@@ -1,0 +1,236 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS Variables ────────────────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg-base:     #07070A;
+  --bg-surface:  #0D0D12;
+  --bg-elevated: #131318;
+  --bg-border:   #1E1E26;
+
+  /* Text */
+  --text-primary:   #EAE6DE;
+  --text-secondary: #A09B93;
+  --text-muted:     #555250;
+
+  /* Accents */
+  --gold:       #C4A882;
+  --gold-bright: #D4BC96;
+  --gold-dim:   #7A6848;
+  --steel:      #4A7FA5;
+
+  /* Semantic */
+  --tension:       rgba(196, 130, 106, 0.12);
+  --vulnerability: rgba(196, 106, 106, 0.14);
+  --trajectory:    rgba(106, 158, 196, 0.12);
+
+  /* Borders */
+  --border-gold-subtle: rgba(196, 168, 130, 0.10);
+  --border-gold-medium: rgba(196, 168, 130, 0.22);
+  --border-gold-strong: rgba(196, 168, 130, 0.40);
+}
+
+/* ── Base Styles ──────────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+  }
+
+  ::selection {
+    background-color: rgba(196, 168, 130, 0.20);
+    color: var(--text-primary);
+  }
+}
+
+/* ── Utility Classes ──────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Section divider line */
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--border-gold-medium) 30%,
+      var(--border-gold-medium) 70%,
+      transparent
+    );
+  }
+
+  /* Display heading style */
+  .heading-display {
+    font-family: var(--font-cormorant), Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+  }
+
+  /* Eyebrow / label text */
+  .label-eyebrow {
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  /* Card base */
+  .card-base {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-gold-subtle);
+    border-radius: 2px;
+  }
+
+  /* Subtle focus ring */
+  .focus-ring:focus-visible {
+    outline: 1px solid var(--gold);
+    outline-offset: 2px;
+  }
+
+  /* Input field */
+  .input-field {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-gold-medium);
+    border-radius: 2px;
+    color: var(--text-primary);
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    transition: border-color 0.2s ease;
+  }
+
+  .input-field::placeholder {
+    color: var(--text-muted);
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+
+  /* CTA button */
+  .btn-primary {
+    background: var(--gold);
+    color: var(--bg-base);
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    font-weight: 500;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 1px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    background: var(--gold-bright);
+  }
+
+  .btn-primary:active {
+    transform: translateY(1px);
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--border-gold-medium);
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    border-radius: 1px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+    cursor: pointer;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--gold);
+    color: var(--gold-bright);
+  }
+}
+
+/* ── Mobile Responsive ────────────────────────────────────────────────────── */
+
+/* Fluid font scaling for small screens */
+@media (max-width: 480px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+/* Card padding on mobile */
+@media (max-width: 480px) {
+  .max-w-card {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
+/* Generate textarea on mobile */
+@media (max-width: 640px) {
+  textarea {
+    font-size: 16px !important; /* prevent iOS zoom on focus */
+  }
+  input[type="text"],
+  input[type="email"],
+  input[type="password"] {
+    font-size: 16px !important;
+  }
+}
+
+/* SC header on very small screens */
+@media (max-width: 400px) {
+  .label-eyebrow {
+    font-size: 0.48rem;
+    letter-spacing: 0.10em;
+  }
+}
+
+/* Trajectory pills wrap on mobile */
+@media (max-width: 480px) {
+  .trajectory-pill-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+/* Share buttons grid on mobile */
+@media (max-width: 480px) {
+  .share-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Navigation on mobile — hide text labels */
+@media (max-width: 360px) {
+  .nav-label-hide {
+    display: none;
+  }
+}
+
+/* ── SC Header logo animation ─────────────────────────────────────────────── */
+@keyframes wheelDrift {
+  0%   { transform: translateY(0)    rotate(0deg)    scale(1);     }
+  25%  { transform: translateY(-3px) rotate(1.2deg)  scale(1.003); }
+  50%  { transform: translateY(0)    rotate(0deg)    scale(1);     }
+  75%  { transform: translateY(3px)  rotate(-1.2deg) scale(0.997); }
+  100% { transform: translateY(0)    rotate(0deg)    scale(1);     }
+}

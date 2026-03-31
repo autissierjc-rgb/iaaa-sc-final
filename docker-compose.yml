@@ -1,0 +1,112 @@
+# IAAA · V1 · Docker Compose
+# Stack frozen: nginx · frontend · backend · postgres
+# Redis removed from V1.
+#
+# Build args vs runtime env — explicit separation:
+#
+#   frontend build args (baked at `docker build`):
+#     NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_API_URL
+#
+#   frontend runtime env (injected at container start):
+#     INTERNAL_API_BASE_URL, NODE_ENV
+#
+#   backend runtime env (from .env via env_file):
+#     DATABASE_URL, SECRET_KEY, AI keys, STRIPE keys, etc.
+
+version: "3.9"
+
+services:
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: iaaa_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certbot/conf:/etc/letsencrypt:ro
+      - ./nginx/certbot/www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - iaaa_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Build-time: baked into Next.js static output
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: iaaa_frontend
+    restart: unless-stopped
+    environment:
+      # Runtime only — never compiled into bundle
+      - NODE_ENV=production
+      - INTERNAL_API_BASE_URL=http://backend:8000
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - backend
+    networks:
+      - iaaa_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: iaaa_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - iaaa_net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: iaaa_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - iaaa_net
+
+volumes:
+  postgres_data:
+
+networks:
+  iaaa_net:
+    driver: bridge
