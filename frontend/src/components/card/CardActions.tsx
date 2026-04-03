@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * IAAA · CardActions — Bloc 6B
  *

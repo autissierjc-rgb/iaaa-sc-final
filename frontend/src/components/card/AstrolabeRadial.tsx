@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * IAAA · AstrolabeRadial — version finale validée
  *
