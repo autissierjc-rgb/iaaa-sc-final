@@ -1,8 +1,10 @@
+﻿'use client'
+
 /**
- * IAAA · PricingPreview
+ * IAAA Â· PricingPreview
  *
  * Renders 3 pricing tiers on the landing page.
- * Stripe and checkout are NOT wired here — belongs to Bloc 6+.
+ * Stripe and checkout are NOT wired here â€” belongs to Bloc 6+.
  * CTAs are simple links to /register?tier=X or /enterprise.
  */
 
@@ -53,10 +55,11 @@ export default function PricingPreview() {
             className="text-xs font-sans tracking-[0.08em] uppercase"
             style={{ color: 'var(--text-muted)' }}
           >
-            See full feature comparison →
+            See full feature comparison â†’
           </Link>
         </div>
       </div>
     </section>
   )
 }
+

@@ -1,5 +1,7 @@
+﻿'use client'
+
 /**
- * IAAA · HowItWorks
+ * IAAA Â· HowItWorks
  *
  * Static 3-step section. No interaction. No API.
  */
@@ -8,7 +10,7 @@ const STEPS = [
   {
     number: '01',
     title: 'Describe your situation',
-    body: 'Write a few sentences — or a few paragraphs. Your words, your frame.',
+    body: 'Write a few sentences â€” or a few paragraphs. Your words, your frame.',
   },
   {
     number: '02',
@@ -97,3 +99,4 @@ export default function HowItWorks() {
     </section>
   )
 }
+

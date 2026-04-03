@@ -1,7 +1,9 @@
+﻿'use client'
+
 /**
- * IAAA · SituationCardPreview
+ * IAAA Â· SituationCardPreview
  *
- * LANDING PRESENTATION COMPONENT — not the final product SituationCard.
+ * LANDING PRESENTATION COMPONENT â€” not the final product SituationCard.
  * The final card rendering belongs to Bloc 4.
  *
  * This component renders static example data to show the product output.
@@ -11,7 +13,7 @@
  * Layout:
  * - Header: title + objective
  * - Row 1: Forces + Tensions (2 cols on desktop)
- * - Row 2: Vulnerabilities — highlighted as "center of the diamond"
+ * - Row 2: Vulnerabilities â€” highlighted as "center of the diamond"
  * - Row 3: Trajectories + Uncertainty (2 cols on desktop)
  * - Footer: Reflection
  */
@@ -22,7 +24,7 @@ interface SituationCardPreviewProps {
   card: SituationCardPreviewData
 }
 
-// ── Section primitive ─────────────────────────────────────────────────────────
+// â”€â”€ Section primitive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CardSection({
   label,
   items,
@@ -56,7 +58,7 @@ function CardSection({
               }}
               aria-hidden="true"
             >
-              ◆
+              â—†
             </span>
             {item}
           </li>
@@ -66,7 +68,7 @@ function CardSection({
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function SituationCardPreview({ card }: SituationCardPreviewProps) {
   return (
     <section className="py-20 px-5" style={{ background: 'var(--bg-base)' }}>
@@ -147,7 +149,7 @@ export default function SituationCardPreview({ card }: SituationCardPreviewProps
             />
           </div>
 
-          {/* Row 2: Vulnerabilities — center of the diamond */}
+          {/* Row 2: Vulnerabilities â€” center of the diamond */}
           <div
             className="rounded-[1px] px-4 py-4"
             style={{
@@ -189,7 +191,7 @@ export default function SituationCardPreview({ card }: SituationCardPreviewProps
                     style={{ fontSize: '0.5rem', color: 'rgba(196,106,106,0.6)' }}
                     aria-hidden="true"
                   >
-                    ◆
+                    â—†
                   </span>
                   {v}
                 </li>
@@ -231,3 +233,4 @@ export default function SituationCardPreview({ card }: SituationCardPreviewProps
     </section>
   )
 }
+

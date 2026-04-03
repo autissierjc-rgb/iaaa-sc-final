@@ -1,6 +1,8 @@
+﻿'use client'
+
 /**
- * IAAA · Footer V2
- * Liens complets : produit + légal + situationcard.com
+ * IAAA Â· Footer V2
+ * Liens complets : produit + lÃ©gal + situationcard.com
  */
 
 import Link from 'next/link'
@@ -16,7 +18,7 @@ const PRODUCT_LINKS = [
 const LEGAL_LINKS = [
   { label: 'Privacy',           href: '/privacy'    },
   { label: 'Terms',             href: '/terms'      },
-  { label: 'Mentions légales',  href: '/legal'      },
+  { label: 'Mentions lÃ©gales',  href: '/legal'      },
 ]
 
 const linkStyle: React.CSSProperties = {
@@ -88,3 +90,4 @@ export default function Footer() {
     </footer>
   )
 }
+

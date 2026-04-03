@@ -1,5 +1,7 @@
+﻿'use client'
+
 /**
- * IAAA · LibraryPreview
+ * IAAA Â· LibraryPreview
  *
  * Shows 3 static public card previews from landingData.
  * In Bloc 6, these will be replaced with real public cards from the API.
@@ -100,7 +102,7 @@ export default function LibraryPreview({ cards }: LibraryPreviewProps) {
             href="/library"
             className="btn-ghost px-4 py-2 shrink-0 text-xs"
           >
-            View all →
+            View all â†’
           </Link>
         </div>
 
@@ -114,3 +116,4 @@ export default function LibraryPreview({ cards }: LibraryPreviewProps) {
     </section>
   )
 }
+
