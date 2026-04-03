@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * IAAA · /sc/[slug]/map — Star Map page
  *
