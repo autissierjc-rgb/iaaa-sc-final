@@ -1,0 +1,113 @@
+{
+  "title": "Séquestration journaliers — Réhabilitation route · Nord-Kivu",
+  "category": "Fraude sur paiement humanitaire / Sécurité employé",
+  "sc_type": "professional",
+  "contextualization_level": "explicit",
+  "context_frame": {
+    "geography": "Nord-Kivu, RDC — zone de conflit armé actif",
+    "institutional_setting": "ONG internationale, projet réhabilitation route, chantier en zone isolée",
+    "sector": "Humanitaire — infrastructure",
+    "organizational_structure": "Employé humanitaire sur site + journaliers locaux + management ONG à distance + autorités locales",
+    "security_environment": "Actif — Nord-Kivu 46% des incidents humanitaires en 2025. Autorités locales liées à groupes armés.",
+    "legal_regulatory_environment": "Droit du travail congolais + règlement interne ONG. Paiement journaliers = obligation légale.",
+    "time_context": "Situation active en cours. Employé prétendument retenu. Pression de paiement immédiat.",
+    "other_relevant_context": [
+      "45 journaliers prévus, 50 inscrits — 5 en surplus suspect",
+      "Autorités locales disent que l'employé n'est pas menacé et que le paiement peut attendre",
+      "Maël (chef de base ONG Congo) identifie 3 scénarios supplémentaires impliquant les autorités"
+    ]
+  },
+  "required_context_missing": true,
+  "missing_context_questions": [
+    "Qui a inscrit les 5 journaliers supplémentaires — l'employé seul ou sur instruction ?",
+    "Existe-t-il une source tierce indépendante des autorités locales pour vérifier la sécurité de l'employé ?",
+    "Les 5 noms supplémentaires correspondent-ils à des personnes liées aux autorités locales ?"
+  ],
+  "contextual_patterns_considered": [
+    "PATTERN V1 — Zone de conflit + paiement journaliers + autorités locales : autorités potentiellement impliquées dans la fraude",
+    "Urgence fabriquée pour court-circuiter le contrôle — méthode classique (validé par Maël)",
+    "Extorsion systématique des projets ONG en Nord-Kivu par les autorités locales — documenté OCHA 2025"
+  ],
+  "contextual_red_flags": [
+    "Les autorités locales sont à la fois la source de vérification sécurité ET des acteurs potentiellement dans la fraude",
+    "L'employé réclame le paiement immédiat des 50 — pas les journaliers eux-mêmes",
+    "Les autorités locales = groupe armé dans ce contexte"
+  ],
+  "independent_verification_required": true,
+  "investigation_mode": true,
+  "astrolabe_raw_sum": 21,
+  "radar_pressure_components": { "impact": 0.30, "urgence": 0.125, "incertitude": 0.25, "reversibilite": 0.20 },
+  "state_index_formula_check": { "astrolabe_base": 87.5, "radar_pressure": 0.875, "state_index_raw": 88 },
+  "state_index_raw": 88,
+  "state_index_adjustment": -3,
+  "state_index_adjustment_reason": "Les autorités locales ont confirmé l'absence de menace réelle et donné une semaine. L'ONG dispose de leviers d'action concrets. Situation grave mais pas incontrôlable si action immédiate.",
+  "state_index_final": 85,
+  "state_label": "Critique",
+  "astrolabe_base": 87.5,
+  "radar_pressure": 0.875,
+  "saturation_index": 0.875,
+  "confidence": "modérée",
+  "insight": "La séquestration n'est peut-être pas ce qu'elle prétend être. L'urgence humanitaire n'est pas la menace sur l'employé — c'est la pression pour payer avant tout contrôle. Les deux sources d'information disponibles (employé et autorités) peuvent être liées par la fraude. L'ONG est potentiellement aveugle structurellement.",
+  "vulnerability": "Les autorités locales sont à la fois la source principale de vérification sécurité ET des acteurs potentiellement impliqués dans la fraude. Vérifier via elles = demander au loup de surveiller la bergerie.",
+  "signal": "Qui réclame le paiement immédiat — l'employé ou les journaliers eux-mêmes ? Si c'est l'employé seul, c'est structurellement suspect dans tous les scénarios de fraude.",
+  "asymmetry": "L'ONG a deux sources d'information. Si ces deux sources sont compromises, elle est aveugle par design — pas par incompétence. La seule sortie est une source tierce qui n'a rien à gagner.",
+  "astrolabe_scores": [
+    { "branch": "I",    "name": "Actors",      "raw_score": 3, "display_score": 2, "label": "Modéré",   "justification": "Acteurs multiples aux intérêts conflictuels nommés. Compressé car Uncertainty et Constraints sont les branches primaires.", "is_primary": false, "compression_applied": true, "compression_reason": "5 branches à raw_score=3, max display=2 en état Critique. Actors moins décisif que Uncertainty et Constraints." },
+    { "branch": "II",   "name": "Interests",   "raw_score": 3, "display_score": 2, "label": "Modéré",   "justification": "Intérêts divergents : employé (paiement rapide), autorités (protection de leur implication), journaliers (paiement légitime), ONG (audit).", "is_primary": false, "compression_applied": true, "compression_reason": "raw_score=3 compressé à 2. Moins central que Uncertainty et Constraints." },
+    { "branch": "III",  "name": "Forces",      "raw_score": 2, "display_score": 2, "label": "Modéré",   "justification": "Norme humanitaire de paiement rapide + contexte armé = forces contradictoires.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "IV",   "name": "Tensions",    "raw_score": 3, "display_score": 2, "label": "Modéré",   "justification": "Séquestration physique active. Contradiction entre récit de l'employé et récit des autorités.", "is_primary": false, "compression_applied": true, "compression_reason": "raw_score=3 compressé à 2. La résoudre dépend d'abord de réduire l'Uncertainty." },
+    { "branch": "V",    "name": "Constraints", "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Double contrainte : payer sans audit = valider la fraude. Ne pas payer = manquement envers journaliers réels. Autorités = groupe armé, toute confrontation risquée.", "is_primary": true, "compression_applied": false, "compression_reason": "" },
+    { "branch": "VI",   "name": "Uncertainty", "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "4 inconnues irréductibles : séquestration réelle ? autorités dans la fraude ? les 5 fictifs qui encaisse ? source tierce accessible ? Branche primaire.", "is_primary": true, "compression_applied": false, "compression_reason": "" },
+    { "branch": "VII",  "name": "Time",        "raw_score": 2, "display_score": 2, "label": "Modéré",   "justification": "Pression temporelle réelle mais partiellement fabriquée. Divergence employé/autorités sur l'urgence est elle-même informative.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "VIII", "name": "Space",       "raw_score": 2, "display_score": 2, "label": "Modéré",   "justification": "Localisation isolée sur chantier. Accès limité du management. Distance avantage les fraudeurs locaux.", "is_primary": false, "compression_applied": false, "compression_reason": "" }
+  ],
+  "radar_scores": [
+    { "dimension": "Impact",        "score": 3, "note": "Sécurité d'un employé + intégrité financière ONG + précédent institutionnel + potentiellement relation avec autorités armées." },
+    { "dimension": "Urgence",       "score": 2, "note": "Pression temporelle réelle mais les autorités ont confirmé qu'une semaine est disponible. Urgence partiellement construite." },
+    { "dimension": "Incertitude",   "score": 3, "note": "4 inconnues de premier ordre non réductibles sans action terrain indépendante. Incertitude maximale sur qui dit la vérité." },
+    { "dimension": "Réversibilité", "score": 3, "note": "Payer les 50 sans audit = irréversible. La fraude est consommée, le précédent créé. Ne pas payer = réversible, audit encore possible." }
+  ],
+  "trajectories": [
+    { "type": "Stabilisation",  "title": "Vérification indépendante → audit → paiement dissocié", "description": "Source tierce non-compromise confirme la sécurité. Audit indépendant des 50 journaliers. Paiement direct des vérifiés sans passer par l'employé ni les autorités. Procédure disciplinaire séparée.", "signal_precurseur": "Source tierce accessible. Autorités n'empêchent pas l'accès au site pour audit.", "probability": "Élevée si source tierce trouvée dans les 24-48h" },
+    { "type": "Escalation",     "title": "Paiement des 50 sous pression — fraude validée", "description": "L'ONG cède sans audit. Les 50 journaliers sont payés dont les 5 fictifs. Précédent créé : la méthode fonctionne. L'ONG devient cible privilégiée pour les prochains projets.", "signal_precurseur": "Aucune source tierce trouvée. Management cède à la pression émotionnelle.", "probability": "Réelle si la pression n'est pas décomposée en deux urgences distinctes" },
+    { "type": "Solution tiers", "title": "Extraction de l'employé + audit simultané", "description": "Si séquestration réelle confirmée : extraction via canal non-compromis (ONG voisine, OCHA, consulat). Simultanément : audit des journaliers. Paiement des vérifiés. Procédure disciplinaire séparée.", "signal_precurseur": "Source non-compromise confirme que l'employé est réellement retenu. Ou : les 5 noms fictifs sont liés aux autorités.", "probability": "Dépend de la disponibilité d'une source tierce" }
+  ],
+  "cap_summary": {
+    "hook": "La victime est peut-être l'auteur. Les autorités sont peut-être le commanditaire.",
+    "insight": "L'urgence humanitaire n'est pas la menace sur l'employé — c'est la pression pour payer avant tout contrôle. Les deux sources d'information disponibles peuvent être liées par la même fraude.",
+    "vulnerability": "Vérifier la sécurité via les autorités si elles sont dans la fraude = demander au loup de surveiller la bergerie",
+    "asymmetry": "L'ONG a deux sources d'information. Si ces deux sources sont compromises, elle est aveugle par design — pas par incompétence.",
+    "watch": "Trouver une source tierce non-compromise avant toute décision. ONG voisine, bailleur local, chauffeur de confiance. Si aucune source n'est accessible, traiter toutes les sources comme compromises."
+  },
+  "actors": [
+    { "name": "Employé humanitaire", "role": "Responsable de chantier, signataire des présences", "stated_position": "Séquestré, demande paiement immédiat des 50", "revealed_behavior": "Insiste pour le paiement alors que les journaliers eux-mêmes n'en sont pas les initiateurs. Potentiel bénéficiaire direct.", "watch_signal": "Peut-il nommer les 5 journaliers supplémentaires et produire leurs présences signées ?" },
+    { "name": "Autorités locales", "role": "Acteurs de pouvoir local — potentiellement groupe armé", "stated_position": "L'employé n'est pas menacé. Le paiement peut attendre une semaine.", "revealed_behavior": "Message rassurant cohérent avec tous les scénarios de fraude les impliquant. Contrôlent l'accès physique à la situation.", "watch_signal": "Les 5 noms fictifs sont-ils liés à des personnes proches des autorités ? Facilitent-ils ou bloquent-ils l'accès au site ?" },
+    { "name": "45 journaliers réels", "role": "Travailleurs ayant effectivement travaillé", "stated_position": "Non exprimée publiquement", "revealed_behavior": "Peuvent être victimes de la fraude ou instrumentalisés.", "watch_signal": "Lors d'entretiens individuels séparés, désignent-ils spontanément les autorités comme acteurs ?" }
+  ],
+  "news_items": [
+    { "date": "19/03/2026", "text": "Validation terrain par Maël (chef de base ONG Congo) : 'Urgence fabriquée pour court-circuiter le contrôle — méthode classique.' + 3 scénarios supplémentaires dont autorités commanditaires.", "source": "Maël — validation terrain directe" },
+    { "date": "2025-2026",  "text": "OCHA DRC : Nord-Kivu représente 46% des incidents impliquant des humanitaires en 2025. Autorités locales documentées comme participants à des rackets de protection.", "source": "OCHA DRC Situation Reports 2025-2026" }
+  ],
+  "causal_scenarios": [
+    { "scenario_id": "A", "title": "Fraude de l'employé seul", "description": "L'employé a inscrit 5 journaliers fictifs et organise une pression collective pour forcer le paiement avant audit. Les autorités sont neutres.", "actors_involved": ["Employé humanitaire"], "causal_logic": "Fraude sur présences → séquestration comme levier → paiement avant audit → fraude consommée", "plausibility": "Modérée — cohérente avec les faits visibles" },
+    { "scenario_id": "B", "title": "Fraude partagée — employé et autorités", "description": "Les autorités ont imposé à l'employé d'inscrire 5 faux journaliers pour partager le gain. L'employé presse pour payer avant que l'audit révèle leur accord.", "actors_involved": ["Employé humanitaire", "Autorités locales"], "causal_logic": "Autorités → pression sur l'employé → fraude concertée → message rassurant des autorités pour protéger leur part", "plausibility": "Élevée — explique le message rassurant ET l'insistance de l'employé" },
+    { "scenario_id": "C", "title": "Autorités commanditaires — journaliers floués", "description": "Les autorités ont forcé l'employé à inscrire 5 faux journaliers et avaient promis une part aux journaliers. Les autorités gardent tout. Les journaliers séquestrent l'employé car s'attaquer aux autorités (groupe armé) serait trop risqué.", "actors_involved": ["Autorités locales (commanditaires)", "Employé (sous contrainte)", "Journaliers réels (lésés)"], "causal_logic": "Autorités → fraude imposée → promesse non tenue aux journaliers → journaliers séquestrent l'employé → autorités rassurent l'ONG", "plausibility": "Élevée — explique tous les comportements observés + cohérent avec patterns Nord-Kivu" },
+    { "scenario_id": "D", "title": "Séquestration réelle — fraude distincte", "description": "L'employé a commis la fraude seul. Les journaliers non payés l'ont réellement retenu. Les deux faits coexistent mais sont indépendants.", "actors_involved": ["Employé humanitaire", "Journaliers réels"], "causal_logic": "Fraude de l'employé → journaliers non payés → séquestration réelle", "plausibility": "Modérée — la plus simple mais ne nécessite pas les 5 fictifs comme mécanisme central" }
+  ],
+  "verification_matrix": [
+    { "question": "Qui a inscrit les 5 journaliers supplémentaires, et sur quelle instruction ?", "why_it_matters": "Discrimine le scénario A (employé seul) des scénarios B et C (autorités impliquées)", "who_can_verify": "Agent ONG indépendant — entretien séparé avec l'employé hors présence des autorités", "compromised_sources": ["Autorités locales", "L'employé"], "independent_source_needed": true },
+    { "question": "Les 5 noms fictifs sont-ils liés à des personnes proches des autorités locales ?", "why_it_matters": "Confirmation directe des scénarios B ou C si oui", "who_can_verify": "Audit des présences signées + recensement physique des journaliers sur site", "compromised_sources": ["Autorités locales", "L'employé"], "independent_source_needed": true },
+    { "question": "L'employé est-il réellement retenu contre sa volonté ?", "why_it_matters": "Détermine si la sécurité est la priorité absolue immédiate ou si la situation est instrumentalisée", "who_can_verify": "ONG voisine, bailleur avec représentant local, OCHA, consulat", "compromised_sources": ["Autorités locales", "L'employé"], "independent_source_needed": true }
+  ],
+  "analysis": {
+    "lecture_systeme": "La situation a deux niveaux. Surface : un employé est retenu, des journaliers veulent être payés. Structure : les deux sources d'information disponibles peuvent être liées par la même fraude. L'urgence est le mécanisme central du dispositif — pas la conséquence de la situation. La dissociation de l'urgence sécurité et de l'urgence paiement est l'acte managérial le plus important.",
+    "avertissement": "Ne jamais vérifier la sécurité de l'employé exclusivement via les autorités locales si leur implication dans la fraude est possible. Dans les scénarios B et C, cette démarche revient à informer les fraudeurs que l'ONG enquête.",
+    "mouvements_recommandes": [
+      "Identifier dans les 24h une source tierce non-compromise (ONG voisine, bailleur, OCHA, consulat) capable de confirmer l'état de sécurité réel de l'employé sans passer par les autorités ni par l'employé.",
+      "Envoyer un agent indépendant sur site pour recenser physiquement les journaliers, croiser avec les présences signées, identifier qui a inscrit les 5 supplémentaires et sur quelle instruction — avant tout paiement.",
+      "Payer les journaliers vérifiés directement, en présence d'un témoin indépendant, sans intermédiaire lié à l'employé ou aux autorités. Ce paiement dissocié met fin à toute pression légitime des journaliers réels.",
+      "Si la fraude implique les autorités (scénarios B ou C confirmés) : informer le siège et le bailleur avant toute action visible localement. Ne pas confronter les autorités sans couverture institutionnelle."
+    ],
+    "synthese": "La situation est Critique à 85 mais pas incontrôlable : l'ONG a une semaine selon les autorités, et des leviers d'action réels si elle dissocie les deux urgences. Le risque maximal n'est pas la séquestration — c'est le paiement des 50 sans audit, qui valide la fraude et expose l'ONG à une répétition systématique."
+  }
+}
