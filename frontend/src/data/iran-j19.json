@@ -1,0 +1,133 @@
+{
+  "title": "Guerre Iran — Opération Epic Fury · Jour 19 · 18 mars 2026",
+  "category": "Guerre régionale · Iran + proxies vs USA + Israël",
+  "sc_type": "geopolitique_active",
+  "contextualization_level": "explicit",
+  "context_frame": {
+    "geography": "Moyen-Orient élargi : Iran, Israël, Liban, Yemen, Irak, Syrie, Golfe Persique, détroit d'Ormuz, Chypre, EAU, Qatar, Arabie Saoudite",
+    "institutional_setting": "Guerre interétatique non déclarée. Coalition USA-Israël vs Iran et proxies. ONU non opérationnel (veto Russie-Chine).",
+    "sector": "Géopolitique / Conflit armé / Énergie mondiale",
+    "organizational_structure": "Coalition USA-Israël sans AUMF. Iran sous nouveau Guide Suprême (Mojtaba Khamenei). IRGC acteur militaire dominant. Proxies : Hezbollah, Houthis, milices irakiennes.",
+    "security_environment": "Guerre active. 1 444 morts iraniens confirmés. 18 hôpitaux touchés. Détroit d'Ormuz fermé. Frappes quotidiennes bilatérales.",
+    "legal_regulatory_environment": "USA sans AUMF — constitutionnalité contestée. AIEA sans accès. Conseil de sécurité ONU bloqué.",
+    "time_context": "Jour 19 de l'Opération Epic Fury (déclenchée le 28 février 2026).",
+    "other_relevant_context": [
+      "Négociations nucléaires Oman actives jusqu'au 26 février — percée annoncée par Al-Busaidi",
+      "Trump 'pas heureux' des négociations le 27 février — décision de guerre déjà prise",
+      "Khamenei assassiné J1. Mojtaba Khamenei désigné nouveau Guide Suprême",
+      "Larijani assassiné le 17 mars — négociateur nucléaire, canal diplomatique fermé",
+      "AIEA Grossi : 'Il restera du matériau fissile et des capacités d'enrichissement'",
+      "Trump : programme iranien 'anéanti' — contredit par l'AIEA"
+    ]
+  },
+  "required_context_missing": false,
+  "missing_context_questions": [],
+  "contextual_patterns_considered": [
+    "Guerre lancée pendant les négociations — décision préalable à la négociation",
+    "Assassinat de Larijani (négociateur) = fermeture délibérée du canal diplomatique par frappe",
+    "AIEA contredit Trump sur l'efficacité des frappes nucléaires"
+  ],
+  "contextual_red_flags": [
+    "Trump a donné 6 justifications contradictoires en 10 jours",
+    "La décision de guerre a été prise pendant les négociations, pas après leur échec",
+    "Israël tue Larijani deux jours après que Trump accepte une proposition iranienne de renégocier — divergence alliés",
+    "Programme nucléaire iranien survit partiellement selon l'AIEA"
+  ],
+  "independent_verification_required": true,
+  "investigation_mode": true,
+  "astrolabe_raw_sum": 24,
+  "radar_pressure_components": { "impact": 0.30, "urgence": 0.25, "incertitude": 0.25, "reversibilite": 0.20 },
+  "state_index_formula_check": { "astrolabe_base": 95, "radar_pressure": 1.00, "state_index_raw": 95 },
+  "state_index_raw": 95,
+  "state_index_adjustment": -4,
+  "state_index_adjustment_reason": "Saturation totale plafonnée à 95. Espaces de manœuvre résiduels : Oman maintient ses relations, Araghchi n'a pas fermé tous les canaux, Mojtaba Khamenei n'a pas encore pris de décision irréversible.",
+  "state_index_final": 91,
+  "state_label": "Hors contrôle",
+  "astrolabe_base": 95,
+  "radar_pressure": 1.00,
+  "saturation_index": 1.00,
+  "confidence": "modérée",
+  "insight": "Cette guerre n'a pas commencé parce que les négociations ont échoué — elle a commencé pendant leur succès apparent. L'Oman annonçait une percée historique le 26 février. Les frappes ont commencé 48 heures plus tard. La décision de guerre précédait les négociations. Ce n'est pas un accident de timing : c'est la clé de lecture de toute la situation.",
+  "vulnerability": "Mojtaba Khamenei dirige l'Iran sous bombardements sans légitimité testée. Il ne peut pas négocier sans paraître capituler. Ce verrou de légitimité bloque toute sortie diplomatique dans l'immédiat.",
+  "signal": "Premier discours substantiel de Mojtaba Khamenei. S'il parle de vengeance : enlisement ou escalation. S'il parle des 'droits de l'Iran' : canal encore ouvert.",
+  "asymmetry": "Trump dit que le programme nucléaire iranien est 'anéanti'. L'AIEA dit qu'il restera du matériau fissile. Quand cet écart deviendra public, la pression pour de nouvelles frappes sera structurellement intégrée.",
+  "astrolabe_scores": [
+    { "branch": "I",    "name": "Actors",      "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Coalition USA-Israël aux objectifs divergents. Iran sous nouveau guide non testé. IRGC autonome. Proxies avec intérêts propres. Russie-Chine en soutien passif. Arabie Saoudite pivot ambigu.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "II",   "name": "Interests",   "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Trump : victoire avant midterms. Netanyahu : regime change. Mojtaba : légitimité, ne peut pas céder. IRGC : préserver position. Arabie Saoudite : stabilité. Chine : Ormuz ouvert. Intérêts nommés et incompatibles.", "is_primary": true, "compression_applied": false, "compression_reason": "" },
+    { "branch": "III",  "name": "Forces",      "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Forces militaires massives des deux côtés. Asymétrie du coût d'interception. Ormuz fermé (20% pétrole mondial). Programme nucléaire partiellement intact.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "IV",   "name": "Tensions",    "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Guerre armée active. Frappes quotidiennes bilatérales. Missiles à têtes multiples sur Tel Aviv. Drone sur base britannique Chypre. Conflit explicite à impact structurel maximal.", "is_primary": true, "compression_applied": false, "compression_reason": "" },
+    { "branch": "V",    "name": "Constraints", "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Contraintes symétriques dures. Iran : ne peut pas capituler. USA : pas d'AUMF, pas de définition de victoire atteignable. Israël : pas de capacité d'invasion terrestre.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "VI",   "name": "Uncertainty", "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Inconnues : stratégie réelle de Mojtaba, état réel du programme nucléaire, cohésion IRGC, réaction Trump quand l'écart AIEA/rhétorique deviendra public.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "VII",  "name": "Time",        "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Trump : victoire avant midterms novembre 2026. Ormuz fermé : chaque semaine amplifie la pression économique. Mojtaba doit consolider sa légitimité rapidement. Larijani mort : reconstruire un canal prend des mois.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "VIII", "name": "Space",       "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Conflit actif dans 12+ pays simultanément. Ormuz fermé. Base britannique Chypre frappée. Bases US dans le Golfe touchées. Mer Rouge. Liban. Distribution géographique maximale.", "is_primary": false, "compression_applied": false, "compression_reason": "" }
+  ],
+  "radar_scores": [
+    { "dimension": "Impact",        "score": 3, "note": "Impact systémique global : 1 444+ morts iraniens, 18 hôpitaux touchés, Ormuz fermé (20% pétrole mondial), 150 navires immobilisés, 12+ pays déstabilisés." },
+    { "dimension": "Urgence",       "score": 3, "note": "Urgences convergentes : Trump/midterms, Ormuz/économie mondiale, Mojtaba/légitimité. Chaque semaine aggrave toutes les dimensions simultanément." },
+    { "dimension": "Incertitude",   "score": 3, "note": "Inconnues de premier ordre : stratégie Mojtaba, état réel programme nucléaire, cohésion IRGC, réaction Trump quand l'écart AIEA/rhétorique deviendra public." },
+    { "dimension": "Réversibilité", "score": 3, "note": "Irréversibilité croissante. Khamenei mort. Larijani mort. Mojtaba ne peut pas négocier sous bombes sans paraître capituler. Chaque frappe ferme des fenêtres." }
+  ],
+  "trajectories": [
+    { "type": "Stabilisation",  "title": "Cessez-le-feu négocié via Oman", "description": "Mojtaba ouvre discrètement un canal via Oman. Trump accepte un accord partiel présentable comme victoire. Netanyahu contraint d'accepter. Cessez-le-feu fragile mais réel. Ormuz rouvert.", "signal_precurseur": "Discours de Mojtaba mentionnant les 'droits de l'Iran'. Navettes Oman intensifiées. Trump reformule ses objectifs sans mentionner le regime change.", "probability": "10-15% — Larijani mort, Mojtaba ne peut pas capituler sous bombes" },
+    { "type": "Escalation",     "title": "Frappe sur installations nucléaires + fermeture durable Ormuz", "description": "Trump décide de 'finir le travail' quand l'AIEA confirme le programme partiellement intact. Frappe massive sur Fordow et Isfahan. Iran ferme officiellement Ormuz. Activation totale des proxies. Choc pétrolier mondial.", "signal_precurseur": "AIEA confirme enrichissement résiduel. Trump tweet sur 'finir le travail'. Iran annonce enrichissement à 80%+.", "probability": "25-35% — logique de la pression politique américaine pre-midterms" },
+    { "type": "Solution tiers", "title": "Enlisement — guerre de basse intensité durable", "description": "Aucun camp ne peut gagner, aucun ne peut se permettre de perdre. Frappes quotidiennes en dessous du seuil d'escalation totale. Ormuz partiellement rouvert sous pression économique de la Chine et de l'Inde. Trump déclare victoire partielle rhétorique.", "signal_precurseur": "Ormuz partiellement rouvert sans accord. Araghchi maintient son discours sans demander de cessez-le-feu. Trump cesse de mentionner le regime change.", "probability": "50-60% — trajectoire la plus probable car aucun camp n'a de définition de victoire convergente" }
+  ],
+  "cap_summary": {
+    "hook": "Trump a décidé la guerre pendant les négociations. L'Oman annonçait la paix — Washington lançait les frappes.",
+    "insight": "La guerre n'a pas été déclenchée par l'échec des négociations — elle a été déclenchée pendant leur succès apparent. Depuis J1, aucun camp n'a de définition de la victoire convergente. Ce n'est pas une guerre que quelqu'un peut gagner — c'est une guerre que personne ne peut arrêter facilement.",
+    "vulnerability": "Mojtaba Khamenei sans légitimité testée, sous bombardements, privé de son principal négociateur. Ne peut pas capituler. Ne peut pas facilement négocier. Verrou de légitimité = blocage de toute sortie diplomatique.",
+    "asymmetry": "Israël vient d'assassiner Larijani — l'homme qui négociait. Ce n'est pas une cible militaire. C'est la fermeture délibérée du canal diplomatique par une frappe, deux jours après que Trump acceptait une proposition iranienne de renégocier.",
+    "watch": "Premier discours substantiel de Mojtaba Khamenei et mouvements de l'Oman. Ce sont les deux seuls signaux qui comptent. Tout le reste est bruit."
+  },
+  "actors": [
+    { "name": "Donald Trump", "role": "Président USA — décideur de la guerre", "stated_position": "Programme iranien 'anéanti'. Guerre justifiée par la menace nucléaire.", "revealed_behavior": "A envoyé des négociateurs à Genève pendant que la décision de frapper était probablement déjà prise. 6 justifications contradictoires en 10 jours. AIEA contredit sa claim principale. Son conseiller antiterrorisme démissionne.", "watch_signal": "Trump reformule-t-il ses objectifs quand l'AIEA publiera ses conclusions sur le programme nucléaire résiduel ?" },
+    { "name": "Benjamin Netanyahu", "role": "Premier ministre Israël", "stated_position": "Regime change. 'Une nouvelle voie de liberté pour l'Iran s'approche.'", "revealed_behavior": "Assassine Larijani le 17 mars — deux jours après que Trump acceptait une proposition iranienne. Objectif (regime change) militairement non atteignable par frappes aériennes.", "watch_signal": "Netanyahu obtient-il le feu vert américain pour Fordow ? Ou Washington lui impose-t-il une limite ?" },
+    { "name": "Mojtaba Khamenei", "role": "Nouveau Guide Suprême Iran — 55 ans", "stated_position": "Vengeance pour Larijani. Appel aux gouvernements régionaux à fermer les bases étrangères.", "revealed_behavior": "Premier successeur héréditaire depuis 1979. N'a jamais exercé de pouvoir public. Premiers communiqués offensifs mais n'a pas fermé Ormuz définitivement ni déclaré guerre nucléaire.", "watch_signal": "Premier discours substantiel : vengeance (escalation) ou droits de l'Iran (canal ouvert) ?" },
+    { "name": "Abbas Araghchi", "role": "Ministre des Affaires étrangères Iran", "stated_position": "'Nous n'avons jamais demandé de cessez-le-feu.' — CBS, 16 mars.", "revealed_behavior": "Architecte de tous les canaux diplomatiques. Maintient une rhétorique de résistance en public. Seul survivant du tandem Larijani-Araghchi.", "watch_signal": "Araghchi reprend-il contact avec Oman ou le Qatar en privé ? Ce décalage serait le signal diplomatique le plus important." },
+    { "name": "Badr Al-Busaidi", "role": "FM Oman — dernier médiateur crédible", "stated_position": "'Consterné. Des négociations actives et sérieuses ont été sapées.' — 28 février.", "revealed_behavior": "Avait annoncé une percée historique le 26 février. N'a pas rompu ses relations avec l'Iran. Dernier canal crédible restant.", "watch_signal": "Al-Busaidi reprend-il des navettes diplomatiques ? C'est le signal le plus fort qu'une sortie est encore possible." },
+    { "name": "Rafael Grossi", "role": "Directeur général AIEA", "stated_position": "'Il restera probablement du matériau fissile et des capacités d'enrichissement même après les frappes.'", "revealed_behavior": "Contredit directement Trump. Dit ne pas avoir accès aux installations depuis juin 2025.", "watch_signal": "Publication du prochain rapport AIEA. Ce rapport déterminera si Trump peut maintenir sa rhétorique de victoire." }
+  ],
+  "news_items": [
+    { "date": "26/02/2026", "text": "Oman annonce une percée significative après le 3e round de négociations à Genève. Al-Busaidi : Iran prêt à ne jamais stocker d'uranium enrichi et à accepter vérification AIEA totale.", "source": "Arms Control Association / CBS News" },
+    { "date": "27/02/2026", "text": "Trump : 'Je ne suis pas heureux des négociations ni de leur façon de négocier.' Questionné sur une frappe : 'Je préfère ne pas vous dire.'", "source": "NPR / Arms Control Association" },
+    { "date": "28/02/2026", "text": "Opération Epic Fury — USA et Israël frappent l'Iran. Khamenei assassiné J1. Plus de 1 200 bombes en 24 heures. Mojtaba Khamenei désigné nouveau Guide Suprême. Détroit d'Ormuz fermé.", "source": "Wikipedia 2026 Iran war / Al Jazeera" },
+    { "date": "05/03/2026", "text": "Trump : 'Ils appellent. Ils disent, comment on fait un deal ? J'ai dit, vous êtes un peu en retard, et on veut se battre maintenant plus qu'eux.'", "source": "Iran International" },
+    { "date": "17/03/2026", "text": "Israël assassine Ali Larijani (chef sécurité nationale, négociateur nucléaire). Bilan total : 1 444 morts iraniens, 18 551 blessés. Joe Kent (antiterrorisme USA) démissionne.", "source": "Al Jazeera / CNBC" },
+    { "date": "18/03/2026", "text": "Iran frappe Tel Aviv avec missiles à têtes multiples. 2 morts à Ramat Gan. Araghchi sur CBS : 'Jamais demandé de cessez-le-feu.' Grossi (AIEA) : programme nucléaire partiellement intact.", "source": "CNN / NPR / Al Jazeera" }
+  ],
+  "causal_scenarios": [
+    { "scenario_id": "A", "title": "Décision de guerre prise avant les négociations", "description": "Trump avait décidé de frapper avant ou pendant les négociations de Genève. Les négociations n'étaient pas de bonne foi côté américain.", "actors_involved": ["Trump", "Netanyahu (lobby pour la frappe)"], "causal_logic": "Décision prise → négociations maintenues comme couverture → frappes 48h après la percée omanaise", "plausibility": "Élevée — timing et citation Trump du 27 février convergent" },
+    { "scenario_id": "B", "title": "Netanyahu pilote la décision américaine", "description": "Netanyahu tue Larijani 2 jours après que Trump accepte de renégocier — geste délibéré pour fermer la fenêtre diplomatique. Netanyahu pilote le calendrier plus que Trump.", "actors_involved": ["Netanyahu", "Trump (influencé)"], "causal_logic": "Netanyahu presse Trump → décision → Trump accepte renégociation J3 → Netanyahu tue Larijani J17", "plausibility": "Modérée — cohérente avec comportement Netanyahu" },
+    { "scenario_id": "C", "title": "Enlisement comme trajectoire voulue par les deux camps", "description": "Ni Trump ni Netanyahu ne veulent l'effondrement du régime iranien. Ils veulent une pression maximale permanente. L'Iran ne veut pas d'une guerre totale. Les deux camps ont intérêt à un conflit chronique.", "actors_involved": ["Trump (midterms)", "Netanyahu (coalition)", "IRGC"], "causal_logic": "Tous les acteurs ont intérêt à la guerre — mais pas à la victoire de l'adversaire. L'enlisement est l'équilibre stable.", "plausibility": "Élevée — explique pourquoi aucun acteur ne franchit les seuils maximaux disponibles" }
+  ],
+  "verification_matrix": [
+    { "question": "Trump avait-il pris la décision de frapper avant le 26 février ?", "why_it_matters": "Détermine si les négociations étaient de bonne foi et si un accord était structurellement possible", "who_can_verify": "Témoignages internes Maison Blanche, Witkoff, Kushner. Journalisme d'investigation.", "compromised_sources": ["Maison Blanche officielle", "Déclarations Trump"], "independent_source_needed": true },
+    { "question": "L'assassination de Larijani était-elle coordonnée avec Washington ou décision autonome israélienne ?", "why_it_matters": "Révèle si USA et Israël ont des objectifs convergents ou si Israël sabote activement les voies diplomatiques", "who_can_verify": "Échanges diplomatiques USA-Israël dans les 48h précédant l'assassinat.", "compromised_sources": ["Gouvernements USA et Israël"], "independent_source_needed": true },
+    { "question": "Quel est l'état réel du programme nucléaire iranien après 19 jours de frappes ?", "why_it_matters": "Détermine si Trump sera contraint à de nouvelles frappes quand l'écart AIEA/rhétorique deviendra public", "who_can_verify": "AIEA quand elle aura accès. Images satellites commerciales.", "compromised_sources": ["Déclarations Trump", "Déclarations iraniennes officielles"], "independent_source_needed": true }
+  ],
+  "analysis": {
+    "chronologie_faits": [
+      { "date": "06/02/2026", "event": "1er round de négociations nucléaires indirectes USA-Iran à Muscat, Oman. Atmosphère constructive." },
+      { "date": "26/02/2026", "event": "3e round à Genève. Al-Busaidi : 'percée significative'. Iran prêt à ne jamais stocker d'uranium enrichi + vérification AIEA totale. 'La paix est à portée.'" },
+      { "date": "27/02/2026", "event": "Trump : 'Je ne suis pas heureux des négociations.' Refuse de dire s'il va frapper. La décision était probablement déjà prise." },
+      { "date": "28/02/2026", "event": "Opération Epic Fury. USA + Israël frappent l'Iran. 1 200+ bombes en 24h. Khamenei assassiné. Mojtaba Khamenei désigné Guide Suprême. Ormuz fermé." },
+      { "date": "05/03/2026", "event": "Trump : 'Vous êtes un peu en retard, et on veut se battre maintenant plus qu'eux.' Contradiction avec l'acceptation de renégocier du 01/03." },
+      { "date": "13/03/2026", "event": "Netanyahu : 'Une nouvelle voie de liberté pour l'Iran s'approche.' Discours de regime change. Scientifiques nucléaires iraniens tués." },
+      { "date": "17/03/2026", "event": "Israël assassine Larijani (négociateur nucléaire). Bilan : 1 444 morts iraniens, 18 551 blessés. Joe Kent démissionne." },
+      { "date": "18/03/2026", "event": "Iran frappe Tel Aviv — missiles à têtes multiples, 2 morts. Araghchi sur CBS : 'Jamais demandé de cessez-le-feu.' Grossi : programme partiellement intact. Drone sur base britannique Chypre." }
+    ],
+    "decideurs": [
+      { "name": "Donald Trump", "role": "Président USA", "citation_directe": "Vous êtes un peu en retard, et on veut se battre maintenant plus qu'eux.", "date": "05/03/2026", "source": "Iran International", "comportement_revele": "A envoyé des négociateurs à Genève pendant que la décision de frapper était probablement déjà prise. 6 justifications contradictoires en 10 jours. AIEA contredit sa claim principale. Son conseiller antiterrorisme démissionne en disant que l'Iran n'est pas une menace.", "watch_signal": "Trump reformule-t-il ses objectifs quand l'AIEA publiera le bilan réel des frappes nucléaires ?" },
+      { "name": "Benjamin Netanyahu", "role": "Premier ministre Israël", "citation_directe": "Nous continuerons à éliminer et à chasser chacun d'eux.", "date": "17/03/2026", "source": "Ministre de la Défense Katz", "comportement_revele": "Assassine Larijani (non-cible militaire opérationnelle) deux jours après que Trump acceptait une proposition iranienne. Objectif (regime change) militairement non atteignable par frappes aériennes seules.", "watch_signal": "Netanyahu obtient-il le feu vert américain pour des frappes sur Fordow ?" },
+      { "name": "Mojtaba Khamenei", "role": "Nouveau Guide Suprême Iran", "citation_directe": "Vœu de vengeance pour Larijani. Appel à fermer les bases étrangères.", "date": "18/03/2026", "source": "Déclarations officielles iraniennes", "comportement_revele": "Premier Guide héréditaire depuis 1979. Jamais exposé publiquement. Premiers communiqués offensifs mais retenue opérationnelle : n'a pas fermé Ormuz définitivement, pas déclaré guerre nucléaire.", "watch_signal": "Contenu de son premier discours substantiel : vengeance (escalation) ou droits de l'Iran (canal ouvert) ?" },
+      { "name": "Abbas Araghchi", "role": "FM Iran", "citation_directe": "Nous n'avons jamais demandé de cessez-le-feu. Nous sommes prêts à nous défendre aussi longtemps qu'il le faudra.", "date": "16/03/2026", "source": "CBS Face the Nation", "comportement_revele": "Discours public de résistance absolue. Mais architecte de tous les canaux diplomatiques. Seul survivant du tandem Larijani-Araghchi. Marge de manœuvre réduite mais non nulle.", "watch_signal": "Araghchi reprend-il contact avec Oman ou le Qatar en privé ? Ce signal privé serait l'indicateur diplomatique le plus important." },
+      { "name": "Badr Al-Busaidi", "role": "FM Oman — dernier médiateur crédible", "citation_directe": "Consterné. Des négociations actives et sérieuses ont été sapées.", "date": "28/02/2026", "source": "Déclaration publique Oman", "comportement_revele": "Médiateur dont la percée a été ignorée 48h après son annonce. N'a pas rompu ses relations avec l'Iran.", "watch_signal": "Al-Busaidi intensifie-t-il ses navettes diplomatiques ? Tout signe de mouvement omanais est un signal de désescalade possible." }
+    ],
+    "avertissements": [
+      "Ne pas analyser cette guerre avec les catégories de la guerre classique. Il n'y a pas de front, pas de conditions de victoire convergentes, pas de traité de paix prévisible.",
+      "L'écart entre la rhétorique de victoire de Trump et la réalité AIEA est une bombe à retardement politique. Quand cet écart deviendra public, la pression pour de nouvelles frappes sera structurellement intégrée.",
+      "Israël et les USA ne jouent pas la même partition. Cette divergence est structurelle et va s'amplifier."
+    ],
+    "synthese": "Au Jour 19, la situation est Hors contrôle à 91 — mais pas irrémédiable. Aucun acteur ne peut gagner au sens conventionnel. La trajectoire la plus probable est l'enlisement (50-60%). L'espace de sortie existe : Oman maintient ses relations, Araghchi n'a pas fermé tous les canaux, Mojtaba n'a pas encore pris de décision irréversible. Ce qui peut tout faire basculer vers l'escalation : le rapport AIEA sur le programme nucléaire résiduel et la réaction Trump."
+  }
+}

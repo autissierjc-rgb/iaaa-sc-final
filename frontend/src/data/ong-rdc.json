@@ -1,0 +1,96 @@
+{
+  "title": "Chef de projet ONG — Nord-Kivu · Dysfonctionnement de rôle protégé",
+  "category": "Gestion de projet humanitaire",
+  "sc_type": "professional",
+  "contextualization_level": "explicit",
+  "context_frame": {
+    "geography": "Nord-Kivu, RDC — zone de conflit armé chronique",
+    "institutional_setting": "ONG internationale avec siège distant et direction pays",
+    "sector": "Humanitaire — projet agriculture / réhabilitation",
+    "organizational_structure": "Chef de projet nommé + adjoint opérationnel non formalisé + manager + directeur siège",
+    "security_environment": "Actif — contexte M23, FARDC, groupes armés locaux",
+    "legal_regulatory_environment": "Droit du travail congolais + règlement interne ONG + obligations bailleurs",
+    "time_context": "Situation stable en surface — pas d'urgence déclarée. Fenêtre d'action ouverte.",
+    "other_relevant_context": [
+      "Relation d'amitié 20 ans entre chef de projet et directeur siège",
+      "Expert terrain 25 ans en Nord-Kivu",
+      "Adjoint opérationnel porte l'essentiel de la charge sans reconnaissance formelle"
+    ]
+  },
+  "required_context_missing": false,
+  "missing_context_questions": [],
+  "contextual_patterns_considered": [
+    "Loyauté institutionnelle protégeant un rôle formel vide — pattern courant dans les ONG à forte ancienneté terrain",
+    "Dépendance opérationnelle à un rôle informel non protégé — vulnérabilité classique de succession"
+  ],
+  "contextual_red_flags": [
+    "La durée de la situation sans correction suggère que personne n'a intérêt à la rendre visible",
+    "L'adjoint est la solution ET la menace — son départ effondrerait le système"
+  ],
+  "independent_verification_required": false,
+  "investigation_mode": false,
+  "astrolabe_raw_sum": 16,
+  "radar_pressure_components": { "impact": 0.15, "urgence": 0, "incertitude": 0.125, "reversibilite": 0.10 },
+  "state_index_formula_check": { "astrolabe_base": 66.7, "radar_pressure": 0.375, "state_index_raw": 57 },
+  "state_index_raw": 57,
+  "state_index_adjustment": -3,
+  "state_index_adjustment_reason": "Situation manageable confirmée terrain par Maël (chef de base ONG Congo). Réversibilité réelle tant que l'adjoint reste en poste.",
+  "state_index_final": 54,
+  "state_label": "Contrôlable",
+  "astrolabe_base": 66.7,
+  "radar_pressure": 0.375,
+  "saturation_index": 0.67,
+  "confidence": "élevée",
+  "insight": "Ce n'est pas un problème de compétence — c'est un problème de rôle mal distribué protégé par une loyauté institutionnelle. Le système fonctionne grâce à l'adjoint, mais ce fonctionnement est invisible et fragile. La vraie vulnérabilité n'est pas le chef de projet : c'est l'adjoint non reconnu qui peut partir.",
+  "vulnerability": "Dépendance opérationnelle totale à un rôle réel non reconnu formellement. Si l'adjoint quitte, le projet perd simultanément planification, budget, reporting et approvisionnements.",
+  "signal": "L'adjoint envisage-t-il de quitter ? C'est le seul indicateur structurel. Tout le reste peut attendre.",
+  "asymmetry": "Tout le monde gère le problème visible (le chef de projet). Personne ne protège la solution invisible (l'adjoint). La contrainte Constraints=3 est en réalité le levier : le chef ne peut pas être renvoyé, mais il peut être repositionné dignement.",
+  "astrolabe_scores": [
+    { "branch": "I",    "name": "Actors",      "raw_score": 2, "display_score": 2, "label": "Modéré",   "justification": "4 acteurs aux intérêts divergents nommés : chef de projet, adjoint, manager, directeur siège. Tensions latentes mais pas de conflit explicite structurellement central.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "II",   "name": "Interests",   "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Intérêts structurellement divergents entre acteurs nommés. Chef = statut. Adjoint = reconnaissance. Directeur siège = loyauté personnelle. Manager = performance.", "is_primary": true, "compression_applied": false, "compression_reason": "" },
+    { "branch": "III",  "name": "Forces",      "raw_score": 2, "display_score": 2, "label": "Modéré",   "justification": "Culture ONG de tolérance aux dysfonctionnements + expertise terrain 25 ans du chef = forces contradictoires qui maintiennent le statu quo.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "IV",   "name": "Tensions",    "raw_score": 2, "display_score": 2, "label": "Modéré",   "justification": "Tensions latentes entre adjoint (frustration non exprimée) et chef (statut maintenu). Pas encore de conflit explicite nommé avec impact structurel déclaré.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "V",    "name": "Constraints", "raw_score": 3, "display_score": 3, "label": "Dominant", "justification": "Contrainte structurelle dure : impossible de renvoyer le chef — relation d'amitié 20 ans avec directeur siège. Ferme toute approche frontale.", "is_primary": true, "compression_applied": false, "compression_reason": "" },
+    { "branch": "VI",   "name": "Uncertainty", "raw_score": 2, "display_score": 2, "label": "Modéré",   "justification": "Incertitude principale : comportement futur de l'adjoint. Réductible par une conversation directe.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "VII",  "name": "Time",        "raw_score": 1, "display_score": 1, "label": "Actif",    "justification": "Pas d'urgence externe immédiate. Mais l'absence d'urgence incite à reporter jusqu'au point de rupture.", "is_primary": false, "compression_applied": false, "compression_reason": "" },
+    { "branch": "VIII", "name": "Space",       "raw_score": 1, "display_score": 1, "label": "Actif",    "justification": "Nord-Kivu est le contexte, pas le problème central. La distance avec le siège crée une marge de manœuvre favorable.", "is_primary": false, "compression_applied": false, "compression_reason": "" }
+  ],
+  "radar_scores": [
+    { "dimension": "Impact",        "score": 2, "note": "Impact significatif sur le projet et ses bénéficiaires si l'adjoint quitte, mais limité à ce projet." },
+    { "dimension": "Urgence",       "score": 1, "note": "Pas d'urgence externe. L'urgence réelle est interne à l'adjoint — à mesurer par conversation directe." },
+    { "dimension": "Incertitude",   "score": 2, "note": "Deux inconnues réductibles : comportement de l'adjoint, réaction du directeur siège." },
+    { "dimension": "Réversibilité", "score": 2, "note": "Situation partiellement réversible. Irréversible seulement quand l'adjoint a trouvé un autre poste." }
+  ],
+  "trajectories": [
+    { "type": "Stabilisation",  "title": "Binôme formalisé", "description": "Création officielle d'un poste 'Chef de projet adjoint opérationnel' avec délégation explicite. Chef repositionné sur représentation locale et mémoire institutionnelle.", "signal_precurseur": "L'adjoint exprime positivement sa motivation. Directeur siège réceptif à une formulation de 'professionnalisation'.", "probability": "Élevée si action engagée dans les 30 prochains jours" },
+    { "type": "Escalation",     "title": "Départ de l'adjoint", "description": "L'adjoint quitte. Le projet perd simultanément planification, budget, reporting et approvisionnements. Le chef de projet se retrouve seul avec ses lacunes exposées.", "signal_precurseur": "Démotivation visible. Moins d'initiative. Questions sur droits contractuels. Mention d'autres opportunités.", "probability": "Réaliste sans action dans les 60 prochains jours" },
+    { "type": "Solution tiers", "title": "Consultant technique interne + promotion adjoint", "description": "Chef repositionné comme consultant technique interne au même salaire. Adjoint officiellement promu chef de projet. Validé terrain par Maël, chef de base ONG Congo.", "signal_precurseur": "Directeur siège réceptif à une reformulation valorisante pour le chef. Adjoint confirme son intention de rester si son rôle évolue.", "probability": "Forte — solution validée terrain 18/03/2026" }
+  ],
+  "cap_summary": {
+    "hook": "Le projet ne tient pas grâce au chef de projet — il tient malgré lui.",
+    "insight": "La loyauté institutionnelle protège un rôle formel vide pendant que le rôle réel est porté silencieusement, sans reconnaissance.",
+    "vulnerability": "Adjoint non reconnu · son départ = effondrement opérationnel immédiat",
+    "asymmetry": "Tout le monde gère le problème visible. Personne ne protège la solution invisible.",
+    "watch": "Surveiller le moral de l'adjoint — pas les performances du chef de projet."
+  },
+  "actors": [
+    { "name": "Chef de projet", "role": "Responsable formel du projet Nord-Kivu", "stated_position": "Maintien du statut et de la rémunération", "revealed_behavior": "Délègue l'essentiel des opérations à l'adjoint. Présence terrain et réseau local forts. Lacunes en gestion documentée.", "watch_signal": "Sa réaction à une reformulation de son rôle. Résistance ou acceptation d'un repositionnement valorisant." },
+    { "name": "Adjoint opérationnel", "role": "Porteur réel des opérations — rôle informel", "stated_position": "Non exprimée publiquement", "revealed_behavior": "Compense les lacunes du chef sans en faire état. Frustration latente non exprimée. Acteur le plus stratégique.", "watch_signal": "Signaux de démotivation ou de recherche active d'autres opportunités." },
+    { "name": "Directeur siège", "role": "Décideur final — ami du chef de projet", "stated_position": "Loyauté envers le chef de projet", "revealed_behavior": "Protège le statu quo. Intérêts de loyauté personnelle en conflit avec intérêts de performance.", "watch_signal": "Réceptivité à une reformulation 'promotion de l'ami' versus 'rétrogradation'." },
+    { "name": "Manager intermédiaire", "role": "Responsable hiérarchique direct", "stated_position": "Performance du projet", "revealed_behavior": "Conscient du dysfonctionnement mais contraint par la relation siège-chef de projet.", "watch_signal": "Degré d'initiative pour proposer une restructuration sans déclencher la protection du directeur siège." }
+  ],
+  "news_items": [],
+  "causal_scenarios": [],
+  "verification_matrix": [],
+  "analysis": {
+    "lecture_systeme": "Le problème apparent est un chef de projet incompétent en gestion. Le problème réel est un système organisationnel informel qui fonctionne, mais dont la stabilité repose sur une personne non protégée. Toute intervention qui ne commence pas par sécuriser l'adjoint risque d'aggraver la situation. La contrainte structurelle dure (impossibilité de renvoyer le chef) n'est pas un obstacle — c'est le levier.",
+    "avertissement": "Ne pas confronter directement le chef de projet ni signaler ses lacunes au directeur siège. Toute approche frontale activera immédiatement la protection de la relation d'amitié et fermera toutes les portes.",
+    "mouvements_recommandes": [
+      "Engager une conversation privée avec l'adjoint dans les 7 jours : évaluer son niveau de frustration, ses intentions, et sa vision d'une évolution de rôle. Sans cette information, aucune décision n'est fiable.",
+      "Construire une proposition de restructuration qui valorise le chef — consultant technique interne expert terrain au même salaire — et qui présente la promotion de l'adjoint comme une récompense de compétence, pas une correction de dysfonctionnement.",
+      "Présenter la proposition au directeur siège comme une professionnalisation du projet et une mise en valeur de l'expertise de son ami, pas comme un changement de leadership.",
+      "Surveiller le moral de l'adjoint dans les 30 jours suivants comme seul indicateur de réussite : s'il reste engagé, le système tient. S'il donne des signaux de désengagement, accélérer la mise en place formelle de son nouveau rôle."
+    ],
+    "synthese": "La situation est contrôlable et réversible, mais la fenêtre se ferme si l'adjoint atteint son seuil de tolérance. La solution est disponible, validée terrain, et acceptable pour tous les acteurs si elle est formulée correctement. L'enjeu n'est pas technique — c'est la formulation et le séquençage."
+  }
+}

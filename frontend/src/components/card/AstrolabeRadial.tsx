@@ -1,286 +1,64 @@
 'use client'
 
-/**
- * IAAA · AstrolabeRadial — version finale validée
- *
- * 8 branches fixes : I Actors · II Interests · III Forces · IV Tensions
- *                    V Constraints · VI Uncertainty · VII Time · VIII Space
- *
- * Losanges centrés sur chaque anneau, proportionnels au rayon.
- * 3 niveaux de force :
- *   Niveau 1 (intérieur)  — Bleu    — Actif
- *   Niveau 2 (milieu)     — Jaune   — Modéré
- *   Niveau 3 (extérieur)  — Carmin  — Dominant
- *
- * Roue laiton statique au centre.
- * Chiffres romains cerclés sur l'anneau extérieur.
- * Fond parchemin, police Cinzel.
- *
- * Design gelé — ne pas modifier sans validation.
- */
-
-'use client'
-
-import React from 'react'
-
-import { useEffect, useRef } from 'react'
-
-export interface AstrolabeScores {
-  actors:      number  // 0–3
-  interests:   number
-  forces:      number
-  tensions:    number
-  constraints: number
-  uncertainty: number
-  time:        number
-  space:       number
-}
+import { AstrolabeScore } from '@/types/sis'
+import { COLORS, ROMAN } from '@/lib/tokens'
 
 interface Props {
-  scores:   AstrolabeScores
-  primary?: string   // e.g. "VI · Uncertainty"
-  size?:    number   // SVG size in px, default 360
+  scores: AstrolabeScore[]
+  size?: number
+  onBranchClick?: (s: AstrolabeScore) => void
 }
 
-const BRANCHES = [
-  'actors', 'interests', 'forces', 'tensions',
-  'constraints', 'uncertainty', 'time', 'space',
-] as const
+const SEGS: [number, number, number][] = [[9, 40, 7], [43, 76, 10], [79, 112, 13]]
 
-const ROMANS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
-const ANGLES = [-90, -45, 0, 45, 90, 135, 180, 225]
-const RINGS  = [40, 80, 120]
+function lozD(a: number, r1: number, r2: number, w: number, cx: number, cy: number) {
+  const co = Math.cos(a), si = Math.sin(a)
+  const pp = a + Math.PI / 2, pc = Math.cos(pp), ps = Math.sin(pp)
+  const rm = (r1 + r2) / 2, f = (n: number) => n.toFixed(2)
+  return `M${f(cx+r1*co)},${f(cy+r1*si)}L${f(cx+rm*co+w*pc)},${f(cy+rm*si+w*ps)}L${f(cx+r2*co)},${f(cy+r2*si)}L${f(cx+rm*co-w*pc)},${f(cy+rm*si-w*ps)}Z`
+}
 
-// Bleu=level1, Jaune=level2, Carmin=level3
-const FILL_COLORS   = ['#1848A0', '#D4B800', '#A01850']
-const STROKE_COLORS = ['#0A3080', '#A89000', '#801038']
-const LEGEND_LABELS = ['Actif', 'Modéré', 'Dominant']
-
-export default function AstrolabeRadial({ scores, primary, size = 360 }: Props) {
-  // Responsive: cap size at container width on mobile
-  const [responsiveSize, setResponsiveSize] = React.useState(size)
-  const containerRef = React.useRef<HTMLDivElement>(null)
-
-  React.useEffect(() => {
-    const update = () => {
-      if (containerRef.current) {
-        const w = containerRef.current.offsetWidth
-        setResponsiveSize(Math.min(size, Math.max(260, w - 32)))
-      }
-    }
-    update()
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
-  }, [size])
-
-  // Use responsiveSize for all calculations
-  const effectiveSize = responsiveSize
-  const svgRef = useRef<SVGSVGElement>(null)
-  const cx = effectiveSize / 2
-  const cy = effectiveSize / 2
-  const maxR = effectiveSize * 0.333  // outer measurement ring radius
-  const labelR = effectiveSize * 0.467 // roman circle radius
-  const tickR1 = effectiveSize * 0.447
-  const tickR2maj = effectiveSize * 0.430
-  const tickR2min = effectiveSize * 0.438
-
-  const scoreValues = BRANCHES.map(b => scores[b])
-
-  useEffect(() => {
-    const svg = svgRef.current
-    if (!svg) return
-
-    const g = svg.getElementById('dmds') as SVGGElement
-    const rc = svg.getElementById('rmc')  as SVGGElement
-    const tm = svg.getElementById('tks')  as SVGGElement
-    if (!g || !rc || !tm) return
-
-    g.innerHTML = ''
-    rc.innerHTML = ''
-    tm.innerHTML = ''
-
-    // Tick marks
-    for (let t = 0; t < 72; t++) {
-      const ta = (t * 5 - 90) * Math.PI / 180
-      const isMaj = t % 9 === 0
-      const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-      tick.setAttribute('x1', String(cx + tickR1 * Math.cos(ta)))
-      tick.setAttribute('y1', String(cy + tickR1 * Math.sin(ta)))
-      tick.setAttribute('x2', String(cx + (isMaj ? tickR2maj : tickR2min) * Math.cos(ta)))
-      tick.setAttribute('y2', String(cy + (isMaj ? tickR2maj : tickR2min) * Math.sin(ta)))
-      tick.setAttribute('stroke', '#C8B880')
-      tick.setAttribute('stroke-width', isMaj ? '1.2' : '0.5')
-      tm.appendChild(tick)
-    }
-
-    // Diamonds
-    scoreValues.forEach((score, i) => {
-      const a = ANGLES[i] * Math.PI / 180
-      const perpA = a + Math.PI / 2
-
-      RINGS.forEach((r, lvl) => {
-        const rScaled = r / 120 * maxR
-        const px = cx + rScaled * Math.cos(a)
-        const py = cy + rScaled * Math.sin(a)
-        const hl = rScaled * 0.30
-        const hw = rScaled * 0.13
-        const filled = score >= (lvl + 1)
-
-        const pts = [
-          `${px + hl * Math.cos(a)},${py + hl * Math.sin(a)}`,
-          `${px + hw * Math.cos(perpA)},${py + hw * Math.sin(perpA)}`,
-          `${px - hl * Math.cos(a)},${py - hl * Math.sin(a)}`,
-          `${px - hw * Math.cos(perpA)},${py - hw * Math.sin(perpA)}`,
-        ].join(' ')
-
-        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon')
-        poly.setAttribute('points', pts)
-        poly.setAttribute('fill', filled ? FILL_COLORS[lvl] : 'rgba(200,184,128,0.10)')
-        poly.setAttribute('stroke', filled ? STROKE_COLORS[lvl] : 'rgba(180,164,108,0.20)')
-        poly.setAttribute('stroke-width', filled ? '1.1' : '0.5')
-        poly.setAttribute('stroke-linejoin', 'miter')
-        if (filled) {
-          poly.style.animation = `unfold 0.35s ease-out ${i * 0.06 + lvl * 0.04}s both`
-        }
-        g.appendChild(poly)
-      })
-    })
-
-    // Roman circles
-    ROMANS.forEach((roman, i) => {
-      const a = ANGLES[i] * Math.PI / 180
-      const lx = cx + labelR * Math.cos(a)
-      const ly = cy + labelR * Math.sin(a)
-      const score = scoreValues[i]
-      const dotColor = score === 3 ? STROKE_COLORS[2] : score === 2 ? STROKE_COLORS[1] : STROKE_COLORS[0]
-      const circR = size * 0.036
-
-      const circ = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-      circ.setAttribute('cx', String(lx))
-      circ.setAttribute('cy', String(ly))
-      circ.setAttribute('r', String(circR))
-      circ.setAttribute('fill', '#F8F3E8')
-      circ.setAttribute('stroke', '#C8B880')
-      circ.setAttribute('stroke-width', '1')
-      rc.appendChild(circ)
-
-      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-      dot.setAttribute('cx', String(lx))
-      dot.setAttribute('cy', String(ly - circR * 0.5))
-      dot.setAttribute('r', String(effectiveSize * 0.006))
-      dot.setAttribute('fill', dotColor)
-      dot.setAttribute('opacity', '0.9')
-      rc.appendChild(dot)
-
-      const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-      txt.setAttribute('x', String(lx))
-      txt.setAttribute('y', String(ly + circR * 0.3))
-      txt.setAttribute('text-anchor', 'middle')
-      txt.setAttribute('font-size', String(effectiveSize * 0.025))
-      txt.setAttribute('font-family', 'Cinzel,Georgia,serif')
-      txt.setAttribute('fill', '#6A5A38')
-      txt.textContent = roman
-      rc.appendChild(txt)
-    })
-  }, [scores, effectiveSize])
-
-  const r1 = 40 / 120 * maxR
-  const r2 = 80 / 120 * maxR
-  const r3 = maxR
-  const rOuter1 = effectiveSize * 0.486
-  const rOuter2 = labelR
-  const rOuter3 = effectiveSize * 0.450
+export default function AstrolabeRadial({ scores, size = 268, onBranchClick }: Props) {
+  const cx = 140, cy = 140
 
   return (
-    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-
-      {/* Header */}
-      {primary && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-          <span style={{ fontFamily: 'Cinzel,Georgia,serif', fontSize: '13px', color: '#3A2E10', letterSpacing: '0.14em' }}>
-            ASTROLABE
-          </span>
-          <span style={{ fontFamily: 'Crimson Pro,Georgia,serif', fontSize: '11px', color: '#9A8860', fontStyle: 'italic' }}>
-            primaire : {primary}
-          </span>
-        </div>
-      )}
-
-      {/* SVG */}
-      <svg
-        ref={svgRef}
-        width={effectiveSize}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        style={{ overflow: 'visible' }}
-      >
-        <style>{`@keyframes unfold{from{opacity:0;transform:scale(0.2)}to{opacity:1;transform:scale(1)}}`}</style>
-        <defs>
-          <filter id="dsp">
-            <feDropShadow dx="0" dy="1" stdDeviation="1.2" floodColor="rgba(80,50,10,0.10)" />
-          </filter>
-        </defs>
-
-        {/* Outer rings */}
-        <circle cx={cx} cy={cy} r={rOuter1} fill="none" stroke="#C8B880" strokeWidth="0.5" opacity="0.3" />
-        <circle cx={cx} cy={cy} r={rOuter2} fill="none" stroke="#C8B880" strokeWidth="1" opacity="0.5" />
-        <circle cx={cx} cy={cy} r={rOuter3} fill="none" stroke="#C8B880" strokeWidth="0.3" strokeDasharray="2,5" opacity="0.2" />
-
-        {/* Ticks */}
-        <g id="tks" opacity="0.3" />
-
-        {/* Measurement rings */}
-        <circle cx={cx} cy={cy} r={r1} fill="none" stroke="#C8B880" strokeWidth="0.9" opacity="0.5" />
-        <circle cx={cx} cy={cy} r={r2} fill="none" stroke="#C8B880" strokeWidth="0.9" opacity="0.5" />
-        <circle cx={cx} cy={cy} r={r3} fill="none" stroke="#C8B880" strokeWidth="0.9" opacity="0.5" />
-
-        {/* Axis lines */}
-        <g stroke="#C8B880" strokeWidth="0.7" opacity="0.35">
-          <line x1={cx} y1={cy - maxR * 1.35} x2={cx} y2={cy + maxR * 1.35} />
-          <line x1={cx - maxR * 1.35} y1={cy} x2={cx + maxR * 1.35} y2={cy} />
-          <line x1={cx - maxR * 0.955} y1={cy - maxR * 0.955} x2={cx + maxR * 0.955} y2={cy + maxR * 0.955} />
-          <line x1={cx + maxR * 0.955} y1={cy - maxR * 0.955} x2={cx - maxR * 0.955} y2={cy + maxR * 0.955} />
-        </g>
-
-        {/* Diamonds */}
-        <g id="dmds" filter="url(#dsp)" />
-
-        {/* Roman circles */}
-        <g id="rmc" />
-
-        {/* Wheel static */}
-        <circle cx={cx} cy={cy} r={size * 0.061} fill="none" stroke="#C8A840" strokeWidth="2" />
-        <circle cx={cx} cy={cy} r={size * 0.044} fill="none" stroke="#C8A840" strokeWidth="0.5" opacity="0.4" />
-        {[[-90, 2.4], [-45, 1.8], [0, 2.4], [45, 1.8], [90, 2.4], [135, 1.8], [180, 2.4], [225, 1.8]].map(([deg, sw], k) => {
-          const a = (deg - 90) * Math.PI / 180
-          const spokeR = size * 0.061
-          return (
-            <line
-              key={k}
-              x1={cx + spokeR * Math.cos(a)} y1={cy + spokeR * Math.sin(a)}
-              x2={cx} y2={cy}
-              stroke="#C8A840" strokeWidth={sw} strokeLinecap="round"
-            />
-          )
-        })}
-        <circle cx={cx} cy={cy} r={size * 0.017} fill="#D4BC78" stroke="#A89050" strokeWidth="1.2" />
-        <circle cx={cx} cy={cy} r={size * 0.008} fill="#8A6830" />
-      </svg>
-
-      {/* Legend */}
-      <div style={{ display: 'flex', gap: '14px', justifyContent: 'center' }}>
-        {LEGEND_LABELS.map((label, lvl) => (
-          <div key={lvl} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontFamily: 'Crimson Pro,Georgia,serif', fontSize: '12px', color: '#6A5A38', fontStyle: 'italic' }}>
-            <div style={{
-              width: '10px', height: '10px',
-              transform: 'rotate(45deg)',
-              background: FILL_COLORS[lvl],
-              border: `1px solid ${STROKE_COLORS[lvl]}`,
-            }} />
-            {label}
-          </div>
-        ))}
-      </div>
-    </div>
+    <svg viewBox="0 0 280 280" width={size} height={size} style={{ display: 'block' }}>
+      {/* Anneaux laiton */}
+      <circle cx={cx} cy={cy} r={133} fill="none" stroke="#C8B890" strokeWidth={0.6} opacity={0.45} />
+      <circle cx={cx} cy={cy} r={128} fill="none" stroke="#C8B890" strokeWidth={1} opacity={0.3} />
+      {/* Guides */}
+      {[40, 76, 112].map(r => (
+        <circle key={r} cx={cx} cy={cy} r={r} fill="none" stroke="#C8C0B0" strokeWidth={0.4} strokeDasharray="1.5 3" opacity={r===40?0.55:r===76?0.5:0.4} />
+      ))}
+      {/* Graduations */}
+      {Array.from({ length: 32 }, (_, i) => {
+        const a = (i / 32) * 2 * Math.PI - Math.PI / 2
+        const major = i % 4 === 0
+        const r1 = major ? 117 : 121, r2 = major ? 126 : 124
+        return <line key={i} x1={(cx+r1*Math.cos(a)).toFixed(1)} y1={(cy+r1*Math.sin(a)).toFixed(1)} x2={(cx+r2*Math.cos(a)).toFixed(1)} y2={(cy+r2*Math.sin(a)).toFixed(1)} stroke="#C0B090" strokeWidth={major?0.8:0.4} opacity={major?0.65:0.38} />
+      })}
+      {/* 8 branches */}
+      {scores.map((sc, i) => {
+        const a = (i * 45 - 90) * Math.PI / 180
+        const ds = sc.display_score
+        return (
+          <g key={sc.branch} onClick={() => onBranchClick?.(sc)} style={{ cursor: onBranchClick ? 'pointer' : 'default' }}>
+            {SEGS.map(([r1, r2, w], si) => {
+              const minScore = si + 1
+              const active = ds >= minScore
+              const c = active ? COLORS.score[minScore] : COLORS.score[0]
+              return <path key={si} d={lozD(a, r1, r2, w, cx, cy)} fill={c.solid} stroke={c.stroke} strokeWidth={si===2&&ds===3?0.7:0.5} opacity={active?1:0.6} style={{ transition: 'fill .4s ease' }} />
+            })}
+            <text x={(cx+150*Math.cos(a)).toFixed(1)} y={(cy+150*Math.sin(a)).toFixed(1)} textAnchor="middle" dominantBaseline="central" fontFamily="Georgia,serif" fontSize={10.5} fontWeight={900} fontStyle="italic" fill={ds>0?COLORS.score[ds].stroke:'#AAAAAA'} opacity={ds>0?1:0.5}>
+              {ROMAN[i]}
+            </text>
+          </g>
+        )
+      })}
+      {/* Centre laiton */}
+      <circle cx={cx} cy={cy} r={9} fill={COLORS.brass.light} stroke={COLORS.brass.ring} strokeWidth={0.8} />
+      <circle cx={cx} cy={cy} r={5.5} fill={COLORS.brass.mid} opacity={0.9} />
+      <circle cx={cx} cy={cy} r={2.5} fill={COLORS.brass.dark} />
+    </svg>
   )
 }

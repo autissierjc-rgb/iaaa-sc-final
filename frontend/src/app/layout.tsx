@@ -37,7 +37,7 @@ export const viewport: Viewport = {
   initialScale:       1,
   maximumScale:       5,
   viewportFit:        'cover',  // safe area for notched phones
-  themeColor:         '#07070A',
+  themeColor: '#F5F3EE',
 }
 
 export const metadata: Metadata = {
@@ -77,7 +77,7 @@ export default function RootLayout({
       lang="en"
       className={`${cormorant.variable} ${dmSans.variable} ${dmMono.variable} ${cinzel.variable}`}
     >
-      <body className="bg-ink-base text-parchment antialiased">
+      <body className="antialiased" style={{ background: '#F5F3EE', color: '#1a2a3a' }}>
         {children}
       </body>
     </html>

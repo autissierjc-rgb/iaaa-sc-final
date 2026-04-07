@@ -5,15 +5,15 @@
 /* ── CSS Variables ────────────────────────────────────────────────────────── */
 :root {
   /* Surfaces */
-  --bg-base:     #07070A;
-  --bg-surface:  #0D0D12;
-  --bg-elevated: #131318;
-  --bg-border:   #1E1E26;
+ --bg-base:     #F5F3EE;
+--bg-surface:  #FAFAF7;
+--bg-elevated: #F7F5F0;
+--bg-border:   #E8E4DA;
 
   /* Text */
-  --text-primary:   #EAE6DE;
-  --text-secondary: #A09B93;
-  --text-muted:     #555250;
+  --text-primary:   #1a2a3a;
+--text-secondary: #5a6a7a;
+--text-muted:     #9aabb8;
 
   /* Accents */
   --gold:       #C4A882;
