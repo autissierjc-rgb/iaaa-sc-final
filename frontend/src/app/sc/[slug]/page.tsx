@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-// ── Couleurs système sc_v1 ────────────────────────────────────────────────────
 const COLORS = {
   score: {
     0: { solid: '#E0DCD4', stroke: '#C8C4BC' },
@@ -26,6 +25,12 @@ const COLORS = {
   } as Record<string, { border: string; text: string; solid: string }>,
 }
 
+const META: Record<string, { certified_by: string; date: string }> = {
+  'ong-rdc':          { certified_by: 'Maël · Chef de base ONG Congo', date: '18 mars 2026' },
+  'sequestration-v2': { certified_by: 'Maël · Chef de base ONG Congo', date: '19 mars 2026' },
+  'iran-j19':         { certified_by: 'JCA · IAAA+',                   date: '22 mars 2026' },
+}
+
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
 const NAVY = '#1B3A6B'
 const GOLD = '#B89A6A'
@@ -38,7 +43,6 @@ const TXT3 = '#9aabb8'
 const BDR = 'rgba(26,42,58,0.1)'
 const BDR_G = 'rgba(184,154,106,0.25)'
 
-// ── Astrolabe SVG ─────────────────────────────────────────────────────────────
 const SEGS: [number, number, number][] = [[9, 40, 7], [43, 76, 10], [79, 112, 13]]
 
 function lozD(a: number, r1: number, r2: number, w: number, cx: number, cy: number) {
@@ -88,7 +92,6 @@ function AstrolabeRadial({ scores, size = 280 }: { scores: any[]; size?: number 
   )
 }
 
-// ── Barre score ───────────────────────────────────────────────────────────────
 function ScoreBar({ score }: { score: number }) {
   return (
     <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
@@ -99,16 +102,18 @@ function ScoreBar({ score }: { score: number }) {
   )
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
 export default function SituationCardPage({ params }: { params: { slug: string } }) {
   const [card, setCard] = useState<any>(null)
   const [tab, setTab] = useState<'sc' | 'cap' | 'analyse'>('sc')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`/api/sc-data/${params.slug}`)
+    fetch(`/data/${params.slug}.json`)
       .then(r => r.ok ? r.json() : null)
-      .then(d => { setCard(d); setLoading(false) })
+      .then(d => {
+        if (d) setCard({ ...d, certified: true, ...META[params.slug] })
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [params.slug])
 
@@ -135,40 +140,29 @@ export default function SituationCardPage({ params }: { params: { slug: string }
         ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:${BDR_G};border-radius:2px}
       `}</style>
 
-      {/* NAV */}
       <nav style={{ background: BG, borderBottom: `1px solid ${BDR}`, padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          <div style={{ fontFamily: "'Cinzel', serif", fontSize: 13, fontWeight: 500, color: NAVY, letterSpacing: '0.04em' }}>Situation Card</div>
+          <div style={{ fontFamily: "'Cinzel', serif", fontSize: 13, fontWeight: 500, color: NAVY }}>Situation Card</div>
           <div style={{ fontSize: 9, color: TXT3 }}>powered by IAAA+</div>
         </Link>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 16 }}>
           <Link href="/library" style={{ fontSize: 12, color: TXT2, textDecoration: 'none' }}>← ATLAS</Link>
           <Link href="/" style={{ fontSize: 12, color: NAVY, textDecoration: 'none', padding: '5px 12px', border: `1px solid ${BDR_G}`, borderRadius: 6 }}>Analyser →</Link>
         </div>
       </nav>
 
-      {/* HEADER SC */}
       <div style={{ background: `linear-gradient(135deg, #1B3A6B 0%, #2A4F8A 60%, #1E3560 100%)`, padding: '20px 28px 0' }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          {/* Badge + catégorie */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(184,154,106,0.15)', border: `1px solid rgba(184,154,106,0.35)`, borderRadius: 20, padding: '2px 10px' }}>
               <span style={{ fontSize: 9, color: GOLD_L, fontFamily: "'Cinzel', serif", letterSpacing: '0.08em' }}>★ SC CERTIFIED</span>
             </div>
-            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.14em', fontFamily: "'Cinzel', serif" }}>
-              {card.category?.toUpperCase()}
-            </span>
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.14em', fontFamily: "'Cinzel', serif" }}>{card.category?.toUpperCase()}</span>
           </div>
-
-          {/* Titre + Index */}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
             <div style={{ flex: 1 }}>
-              <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 22, color: '#fff', lineHeight: 1.3, marginBottom: 6 }}>
-                {card.title}
-              </h1>
-              <div style={{ fontSize: 10, color: 'rgba(184,154,106,0.65)' }}>
-                {card.certified_by} · {card.date}
-              </div>
+              <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 22, color: '#fff', lineHeight: 1.3, marginBottom: 6 }}>{card.title}</h1>
+              <div style={{ fontSize: 10, color: 'rgba(184,154,106,0.65)' }}>{card.certified_by} · {card.date}</div>
             </div>
             <div style={{ flexShrink: 0, background: 'rgba(255,255,255,0.07)', border: `1px solid rgba(184,154,106,0.3)`, borderRadius: 10, padding: '10px 18px', textAlign: 'center' }}>
               <div style={{ fontSize: 34, fontWeight: 700, color: '#E8D080', fontFamily: "'Cinzel', serif", lineHeight: 1 }}>{card.state_index_final}</div>
@@ -176,51 +170,29 @@ export default function SituationCardPage({ params }: { params: { slug: string }
               <div style={{ fontSize: 11, color: stateC.border, fontWeight: 600, marginTop: 4, fontFamily: "'Cinzel', serif" }}>{card.state_label}</div>
             </div>
           </div>
-
-          {/* Onglets */}
           <div style={{ display: 'flex', gap: 2 }}>
-            {([
-              { key: 'sc', label: 'Situation' },
-              { key: 'cap', label: 'Cap' },
-              { key: 'analyse', label: 'Analyse' },
-            ] as const).map(t => (
-              <button key={t.key} onClick={() => setTab(t.key)} style={{
-                padding: '8px 18px', border: 'none', cursor: 'pointer',
-                fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.08em',
-                background: tab === t.key ? BG : 'transparent',
-                color: tab === t.key ? NAVY : 'rgba(255,255,255,0.5)',
-                borderRadius: '6px 6px 0 0',
-                transition: 'all .2s',
-              }}>{t.label}</button>
+            {([{ key: 'sc', label: 'Situation' }, { key: 'cap', label: 'Cap' }, { key: 'analyse', label: 'Analyse' }] as const).map(t => (
+              <button key={t.key} onClick={() => setTab(t.key)} style={{ padding: '8px 18px', border: 'none', cursor: 'pointer', fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: '0.08em', background: tab === t.key ? BG : 'transparent', color: tab === t.key ? NAVY : 'rgba(255,255,255,0.5)', borderRadius: '6px 6px 0 0', transition: 'all .2s' }}>{t.label}</button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* CONTENU ONGLETS */}
       <main style={{ maxWidth: 900, margin: '0 auto', padding: '24px 28px 60px' }}>
 
-        {/* ── ONGLET SC ── */}
         {tab === 'sc' && (
           <div>
-            {/* Lecture */}
             {card.insight && (
               <div style={{ background: 'rgba(184,154,106,0.07)', border: `1px solid ${BDR_G}`, borderRadius: 8, padding: '16px 18px', marginBottom: 24 }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 8 }}>LECTURE</div>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 17, color: TXT, lineHeight: 1.75 }}>{card.insight}</div>
               </div>
             )}
-
-            {/* Astrolabe + scores */}
             {card.astrolabe_scores && (
               <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 10, padding: '20px', marginBottom: 20 }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 16 }}>ASTROLABE</div>
                 <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  {/* SVG */}
-                  <div style={{ flexShrink: 0 }}>
-                    <AstrolabeRadial scores={card.astrolabe_scores} size={260}/>
-                  </div>
-                  {/* Légende */}
+                  <div style={{ flexShrink: 0 }}><AstrolabeRadial scores={card.astrolabe_scores} size={260}/></div>
                   <div style={{ flex: 1, minWidth: 200 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {card.astrolabe_scores.map((a: any, i: number) => (
@@ -232,13 +204,8 @@ export default function SituationCardPage({ params }: { params: { slug: string }
                         </div>
                       ))}
                     </div>
-                    {/* Légende couleurs */}
-                    <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      {[
-                        { score: 1, label: 'Actif' },
-                        { score: 2, label: 'Modéré' },
-                        { score: 3, label: 'Dominant' },
-                      ].map(({ score, label }) => (
+                    <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
+                      {[{score:1,label:'Actif'},{score:2,label:'Modéré'},{score:3,label:'Dominant'}].map(({score,label}) => (
                         <div key={score} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                           <div style={{ width: 12, height: 12, borderRadius: 2, background: COLORS.score[score].solid, border: `1px solid ${COLORS.score[score].stroke}` }}/>
                           <span style={{ fontSize: 10, color: TXT3 }}>{label}</span>
@@ -249,8 +216,6 @@ export default function SituationCardPage({ params }: { params: { slug: string }
                 </div>
               </div>
             )}
-
-            {/* Radar de pression */}
             {card.radar_scores && (
               <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 10, padding: '16px 18px', marginBottom: 20 }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 14 }}>RADAR DE PRESSION</div>
@@ -270,8 +235,6 @@ export default function SituationCardPage({ params }: { params: { slug: string }
                 </div>
               </div>
             )}
-
-            {/* Vulnérabilité */}
             {card.vulnerability && (
               <div style={{ background: 'rgba(226,75,74,0.05)', border: '1px solid rgba(226,75,74,0.2)', borderRadius: 8, padding: '14px 16px', marginBottom: 16 }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: '#E24B4A', letterSpacing: '0.12em', marginBottom: 6 }}>VULNÉRABILITÉ</div>
@@ -281,27 +244,21 @@ export default function SituationCardPage({ params }: { params: { slug: string }
           </div>
         )}
 
-        {/* ── ONGLET CAP ── */}
         {tab === 'cap' && (
           <div>
             {card.cap_summary && (
               <>
-                {/* Hook */}
                 <div style={{ background: `linear-gradient(to right, rgba(27,58,107,0.06), rgba(184,154,106,0.08))`, border: `1px solid ${BDR_G}`, borderRadius: 10, padding: '20px 22px', marginBottom: 20 }}>
                   <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.14em', marginBottom: 10 }}>CAP</div>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 20, color: NAVY, lineHeight: 1.45, marginBottom: 12 }}>{card.cap_summary.hook}</div>
                   {card.cap_summary.insight && <div style={{ fontSize: 13, color: TXT2, lineHeight: 1.7 }}>{card.cap_summary.insight}</div>}
                 </div>
-
-                {/* Asymétrie */}
                 {card.asymmetry && (
                   <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 8, padding: '14px 16px', marginBottom: 16 }}>
                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 6 }}>ASYMÉTRIE</div>
                     <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14, color: TXT, lineHeight: 1.65 }}>{card.asymmetry}</div>
                   </div>
                 )}
-
-                {/* Watch */}
                 {card.cap_summary.watch && (
                   <div style={{ background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.25)', borderRadius: 8, padding: '12px 16px', marginBottom: 20 }}>
                     <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: '#A16207', letterSpacing: '0.12em', marginBottom: 6 }}>WATCH</div>
@@ -310,29 +267,21 @@ export default function SituationCardPage({ params }: { params: { slug: string }
                 )}
               </>
             )}
-
-            {/* Trajectoires */}
             {card.trajectories && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 14 }}>TRAJECTOIRES</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {card.trajectories.map((t: any, i: number) => {
-                    const tc = COLORS.trajectory[t.type] ?? { border: '#9aabb8', bg: '#F5F3EE', text: '#5a6a7a' }
-                    return (
-                      <div key={i} style={{ display: 'flex', gap: 12, padding: '14px 16px', background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: 8, borderLeft: `4px solid ${tc.border}` }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: tc.text, fontFamily: "'Cinzel', serif", letterSpacing: '0.04em', marginBottom: 5 }}>{t.type} — {t.title}</div>
-                          <div style={{ fontSize: 12, color: TXT2, lineHeight: 1.65, marginBottom: t.probability ? 6 : 0 }}>{t.description}</div>
-                          {t.probability && <div style={{ fontSize: 10, color: tc.text, fontStyle: 'italic', fontWeight: 500 }}>{t.probability}</div>}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                {card.trajectories.map((t: any, i: number) => {
+                  const tc = COLORS.trajectory[t.type] ?? { border: '#9aabb8', bg: '#F5F3EE', text: '#5a6a7a' }
+                  return (
+                    <div key={i} style={{ padding: '14px 16px', background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: 8, borderLeft: `4px solid ${tc.border}`, marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: tc.text, fontFamily: "'Cinzel', serif", letterSpacing: '0.04em', marginBottom: 5 }}>{t.type} — {t.title}</div>
+                      <div style={{ fontSize: 12, color: TXT2, lineHeight: 1.65, marginBottom: t.probability ? 6 : 0 }}>{t.description}</div>
+                      {t.probability && <div style={{ fontSize: 10, color: tc.text, fontStyle: 'italic' }}>{t.probability}</div>}
+                    </div>
+                  )
+                })}
               </div>
             )}
-
-            {/* Signal */}
             {card.signal && (
               <div style={{ background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.3)', borderRadius: 8, padding: '14px 16px' }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: '#A16207', letterSpacing: '0.12em', marginBottom: 6 }}>SIGNAL CLÉ</div>
@@ -342,48 +291,40 @@ export default function SituationCardPage({ params }: { params: { slug: string }
           </div>
         )}
 
-        {/* ── ONGLET ANALYSE ── */}
-        {tab === 'analyse' && (
+        {tab === 'analyse' && card.analysis && (
           <div>
-            {card.analysis && (
-              <>
-                {card.analysis.lecture_systeme && (
-                  <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 8, padding: '16px 18px', marginBottom: 16 }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 8 }}>LECTURE SYSTÈME</div>
-                    <div style={{ fontSize: 13, color: TXT, lineHeight: 1.75 }}>{card.analysis.lecture_systeme}</div>
+            {card.analysis.lecture_systeme && (
+              <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 8, padding: '16px 18px', marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 8 }}>LECTURE SYSTÈME</div>
+                <div style={{ fontSize: 13, color: TXT, lineHeight: 1.75 }}>{card.analysis.lecture_systeme}</div>
+              </div>
+            )}
+            {card.analysis.avertissement && (
+              <div style={{ background: 'rgba(226,75,74,0.05)', border: '1px solid rgba(226,75,74,0.2)', borderRadius: 8, padding: '14px 16px', marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: '#E24B4A', letterSpacing: '0.12em', marginBottom: 6 }}>AVERTISSEMENT</div>
+                <div style={{ fontSize: 13, color: TXT, lineHeight: 1.65 }}>{card.analysis.avertissement}</div>
+              </div>
+            )}
+            {card.analysis.mouvements_recommandes && (
+              <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 8, padding: '16px 18px', marginBottom: 16 }}>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 12 }}>MOUVEMENTS RECOMMANDÉS</div>
+                {card.analysis.mouvements_recommandes.map((m: string, i: number) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: BDR_G, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 10, color: GOLD, fontWeight: 600 }}>{i+1}</div>
+                    <div style={{ fontSize: 13, color: TXT, lineHeight: 1.65, paddingTop: 1 }}>{m}</div>
                   </div>
-                )}
-                {card.analysis.avertissement && (
-                  <div style={{ background: 'rgba(226,75,74,0.05)', border: '1px solid rgba(226,75,74,0.2)', borderRadius: 8, padding: '14px 16px', marginBottom: 16 }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: '#E24B4A', letterSpacing: '0.12em', marginBottom: 6 }}>AVERTISSEMENT</div>
-                    <div style={{ fontSize: 13, color: TXT, lineHeight: 1.65 }}>{card.analysis.avertissement}</div>
-                  </div>
-                )}
-                {card.analysis.mouvements_recommandes && (
-                  <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 8, padding: '16px 18px', marginBottom: 16 }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 12 }}>MOUVEMENTS RECOMMANDÉS</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {card.analysis.mouvements_recommandes.map((m: string, i: number) => (
-                        <div key={i} style={{ display: 'flex', gap: 10 }}>
-                          <div style={{ width: 20, height: 20, borderRadius: '50%', background: BDR_G, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 10, color: GOLD, fontWeight: 600 }}>{i+1}</div>
-                          <div style={{ fontSize: 13, color: TXT, lineHeight: 1.65, paddingTop: 1 }}>{m}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {card.analysis.synthese && (
-                  <div style={{ background: `rgba(27,58,107,0.04)`, border: `1px solid ${BDR_G}`, borderRadius: 8, padding: '16px 18px' }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 8 }}>SYNTHÈSE</div>
-                    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 15, color: TXT, lineHeight: 1.75 }}>{card.analysis.synthese}</div>
-                  </div>
-                )}
-              </>
+                ))}
+              </div>
+            )}
+            {card.analysis.synthese && (
+              <div style={{ background: `rgba(27,58,107,0.04)`, border: `1px solid ${BDR_G}`, borderRadius: 8, padding: '16px 18px' }}>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: 9, color: GOLD, letterSpacing: '0.12em', marginBottom: 8 }}>SYNTHÈSE</div>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 15, color: TXT, lineHeight: 1.75 }}>{card.analysis.synthese}</div>
+              </div>
             )}
           </div>
         )}
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 32 }}>
           <Link href="/library" style={{ padding: '8px 20px', border: `1px solid ${BDR}`, borderRadius: 8, fontSize: 12, color: TXT2, textDecoration: 'none' }}>← ATLAS</Link>
           <button style={{ padding: '8px 20px', background: 'rgba(27,58,107,0.08)', border: `1px solid ${BDR}`, borderRadius: 8, fontSize: 12, color: NAVY, cursor: 'pointer' }}>Partager</button>
