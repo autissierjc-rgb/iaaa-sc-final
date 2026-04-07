@@ -1,49 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server'
-import fs from 'fs'
-import path from 'path'
+import { NextResponse } from 'next/server'
+import ongRdc from '@/data/ong-rdc.json'
+import sequestration from '@/data/sequestration-v2.json'
+import iranJ19 from '@/data/iran-j19.json'
 
-const DEMO_SLUGS = ['ong-rdc', 'sequestration-v2', 'iran-j19']
-
-const CERTIFIED_BY: Record<string, string> = {
-  'iran-j19': 'JCA · IAAA+',
-  'sequestration-v2': 'Maël · Chef de base ONG Congo',
-  'ong-rdc': 'Maël · Chef de base ONG Congo',
+const DATA: Record<string, any> = {
+  'ong-rdc': { ...ongRdc, certified: true, certified_by: 'Maël · Chef de base ONG Congo', date: '18 mars 2026' },
+  'sequestration-v2': { ...sequestration, certified: true, certified_by: 'Maël · Chef de base ONG Congo', date: '19 mars 2026' },
+  'iran-j19': { ...iranJ19, certified: true, certified_by: 'JCA · IAAA+', date: '22 mars 2026' },
 }
 
-const DATES: Record<string, string> = {
-  'iran-j19': '22 mars 2026',
-  'sequestration-v2': '19 mars 2026',
-  'ong-rdc': '18 mars 2026',
-}
-
-export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
-  const { slug } = params
-
-  if (DEMO_SLUGS.includes(slug)) {
-    try {
-      const filePath = path.join(process.cwd(), 'src', 'data', `${slug}.json`)
-      const raw = fs.readFileSync(filePath, 'utf-8')
-      const data = JSON.parse(raw)
-      return NextResponse.json({
-        ...data,
-        slug,
-        certified: true,
-        certified_by: CERTIFIED_BY[slug] ?? 'IAAA+',
-        date: DATES[slug] ?? '',
-      })
-    } catch {
-      return NextResponse.json({ error: 'not found' }, { status: 404 })
-    }
-  }
-
-  // Backend FastAPI fallback
-  try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-    const res = await fetch(`${apiUrl}/api/cards/${slug}`)
-    if (!res.ok) return NextResponse.json({ error: 'not found' }, { status: 404 })
-    const data = await res.json()
-    return NextResponse.json(data)
-  } catch {
-    return NextResponse.json({ error: 'not found' }, { status: 404 })
-  }
+export async function GET(_req: Request, { params }: { params: { slug: string } }) {
+  const card = DATA[params.slug]
+  if (card) return NextResponse.json(card)
+  return NextResponse.json({ error: 'not found' }, { status: 404 })
 }
