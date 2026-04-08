@@ -1,6 +1,9 @@
 ﻿'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -239,6 +242,8 @@ function SidePanel({ open, title, onClose, children }: { open: boolean; title: s
 }
 
 export default function HomeClient() {
+    const router = useRouter()
+    
   const [lang, setLang] = useState<'FR' | 'EN'>('FR')
   const [activeTab, setActiveTab] = useState(0)
   const [situation, setSituation] = useState('')
@@ -377,7 +382,11 @@ export default function HomeClient() {
                 </div>
                 {/* Boussole = déclencheur SC */}
                 <button
-                  onClick={() => { setScVisible(true) }}
+                  onClick={() => {
+  const trimmed = situation.trim()
+  if (!trimmed) return
+  router.push(`/generate?q=${encodeURIComponent(trimmed)}`)
+}}
                   style={{
                     width: 44, height: 44, borderRadius: '50%', border: 'none', cursor: 'pointer',
                     padding: 0, overflow: 'hidden', background: 'none',
@@ -510,3 +519,4 @@ export default function HomeClient() {
     </>
   )
 }
+
