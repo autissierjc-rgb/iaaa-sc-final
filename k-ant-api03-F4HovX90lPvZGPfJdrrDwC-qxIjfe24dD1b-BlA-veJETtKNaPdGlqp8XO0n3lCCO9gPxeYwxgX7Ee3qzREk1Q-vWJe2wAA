@@ -1,0 +1,7 @@
+[33mcommit cf41850a97e77ae678ea9e8662f8340cb90c2563[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Jean-Christophe Autissier <autissierjc@gmauil.com>
+Date:   Wed Apr 8 13:49:58 2026 +0200
+
+    feat: api route generate
+
+frontend/src/app/api/generate/route.ts
