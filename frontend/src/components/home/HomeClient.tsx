@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import Image from 'next/image'
@@ -261,24 +261,7 @@ export default function HomeClient() {
 
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=Cinzel:wght@400;500&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'DM Sans',sans-serif;background:${BG};color:${TXT}}
-        .tab-btn{border-bottom:2px solid transparent;transition:color .2s,border-color .2s}
-        .tab-btn.active{color:${TXT2};border-bottom-color:rgba(184,154,106,.5)}
-        .tab-btn:not(.active):hover{color:${NAVY}}
-        .hint-item:hover{color:${NAVY}!important;opacity:1!important}
-        .mod-card{transition:border-color .2s,transform .2s}
-        .mod-card:hover{border-color:${GOLD}!important;transform:translateY(-1px)}
-        .ic-btn{transition:background .2s,color .2s}
-        .ic-btn:hover{background:rgba(26,58,107,.07)!important}
-        @keyframes rot1{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        @keyframes rot2{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        @keyframes rot3{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        @keyframes compassPulse{0%,100%{filter:drop-shadow(0 0 0px rgba(184,154,106,0))}50%{filter:drop-shadow(0 0 6px rgba(184,154,106,.6))}}
-        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:${BDR_G};border-radius:2px}
-      `}</style>
+     
 
       <SidePanel open={panelHistory} title={lang === 'FR' ? 'Historique' : 'History'} onClose={() => setPanelHistory(false)}>
         {HISTORY_ITEMS.map((item, i) => (

@@ -233,4 +233,16 @@
   50%  { transform: translateY(0)    rotate(0deg)    scale(1);     }
   75%  { transform: translateY(3px)  rotate(-1.2deg) scale(0.997); }
   100% { transform: translateY(0)    rotate(0deg)    scale(1);     }
-}
+}@keyframes rot1{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes rot2{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes rot3{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes compassOsc{0%,100%{transform:rotate(0deg)}25%{transform:rotate(3deg)}75%{transform:rotate(-3deg)}}
+@keyframes compassPulse{0%,100%{filter:drop-shadow(0 0 0px rgba(184,154,106,0))}50%{filter:drop-shadow(0 0 6px rgba(184,154,106,.6))}}
+.tab-btn{border-bottom:2px solid transparent;transition:color .2s,border-color .2s}
+.tab-btn.active{color:#5a6a7a;border-bottom-color:rgba(184,154,106,.5)}
+.tab-btn:not(.active):hover{color:#1B3A6B}
+.hint-item:hover{color:#1B3A6B!important;opacity:1!important}
+.mod-card{transition:border-color .2s,transform .2s}
+.mod-card:hover{border-color:#B89A6A!important;transform:translateY(-1px)}
+.ic-btn{transition:background .2s,color .2s}
+.ic-btn:hover{background:rgba(26,58,107,.07)!important}
