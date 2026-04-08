@@ -884,7 +884,7 @@ export default function HomeClient() {
                     <span style={{ color: TXT2, fontStyle: 'italic' }}>{t.waiting}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: TXT2, marginBottom: 6 }}>
-                    <Image src="/pictos/LighthouseSweepAmbient.tsx" alt="cap" width={16} height={16} style={{ objectFit: 'contain' }} unoptimized onError={() => {}} />
+                    <Image src="/pictos/cap.png" alt="cap" width={16} height={16} style={{ objectFit: 'contain' }} unoptimized onError={() => {}} />
                     <span>Cap</span>
                     <span style={{ color: TXT3 }}>· 3 {lang === 'FR' ? 'trajectoires possibles' : 'possible trajectories'}</span>
                   </div>

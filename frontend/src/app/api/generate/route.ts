@@ -324,7 +324,7 @@ export async function POST(req: NextRequest) {
     // ── APPEL 2 : Moteur SC complet ──────────────────────────────────────────
     const scMsg = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
+      max_tokens: 6000,
       messages: [{
         role: 'user',
         content: `${SC_PROMPT}\n\nSituation :\n${situation.trim()}`,
