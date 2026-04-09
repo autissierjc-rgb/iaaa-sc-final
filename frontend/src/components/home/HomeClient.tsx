@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
@@ -277,9 +277,9 @@ function AstrolabeRadial({ scores }: {
       <circle cx={cx} cy={cy} r="3" fill="#8A6830" />
       {/* Légende */}
       {[
-        { c: '#B8D4F0', l: 'Calme' },
+        { c: '#B8D4F0', l: 'Faible' },
         { c: '#F0CA70', l: 'Modéré' },
-        { c: '#E87C7C', l: 'Agité' },
+        { c: '#E87C7C', l: 'Dominant' },
       ].map((item, i) => (
         <g key={i} transform={`translate(${28 + i * 64}, 228)`}>
           <polygon points="8,0 4,8 8,16 12,8"
@@ -307,7 +307,7 @@ function ForceLines({ scores, lang }: {
             {s.branch}
           </span>
           <span style={{ fontSize: 10, color: TXT2, width: 72, flexShrink: 0 }}>
-            {lang === 'FR' "t.partager\|NAVY\|Partag" s.name : s.name_en}
+            {lang === 'FR' ? s.name : s.name_en}
           </span>
           <div style={{ flex: 1, height: 5, background: '#EDEAE4', borderRadius: 3, overflow: 'hidden' }}>
             <div style={{
@@ -1133,6 +1133,5 @@ export default function HomeClient() {
     </>
   )
 }
-
 
 
