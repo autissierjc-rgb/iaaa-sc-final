@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic()
 
-// ── GATE DÉTERMINISTE ─────────────────────────────────────────────────────────
+// ── GATE DÉTERMINISTE (TypeScript pur, zéro LLM) ─────────────────────────────
 
 const BLOCK_MARKERS = [
   "confirme que j'ai raison", "prouve que j'ai raison", "dis-moi que j'ai raison",
@@ -37,11 +37,11 @@ type GateMode = 'FLASH' | 'GENERATE' | 'CLARIFY' | 'BLOCK'
 function detectGate(text: string): GateMode {
   const t = text.toLowerCase()
   if (BLOCK_MARKERS.some(m => t.includes(m))) return 'BLOCK'
-  if (ANALYSIS_MARKERS.some(m => t.includes(m))) return 'GENERATE'
-  if (ORG_MARKERS.some(m => t.includes(m))) return 'GENERATE'
-  if (STATUS_MARKERS.some(m => t.includes(m))) return 'FLASH'
-  if (PERSONAL_MARKERS.some(m => t.includes(m))) return 'CLARIFY'
-  return 'GENERATE'
+if (ANALYSIS_MARKERS.some(m => t.includes(m))) return 'GENERATE'
+if (ORG_MARKERS.some(m => t.includes(m))) return 'GENERATE'
+if (STATUS_MARKERS.some(m => t.includes(m))) return 'FLASH'
+if (PERSONAL_MARKERS.some(m => t.includes(m))) return 'CLARIFY'
+return 'GENERATE'
 }
 
 // ── PROMPTS ───────────────────────────────────────────────────────────────────
@@ -49,86 +49,89 @@ function detectGate(text: string): GateMode {
 const FLASH_PROMPT = `You are IAAA — a structural intelligence system.
 The user asked a public status question.
 Return ONLY raw JSON. No markdown. No backticks.
+
 Schema:
 {
-  "etat_actuel": "one factual sentence (FR)",
+  "etat_actuel": "one factual sentence about current state (FR)",
   "etat_actuel_en": "same in EN",
-  "lecture": "one structural sentence (FR)",
+  "lecture": "one structural sentence naming the deeper dynamic (FR)",
   "lecture_en": "same in EN"
 }
-Rules: 2 sentences max. No jargon. No preamble. Structurally honest if data lacking.`
+
+Rules:
+- 2 sentences maximum total
+- No jargon, no preamble, no questions, no lists
+- If you lack recent data, be structurally honest: name the dynamics, not invented facts
+- Never say "je vais analyser" or start with "Pour analyser"
+- Write in French for etat_actuel/lecture, English for _en fields`
 
 const CLARIFY_PROMPT = `You are IAAA — a structural intelligence system.
-Return ONLY raw JSON. No markdown.
-Schema: { "questions": ["q1", "q2"] }
-Rules: max 2 questions, short and direct, same language as input.`
+The situation is personal or professional but lacks key structural elements.
+Return ONLY raw JSON. No markdown. No backticks.
 
-// Appel 1 — Astrolabe uniquement (~800 tokens)
-const ASTROLABE_PROMPT = `You are IAAA SIS — structural analysis engine.
+Schema:
+{ "questions": ["question 1", "question 2"] }
+
+Rules:
+- Maximum 2 questions
+- Each targets one missing element: actors, scope, core issue, or timeframe
+- Short, direct, not therapeutic
+- Write in the same language as the input`
+
+const SC_PROMPT = `You are IAAA SIS — structural analysis engine.
 Return ONLY valid JSON. No markdown. No text outside JSON.
 
-CALIBRAGE:
-Astrolabe 8 branches 0-3.
-TENSIONS=3 ONLY if explicit conflict between NAMED actors AND structural impact. Friction → max 2.
-INTERESTS=3 ONLY if divergent incentives explicitly named. Personal stake → max 2.
-UNCERTAINTY=3 ONLY if systemic, unpredictable even for informed observer. Decisional → max 2.
-SPACE=3 ONLY if geographic constraints are primary driver.
-TIME=3 ONLY if irreversible deadline is central constraint.
-RULE: Maximum 3 branches at score 3. If more would score 3, downgrade least decisive to 2.
-Maximum 1 primary branch (2 if truly equal, never 3).
-Labels: 0=Absent 1=Faible 2=Modéré 3=Dominant
+CONTEXT PRE-LOADING (silent):
+Axis 1 Territory: geographic constraints shape vulnerability profiles.
+Axis 2 Domain: load sector standards silently (humanitarian, legal, medical, financial).
+Axis 3 Emotional state: detect register (distress/fatigue/resignation/clarity). Adjust formulation not diagnosis.
+Axis 4 Socio-cultural: calibrate vocabulary and realism from language/framing.
+Axis 5 Temporal: integrate recent dynamics for dated situations only.
 
-astrolabe_base = (sum/24)x100
-radar_pressure = (Impact-1)/2x0.30 + (Urgence-1)/2x0.25 + (Incertitude-1)/2x0.25 + (Réversibilité-1)/2x0.20
-state_index_raw = astrolabe_base x 0.65 + (radar_pressure x 100) x 0.35
-Adjustment -5 to +5 max.
-States: 0-39=Stable/Clear | 40-54=Contrôlable/Navigable | 55-69=Vigilance/Watch | 70-89=Critique/Critical | 90-100=Hors contrôle/Loss of Control
+HUMAN UNCERTAINTY PRINCIPLE: what is submitted is never complete. The load-bearing contradiction is one layer below the surface.
 
-PATTERN DETECTION (silent):
+PATTERN DETECTION (silent, never display):
 Systemic: Escalation spiral / Dependency trap / Principal-agent conflict / Power asymmetry / Coordination failure / Strategic lag / Trust breakdown / Replacement lag / Institutional absorption limit
 Human: Identity Split / Loyalty Conflict / Dependency Loop / Recognition Asymmetry / Shame-Avoidance Loop / Fear-of-Loss Paralysis / Self-Worth Role Fusion / Chronic Over-Adaptation / Emotional Load Asymmetry / Unspoken Contract Breakdown / Hidden Resentment Accumulation / Boundary Erosion / Meaning Collapse Under Constraint / Care Burden Imbalance / Validation Trap / Deferred Conflict Saturation / Projection Misalignment / Attachment-Security Conflict / Invisible Standards Pressure / Role Container Failure
 
-CONTEXT (silent): detect territory, domain, emotional state, socio-cultural level, temporal context. Adjust formulation not diagnosis.
-HUMAN UNCERTAINTY: what is submitted is never complete. The contradiction is one layer below.
+CALIBRAGE (figé):
+Astrolabe 8 branches 0-3. TENSIONS=3 ONLY if: explicit conflict between NAMED actors AND structural impact on the system. Friction alone → max 2.
+INTERESTS=3 ONLY if: structurally divergent incentives explicitly named ("X wants A, Y wants B"). Personal stake alone → max 2.
+UNCERTAINTY=3 ONLY if: systemic uncertainty, unpredictable even for a well-informed external observer. Decisional uncertainty ("I don't know what to do") → max 2.
+SPACE=3 ONLY if: geographic or physical constraints are the primary structural driver.
+TIME=3 ONLY if: irreversible deadline is the central structural constraint.
+RULE: Maximum 3 branches at score 3 across the entire astrolabe. If more than 3 would score 3, downgrade the least structurally decisive ones to 2.
+Maximum 1 primary branch. Maximum 2 if truly equal — never 3.
+Radar 4 dimensions 1-3: Impact/Urgence/Incertitude/Réversibilité.
+astrolabe_base = (sum/24)x100
+radar_pressure = (Impact-1)/2x0.30 + (Urgence-1)/2x0.25 + (Incertitude-1)/2x0.25 + (Réversibilité-1)/2x0.20
+state_index_raw = astrolabe_base x 0.65 + (radar_pressure x 100) x 0.35
+Adjustment -5 to +5 max. If state=Hors contrôle: index must be >=90 AND at least 2 radar dimensions at 3. If index>70 AND no branch at 3: incoherence, revise. Labels: 0=Absent 1=Faible 2=Modéré 3=Dominant.
+States: 0-39=Stable/Clear | 40-54=Contrôlable/Navigable | 55-69=Vigilance/Watch | 70-89=Critique/Critical | 90-100=Hors contrôle/Loss of Control
 
-Return ONLY this JSON:
+OUTPUT SCHEMA (all fields required, no extras):
 {
   "title": "(FR)", "title_en": "(EN)",
   "category": "Professionnel|Personnel|Gouvernance|Social|Géopolitique",
   "category_en": "Professional|Personal|Governance|Social|Geopolitical",
-  "submitted_situation": "restate exactly, correct spelling (FR)",
+  "submitted_situation": "restate submitted situation, correct spelling only (FR)",
   "submitted_situation_en": "same in EN",
   "state_index_final": <0-100>,
   "state_label": "<fr>", "state_label_en": "<en>",
   "confidence": "faible|moyenne|élevée", "confidence_en": "low|medium|high",
-  "astrolabe_scores": [
-    { "branch": "I",    "name": "Acteurs",    "name_en": "Actors",      "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "II",   "name": "Intérêts",   "name_en": "Interests",   "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "III",  "name": "Forces",     "name_en": "Forces",      "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "IV",   "name": "Tensions",   "name_en": "Tensions",    "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "V",    "name": "Contraintes","name_en": "Constraints", "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "VI",   "name": "Incertitude","name_en": "Uncertainty", "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "VII",  "name": "Temps",      "name_en": "Time",        "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "VIII", "name": "Espace",     "name_en": "Space",       "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> }
-  ]
-}`
-
-// Appel 2 — Reste de la SC (~4000 tokens)
-const SC_REST_PROMPT = `You are IAAA SIS — structural analysis engine.
-You have already computed the astrolabe scores and state index for this situation.
-Now complete the Situation Card with all remaining fields.
-Return ONLY valid JSON. No markdown. No text outside JSON.
-
-CALIBRAGE RADAR:
-Radar 4 dimensions 1-3: Impact/Urgence/Incertitude/Réversibilité.
-radar_pressure = (Impact-1)/2x0.30 + (Urgence-1)/2x0.25 + (Incertitude-1)/2x0.25 + (Réversibilité-1)/2x0.20
-Use the same structural diagnosis as the astrolabe. Be consistent.
-
-Return ONLY this JSON:
-{
   "insight": "(FR)", "insight_en": "(EN)",
   "vulnerability": "concrete structural failure point (FR)", "vulnerability_en": "(EN)",
   "asymmetry": "what everyone manages vs what no one protects (FR)", "asymmetry_en": "(EN)",
+  "astrolabe_scores": [
+    { "branch": "I",    "name": "Acteurs",    "name_en": "Actors",       "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "II",   "name": "Intérêts",   "name_en": "Interests",    "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "III",  "name": "Forces",     "name_en": "Forces",       "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "IV",   "name": "Tensions",   "name_en": "Tensions",     "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "V",    "name": "Contraintes","name_en": "Constraints",  "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "VI",   "name": "Incertitude","name_en": "Uncertainty",  "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "VII",  "name": "Temps",      "name_en": "Time",         "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "VIII", "name": "Espace",     "name_en": "Space",        "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> }
+  ],
   "radar_scores": [
     { "dimension": "Impact",        "dimension_en": "Impact",        "score": <1-3>, "note": "(FR)", "note_en": "(EN)" },
     { "dimension": "Urgence",       "dimension_en": "Urgency",       "score": <1-3>, "note": "(FR)", "note_en": "(EN)" },
@@ -157,21 +160,22 @@ Return ONLY this JSON:
   }
 }
 
-SELF-CHECK: signal=observable? trajectories=different regimes? vulnerability=concrete? avertissement=what NOT to do?`
+SELF-CHECK before output:
+signal=observable? trajectories=different regimes? vulnerability=concrete? primary=dominant? asymmetry=named? avertissement=what NOT to do?`
 
 // ── HANDLER ───────────────────────────────────────────────────────────────────
 
-function parseJSON(raw: string): Record<string, unknown> {
-  const clean = raw.replace(/```json|```/g, '').trim()
-  try {
-    return JSON.parse(clean)
-  } catch {
-    const fixed = clean
-      .replace(/[\u2018\u2019]/g, "'")
-      .replace(/[\u201C\u201D]/g, '"')
-      .replace(/\r?\n/g, ' ')
-    return JSON.parse(fixed)
-  }
+async function generateSC(situation: string) {
+  const msg = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 6000,
+    messages: [{ role: 'user', content: `${SC_PROMPT}\n\nSituation:\n${situation}` }],
+  })
+  const raw = msg.content
+    .filter(b => b.type === 'text')
+    .map(b => (b as { type: 'text'; text: string }).text)
+    .join('').replace(/```json|```/g, '').trim()
+  return JSON.parse(raw)
 }
 
 export async function POST(req: NextRequest) {
@@ -184,40 +188,49 @@ export async function POST(req: NextRequest) {
 
     // Mode forcé depuis bouton "Situation Card" sous FLASH
     if (mode === 'generate') {
-      return streamGenerate(text)
+      const sc = await generateSC(text)
+      return NextResponse.json({ gate: 'GENERATE', sc })
     }
 
     const gate = detectGate(text)
 
     if (gate === 'BLOCK') {
       const reason = lang === 'fr'
-        ? "Cette formulation ne permet pas d'analyse structurelle. Une situation analysable décrit des acteurs, des forces en présence et des trajectoires possibles."
+        ? 'Cette formulation ne permet pas d\'analyse structurelle. Une situation analysable décrit des acteurs, des forces en présence et des trajectoires possibles.'
         : 'This formulation does not allow structural analysis. An analysable situation describes actors, forces at play, and possible trajectories.'
       return NextResponse.json({ gate: 'BLOCK', reason })
     }
 
     if (gate === 'FLASH') {
       const msg = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: 500,
         messages: [{ role: 'user', content: `${FLASH_PROMPT}\n\nQuestion: ${text}` }],
       })
-      const raw = msg.content.filter(b => b.type === 'text').map(b => (b as {type:'text';text:string}).text).join('').replace(/```json|```/g, '').trim()
+      const raw = msg.content
+        .filter(b => b.type === 'text')
+        .map(b => (b as { type: 'text'; text: string }).text)
+        .join('').replace(/```json|```/g, '').trim()
       try {
         const flash = JSON.parse(raw)
         return NextResponse.json({ gate: 'FLASH', flash })
       } catch {
-        return streamGenerate(text)
+        // fallback GENERATE si FLASH parse échoue
+        const sc = await generateSC(text)
+        return NextResponse.json({ gate: 'GENERATE', sc })
       }
     }
 
     if (gate === 'CLARIFY') {
       const msg = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: 300,
         messages: [{ role: 'user', content: `${CLARIFY_PROMPT}\n\nSituation: ${text}` }],
       })
-      const raw = msg.content.filter(b => b.type === 'text').map(b => (b as {type:'text';text:string}).text).join('').replace(/```json|```/g, '').trim()
+      const raw = msg.content
+        .filter(b => b.type === 'text')
+        .map(b => (b as { type: 'text'; text: string }).text)
+        .join('').replace(/```json|```/g, '').trim()
       try {
         const clarify = JSON.parse(raw)
         return NextResponse.json({ gate: 'CLARIFY', questions: clarify.questions ?? [] })
@@ -226,65 +239,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // GENERATE → streaming 2 appels
-    return streamGenerate(text)
+    // GENERATE
+    const sc = await generateSC(text)
+    return NextResponse.json({ gate: 'GENERATE', sc })
 
   } catch (err) {
     console.error('generate error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
-}
-
-// ── STREAMING GENERATE ────────────────────────────────────────────────────────
-function streamGenerate(situation: string): Response {
-  const encoder = new TextEncoder()
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (data: unknown) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
-      }
-
-      try {
-        // ── APPEL 1 : Astrolabe (~3-5s) ──────────────────────────────────────
-        const msg1 = await client.messages.create({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1500,
-          messages: [{ role: 'user', content: `${ASTROLABE_PROMPT}\n\nSituation:\n${situation}` }],
-        })
-        const raw1 = msg1.content.filter(b => b.type === 'text').map(b => (b as {type:'text';text:string}).text).join('').replace(/```json|```/g, '').trim()
-        const partial = parseJSON(raw1)
-
-        // Envoyer l'astrolabe immédiatement
-        send({ type: 'partial', gate: 'GENERATE', partial })
-
-        // ── APPEL 2 : Reste SC (~20-30s) ─────────────────────────────────────
-        const msg2 = await client.messages.create({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 5000,
-          messages: [{ role: 'user', content: `${SC_REST_PROMPT}\n\nSituation:\n${situation}\n\nAstrolabe already computed:\nstate_index_final: ${partial.state_index_final}\nstate_label: ${partial.state_label}\nprimary branch: ${(partial.astrolabe_scores as any[])?.find((s: any) => s.is_primary)?.name ?? 'unknown'}` }],
-        })
-        const raw2 = msg2.content.filter(b => b.type === 'text').map(b => (b as {type:'text';text:string}).text).join('').replace(/```json|```/g, '').trim()
-        const rest = parseJSON(raw2)
-
-        // Fusionner les deux JSONs
-        const sc = { ...partial, ...rest }
-        send({ type: 'complete', gate: 'GENERATE', sc })
-
-      } catch (err) {
-        console.error('stream error:', err)
-        send({ type: 'error', error: String(err) })
-      } finally {
-        controller.close()
-      }
-    }
-  })
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  })
 }
