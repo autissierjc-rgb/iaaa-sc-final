@@ -198,7 +198,7 @@ function AstrolabeRadial({ scores }: {
 }) {
   const cx = 120, cy = 120
   const RINGS = [32, 62, 92]        // 3 anneaux correspondant aux 3 losanges
-  const LABEL_R = 112               // rayon des chiffres romains
+  const LABEL_R = 125               // rayon des chiffres romains
   const FILLS   = ['#B8D4F0', '#F0CA70', '#E87C7C']   // bleu / ambre / corail
   const STROKES = ['#7AAEDC', '#D4A830', '#C84040']
   const EMPTY   = '#E0DCD4'
@@ -1133,3 +1133,5 @@ export default function HomeClient() {
     </>
   )
 }
+
+
