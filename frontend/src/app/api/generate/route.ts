@@ -37,11 +37,11 @@ type GateMode = 'FLASH' | 'GENERATE' | 'CLARIFY' | 'BLOCK'
 function detectGate(text: string): GateMode {
   const t = text.toLowerCase()
   if (BLOCK_MARKERS.some(m => t.includes(m))) return 'BLOCK'
-  if (ANALYSIS_MARKERS.some(m => t.includes(m))) return 'GENERATE'
-  if (ORG_MARKERS.some(m => t.includes(m))) return 'GENERATE'
-  if (PERSONAL_MARKERS.some(m => t.includes(m))) return 'CLARIFY'
-  if (STATUS_MARKERS.some(m => t.includes(m))) return 'FLASH'
-  return 'GENERATE'
+if (ANALYSIS_MARKERS.some(m => t.includes(m))) return 'GENERATE'
+if (ORG_MARKERS.some(m => t.includes(m))) return 'GENERATE'
+if (STATUS_MARKERS.some(m => t.includes(m))) return 'FLASH'
+if (PERSONAL_MARKERS.some(m => t.includes(m))) return 'CLARIFY'
+return 'GENERATE'
 }
 
 // ── PROMPTS ───────────────────────────────────────────────────────────────────
