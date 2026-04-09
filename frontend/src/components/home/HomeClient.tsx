@@ -277,9 +277,9 @@ function AstrolabeRadial({ scores }: {
       <circle cx={cx} cy={cy} r="3" fill="#8A6830" />
       {/* Légende */}
       {[
-        { c: '#B8D4F0', l: 'Faible' },
+        { c: '#B8D4F0', l: 'Calme' },
         { c: '#F0CA70', l: 'Modéré' },
-        { c: '#E87C7C', l: 'Dominant' },
+        { c: '#E87C7C', l: 'Agité' },
       ].map((item, i) => (
         <g key={i} transform={`translate(${28 + i * 64}, 228)`}>
           <polygon points="8,0 4,8 8,16 12,8"
@@ -1133,5 +1133,6 @@ export default function HomeClient() {
     </>
   )
 }
+
 
 
