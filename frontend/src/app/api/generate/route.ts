@@ -249,7 +249,7 @@ function streamGenerate(situation: string): Response {
         // ── APPEL 1 : Astrolabe (~3-5s) ──────────────────────────────────────
         const msg1 = await client.messages.create({
           model: 'claude-sonnet-4-6',
-          max_tokens: 1500,
+         git add -A && git commit -m "fix: max_tokens appel 1 a 2000" && git push
           messages: [{ role: 'user', content: `${ASTROLABE_PROMPT}\n\nSituation:\n${situation}` }],
         })
         const raw1 = msg1.content.filter(b => b.type === 'text').map(b => (b as {type:'text';text:string}).text).join('').replace(/```json|```/g, '').trim()
