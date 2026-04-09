@@ -17,8 +17,8 @@ const STATUS_MARKERS = [
   'où en sommes', 'ou en sommes', 'how are things', 'news on',
 ]
 const PERSONAL_MARKERS = [
-  ' je ', " j'", ' mon ', ' ma ', ' mes ', ' moi ', ' nous ', ' notre ', ' nos ',
-  ' my ', " i'm ", ' we ', ' our ', " i'd ", " i've ",
+  ' je ', " j'", ' mon ', ' ma ', ' mes ', ' moi ',
+  ' my ', " i'm ", " i'd ", " i've ",
 ]
 const ORG_MARKERS = [
   'équipe', 'equipe', 'board', 'comex', 'ceo', 'cfo', 'dg ', 'pdg',
