@@ -123,15 +123,14 @@ OUTPUT SCHEMA (all fields required, no extras):
   "vulnerability": "concrete structural failure point (FR)", "vulnerability_en": "(EN)",
   "asymmetry": "what everyone manages vs what no one protects (FR)", "asymmetry_en": "(EN)",
   "astrolabe_scores": [
-    { "branch": "I",    "name": "Acteurs",    "name_en": "Actors",       "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "II",   "name": "Intérêts",   "name_en": "Interests",    "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "III",  "name": "Forces",     "name_en": "Forces",       "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "IV",   "name": "Tensions",   "name_en": "Tensions",     "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "V",    "name": "Contraintes","name_en": "Constraints",  "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "VI",   "name": "Incertitude","name_en": "Uncertainty",  "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "VII",  "name": "Temps",      "name_en": "Time",         "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
-    { "branch": "VIII", "name": "Espace",     "name_en": "Space",        "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> }
-  ],
+    { "branch": "I",    "name": "Acteurs",    { "branch": "I",    "name": "Acteurs",    "name_en": "Actors",      "display_score": <0-3>, "label": "", "label_en": "", "is_primary": <bool> },
+    { "branch": "II",   "name": "Intérêts",   "name_en": "Interests",   "display_score": <0-3>, "label": "", "label_en": "", "is_primary": <bool> },
+    { "branch": "III",  "name": "Forces",     "name_en": "Forces",      "display_score": <0-3>, "label": "", "label_en": "", "is_primary": <bool> },
+    { "branch": "IV",   "name": "Tensions",   "name_en": "Tensions",    "display_score": <0-3>, "label": "", "label_en": "", "is_primary": <bool> },
+    { "branch": "V",    "name": "Contraintes","name_en": "Constraints", "display_score": <0-3>, "label": "", "label_en": "", "is_primary": <bool> },
+    { "branch": "VI",   "name": "Incertitude","name_en": "Uncertainty", "display_score": <0-3>, "label": "", "label_en": "", "is_primary": <bool> },
+    { "branch": "VII",  "name": "Temps",      "name_en": "Time",        "display_score": <0-3>, "label": "", "label_en": "", "is_primary": <bool> },
+    { "branch": "VIII", "name": "Espace",     "name_en": "Space",       "display_score": <0-3>, "label": "", "label_en": "", "is_primary": <bool> }
   "radar_scores": [
     { "dimension": "Impact",        "dimension_en": "Impact",        "score": <1-3>, "note": "(FR)", "note_en": "(EN)" },
     { "dimension": "Urgence",       "dimension_en": "Urgency",       "score": <1-3>, "note": "(FR)", "note_en": "(EN)" },
