@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
     const text = situation.trim()
 
     // Mode forcé depuis bouton "Situation Card" sous FLASH
-    if (mode === 'generate') {
+    if (mode === 'generate' || mode === 'generate_full') {
       const sc = await generateSC(text)
       return NextResponse.json({ gate: 'GENERATE', sc })
     }
