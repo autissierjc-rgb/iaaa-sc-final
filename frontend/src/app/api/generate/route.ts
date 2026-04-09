@@ -203,8 +203,8 @@ export async function POST(req: NextRequest) {
 
     if (gate === 'FLASH') {
       const msg = await client.messages.create({
-        model: model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
+        model: 'claude-sonnet-4-6',
+        max_tokens: 500,
         messages: [{ role: 'user', content: `${FLASH_PROMPT}\n\nQuestion: ${text}` }],
       })
       const raw = msg.content

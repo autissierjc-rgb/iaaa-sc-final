@@ -1030,7 +1030,7 @@ export default function HomeClient() {
                     <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
                     <polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
                   </svg>
-                  {t.partager}
+                  <div style={{ display: 'flex', gap: 4, marginRight: 4 }}>{(['FR','EN']).map(l => (<button key={l} onClick={() => setLang(l as 'FR' | 'EN')} style={{ fontSize: 10, fontWeight: 500, padding: '3px 7px', border: `1px solid ${l === lang ? GOLD : BDR}`, borderRadius: 5, background: l === lang ? `${GOLD}22` : 'transparent', color: l === lang ? GOLD : TXT3, cursor: 'pointer' }}>{l}</button>))}</div>{t.partager}
                 </button>
               </div>
 
@@ -1133,6 +1133,7 @@ export default function HomeClient() {
     </>
   )
 }
+
 
 
 
