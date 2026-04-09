@@ -106,7 +106,7 @@ Radar 4 dimensions 1-3: Impact/Urgence/Incertitude/Réversibilité.
 astrolabe_base = (sum/24)x100
 radar_pressure = (Impact-1)/2x0.30 + (Urgence-1)/2x0.25 + (Incertitude-1)/2x0.25 + (Réversibilité-1)/2x0.20
 state_index_raw = astrolabe_base x 0.65 + (radar_pressure x 100) x 0.35
-Adjustment -5 to +5 max.
+Adjustment -5 to +5 max. If state=Hors contrôle: index must be >=90 AND at least 2 radar dimensions at 3. If index>70 AND no branch at 3: incoherence, revise. Labels: 0=Absent 1=Faible 2=Modéré 3=Dominant.
 States: 0-39=Stable/Clear | 40-54=Contrôlable/Navigable | 55-69=Vigilance/Watch | 70-89=Critique/Critical | 90-100=Hors contrôle/Loss of Control
 
 OUTPUT SCHEMA (all fields required, no extras):
