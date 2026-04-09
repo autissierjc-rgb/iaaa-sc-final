@@ -163,7 +163,15 @@ SELF-CHECK: signal=observable? trajectories=different regimes? vulnerability=con
 
 function parseJSON(raw: string): Record<string, unknown> {
   const clean = raw.replace(/```json|```/g, '').trim()
-  return JSON.parse(clean)
+  try {
+    return JSON.parse(clean)
+  } catch {
+    const fixed = clean
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/\r?\n/g, ' ')
+    return JSON.parse(fixed)
+  }
 }
 
 export async function POST(req: NextRequest) {
