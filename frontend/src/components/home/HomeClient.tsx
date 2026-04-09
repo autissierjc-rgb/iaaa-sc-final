@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
@@ -426,27 +426,10 @@ function SituationCardPanel({ sc, lang, onExpand }: {
                 borderRadius: 6, padding: '7px 10px',
               }}>
                 <div style={{ fontSize: 8, color: TXT3, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 3 }}>
-                      <div style={{ height: 1, background: BDR_G, margin: '4px 0' }} />
-
-            {/* Astrolabe + Force Lines */}
-            {sc.astrolabe_scores?.length > 0 && (
-              <div>
-                <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 6, textAlign: 'center' }}>
-                  ASTROLABE
+                  {lang === 'FR' ? 'SITUATION SOUMISE' : 'SUBMITTED SITUATION'}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-                  <AstrolabeRadial scores={sc.astrolabe_scores} />
-                </div>
-                <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 6 }}>
-                  FORCE LINES
-                </div>
-                <ForceLines scores={sc.astrolabe_scores} lang={lang} />
-              </div>
-            )
-            )}
-
-            {/* Séparateur */}
-       }
+                <div style={{ fontSize: 11, color: TXT2, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.6 }}>
+                  {submitted}
                 </div>
               </div>
             )}
@@ -482,7 +465,27 @@ function SituationCardPanel({ sc, lang, onExpand }: {
                   {lang === 'FR' ? 'ASYMÉTRIE' : 'ASYMMETRY'}
                 </div>
                 <div style={{ fontSize: 11, color: TXT, fontStyle: 'italic', lineHeight: 1.5 }}>{asymmetry}</div>
-              
+              </div>
+            )}
+
+            {/* Séparateur */}
+            <div style={{ height: 1, background: BDR_G, margin: '4px 0' }} />
+
+            {/* Astrolabe + Force Lines */}
+            {sc.astrolabe_scores?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 6, textAlign: 'center' }}>
+                  ASTROLABE
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+                  <AstrolabeRadial scores={sc.astrolabe_scores} />
+                </div>
+                <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 6 }}>
+                  FORCE LINES
+                </div>
+                <ForceLines scores={sc.astrolabe_scores} lang={lang} />
+              </div>
+            )}
           </div>
         )}
 
