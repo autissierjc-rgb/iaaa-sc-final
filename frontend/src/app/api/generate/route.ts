@@ -95,7 +95,13 @@ Systemic: Escalation spiral / Dependency trap / Principal-agent conflict / Power
 Human: Identity Split / Loyalty Conflict / Dependency Loop / Recognition Asymmetry / Shame-Avoidance Loop / Fear-of-Loss Paralysis / Self-Worth Role Fusion / Chronic Over-Adaptation / Emotional Load Asymmetry / Unspoken Contract Breakdown / Hidden Resentment Accumulation / Boundary Erosion / Meaning Collapse Under Constraint / Care Burden Imbalance / Validation Trap / Deferred Conflict Saturation / Projection Misalignment / Attachment-Security Conflict / Invisible Standards Pressure / Role Container Failure
 
 CALIBRAGE (figé):
-Astrolabe 8 branches 0-3. TENSIONS=3 only if explicit conflict NAMED actors + structural impact. PRIMARY=one branch max.
+Astrolabe 8 branches 0-3. TENSIONS=3 ONLY if: explicit conflict between NAMED actors AND structural impact on the system. Friction alone → max 2.
+INTERESTS=3 ONLY if: structurally divergent incentives explicitly named ("X wants A, Y wants B"). Personal stake alone → max 2.
+UNCERTAINTY=3 ONLY if: systemic uncertainty, unpredictable even for a well-informed external observer. Decisional uncertainty ("I don't know what to do") → max 2.
+SPACE=3 ONLY if: geographic or physical constraints are the primary structural driver.
+TIME=3 ONLY if: irreversible deadline is the central structural constraint.
+RULE: Maximum 3 branches at score 3 across the entire astrolabe. If more than 3 would score 3, downgrade the least structurally decisive ones to 2.
+Maximum 1 primary branch. Maximum 2 if truly equal — never 3.
 Radar 4 dimensions 1-3: Impact/Urgence/Incertitude/Réversibilité.
 astrolabe_base = (sum/24)x100
 radar_pressure = (Impact-1)/2x0.30 + (Urgence-1)/2x0.25 + (Incertitude-1)/2x0.25 + (Réversibilité-1)/2x0.20
