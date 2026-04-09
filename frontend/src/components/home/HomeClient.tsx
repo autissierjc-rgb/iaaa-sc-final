@@ -725,6 +725,8 @@ export default function HomeClient() {
         const etat    = lang === 'FR' ? fl.etat_actuel    : (fl.etat_actuel_en    ?? fl.etat_actuel)
         const lecture = lang === 'FR' ? fl.lecture        : (fl.lecture_en        ?? fl.lecture)
         setChatMsgs(prev => [...prev, { kind: 'flash', etat, lecture }])
+        setSituation('')
+        setSituation('')
         setScData(null)
       } else if (data.gate === 'GENERATE' && data.sc) {
         setCompassMode('idle')
