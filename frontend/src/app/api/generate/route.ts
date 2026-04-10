@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { computeState, getStateLabel, AstrolabeBranch, RadarScores } from '@/lib/scoring'
 
 const client = new Anthropic()
 
@@ -44,92 +45,161 @@ function detectGate(text: string): GateMode {
 const FLASH_PROMPT = `You are IAAA — a structural intelligence system.
 Return ONLY raw JSON. No markdown.
 {"etat_actuel":"(FR)","etat_actuel_en":"(EN)","lecture":"(FR)","lecture_en":"(EN)"}
-Rules: 2 sentences max. No jargon. No preamble.`
+Rules: 2 sentences max. No jargon. No preamble. Structurally honest if data lacking.`
 
 const CLARIFY_PROMPT = `You are IAAA — structural intelligence.
 Return ONLY: {"questions":["q1","q2"]}
 Max 2 questions. Short. Same language as input.`
 
-// Fast Card — compact, no justifications, bilingue courts uniquement
-const FAST_CARD_PROMPT = `You are IAAA SIS — structural analysis engine.
+const FAST_CARD_PROMPT = `You are the IAAA Situation Card engine.
+
+Your role:
+Produce a fast, structured, decision-grade Situation Card.
+
+CONTEXT (silent):
+- detect territory, domain, emotional register, temporal context
+- the load-bearing contradiction is one layer below the surface
+
+PATTERN DETECTION (silent, never display):
+Systemic: Escalation spiral / Dependency trap / Principal-agent conflict / Power asymmetry / Coordination failure / Strategic lag / Trust breakdown
+Human: Identity Split / Loyalty Conflict / Dependency Loop / Recognition Asymmetry / Shame-Avoidance / Fear-of-Loss Paralysis / Emotional Load Asymmetry / Unspoken Contract Breakdown / Boundary Erosion / Meaning Collapse / Validation Trap
+
+OUTPUT:
 Return ONLY valid JSON. No markdown. No text outside JSON.
 
-CONTEXT (silent): detect territory, domain, emotional register, temporal context.
-HUMAN UNCERTAINTY: the load-bearing contradiction is one layer below the surface.
-
-CALIBRAGE:
-State index 0-100 from structural pressure.
-States: 0-39=Stable/Clear | 40-54=Contrôlable/Navigable | 55-69=Vigilance/Watch | 70-89=Critique/Critical | 90-100=Hors contrôle/Loss of Control
-
-PATTERNS (silent, never display):
-Systemic: Escalation spiral / Dependency trap / Principal-agent conflict / Power asymmetry / Coordination failure / Strategic lag / Trust breakdown
-Human: Identity Split / Loyalty Conflict / Dependency Loop / Recognition Asymmetry / Shame-Avoidance Loop / Fear-of-Loss Paralysis / Emotional Load Asymmetry / Unspoken Contract Breakdown / Boundary Erosion / Meaning Collapse / Validation Trap
-
-Return ONLY this JSON (compact, no extras):
 {
-  "title": "(FR 6 words max)", "title_en": "(EN)",
-  "submitted_situation": "restate, correct spelling (FR)", "submitted_situation_en": "(EN)",
-  "state_index_final": <0-100>,
-  "state_label": "<fr>", "state_label_en": "<en>",
-  "insight": "(FR 2 sentences)", "insight_en": "(EN)",
-  "vulnerability": "(FR short)", "vulnerability_en": "(EN)",
-  "asymmetry": "(FR short)", "asymmetry_en": "(EN)",
-  "radar_scores": [
-    {"dimension":"Impact","dimension_en":"Impact","score":<1-3>,"note":"(FR short)","note_en":"(EN)"},
-    {"dimension":"Urgence","dimension_en":"Urgency","score":<1-3>,"note":"(FR short)","note_en":"(EN)"},
-    {"dimension":"Incertitude","dimension_en":"Uncertainty","score":<1-3>,"note":"(FR short)","note_en":"(EN)"},
-    {"dimension":"Réversibilité","dimension_en":"Reversibility","score":<1-3>,"note":"(FR short)","note_en":"(EN)"}
-  ],
-  "cap_summary": {
-    "hook": "(FR)", "hook_en": "(EN)",
-    "insight": "(FR)", "insight_en": "(EN)",
-    "watch": "(FR)", "watch_en": "(EN)"
+  "title_fr": "max 6 words",
+  "title_en": "max 6 words",
+  "submitted_situation_fr": "restate submitted situation, correct spelling, no reformulation",
+  "submitted_situation_en": "same in EN",
+  "insight_fr": "2 sentences — reveal structure, not summarize",
+  "insight_en": "same in EN",
+  "main_vulnerability_fr": "structural failure point — precise and testable",
+  "main_vulnerability_en": "same in EN",
+  "asymmetry_fr": "what everyone manages vs what no one protects",
+  "asymmetry_en": "same in EN",
+  "radar": {
+    "impact": <0-100>,
+    "urgency": <0-100>,
+    "uncertainty": <0-100>,
+    "reversibility": <0-100>
   },
   "trajectories": [
-    {"type":"Stabilisation","type_en":"Stabilization","color":"#1D9E75","title":"(FR)","title_en":"(EN)","description":"(FR 1 sentence)","description_en":"(EN)","signal_precurseur":"(FR)","signal_precurseur_en":"(EN)"},
-    {"type":"Escalade","type_en":"Escalation","color":"#E06B4A","title":"(FR)","title_en":"(EN)","description":"(FR 1 sentence)","description_en":"(EN)","signal_precurseur":"(FR)","signal_precurseur_en":"(EN)"},
-    {"type":"Rupture","type_en":"Regime Shift","color":"#378ADD","title":"(FR)","title_en":"(EN)","description":"(FR 1 sentence)","description_en":"(EN)","signal_precurseur":"(FR)","signal_precurseur_en":"(EN)"}
+    {
+      "type": "stabilization",
+      "title_fr": "",
+      "title_en": "",
+      "description_fr": "1 sentence — return to coherence",
+      "description_en": "",
+      "signal_fr": "observable signal",
+      "signal_en": ""
+    },
+    {
+      "type": "escalation",
+      "title_fr": "",
+      "title_en": "",
+      "description_fr": "1 sentence — intensification without structural change",
+      "description_en": "",
+      "signal_fr": "",
+      "signal_en": ""
+    },
+    {
+      "type": "regime_shift",
+      "title_fr": "",
+      "title_en": "",
+      "description_fr": "1 sentence — system changes NATURE not intensity",
+      "description_en": "",
+      "signal_fr": "",
+      "signal_en": ""
+    }
   ],
-  "signal": "(FR 1 observable sentence)", "signal_en": "(EN)",
-  "analysis": {
-    "avertissement": "(FR what NOT to do)", "avertissement_en": "(EN)",
-    "mouvements_recommandes": ["(FR)","(FR)","(FR)"],
-    "mouvements_recommandes_en": ["(EN)","(EN)","(EN)"],
-    "synthese": "(FR 1 sentence)", "synthese_en": "(EN)"
-  }
+  "key_signal_fr": "1 observable, concrete, binary signal",
+  "key_signal_en": "",
+  "cap": {
+    "hook_fr": "< 15 words, striking",
+    "hook_en": "",
+    "watch_fr": "observable signal to monitor",
+    "watch_en": ""
+  },
+  "movements_fr": ["immediate action", "structural action", "observation / positioning"],
+  "movements_en": ["", "", ""],
+  "avertissement_fr": "what must NOT be done — 1 sentence",
+  "avertissement_en": ""
 }
 
-SELF-CHECK: signal=observable? trajectories=different regimes? vulnerability=concrete? avertissement=what NOT to do?`
+RULES:
+INSIGHT: must reveal structure, not summarize. No fluff.
+MAIN VULNERABILITY: structural, precise, testable. No vague wording.
+RADAR: reflects decision tension. Must be coherent with situation.
+  - impact: structural consequence if nothing changes (0=none, 100=systemic)
+  - urgency: time pressure on decisions (0=no pressure, 100=critical deadline)
+  - uncertainty: unknowns that could change the reading (0=clear, 100=opaque)
+  - reversibility: how reversible is the current trajectory (0=irreversible, 100=fully reversible)
+TRAJECTORIES: exactly 3, structurally different regimes — not 3 intensity variations.
+KEY SIGNAL: one only, observable and concrete.
+MOVEMENTS: exactly 3 — immediate / structural / observation. No orders.
+AVERTISSEMENT: what NOT to do. One sentence. No moralizing.
+LANGUAGE: concise, factual, no drama, translations natural not literal.
 
+IMPORTANT: JSON only. No markdown. No meta-commentary.`
+
+// ── SCORING BACKEND ───────────────────────────────────────────────────────────
 function parseJSON(raw: string): Record<string, unknown> {
   const clean = raw.replace(/```json|```/g, '').trim()
-  try { return JSON.parse(clean) } catch {
-    return JSON.parse(clean.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/\r?\n/g, ' '))
+  try { return JSON.parse(clean) }
+  catch {
+    return JSON.parse(
+      clean.replace(/[\u2018\u2019]/g, "'")
+           .replace(/[\u201C\u201D]/g, '"')
+           .replace(/\r?\n/g, ' ')
+    )
   }
 }
 
-async function generateFastCard(situation: string) {
-  const msg = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4000,
-    messages: [{ role: 'user', content: `${FAST_CARD_PROMPT}\n\nSituation:\n${situation}` }],
-  })
-  const raw = msg.content.filter(b => b.type === 'text').map(b => (b as { type: 'text'; text: string }).text).join('').replace(/```json|```/g, '').trim()
-  return parseJSON(raw)
+function enrichWithScoring(
+  sc: Record<string, unknown>,
+  branches: AstrolabeBranch[]
+): Record<string, unknown> {
+  const radar = sc.radar as RadarScores | undefined
+  if (!radar) return sc
+
+  const state = computeState(branches, radar)
+  return {
+    ...sc,
+    state_index_final: state,
+    state_label: getStateLabel(state, 'fr'),
+    state_label_en: getStateLabel(state, 'en'),
+  }
 }
 
+async function generateFastCard(
+  situation: string,
+  branches: AstrolabeBranch[] = []
+) {
+  const msg = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 3500,
+    messages: [{ role: 'user', content: `${FAST_CARD_PROMPT}\n\nSituation:\n${situation}` }],
+  })
+  const raw = msg.content
+    .filter(b => b.type === 'text')
+    .map(b => (b as { type: 'text'; text: string }).text)
+    .join('').replace(/```json|```/g, '').trim()
+
+  const sc = parseJSON(raw)
+  return enrichWithScoring(sc, branches)
+}
+
+// ── HANDLER ───────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const { situation, mode, lang = 'fr' } = await req.json()
+    const { situation, mode, lang = 'fr', astrolabe_branches } = await req.json()
     if (!situation?.trim()) return NextResponse.json({ error: 'No situation' }, { status: 400 })
     const text = situation.trim()
 
-    // Mode forcé (depuis FLASH expand ou astrolabe first)
-  if (mode === 'gate_only') {
-      return NextResponse.json({ gate: detectGate(text) })
-    }
+    // Mode forcé
     if (mode === 'generate' || mode === 'generate_full') {
-      const sc = await generateFastCard(text)
+      const sc = await generateFastCard(text, astrolabe_branches ?? [])
       return NextResponse.json({ gate: 'GENERATE', sc })
     }
 
@@ -164,9 +234,8 @@ export async function POST(req: NextRequest) {
       catch { return NextResponse.json({ gate: 'CLARIFY', questions: [] }) }
     }
 
-    // GENERATE
-    const sc = await generateFastCard(text)
-    return NextResponse.json({ gate: 'GENERATE', sc })
+    // GENERATE — gate only, pas de génération SC
+    return NextResponse.json({ gate: 'GENERATE' })
 
   } catch (err) {
     console.error('generate error:', err)
