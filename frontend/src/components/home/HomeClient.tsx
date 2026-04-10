@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
@@ -294,27 +294,6 @@ function AstrolabeRadial({ scores }: {
 }
 
 // ── Force Lines ───────────────────────────────────────────────────────────────
-const BRANCH_DESC_FR: Record<string, string> = {
-  I:    'Ceux qui agissent, influencent ou bloquent.',
-  II:   'Ce que les parties cherchent, défendent ou refusent.',
-  III:  'Ce qui pousse, soutient ou accélère la situation.',
-  IV:   'Ce qui oppose, fragilise ou met sous pression.',
-  V:    "Ce qui limite l'action et réduit les marges.",
-  VI:   'Ce qui reste flou, instable ou difficile à vérifier.',
-  VII:  "Les rythmes, délais et fenêtres d'action.",
-  VIII: 'Les lieux, distances, frontières et zones de contact.',
-}
-const BRANCH_DESC_EN: Record<string, string> = {
-  I:    'Those who act, influence or block.',
-  II:   'What each party seeks, defends or refuses.',
-  III:  'What pushes, sustains or accelerates the situation.',
-  IV:   'What opposes, weakens or puts under pressure.',
-  V:    'What limits action and reduces room to manoeuvre.',
-  VI:   'What remains unclear, unstable or hard to verify.',
-  VII:  'The rhythms, deadlines and windows for action.',
-  VIII: 'The places, distances, borders and contact zones.',
-}
-
 function ForceLines({ scores, lang }: {
   scores: Array<{ display_score: number; name: string; name_en: string; branch: string }>
   lang: 'FR' | 'EN'
@@ -322,35 +301,25 @@ function ForceLines({ scores, lang }: {
   const COLORS = ['#E0DCD4', '#B8D4F0', '#F0CA70', '#E87C7C']
   return (
     <div style={{ width: '100%' }}>
-      {scores.map((s, i) => {
-        const desc = lang === 'FR' ? BRANCH_DESC_FR[s.branch] : BRANCH_DESC_EN[s.branch]
-        return (
-          <div key={i} style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-              <span style={{ fontSize: 9, color: TXT3, fontStyle: 'italic', width: 22, textAlign: 'right', flexShrink: 0 }}>
-                {s.branch}
-              </span>
-              <span style={{ fontSize: 10, color: TXT2, width: 72, flexShrink: 0, fontWeight: 500 }}>
-                {lang === 'FR' ? s.name : s.name_en}
-              </span>
-              <div style={{ flex: 1, height: 5, background: '#EDEAE4', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{
-                  width: `${(s.display_score / 3) * 100}%`,
-                  height: '100%',
-                  background: COLORS[s.display_score] ?? COLORS[0],
-                  borderRadius: 3,
-                  transition: 'width 0.5s ease',
-                }} />
-              </div>
-            </div>
-            {desc && (
-              <div style={{ paddingLeft: 30, fontSize: 9, color: TXT3, fontStyle: 'italic', lineHeight: 1.4 }}>
-                {desc}
-              </div>
-            )}
+      {scores.map((s, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+          <span style={{ fontSize: 9, color: TXT3, fontStyle: 'italic', width: 22, textAlign: 'right', flexShrink: 0 }}>
+            {s.branch}
+          </span>
+          <span style={{ fontSize: 10, color: TXT2, width: 72, flexShrink: 0 }}>
+            {lang === 'FR' ? s.name : s.name_en}
+          </span>
+          <div style={{ flex: 1, height: 5, background: '#EDEAE4', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{
+              width: `${(s.display_score / 3) * 100}%`,
+              height: '100%',
+              background: COLORS[s.display_score] ?? COLORS[0],
+              borderRadius: 3,
+              transition: 'width 0.5s ease',
+            }} />
           </div>
-        )
-      })}
+        </div>
+      ))}
     </div>
   )
 }
@@ -464,33 +433,13 @@ function SituationCardPanel({ sc, lang, onExpand }: {
                 </div>
               </div>
             )}
-
-            {/* Astrolabe + Force Lines — sous la question soumise */}
-            {sc.astrolabe_scores?.length > 0 && (
-              <div>
-                <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 6, textAlign: 'center' }}>
-                  ASTROLABE
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-                  <AstrolabeRadial scores={sc.astrolabe_scores} />
-                </div>
-                <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 6 }}>
-                  FORCE LINES
-                </div>
-                <ForceLines scores={sc.astrolabe_scores} lang={lang} />
-              </div>
-            )}
-
-            {/* Séparateur */}
-            <div style={{ height: 1, background: BDR_G, margin: '4px 0' }} />
-
             <div style={{
               background: 'rgba(184,154,106,0.08)',
               border: `1px solid ${BDR_G}`,
               borderRadius: 6, padding: '8px 10px',
             }}>
               <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 4 }}>
-                {lang === 'FR' ? 'LECTURE' : 'READING'}
+                {lang === 'FR' ? 'READING' : 'READING'}
               </div>
               <div style={{ fontSize: 12, color: TXT, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.6 }}>
                 {insight}
@@ -502,7 +451,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
               borderRadius: 6, padding: '6px 10px',
             }}>
               <div style={{ fontSize: 8, color: '#E06B4A', letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 3 }}>
-                {lang === 'FR' ? 'VULNÉRABILITÉ PRINCIPALE' : 'MAIN VULNERABILITY'}
+                {lang === 'FR' ? 'MAIN VULNERABILITY' : 'MAIN VULNERABILITY'}
               </div>
               <div style={{ fontSize: 11, color: TXT, fontWeight: 500, lineHeight: 1.5 }}>{vulnerability}</div>
             </div>
@@ -516,6 +465,25 @@ function SituationCardPanel({ sc, lang, onExpand }: {
                   {lang === 'FR' ? 'ASYMÉTRIE' : 'ASYMMETRY'}
                 </div>
                 <div style={{ fontSize: 11, color: TXT, fontStyle: 'italic', lineHeight: 1.5 }}>{asymmetry}</div>
+              </div>
+            )}
+
+            {/* Séparateur */}
+            <div style={{ height: 1, background: BDR_G, margin: '4px 0' }} />
+
+            {/* Astrolabe + Force Lines */}
+            {sc.astrolabe_scores?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 6, textAlign: 'center' }}>
+                  ASTROLABE
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+                  <AstrolabeRadial scores={sc.astrolabe_scores} />
+                </div>
+                <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 6 }}>
+                  FORCE LINES
+                </div>
+                <ForceLines scores={sc.astrolabe_scores} lang={lang} />
               </div>
             )}
           </div>
@@ -856,28 +824,27 @@ export default function HomeClient() {
       }
 
       // GENERATE — Appel 1 astrolabe (haiku ~3s) + Appel 2 SC (sonnet ~10s) en parallèle
-      const [astroRes, scRes] = await Promise.all([
-        fetch('/api/astrolabe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ situation: fullText }),
-        }),
-        fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ situation: fullText, lang: lang.toLowerCase(), mode: 'generate_full' }),
-        })
-      ])
+      // Lancer les 2 en parallèle — astrolabe affiché dès réception
+      const astroPromise = fetch('/api/astrolabe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ situation: fullText }),
+      })
+      const scPromise = fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ situation: fullText, lang: lang.toLowerCase(), mode: 'generate_full' }),
+      })
 
-      // Astrolabe — afficher dès réception
-      const astroData = await astroRes.json()
+      // Astrolabe en premier (~3s)
+      const astroData = await (await astroPromise).json()
       const partial = convertAstrolabe(astroData)
       if (partial) { setScData(partial); setCompassMode('light') }
 
-      // SC complète — fusionner
-      const scData2 = await scRes.json()
+      // SC complète (~30s)
+      const scData2 = await (await scPromise).json()
       if (scData2.sc) {
-        setScData(prev => ({ ...(partial ?? {}), ...scData2.sc }))
+        setScData(() => ({ ...(partial ?? {}), ...scData2.sc }))
       }
       setCompassMode('idle')
       setScLoading(false)
@@ -893,17 +860,13 @@ export default function HomeClient() {
     setScLoading(true)
     setCompassMode('full')
     try {
-      const astroPromise = fetch('/api/astrolabe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: fullText }) })
-      const scPromise = fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: fullText, lang: lang.toLowerCase(), mode: 'generate_full' }) })
-
-      // Astrolabe — afficher immédiatement dès réception
+      const astroPromise = fetch('/api/astrolabe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: text }) })
+      const scPromise = fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: text, mode: 'generate_full', lang: lang.toLowerCase() }) })
       const astroData = await (await astroPromise).json()
-      const partial = convertAstrolabe(astroData, lang)
+      const partial = convertAstrolabe(astroData)
       if (partial) { setScData(partial); setCompassMode('light') }
-
-      // SC complète — fusionner
       const scData2 = await (await scPromise).json()
-      if (scData2.sc) setScData(prev => ({ ...(partial ?? {}), ...scData2.sc }))
+      if (scData2.sc) setScData(() => ({ ...(partial ?? {}), ...scData2.sc }))
     } catch (e) { console.error(e) }
     finally { setScLoading(false); setCompassMode('idle') }
   }
@@ -1118,23 +1081,12 @@ export default function HomeClient() {
                   <button key={l} style={{ padding: '5px 11px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: '1px solid #dde3e8', color: '#b0bcc8', background: 'transparent' }}>{l}</button>
                 ))}
                 <button style={{ width: 24, height: 24, borderRadius: '50%', border: `1px solid ${BDR}`, background: 'none', cursor: 'pointer', fontSize: 11, color: TXT3, marginRight: 'auto' }}>?</button>
-                <div style={{ display: 'flex', gap: 3 }}>
-                  {(['FR','EN'] as const).map(l => (
-                    <button key={l} onClick={() => setLang(l)} style={{
-                      fontSize: 10, fontWeight: 500, padding: '3px 7px',
-                      border: `1px solid ${l === lang ? GOLD : BDR}`,
-                      borderRadius: 5,
-                      background: l === lang ? `${GOLD}22` : 'transparent',
-                      color: l === lang ? GOLD : TXT3, cursor: 'pointer',
-                    }}>{l}</button>
-                  ))}
-                </div>
                 <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, background: NAVY, color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
                     <polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
                   </svg>
-                  {t.partager}
+                  <div style={{ display: 'flex', gap: 4, marginRight: 4 }}>{(['FR','EN']).map(l => (<button key={l} onClick={() => setLang(l as 'FR' | 'EN')} style={{ fontSize: 10, fontWeight: 500, padding: '3px 7px', border: `1px solid ${l === lang ? GOLD : BDR}`, borderRadius: 5, background: l === lang ? `${GOLD}22` : 'transparent', color: l === lang ? GOLD : TXT3, cursor: 'pointer' }}>{l}</button>))}</div>{t.partager}
                 </button>
               </div>
 
