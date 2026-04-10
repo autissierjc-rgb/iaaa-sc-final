@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
@@ -799,7 +799,7 @@ export default function HomeClient() {
       const gateRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ situation: fullText, lang: lang.toLowerCase() }),
+       body: JSON.stringify({ situation: fullText, lang: lang.toLowerCase(), mode: 'gate_only' }),
       })
       const gateData = await gateRes.json()
 

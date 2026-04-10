@@ -125,6 +125,9 @@ export async function POST(req: NextRequest) {
     const text = situation.trim()
 
     // Mode forcé (depuis FLASH expand ou astrolabe first)
+  if (mode === 'gate_only') {
+      return NextResponse.json({ gate: detectGate(text) })
+    }
     if (mode === 'generate' || mode === 'generate_full') {
       const sc = await generateFastCard(text)
       return NextResponse.json({ gate: 'GENERATE', sc })
