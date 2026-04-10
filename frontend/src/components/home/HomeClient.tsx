@@ -294,6 +294,28 @@ function AstrolabeRadial({ scores }: {
 }
 
 // ── Force Lines ───────────────────────────────────────────────────────────────
+// ── Force Lines ───────────────────────────────────────────────────────────────
+const BRANCH_DESC_FR: Record<string, string> = {
+  I:    'Ceux qui agissent, influencent ou bloquent.',
+  II:   'Ce que les parties cherchent, défendent ou refusent.',
+  III:  'Ce qui pousse, soutient ou accélère la situation.',
+  IV:   'Ce qui oppose, fragilise ou met sous pression.',
+  V:    "Ce qui limite l'action et réduit les marges.",
+  VI:   'Ce qui reste flou, instable ou difficile à vérifier.',
+  VII:  "Les rythmes, délais et fenêtres d'action.",
+  VIII: 'Les lieux, distances, frontières et zones de contact.',
+}
+const BRANCH_DESC_EN: Record<string, string> = {
+  I:    'Those who act, influence or block.',
+  II:   'What each party seeks, defends or refuses.',
+  III:  'What pushes, sustains or accelerates the situation.',
+  IV:   'What opposes, weakens or puts under pressure.',
+  V:    'What limits action and reduces room to manoeuvre.',
+  VI:   'What remains unclear, unstable or hard to verify.',
+  VII:  'The rhythms, deadlines and windows for action.',
+  VIII: 'The places, distances, borders and contact zones.',
+}
+
 function ForceLines({ scores, lang }: {
   scores: Array<{ display_score: number; name: string; name_en: string; branch: string }>
   lang: 'FR' | 'EN'
@@ -301,25 +323,35 @@ function ForceLines({ scores, lang }: {
   const COLORS = ['#E0DCD4', '#B8D4F0', '#F0CA70', '#E87C7C']
   return (
     <div style={{ width: '100%' }}>
-      {scores.map((s, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-          <span style={{ fontSize: 9, color: TXT3, fontStyle: 'italic', width: 22, textAlign: 'right', flexShrink: 0 }}>
-            {s.branch}
-          </span>
-          <span style={{ fontSize: 10, color: TXT2, width: 72, flexShrink: 0 }}>
-            {lang === 'FR' ? s.name : s.name_en}
-          </span>
-          <div style={{ flex: 1, height: 5, background: '#EDEAE4', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{
-              width: `${(s.display_score / 3) * 100}%`,
-              height: '100%',
-              background: COLORS[s.display_score] ?? COLORS[0],
-              borderRadius: 3,
-              transition: 'width 0.5s ease',
-            }} />
+      {scores.map((s, i) => {
+        const desc = lang === 'FR' ? BRANCH_DESC_FR[s.branch] : BRANCH_DESC_EN[s.branch]
+        return (
+          <div key={i} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+              <span style={{ fontSize: 9, color: TXT3, fontStyle: 'italic', width: 22, textAlign: 'right', flexShrink: 0 }}>
+                {s.branch}
+              </span>
+              <span style={{ fontSize: 10, color: TXT2, width: 72, flexShrink: 0, fontWeight: 500 }}>
+                {lang === 'FR' ? s.name : s.name_en}
+              </span>
+              <div style={{ flex: 1, height: 5, background: '#EDEAE4', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
+                  width: `${(s.display_score / 3) * 100}%`,
+                  height: '100%',
+                  background: COLORS[s.display_score] ?? COLORS[0],
+                  borderRadius: 3,
+                  transition: 'width 0.5s ease',
+                }} />
+              </div>
+            </div>
+            {desc && (
+              <div style={{ paddingLeft: 30, fontSize: 9, color: TXT3, fontStyle: 'italic', lineHeight: 1.4 }}>
+                {desc}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -331,18 +363,22 @@ function SituationCardPanel({ sc, lang, onExpand }: {
   const [tab, setTab] = useState<'situation' | 'cap' | 'analyse'>('situation')
   const t = TX[lang]
 
-  const g = (fr: string, en: string) => lang === 'FR' ? (sc[fr] ?? '') : (sc[en] ?? sc[fr] ?? '')
+  const g = (fr: string, en: string) => {
+    const frVal = sc[fr] ?? sc[fr.replace('_fr','')] ?? ''
+    const enVal = sc[en] ?? sc[en.replace('_en','')] ?? frVal
+    return lang === 'FR' ? frVal : enVal
+  }
 
-  const insight       = g('insight',       'insight_en')
-  const vulnerability = g('vulnerability', 'vulnerability_en')
-  const asymmetry     = g('asymmetry',     'asymmetry_en')
-  const signal        = g('signal',        'signal_en')
-  const submitted     = g('submitted_situation', 'submitted_situation_en')
+  const insight       = g('insight_fr',            'insight_en')
+  const vulnerability = g('main_vulnerability_fr', 'main_vulnerability_en')
+  const asymmetry     = g('asymmetry_fr',          'asymmetry_en')
+  const signal        = g('key_signal_fr',          'key_signal_en')
+  const submitted     = g('submitted_situation_fr', 'submitted_situation_en')
   const stateLabel    = g('state_label',   'state_label_en')
-  const cap           = sc.cap_summary ?? {}
-  const hook          = lang === 'FR' ? (cap.hook ?? '') : (cap.hook_en ?? cap.hook ?? '')
-  const capInsight    = lang === 'FR' ? (cap.insight ?? '') : (cap.insight_en ?? cap.insight ?? '')
-  const watch         = lang === 'FR' ? (cap.watch ?? '') : (cap.watch_en ?? cap.watch ?? '')
+  const cap           = sc.cap_summary ?? sc.cap ?? {}
+  const hook          = lang === 'FR' ? (cap.hook_fr ?? cap.hook ?? '') : (cap.hook_en ?? cap.hook ?? '')
+  const capInsight    = lang === 'FR' ? (cap.insight_fr ?? cap.insight ?? '') : (cap.insight_en ?? cap.insight ?? '')
+  const watch         = lang === 'FR' ? (cap.watch_fr ?? cap.watch ?? '') : (cap.watch_en ?? cap.watch ?? '')
   const trajectories  = sc.trajectories ?? []
 
   const TABS = [
@@ -371,7 +407,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
             POWERED BY IAAA+ · SITUATION CARD
           </div>
           <div style={{ fontSize: 13, color: '#fff', fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.3 }}>
-            {g('title', 'title_en')}
+            {g('title_fr', 'title_en')}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -526,18 +562,20 @@ function SituationCardPanel({ sc, lang, onExpand }: {
                   {lang === 'FR' ? 'TRAJECTOIRES' : 'TRAJECTORIES'}
                 </div>
                 {trajectories.map((tr: any, i: number) => {
-                  const lbl  = lang === 'FR' ? tr.type        : (tr.type_en        ?? tr.type)
-                  const ttl  = lang === 'FR' ? tr.title       : (tr.title_en       ?? tr.title)
-                  const desc = lang === 'FR' ? tr.description : (tr.description_en ?? tr.description)
-                  const sig  = lang === 'FR' ? tr.signal_precurseur : (tr.signal_precurseur_en ?? tr.signal_precurseur)
+                  const trType = tr.type ?? ''
+                  const TRAJ_COLORS: Record<string,string> = {'stabilization':'#1D9E75','escalation':'#E06B4A','regime_shift':'#378ADD'}; const trColor: string = tr.color ?? TRAJ_COLORS[trType as string] ?? '#9AABB8'
+                  const lbl  = lang === 'FR' ? (tr.type_fr ?? tr.type ?? trType) : (tr.type_en ?? trType)
+                  const ttl  = lang === 'FR' ? (tr.title_fr ?? tr.title ?? '') : (tr.title_en ?? tr.title ?? '')
+                  const desc = lang === 'FR' ? (tr.description_fr ?? tr.description ?? '') : (tr.description_en ?? tr.description ?? '')
+                  const sig  = lang === 'FR' ? (tr.signal_fr ?? tr.signal_precurseur ?? '') : (tr.signal_en ?? tr.signal_precurseur_en ?? tr.signal_precurseur ?? '')
                   return (
                     <div key={i} style={{
-                      borderLeft: `3px solid ${tr.color}`,
-                      background: `${tr.color}08`,
-                      border: `1px solid ${tr.color}30`,
+                      borderLeft: `3px solid ${trColor}`,
+                      background: `${trColor}08`,
+                      border: `1px solid ${trColor}30`,
                       borderRadius: 5, padding: '6px 10px', marginBottom: 7,
                     }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: tr.color, marginBottom: 2 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: trColor, marginBottom: 2 }}>
                         {lbl} — {ttl}
                       </div>
                       <div style={{ fontSize: 10, color: TXT2, lineHeight: 1.5, marginBottom: 3 }}>{desc}</div>
@@ -589,21 +627,24 @@ function SituationCardPanel({ sc, lang, onExpand }: {
                     )
                   })}
                 </div>
-                {sc.analysis?.avertissement && (
+                {(sc.avertissement_fr || sc.analysis?.avertissement) && (
                   <div style={{ fontSize: 11, color: TXT3, fontStyle: 'italic', lineHeight: 1.6, borderLeft: `2px solid ${GOLD}`, paddingLeft: 10, marginBottom: 4 }}>
-                    ↓ {lang === 'FR' ? sc.analysis.avertissement : (sc.analysis.avertissement_en ?? sc.analysis.avertissement)}
+                    ↓ {lang === 'FR' ? (sc.avertissement_fr ?? sc.analysis?.avertissement ?? '') : (sc.avertissement_en ?? sc.analysis?.avertissement_en ?? sc.avertissement_fr ?? sc.analysis?.avertissement ?? '')}
                   </div>
                 )}
               </div>
             )}
 
             {/* Mouvements recommandés */}
-            {(sc.analysis?.mouvements_recommandes?.length > 0) && (
+            {((sc.movements_fr?.length > 0) || (sc.analysis?.mouvements_recommandes?.length > 0)) && (
               <div>
                 <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 8 }}>
                   {lang === 'FR' ? 'MOUVEMENTS' : 'RECOMMENDED ACTIONS'}
                 </div>
-                {(lang === 'FR' ? sc.analysis.mouvements_recommandes : (sc.analysis.mouvements_recommandes_en ?? sc.analysis.mouvements_recommandes)).map((m: string, i: number) => (
+                {(lang === 'FR'
+                  ? (sc.movements_fr ?? sc.analysis?.mouvements_recommandes ?? [])
+                  : (sc.movements_en ?? sc.analysis?.mouvements_recommandes_en ?? sc.movements_fr ?? sc.analysis?.mouvements_recommandes ?? [])
+                ).map((m: string, i: number) => (
                   <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 7 }}>
                     <div style={{ width: 18, height: 18, borderRadius: '50%', background: NAVY, color: '#fff', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: "'Cinzel',serif" }}>
                       {i + 1}
@@ -1189,6 +1230,7 @@ export default function HomeClient() {
     </>
   )
 }
+
 
 
 
