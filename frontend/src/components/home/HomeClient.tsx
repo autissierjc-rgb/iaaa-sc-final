@@ -893,14 +893,16 @@ export default function HomeClient() {
     setScLoading(true)
     setCompassMode('full')
     try {
-      const [astroRes, scRes] = await Promise.all([
-        fetch('/api/astrolabe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: text }) }),
-        fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: text, mode: 'generate_full', lang: lang.toLowerCase() }) })
-      ])
-      const astroData = await astroRes.json()
-      const partial = convertAstrolabe(astroData)
+      const astroPromise = fetch('/api/astrolabe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: fullText }) })
+      const scPromise = fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: fullText, lang: lang.toLowerCase(), mode: 'generate_full' }) })
+
+      // Astrolabe — afficher immédiatement dès réception
+      const astroData = await (await astroPromise).json()
+      const partial = convertAstrolabe(astroData, lang)
       if (partial) { setScData(partial); setCompassMode('light') }
-      const scData2 = await scRes.json()
+
+      // SC complète — fusionner
+      const scData2 = await (await scPromise).json()
       if (scData2.sc) setScData(prev => ({ ...(partial ?? {}), ...scData2.sc }))
     } catch (e) { console.error(e) }
     finally { setScLoading(false); setCompassMode('idle') }
