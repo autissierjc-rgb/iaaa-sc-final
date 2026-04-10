@@ -220,7 +220,7 @@ export async function POST(req: NextRequest) {
       })
       const raw = msg.content.filter(b => b.type === 'text').map(b => (b as { type: 'text'; text: string }).text).join('').replace(/```json|```/g, '').trim()
       try { return NextResponse.json({ gate: 'FLASH', flash: JSON.parse(raw) }) }
-      catch { return NextResponse.json({ gate: 'GENERATE', sc: await generateFastCard(text) }) }
+     catch { return NextResponse.json({ gate: 'GENERATE' }) }
     }
 
     if (gate === 'CLARIFY') {
