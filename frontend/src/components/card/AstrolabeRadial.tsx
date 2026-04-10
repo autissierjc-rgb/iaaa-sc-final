@@ -1,64 +1,102 @@
 'use client'
+// ── AstrolabeRadial ───────────────────────────────────────────────────────────
+// Design figé — ne pas modifier sans validation JCA
+// 3 losanges par branche : bleu #B8D4F0 / ambre #F0CA70 / corail #E87C7C
+// Inactif : parchemin #E0DCD4
+// LABEL_R = 125, anneau laiton, chiffres romains cerclés, légende Calme/Modéré/Agité
 
-import { AstrolabeScore } from '@/types/sis'
-import { COLORS, ROMAN } from '@/lib/tokens'
+import { TXT3 } from '@/lib/constants'
 
-interface Props {
-  scores: AstrolabeScore[]
-  size?: number
-  onBranchClick?: (s: AstrolabeScore) => void
+interface AstrolabeScore {
+  display_score: number
+  name: string
+  branch: string
 }
 
-const SEGS: [number, number, number][] = [[9, 40, 7], [43, 76, 10], [79, 112, 13]]
-
-function lozD(a: number, r1: number, r2: number, w: number, cx: number, cy: number) {
-  const co = Math.cos(a), si = Math.sin(a)
-  const pp = a + Math.PI / 2, pc = Math.cos(pp), ps = Math.sin(pp)
-  const rm = (r1 + r2) / 2, f = (n: number) => n.toFixed(2)
-  return `M${f(cx+r1*co)},${f(cy+r1*si)}L${f(cx+rm*co+w*pc)},${f(cy+rm*si+w*ps)}L${f(cx+r2*co)},${f(cy+r2*si)}L${f(cx+rm*co-w*pc)},${f(cy+rm*si-w*ps)}Z`
-}
-
-export default function AstrolabeRadial({ scores, size = 268, onBranchClick }: Props) {
-  const cx = 140, cy = 140
+export default function AstrolabeRadial({ scores }: { scores: AstrolabeScore[] }) {
+  const cx = 120, cy = 120
+  const RINGS  = [32, 62, 92]
+  const LABEL_R = 125
+  const FILLS  = ['#B8D4F0', '#F0CA70', '#E87C7C']
+  const STROKES = ['#7AAEDC', '#D4A830', '#C84040']
+  const EMPTY  = '#E0DCD4'
+  const EMPTY_S = '#C8C4BC'
 
   return (
-    <svg viewBox="0 0 280 280" width={size} height={size} style={{ display: 'block' }}>
-      {/* Anneaux laiton */}
-      <circle cx={cx} cy={cy} r={133} fill="none" stroke="#C8B890" strokeWidth={0.6} opacity={0.45} />
-      <circle cx={cx} cy={cy} r={128} fill="none" stroke="#C8B890" strokeWidth={1} opacity={0.3} />
-      {/* Guides */}
-      {[40, 76, 112].map(r => (
-        <circle key={r} cx={cx} cy={cy} r={r} fill="none" stroke="#C8C0B0" strokeWidth={0.4} strokeDasharray="1.5 3" opacity={r===40?0.55:r===76?0.5:0.4} />
-      ))}
-      {/* Graduations */}
-      {Array.from({ length: 32 }, (_, i) => {
-        const a = (i / 32) * 2 * Math.PI - Math.PI / 2
-        const major = i % 4 === 0
-        const r1 = major ? 117 : 121, r2 = major ? 126 : 124
-        return <line key={i} x1={(cx+r1*Math.cos(a)).toFixed(1)} y1={(cy+r1*Math.sin(a)).toFixed(1)} x2={(cx+r2*Math.cos(a)).toFixed(1)} y2={(cy+r2*Math.sin(a)).toFixed(1)} stroke="#C0B090" strokeWidth={major?0.8:0.4} opacity={major?0.65:0.38} />
-      })}
-      {/* 8 branches */}
-      {scores.map((sc, i) => {
-        const a = (i * 45 - 90) * Math.PI / 180
-        const ds = sc.display_score
+    <svg viewBox="0 0 240 240" width="210" height="210" style={{ overflow: 'visible' }}>
+      {/* Anneau laiton extérieur */}
+      <circle cx={cx} cy={cy} r={108} fill="none" stroke="#C8B880" strokeWidth="1.2" />
+      {/* 32 graduations */}
+      {Array.from({ length: 32 }).map((_, t) => {
+        const ta = (t * 360 / 32 - 90) * Math.PI / 180
+        const isMaj = t % 4 === 0
         return (
-          <g key={sc.branch} onClick={() => onBranchClick?.(sc)} style={{ cursor: onBranchClick ? 'pointer' : 'default' }}>
-            {SEGS.map(([r1, r2, w], si) => {
-              const minScore = si + 1
-              const active = ds >= minScore
-              const c = active ? COLORS.score[minScore] : COLORS.score[0]
-              return <path key={si} d={lozD(a, r1, r2, w, cx, cy)} fill={c.solid} stroke={c.stroke} strokeWidth={si===2&&ds===3?0.7:0.5} opacity={active?1:0.6} style={{ transition: 'fill .4s ease' }} />
+          <line key={t}
+            x1={cx + 100 * Math.cos(ta)} y1={cy + 100 * Math.sin(ta)}
+            x2={cx + (isMaj ? 94 : 97) * Math.cos(ta)} y2={cy + (isMaj ? 94 : 97) * Math.sin(ta)}
+            stroke="#C8B880" strokeWidth={isMaj ? 1 : 0.5} />
+        )
+      })}
+      {/* Cercles guide */}
+      {RINGS.map(r => (
+        <circle key={r} cx={cx} cy={cy} r={r}
+          fill="none" stroke="#DDD8CC" strokeWidth="0.6" strokeDasharray="3 3" />
+      ))}
+      {/* 8 branches */}
+      {scores.map((s, i) => {
+        const a = (i * 45 - 90) * Math.PI / 180
+        const perpA = a + Math.PI / 2
+        const lx = cx + LABEL_R * Math.cos(a)
+        const ly = cy + LABEL_R * Math.sin(a)
+        const dotColor = s.display_score === 3 ? '#801050' : s.display_score === 2 ? '#888000' : '#004858'
+        return (
+          <g key={i}>
+            <line x1={cx} y1={cy} x2={cx + 95 * Math.cos(a)} y2={cy + 95 * Math.sin(a)}
+              stroke="#E0DCD4" strokeWidth="0.8" />
+            {RINGS.map((r, lvl) => {
+              const px = cx + r * Math.cos(a), py = cy + r * Math.sin(a)
+              const hl = r * 0.28, hw = r * 0.12
+              const filled = s.display_score >= (lvl + 1)
+              const t1x = px + hl * Math.cos(a), t1y = py + hl * Math.sin(a)
+              const t2x = px - hl * Math.cos(a), t2y = py - hl * Math.sin(a)
+              const s1x = px + hw * Math.cos(perpA), s1y = py + hw * Math.sin(perpA)
+              const s2x = px - hw * Math.cos(perpA), s2y = py - hw * Math.sin(perpA)
+              return (
+                <polygon key={lvl}
+                  points={`${t1x},${t1y} ${s1x},${s1y} ${t2x},${t2y} ${s2x},${s2y}`}
+                  fill={filled ? FILLS[lvl] : EMPTY}
+                  stroke={filled ? STROKES[lvl] : EMPTY_S}
+                  strokeWidth={filled ? '1' : '0.5'}
+                  strokeLinejoin="miter"
+                  opacity={filled ? 0.92 : 0.5}
+                />
+              )
             })}
-            <text x={(cx+150*Math.cos(a)).toFixed(1)} y={(cy+150*Math.sin(a)).toFixed(1)} textAnchor="middle" dominantBaseline="central" fontFamily="Georgia,serif" fontSize={10.5} fontWeight={900} fontStyle="italic" fill={ds>0?COLORS.score[ds].stroke:'#AAAAAA'} opacity={ds>0?1:0.5}>
-              {ROMAN[i]}
+            <circle cx={lx} cy={ly} r="11" fill="#F8F3E8" stroke="#C8B880" strokeWidth="0.9" />
+            <circle cx={lx} cy={ly - 5} r="2" fill={dotColor} opacity="0.85" />
+            <text x={lx} y={ly + 3.5} textAnchor="middle" dominantBaseline="middle"
+              fontSize="8" fontFamily="'Cinzel',Georgia,serif" fill="#6A5A38">
+              {s.branch}
             </text>
           </g>
         )
       })}
       {/* Centre laiton */}
-      <circle cx={cx} cy={cy} r={9} fill={COLORS.brass.light} stroke={COLORS.brass.ring} strokeWidth={0.8} />
-      <circle cx={cx} cy={cy} r={5.5} fill={COLORS.brass.mid} opacity={0.9} />
-      <circle cx={cx} cy={cy} r={2.5} fill={COLORS.brass.dark} />
+      <circle cx={cx} cy={cy} r="7" fill="#D4BC78" stroke="#A89050" strokeWidth="1" />
+      <circle cx={cx} cy={cy} r="3" fill="#8A6830" />
+      {/* Légende */}
+      {[
+        { c: '#B8D4F0', l: 'Calme' },
+        { c: '#F0CA70', l: 'Modéré' },
+        { c: '#E87C7C', l: 'Agité' },
+      ].map((item, i) => (
+        <g key={i} transform={`translate(${28 + i * 64}, 228)`}>
+          <polygon points="8,0 4,8 8,16 12,8" fill={item.c} stroke="none" opacity="0.9" />
+          <text x="18" y="11" fontSize="8" fill={TXT3} fontFamily="'Cinzel',Georgia,serif">
+            {item.l}
+          </text>
+        </g>
+      ))}
     </svg>
   )
 }
