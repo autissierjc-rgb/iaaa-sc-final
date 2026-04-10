@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
@@ -277,9 +277,9 @@ function AstrolabeRadial({ scores }: {
       <circle cx={cx} cy={cy} r="3" fill="#8A6830" />
       {/* Légende */}
       {[
-        { c: '#B8D4F0', l: 'Faible' },
+        { c: '#B8D4F0', l: 'Calme' },
         { c: '#F0CA70', l: 'Modéré' },
-        { c: '#E87C7C', l: 'Dominant' },
+        { c: '#E87C7C', l: 'Agité' },
       ].map((item, i) => (
         <g key={i} transform={`translate(${28 + i * 64}, 228)`}>
           <polygon points="8,0 4,8 8,16 12,8"
@@ -746,11 +746,41 @@ export default function HomeClient() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMsgs])
 
+  // Mapping branches côté client (plus de name/name_en dans le JSON astrolabe)
+  const BRANCH_FR: Record<string, string> = { I:'Acteurs', II:'Intérêts', III:'Forces', IV:'Tensions', V:'Contraintes', VI:'Incertitude', VII:'Temps', VIII:'Espace' }
+  const BRANCH_EN: Record<string, string> = { I:'Actors', II:'Interests', III:'Forces', IV:'Tensions', V:'Constraints', VI:'Uncertainty', VII:'Time', VIII:'Space' }
+
+  function getStateLabel(v: number): string {
+    if (v < 40) return lang === 'FR' ? 'Stable' : 'Clear'
+    if (v < 55) return lang === 'FR' ? 'Contrôlable' : 'Navigable'
+    if (v < 70) return lang === 'FR' ? 'Vigilance' : 'Watch'
+    if (v < 90) return lang === 'FR' ? 'Critique' : 'Critical'
+    return lang === 'FR' ? 'Hors contrôle' : 'Loss of Control'
+  }
+
+  // Convertit le format compact {state, branches} en astrolabe_scores pour AstrolabeRadial
+  function convertAstrolabe(data: { state?: number; branches?: Array<{b:string;s:number;p:boolean}> }) {
+    if (!data?.branches) return null
+    return {
+      state_index_final: data.state ?? 50,
+      state_label: getStateLabel(data.state ?? 50),
+      state_label_en: getStateLabel(data.state ?? 50),
+      astrolabe_scores: data.branches.map(br => ({
+        branch: br.b,
+        display_score: br.s,
+        is_primary: br.p,
+        name: BRANCH_FR[br.b] ?? br.b,
+        name_en: BRANCH_EN[br.b] ?? br.b,
+        label: '',
+        label_en: '',
+      }))
+    }
+  }
+
   const handleGenerate = useCallback(async () => {
     if (compassDisabled) return
     const text = situation.trim()
 
-    // Si en attente de réponses CLARIFY — on enrichit
     let fullText = text
     if (waitingForAnswers && lastMsg?.kind === 'clarify') {
       const qa = lastMsg.questions
@@ -762,40 +792,67 @@ export default function HomeClient() {
     setScLoading(true)
     setCompassMode('full')
     setChatMsgs(prev => [...prev, { kind: 'user', text }])
+    setSituation('')
 
     try {
-      const res = await fetch('/api/generate', {
+      // Gate check — déterministe, instantané
+      const gateRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ situation: fullText, lang: lang.toLowerCase() }),
       })
-      const data = await res.json()
+      const gateData = await gateRes.json()
 
-      if (data.gate === 'FLASH') {
+      if (gateData.gate === 'FLASH') {
         setCompassMode('idle')
-        const fl = data.flash
-        const etat    = lang === 'FR' ? fl.etat_actuel    : (fl.etat_actuel_en    ?? fl.etat_actuel)
-        const lecture = lang === 'FR' ? fl.lecture        : (fl.lecture_en        ?? fl.lecture)
+        const fl = gateData.flash
+        const etat    = lang === 'FR' ? fl.etat_actuel : (fl.etat_actuel_en ?? fl.etat_actuel)
+        const lecture = lang === 'FR' ? fl.lecture     : (fl.lecture_en     ?? fl.lecture)
         setChatMsgs(prev => [...prev, { kind: 'flash', etat, lecture }])
-        setScData(null)
-      } else if (data.gate === 'GENERATE' && data.sc) {
-        setCompassMode('idle')
-        setScData(data.sc)
-        setSituation('')
-      } else if (data.gate === 'CLARIFY') {
-        setCompassMode('idle')
-        setChatMsgs(prev => [...prev, { kind: 'clarify', questions: data.questions ?? [] }])
-        setAnswers(new Array(data.questions?.length ?? 0).fill(''))
-        setScData(null)
-      } else if (data.gate === 'BLOCK') {
-        setCompassMode('off')
-        setChatMsgs(prev => [...prev, { kind: 'block', reason: data.reason ?? '' }])
-        setScData(null)
+        setScData(null); setScLoading(false); return
       }
+      if (gateData.gate === 'CLARIFY') {
+        setCompassMode('idle')
+        setChatMsgs(prev => [...prev, { kind: 'clarify', questions: gateData.questions ?? [] }])
+        setAnswers(new Array(gateData.questions?.length ?? 0).fill(''))
+        setScData(null); setScLoading(false); return
+      }
+      if (gateData.gate === 'BLOCK') {
+        setCompassMode('off')
+        setChatMsgs(prev => [...prev, { kind: 'block', reason: gateData.reason ?? '' }])
+        setScData(null); setScLoading(false); return
+      }
+
+      // GENERATE — Appel 1 astrolabe (haiku ~3s) + Appel 2 SC (sonnet ~10s) en parallèle
+      const [astroRes, scRes] = await Promise.all([
+        fetch('/api/astrolabe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ situation: fullText }),
+        }),
+        fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ situation: fullText, lang: lang.toLowerCase(), mode: 'generate_full' }),
+        })
+      ])
+
+      // Astrolabe — afficher dès réception
+      const astroData = await astroRes.json()
+      const partial = convertAstrolabe(astroData)
+      if (partial) { setScData(partial); setCompassMode('light') }
+
+      // SC complète — fusionner
+      const scData2 = await scRes.json()
+      if (scData2.sc) {
+        setScData(prev => ({ ...(partial ?? {}), ...scData2.sc }))
+      }
+      setCompassMode('idle')
+      setScLoading(false)
+
     } catch (e) {
       console.error(e)
       setCompassMode('idle')
-    } finally {
       setScLoading(false)
     }
   }, [situation, lang, compassDisabled, waitingForAnswers, lastMsg, answers])
@@ -804,13 +861,15 @@ export default function HomeClient() {
     setScLoading(true)
     setCompassMode('full')
     try {
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ situation: text, mode: 'generate', lang: lang.toLowerCase() }),
-      })
-      const data = await res.json()
-      if (data.sc) setScData(data.sc)
+      const [astroRes, scRes] = await Promise.all([
+        fetch('/api/astrolabe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: text }) }),
+        fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: text, mode: 'generate_full', lang: lang.toLowerCase() }) })
+      ])
+      const astroData = await astroRes.json()
+      const partial = convertAstrolabe(astroData)
+      if (partial) { setScData(partial); setCompassMode('light') }
+      const scData2 = await scRes.json()
+      if (scData2.sc) setScData(prev => ({ ...(partial ?? {}), ...scData2.sc }))
     } catch (e) { console.error(e) }
     finally { setScLoading(false); setCompassMode('idle') }
   }
@@ -1030,12 +1089,12 @@ export default function HomeClient() {
                     <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" />
                     <polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
                   </svg>
-                  {t.partager}
+                  <div style={{ display: 'flex', gap: 4, marginRight: 4 }}>{(['FR','EN']).map(l => (<button key={l} onClick={() => setLang(l as 'FR' | 'EN')} style={{ fontSize: 10, fontWeight: 500, padding: '3px 7px', border: `1px solid ${l === lang ? GOLD : BDR}`, borderRadius: 5, background: l === lang ? `${GOLD}22` : 'transparent', color: l === lang ? GOLD : TXT3, cursor: 'pointer' }}>{l}</button>))}</div>{t.partager}
                 </button>
               </div>
 
               {/* Contenu droit */}
-              {scLoading ? (
+              {scLoading && !scData ? (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
                   <GlobeInteractif size={200} />
                   <div style={{ fontSize: 12, color: TXT3, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif" }}>
@@ -1133,5 +1192,7 @@ export default function HomeClient() {
     </>
   )
 }
+
+
 
 
