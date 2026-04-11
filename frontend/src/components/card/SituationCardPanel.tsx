@@ -351,7 +351,7 @@ export default function SituationCardPanel({ sc, lang, onExpand }: {
           borderRadius: 7, padding: '7px 8px', fontSize: 11,
           fontFamily: "'Cinzel',serif", letterSpacing: '.04em', cursor: 'pointer',
         }}>
-          <Picto src="/pictos/cartes.jpeg" />
+          <Picto src="/pictos/carte.jpg" />
           {TX[lang].lectures}
         </button>
         <button style={{
