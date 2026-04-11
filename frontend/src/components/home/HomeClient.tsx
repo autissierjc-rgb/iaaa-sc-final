@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 // ── HomeClient ────────────────────────────────────────────────────────────────
 // LOGIQUE PURE — fetch, gate, state React
 // Pour modifier le design : toucher SituationCardPanel.tsx uniquement
@@ -114,7 +114,7 @@ export default function HomeClient() {
   const [scExpanded, setScExpanded] = useState(false)
   const [compassMode, setCompassMode] = useState<CompassMode>('idle')
   const [panelHistory, setPanelHistory] = useState(false)
-  const [panelSaved, setPanelSaved] = useState(false)
+ const [parchemin, setParchemin] = useState<'idle'|'unrolling'|'done'>('idle')
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const t = TX[lang]
@@ -162,7 +162,12 @@ export default function HomeClient() {
       const scPromise    = fetch('/api/generate',   { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: fullText, lang: lang.toLowerCase(), mode: 'generate_full' }) })
       const astroData = await (await astroPromise).json()
       const partial = convertAstrolabe(astroData, lang)
-      if (partial) { setScData(partial); setCompassMode('light') }
+    if (partial) {
+  setScData(partial)
+  setCompassMode('light')
+  setParchemin('unrolling')
+  setTimeout(() => setParchemin('done'), 800)
+}
       const scData2 = await (await scPromise).json()
       if (scData2.sc) { setScData({ ...(partial ?? {}), ...scData2.sc }) }
       setCompassMode('idle'); setScLoading(false)
