@@ -475,7 +475,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
               borderRadius: 6, padding: '8px 10px',
             }}>
               <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 4 }}>
-                {lang === 'FR' ? 'READING' : 'READING'}
+                {lang === 'FR' ? 'LECTURE' : 'LECTURE'}
               </div>
               <div style={{ fontSize: 12, color: TXT, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.6 }}>
                 {insight}
@@ -487,7 +487,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
               borderRadius: 6, padding: '6px 10px',
             }}>
               <div style={{ fontSize: 8, color: '#E06B4A', letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 3 }}>
-                {lang === 'FR' ? 'MAIN VULNERABILITY' : 'MAIN VULNERABILITY'}
+                {lang === 'FR' ? 'VULNÉRABILITÉ PRINCIPALE' : 'VULNÉRABILITÉ PRINCIPALE'}
               </div>
               <div style={{ fontSize: 11, color: TXT, fontWeight: 500, lineHeight: 1.5 }}>{vulnerability}</div>
             </div>
