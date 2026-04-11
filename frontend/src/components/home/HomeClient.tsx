@@ -1,4 +1,4 @@
-'use client'
+﻿import HomeClient from '@/components/home/HomeClient''use client'
 
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
