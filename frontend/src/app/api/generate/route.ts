@@ -124,7 +124,9 @@ Return ONLY valid JSON. No markdown. No text outside JSON.
   "movements_fr": ["immediate action", "structural action", "observation / positioning"],
   "movements_en": ["", "", ""],
   "avertissement_fr": "what must NOT be done — 1 sentence",
-  "avertissement_en": ""
+  "avertissement_en": "",
+  "lecture_systeme_fr": "3-4 sentences — explain WHY the SC looks the way it does: which structural logic drives the reading, which pattern was detected, what the load-bearing contradiction is",
+  "lecture_systeme_en": "same in EN"
 }
 
 RULES:
@@ -139,6 +141,7 @@ TRAJECTORIES: exactly 3, structurally different regimes — not 3 intensity vari
 KEY SIGNAL: one only, observable and concrete.
 MOVEMENTS: exactly 3 — immediate / structural / observation. No orders.
 AVERTISSEMENT: what NOT to do. One sentence. No moralizing.
+LECTURE_SYSTEME: 3-4 sentences explaining the internal structural logic. Name the pattern detected, the load-bearing contradiction, why the SC reads as it does. Written for the person, not for an analyst.
 LANGUAGE: concise, factual, no drama, translations natural not literal.
 
 IMPORTANT: JSON only. No markdown. No meta-commentary.`
