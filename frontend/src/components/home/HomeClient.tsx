@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
@@ -675,7 +675,7 @@ export default function HomeClient() {
   function convertAstrolabe(data: { state?: number; branches?: Array<{b:string;s:number;p:boolean}> }) {
     if (!data?.branches) return null
     return {
-      state_index_final: data.state ?? 50,
+      state_index_final: 0,
       state_label: getStateLabel(data.state ?? 50),
       state_label_en: getStateLabel(data.state ?? 50),
       astrolabe_scores: data.branches.map(br => ({

@@ -290,7 +290,7 @@ export async function POST(req: NextRequest) {
     // ── APPEL 1 : Response Gate ──────────────────────────────────────────────
     const gateMsg = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 400,
+      max_tokens: 500,
       messages: [{
         role: 'user',
         content: `${GATE_PROMPT}\n\nSituation soumise :\n${situation.trim()}`,
@@ -324,7 +324,7 @@ export async function POST(req: NextRequest) {
     // ── APPEL 2 : Moteur SC complet ──────────────────────────────────────────
     const scMsg = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
+      max_tokens: 8000,
       messages: [{
         role: 'user',
         content: `${SC_PROMPT}\n\nSituation :\n${situation.trim()}`,
