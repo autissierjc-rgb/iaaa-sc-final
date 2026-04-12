@@ -3,349 +3,238 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic()
 
-// ── APPEL 1 — RESPONSE GATE ───────────────────────────────────────────────────
-// Détermine si la situation est prête à être analysée.
-// Retourne : { mode: 'GENERATE' | 'CLARIFY' | 'BLOCK', questions?: string[], reason?: string }
+// ── GATE DÉTERMINISTE (TypeScript pur, zéro LLM) ─────────────────────────────
 
-const GATE_PROMPT = `You are IAAA — a decision governance layer.
-Your only role: determine if this situation is structurally valid for analysis.
-Return ONLY raw JSON. No markdown. No comments.
+const BLOCK_MARKERS = [
+  "confirme que j'ai raison", "prouve que j'ai raison", "dis-moi que j'ai raison",
+  "confirm i'm right", "prove i'm right", "tell me i'm right",
+  'valide ma décision', 'valide mon choix',
+]
+const STATUS_MARKERS = [
+  'où en est', 'ou en est', 'where are we', "what's happening", 'what is happening',
+  'latest on', 'update on', 'que se passe-t-il', 'que se passe t-il',
+  'status of', 'état de', 'etat de', 'how is the', 'comment va',
+  'où en sommes', 'ou en sommes', 'how are things', 'news on',
+]
+const PERSONAL_MARKERS = [
+  ' je ', " j'", ' mon ', ' ma ', ' mes ', ' moi ', ' nous ', ' notre ', ' nos ',
+  ' my ', " i'm ", ' we ', ' our ', " i'd ", " i've ",
+]
+const ORG_MARKERS = [
+  'équipe', 'equipe', 'board', 'comex', 'ceo', 'cfo', 'dg ', 'pdg',
+  'entreprise', 'client', 'projet', 'project', 'ong', 'ngo',
+  'manager', 'associé', 'associe', 'fondateur', 'startup',
+  'organisation', 'organization', 'institution', 'direction',
+]
+const ANALYSIS_MARKERS = [
+  'analyse', 'analyze', 'structure', 'situation card', ' sc ', 'diagnostic',
+  'trajectoire', 'trajectory', 'vulnérabilité', 'vulnerability',
+  'fais une', 'génère', 'generate', 'create a card', 'make a card',
+]
 
-DECISION MODES (choose exactly one):
+type GateMode = 'FLASH' | 'GENERATE' | 'CLARIFY' | 'BLOCK'
 
-MODE GENERATE — all conditions met:
-- Actors are identifiable (even implicitly)
-- Scope is understandable
-- At least one structural dynamic exists
-- At least 2 distinct future paths are conceivable
-- Input is not seeking validation of a predefined conclusion
-→ Return: {"mode":"GENERATE"}
+function detectGate(text: string): GateMode {
+  const t = text.toLowerCase()
+  if (BLOCK_MARKERS.some(m => t.includes(m))) return 'BLOCK'
+  if (ANALYSIS_MARKERS.some(m => t.includes(m))) return 'GENERATE'
+  if (ORG_MARKERS.some(m => t.includes(m))) return 'GENERATE'
+  if (PERSONAL_MARKERS.some(m => t.includes(m))) return 'CLARIFY'
+  if (STATUS_MARKERS.some(m => t.includes(m))) return 'FLASH'
+  return 'GENERATE'
+}
 
-MODE CLARIFY — situation is real but structurally incomplete:
-- Missing: who the actors are, what the exact issue is, what timeframe applies, or what is at stake
-- Ask 2 to 4 targeted questions maximum
-- Only ask what is strictly necessary
-→ Return: {"mode":"CLARIFY","questions":["...","..."]}
+// ── PROMPTS ───────────────────────────────────────────────────────────────────
 
-MODE BLOCK — situation cannot be analyzed:
-- No identifiable structure
-- Blatant confirmation bias ("tell me I'm right")
-- Too premature or incoherent
-→ Return: {"mode":"BLOCK","reason":"one sentence explaining why"}
+const FLASH_PROMPT = `You are IAAA — a structural intelligence system.
+The user asked a public status question.
+Return ONLY raw JSON. No markdown. No backticks.
 
-PRIORITY RULE: When in doubt → BLOCK > CLARIFY > GENERATE
+Schema:
+{
+  "etat_actuel": "one factual sentence about current state (FR)",
+  "etat_actuel_en": "same in EN",
+  "lecture": "one structural sentence naming the deeper dynamic (FR)",
+  "lecture_en": "same in EN"
+}
 
-IMPORTANT: Broad, open situations ("where is the Iran conflict going?") are GENERATE.
-Vague personal situations without any context are CLARIFY, not BLOCK.
-Only BLOCK if there is literally nothing to work with.`
+Rules:
+- 2 sentences maximum total
+- No jargon, no preamble, no questions, no lists
+- If you lack recent data, be structurally honest: name the dynamics, not invented facts
+- Never say "je vais analyser" or start with "Pour analyser"
+- Write in French for etat_actuel/lecture, English for _en fields`
 
-// ── APPEL 2 — MOTEUR SC COMPLET ──────────────────────────────────────────────
-// Le prompt complet du moteur IAAA avec les 5 axes contextuels,
-// les 20 patterns humains, les 9 patterns systémiques,
-// le calibrage figé, et le format bilingue FR/EN.
+const CLARIFY_PROMPT = `You are IAAA — a structural intelligence system.
+The situation is personal or professional but lacks key structural elements.
+Return ONLY raw JSON. No markdown. No backticks.
+
+Schema:
+{ "questions": ["question 1", "question 2"] }
+
+Rules:
+- Maximum 2 questions
+- Each targets one missing element: actors, scope, core issue, or timeframe
+- Short, direct, not therapeutic
+- Write in the same language as the input`
 
 const SC_PROMPT = `You are IAAA SIS — structural analysis engine.
 Return ONLY valid JSON. No markdown. No text outside JSON.
 
-═══════════════════════════════════════════════════════════════
-CONTEXT PRE-LOADING (silent, before analysis)
-═══════════════════════════════════════════════════════════════
+CONTEXT PRE-LOADING (silent):
+Axis 1 Territory: geographic constraints shape vulnerability profiles.
+Axis 2 Domain: load sector standards silently (humanitarian, legal, medical, financial).
+Axis 3 Emotional state: detect register (distress/fatigue/resignation/clarity). Adjust formulation not diagnosis.
+Axis 4 Socio-cultural: calibrate vocabulary and realism from language/framing.
+Axis 5 Temporal: integrate recent dynamics for dated situations only.
 
-Before any analysis, silently detect the situation's context on 5 axes.
-Never mention these axes in the output.
+HUMAN UNCERTAINTY PRINCIPLE: what is submitted is never complete. The load-bearing contradiction is one layer below the surface.
 
-AXIS 1 — TERRITORY
-Identify geography, infrastructure density, service availability, mobility constraints.
-A person unemployed in Paris vs a rural area has structurally different constraints.
-Apply to any situation with a geographic anchor.
+PATTERN DETECTION (silent, never display):
+Systemic: Escalation spiral / Dependency trap / Principal-agent conflict / Power asymmetry / Coordination failure / Strategic lag / Trust breakdown / Replacement lag / Institutional absorption limit
+Human: Identity Split / Loyalty Conflict / Dependency Loop / Recognition Asymmetry / Shame-Avoidance Loop / Fear-of-Loss Paralysis / Self-Worth Role Fusion / Chronic Over-Adaptation / Emotional Load Asymmetry / Unspoken Contract Breakdown / Hidden Resentment Accumulation / Boundary Erosion / Meaning Collapse Under Constraint / Care Burden Imbalance / Validation Trap / Deferred Conflict Saturation / Projection Misalignment / Attachment-Security Conflict / Invisible Standards Pressure / Role Container Failure
 
-AXIS 2 — PROFESSIONAL DOMAIN
-Does this situation belong to a recognized domain?
-If yes, load its standards, procedures, real constraints.
-Humanitarian: INSO standards, probability/impact distinction.
-Legal: jurisdiction, prescription, procedural constraints.
-Medical: triage logic, institutional hierarchy.
-Financial: regulatory constraints, fiduciary obligations.
+CALIBRAGE (figé):
+Astrolabe 8 branches 0-3. TENSIONS=3 only if explicit conflict NAMED actors + structural impact. PRIMARY=one branch max.
+Radar 4 dimensions 1-3: Impact/Urgence/Incertitude/Réversibilité.
+astrolabe_base = (sum/24)x100
+radar_pressure = (Impact-1)/2x0.30 + (Urgence-1)/2x0.25 + (Incertitude-1)/2x0.25 + (Réversibilité-1)/2x0.20
+state_index_raw = astrolabe_base x 0.65 + (radar_pressure x 100) x 0.35
+Adjustment -5 to +5 max.
+States: 0-39=Stable/Clear | 40-54=Contrôlable/Navigable | 55-69=Vigilance/Watch | 70-89=Critique/Critical | 90-100=Hors contrôle/Loss of Control
 
-AXIS 3 — EMOTIONAL STATE (personal/relational situations)
-Detect the emotional register: acute distress, chronic fatigue, anger, confusion, resignation, relative clarity.
-Emotional state affects which trajectories are psychologically accessible and how to formulate the structural diagnosis.
-Do NOT soften the structural diagnosis. Adjust the formulation, not the content.
-A person in acute distress needs an anchor before analysis.
-A person in chronic resignation needs the structural dynamic named clearly, not confirmed gently.
-
-AXIS 4 — INTELLECTUAL AND SOCIO-CULTURAL CONTEXT
-Infer from the submission's language, vocabulary, framing:
-- Familiarity with analytical frameworks
-- Socio-economic and cultural context
-- Real vs theoretical constraints for this person
-- Whether institutional support exists in their context
-Use to calibrate vocabulary (no jargon if not signaled), depth, and realism of trajectories.
-
-AXIS 5 — TEMPORAL CONTEXT
-For dated geopolitical or economic situations: integrate recent dynamics.
-For personal/intemporelle situations: leave this axis inactive.
-
-HUMAN UNCERTAINTY PRINCIPLE (permanent, for all human situations)
-The situation as submitted is never complete.
-The person may not say everything. They may not know everything about themselves.
-What is described as the problem is often a symptom — the load-bearing contradiction is one layer below.
-The SC must reach that layer, not describe the surface.
-
-═══════════════════════════════════════════════════════════════
-INTERNAL PATTERN DETECTION (silent — never display)
-═══════════════════════════════════════════════════════════════
-
-Silently detect which patterns apply. Use them to sharpen the analysis.
-Never name the pattern in the output.
-
-SYSTEMIC PATTERNS:
-- Escalation spiral (actions trigger counter-reactions)
-- Dependency trap (actor locked to resource/relationship they cannot leave)
-- Principal-agent conflict (instructions vs actual incentives diverge)
-- Power asymmetry (one actor controls what others depend on)
-- Coordination failure (no single actor can solve alone, none will move first)
-- Strategic lag (strategy fixed while context has already changed)
-- Trust breakdown (cooperation depends on trust that is eroding)
-- Replacement lag (old system weakening faster than new system can take over)
-- Institutional absorption limit (institution cannot absorb more change)
-
-HUMAN PATTERNS (personal, relational, professional situations):
-- Identity Split (person pulled between two incompatible self-definitions)
-- Loyalty Conflict (obligations to two incompatible parties or values)
-- Dependency Loop (person needs what they are trying to escape)
-- Recognition Asymmetry (contribution invisible to those who matter most)
-- Shame-Avoidance Loop (fear of exposure preventing necessary action)
-- Fear-of-Loss Paralysis (person frozen between bad options to avoid loss)
-- Self-Worth / Role Fusion (identity too merged with a role or title)
-- Chronic Over-Adaptation (person continuously adjusting until nothing authentic remains)
-- Emotional Load Asymmetry (one person carries what should be distributed)
-- Unspoken Contract Breakdown (implicit agreement was never said and is now violated)
-- Hidden Resentment Accumulation (past silences now poisoning present)
-- Boundary Erosion (limits crossed so many times they no longer feel real)
-- Meaning Collapse Under Constraint (purpose disappears under accumulated obligation)
-- Care Burden Imbalance (care given far exceeds care received, unsustainably)
-- Validation Trap (self-worth dependent on external approval that cannot be controlled)
-- Deferred Conflict Saturation (avoided conversations creating systemic pressure)
-- Projection / Misalignment Pattern (person responding to imagined dynamic, not real one)
-- Attachment-Security Conflict (desire for closeness in conflict with need for safety)
-- Invisible Standards Pressure (person judged by standards never explicitly stated)
-- Role Container Failure (role no longer contains the actual complexity of what is needed)
-
-═══════════════════════════════════════════════════════════════
-CALIBRAGE ET SCORING (figé — ne pas modifier)
-═══════════════════════════════════════════════════════════════
-
-ASTROLABE — 8 branches, scores 0-3 each:
-- 0 = Inactive / 1 = Active / 2 = Moderate / 3 = Dominant
-- TENSIONS=3 only if explicit conflict between NAMED actors AND structural impact
-- INTERESTS=3 only if divergent incentives explicitly named
-- UNCERTAINTY=3 only if systemic (not merely decisional)
-- One branch maximum as primary
-
-RADAR — 4 dimensions, scores 1-3:
-- Impact: structural consequence if vulnerability materializes
-- Urgence: time pressure on the situation
-- Incertitude: degree of irreducible uncertainty
-- Réversibilité: how difficult to reverse if escalation occurs
-
-STATE INDEX (computed, do not invent):
-astrolabe_base = (sum of 8 branch scores / 24) × 100
-radar_pressure = (Impact-1)/2×0.30 + (Urgence-1)/2×0.25 + (Incertitude-1)/2×0.25 + (Réversibilité-1)/2×0.20
-state_index_raw = astrolabe_base × 0.65 + (radar_pressure × 100) × 0.35
-Adjustment allowed: -5 to +5 if terrain context justifies it
-
-STATE LABELS (use exact values):
-0-39   → state_fr: "Stable"      state_en: "Clear"
-40-54  → state_fr: "Contrôlable" state_en: "Navigable"
-55-69  → state_fr: "Vigilance"   state_en: "Watch"
-70-89  → state_fr: "Critique"    state_en: "Critical"
-90-100 → state_fr: "Hors contrôle" state_en: "Loss of Control"
-
-═══════════════════════════════════════════════════════════════
-OUTPUT FORMAT
-═══════════════════════════════════════════════════════════════
-
-Return this exact JSON schema. All fields required. No extras.
-
+OUTPUT SCHEMA (all fields required, no extras):
 {
-  "title": "short situation title (FR)",
-  "title_en": "short situation title (EN)",
+  "title": "(FR)", "title_en": "(EN)",
   "category": "Professionnel|Personnel|Gouvernance|Social|Géopolitique",
   "category_en": "Professional|Personal|Governance|Social|Geopolitical",
-  "state_index_final": <integer 0-100>,
-  "state_label": "<state_fr>",
-  "state_label_en": "<state_en>",
-  "confidence": "faible|moyenne|élevée",
-  "confidence_en": "low|medium|high",
-
-  "insight": "one sentence naming the real underlying dynamic (FR)",
-  "insight_en": "same in EN",
-  "vulnerability": "the single structural failure point — concrete, not vague (FR)",
-  "vulnerability_en": "same in EN",
-  "asymmetry": "what everyone manages vs what no one protects (FR)",
-  "asymmetry_en": "same in EN",
-
+  "submitted_situation": "restate submitted situation, correct spelling only (FR)",
+  "submitted_situation_en": "same in EN",
+  "state_index_final": <0-100>,
+  "state_label": "<fr>", "state_label_en": "<en>",
+  "confidence": "faible|moyenne|élevée", "confidence_en": "low|medium|high",
+  "insight": "(FR)", "insight_en": "(EN)",
+  "vulnerability": "concrete structural failure point (FR)", "vulnerability_en": "(EN)",
+  "asymmetry": "what everyone manages vs what no one protects (FR)", "asymmetry_en": "(EN)",
   "astrolabe_scores": [
-    {
-      "branch": "I", "name": "Acteurs", "name_en": "Actors",
-      "display_score": <0-3>, "label": "Inactif|Actif|Modéré|Dominant",
-      "label_en": "Inactive|Active|Moderate|Dominant",
-      "justification": "one sentence (FR)", "justification_en": "same (EN)",
-      "is_primary": <boolean>
-    },
-    { "branch": "II",   "name": "Intérêts",    "name_en": "Interests" },
-    { "branch": "III",  "name": "Forces",       "name_en": "Forces" },
-    { "branch": "IV",   "name": "Tensions",     "name_en": "Tensions" },
-    { "branch": "V",    "name": "Contraintes",  "name_en": "Constraints" },
-    { "branch": "VI",   "name": "Incertitude",  "name_en": "Uncertainty" },
-    { "branch": "VII",  "name": "Temps",        "name_en": "Time" },
-    { "branch": "VIII", "name": "Espace",       "name_en": "Space" }
+    { "branch": "I",    "name": "Acteurs",    "name_en": "Actors",       "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "II",   "name": "Intérêts",   "name_en": "Interests",    "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "III",  "name": "Forces",     "name_en": "Forces",       "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "IV",   "name": "Tensions",   "name_en": "Tensions",     "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "V",    "name": "Contraintes","name_en": "Constraints",  "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "VI",   "name": "Incertitude","name_en": "Uncertainty",  "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "VII",  "name": "Temps",      "name_en": "Time",         "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> },
+    { "branch": "VIII", "name": "Espace",     "name_en": "Space",        "display_score": <0-3>, "label": "", "label_en": "", "justification": "(FR)", "justification_en": "(EN)", "is_primary": <bool> }
   ],
-
   "radar_scores": [
-    { "dimension": "Impact",        "dimension_en": "Impact",        "score": <1-3>, "note": "one sentence (FR)", "note_en": "same (EN)" },
-    { "dimension": "Urgence",       "dimension_en": "Urgency",       "score": <1-3>, "note": "...", "note_en": "..." },
-    { "dimension": "Incertitude",   "dimension_en": "Uncertainty",   "score": <1-3>, "note": "...", "note_en": "..." },
-    { "dimension": "Réversibilité", "dimension_en": "Reversibility", "score": <1-3>, "note": "...", "note_en": "..." }
+    { "dimension": "Impact",        "dimension_en": "Impact",        "score": <1-3>, "note": "(FR)", "note_en": "(EN)" },
+    { "dimension": "Urgence",       "dimension_en": "Urgency",       "score": <1-3>, "note": "(FR)", "note_en": "(EN)" },
+    { "dimension": "Incertitude",   "dimension_en": "Uncertainty",   "score": <1-3>, "note": "(FR)", "note_en": "(EN)" },
+    { "dimension": "Réversibilité", "dimension_en": "Reversibility", "score": <1-3>, "note": "(FR)", "note_en": "(EN)" }
   ],
-
   "cap_summary": {
-    "hook": "the one sentence that names what is really happening (FR)",
-    "hook_en": "same in EN",
-    "insight": "structural framing of the cap (FR)",
-    "insight_en": "same in EN",
-    "vulnerability": "short form of the vulnerability (FR)",
-    "vulnerability_en": "same in EN",
-    "asymmetry": "short form of the asymmetry (FR)",
-    "asymmetry_en": "same in EN",
-    "watch": "the one signal that matters above all (FR)",
-    "watch_en": "same in EN"
+    "hook": "(FR)", "hook_en": "(EN)",
+    "insight": "(FR)", "insight_en": "(EN)",
+    "vulnerability": "(FR)", "vulnerability_en": "(EN)",
+    "asymmetry": "(FR)", "asymmetry_en": "(EN)",
+    "watch": "(FR)", "watch_en": "(EN)"
   },
-
   "trajectories": [
-    {
-      "type": "Stabilisation", "type_en": "Stabilization",
-      "color": "#1D9E75",
-      "title": "short label (FR)", "title_en": "short label (EN)",
-      "description": "what changes structurally — not just what happens (FR)",
-      "description_en": "same in EN",
-      "probability": "likelihood assessment (FR)",
-      "probability_en": "same in EN",
-      "signal_precurseur": "observable early signal (FR)",
-      "signal_precurseur_en": "same in EN"
-    },
-    {
-      "type": "Escalade", "type_en": "Escalation",
-      "color": "#E06B4A",
-      "title": "...", "title_en": "...",
-      "description": "...", "description_en": "...",
-      "probability": "...", "probability_en": "...",
-      "signal_precurseur": "...", "signal_precurseur_en": "..."
-    },
-    {
-      "type": "Rupture", "type_en": "Regime Shift",
-      "color": "#378ADD",
-      "title": "...", "title_en": "...",
-      "description": "the system changes NATURE not just intensity (FR)",
-      "description_en": "same in EN",
-      "probability": "...", "probability_en": "...",
-      "signal_precurseur": "...", "signal_precurseur_en": "..."
-    }
+    { "type": "Stabilisation", "type_en": "Stabilization", "color": "#1D9E75", "title": "(FR)", "title_en": "(EN)", "description": "(FR)", "description_en": "(EN)", "signal_precurseur": "(FR)", "signal_precurseur_en": "(EN)" },
+    { "type": "Escalade",      "type_en": "Escalation",    "color": "#E06B4A", "title": "(FR)", "title_en": "(EN)", "description": "(FR)", "description_en": "(EN)", "signal_precurseur": "(FR)", "signal_precurseur_en": "(EN)" },
+    { "type": "Rupture",       "type_en": "Regime Shift",  "color": "#378ADD", "title": "(FR)", "title_en": "(EN)", "description": "system changes NATURE not intensity (FR)", "description_en": "(EN)", "signal_precurseur": "(FR)", "signal_precurseur_en": "(EN)" }
   ],
-
-  "signal": "the one observable indicator that determines everything (FR)",
-  "signal_en": "same in EN",
-
+  "signal": "(FR)", "signal_en": "(EN)",
   "analysis": {
-    "lecture_systeme": "what is really happening at the structural level (FR)",
-    "lecture_systeme_en": "same in EN",
-    "avertissement": "what must not be done and why (FR)",
-    "avertissement_en": "same in EN",
-    "mouvements_recommandes": ["action 1 (FR)", "action 2 (FR)", "action 3 (FR)"],
-    "mouvements_recommandes_en": ["action 1 (EN)", "action 2 (EN)", "action 3 (EN)"],
-    "synthese": "conclusion in one sentence (FR)",
-    "synthese_en": "same in EN"
+    "lecture_systeme": "(FR)", "lecture_systeme_en": "(EN)",
+    "avertissement": "what must NOT be done (FR)", "avertissement_en": "(EN)",
+    "mouvements_recommandes": ["(FR)","(FR)","(FR)"],
+    "mouvements_recommandes_en": ["(EN)","(EN)","(EN)"],
+    "synthese": "(FR)", "synthese_en": "(EN)"
   }
 }
 
-FINAL SELF-CHECK before outputting:
-- signal: is it one observable indicator, not a question?
-- trajectories: do they represent genuinely different regime logics?
-- vulnerability: is it concrete and structural, not vague?
-- astrolabe: is the primary branch truly dominant?
-- asymmetry: does it name what everyone sees vs what no one protects?
-- analysis.avertissement: does it name what must NOT be done?
-If any field fails → rewrite it before outputting.`
+SELF-CHECK before output:
+signal=observable? trajectories=different regimes? vulnerability=concrete? primary=dominant? asymmetry=named? avertissement=what NOT to do?`
 
 // ── HANDLER ───────────────────────────────────────────────────────────────────
 
+async function generateSC(situation: string) {
+  const msg = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 6000,
+    messages: [{ role: 'user', content: `${SC_PROMPT}\n\nSituation:\n${situation}` }],
+  })
+  const raw = msg.content
+    .filter(b => b.type === 'text')
+    .map(b => (b as { type: 'text'; text: string }).text)
+    .join('').replace(/```json|```/g, '').trim()
+  return JSON.parse(raw)
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { situation, lang = 'fr' } = await req.json()
+    const { situation, mode, lang = 'fr' } = await req.json()
     if (!situation?.trim()) {
       return NextResponse.json({ error: 'No situation provided' }, { status: 400 })
     }
+    const text = situation.trim()
 
-    // ── APPEL 1 : Response Gate ──────────────────────────────────────────────
-    const gateMsg = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 400,
-      messages: [{
-        role: 'user',
-        content: `${GATE_PROMPT}\n\nSituation soumise :\n${situation.trim()}`,
-      }],
-    })
-
-    const gateRaw = gateMsg.content
-      .filter(b => b.type === 'text')
-      .map(b => (b as { type: 'text'; text: string }).text)
-      .join('')
-      .replace(/```json|```/g, '')
-      .trim()
-
-    let gate: { mode: string; questions?: string[]; reason?: string }
-    try {
-      gate = JSON.parse(gateRaw)
-    } catch {
-      // Si le gate échoue à parser, on laisse passer en GENERATE
-      gate = { mode: 'GENERATE' }
+    // Mode forcé depuis bouton "Situation Card" sous FLASH
+    if (mode === 'generate') {
+      const sc = await generateSC(text)
+      return NextResponse.json({ gate: 'GENERATE', sc })
     }
 
-    // Si CLARIFY ou BLOCK → retourner immédiatement sans appel SC
-    if (gate.mode === 'CLARIFY' || gate.mode === 'BLOCK') {
-      return NextResponse.json({
-        gate: gate.mode,
-        questions: gate.questions ?? [],
-        reason: gate.reason ?? '',
+    const gate = detectGate(text)
+
+    if (gate === 'BLOCK') {
+      const reason = lang === 'fr'
+        ? 'Cette formulation ne permet pas d\'analyse structurelle. Une situation analysable décrit des acteurs, des forces en présence et des trajectoires possibles.'
+        : 'This formulation does not allow structural analysis. An analysable situation describes actors, forces at play, and possible trajectories.'
+      return NextResponse.json({ gate: 'BLOCK', reason })
+    }
+
+    if (gate === 'FLASH') {
+      const msg = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: `${FLASH_PROMPT}\n\nQuestion: ${text}` }],
       })
+      const raw = msg.content
+        .filter(b => b.type === 'text')
+        .map(b => (b as { type: 'text'; text: string }).text)
+        .join('').replace(/```json|```/g, '').trim()
+      try {
+        const flash = JSON.parse(raw)
+        return NextResponse.json({ gate: 'FLASH', flash })
+      } catch {
+        // fallback GENERATE si FLASH parse échoue
+        const sc = await generateSC(text)
+        return NextResponse.json({ gate: 'GENERATE', sc })
+      }
     }
 
-    // ── APPEL 2 : Moteur SC complet ──────────────────────────────────────────
-    const scMsg = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
-      messages: [{
-        role: 'user',
-        content: `${SC_PROMPT}\n\nSituation :\n${situation.trim()}`,
-      }],
-    })
-
-    const scRaw = scMsg.content
-      .filter(b => b.type === 'text')
-      .map(b => (b as { type: 'text'; text: string }).text)
-      .join('')
-      .replace(/```json|```/g, '')
-      .trim()
-
-    let sc: Record<string, unknown>
-    try {
-      sc = JSON.parse(scRaw)
-    } catch {
-      console.error('SC parse error — raw:', scRaw.slice(0, 300))
-      return NextResponse.json({ error: 'SC generation failed — invalid JSON' }, { status: 500 })
+    if (gate === 'CLARIFY') {
+      const msg = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: `${CLARIFY_PROMPT}\n\nSituation: ${text}` }],
+      })
+      const raw = msg.content
+        .filter(b => b.type === 'text')
+        .map(b => (b as { type: 'text'; text: string }).text)
+        .join('').replace(/```json|```/g, '').trim()
+      try {
+        const clarify = JSON.parse(raw)
+        return NextResponse.json({ gate: 'CLARIFY', questions: clarify.questions ?? [] })
+      } catch {
+        return NextResponse.json({ gate: 'CLARIFY', questions: [] })
+      }
     }
 
+    // GENERATE
+    const sc = await generateSC(text)
     return NextResponse.json({ gate: 'GENERATE', sc })
 
   } catch (err) {
