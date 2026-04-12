@@ -163,7 +163,9 @@ function enrichWithScoring(
   const radar = sc.radar as RadarScores | undefined
   if (!radar) return sc
 
-  const state = computeState(branches, radar)
+  const state = branches.length > 0
+    ? computeState(branches, radar)
+    : Math.round(Math.max(0, Math.min(100, radar.impact * 0.30 + radar.urgency * 0.25 + radar.uncertainty * 0.25 + (100 - radar.reversibility) * 0.20)))
   return {
     ...sc,
     state_index_final: state,
@@ -186,7 +188,8 @@ async function generateFastCard(
     .map(b => (b as { type: 'text'; text: string }).text)
     .join('').replace(/```json|```/g, '').trim()
 
-  return parseJSON(raw)
+  const sc = parseJSON(raw)
+  return enrichWithScoring(sc, branches)
 }
 
 // ── HANDLER ───────────────────────────────────────────────────────────────────
