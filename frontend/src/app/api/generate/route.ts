@@ -186,8 +186,7 @@ async function generateFastCard(
     .map(b => (b as { type: 'text'; text: string }).text)
     .join('').replace(/```json|```/g, '').trim()
 
-  const sc = parseJSON(raw)
-  return enrichWithScoring(sc, branches)
+  return parseJSON(raw)
 }
 
 // ── HANDLER ───────────────────────────────────────────────────────────────────
