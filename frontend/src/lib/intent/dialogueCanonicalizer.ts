@@ -53,7 +53,13 @@ export async function buildCanonicalSituationFromDialogue({
   originalSituation?: string
   dialogueEvents: unknown
 }): Promise<CanonicalDialogue | null> {
-  const events = normalizeEvents(dialogueEvents)
+  let events = normalizeEvents(dialogueEvents)
+  if (events.length === 0) {
+    const firstText = asText(originalSituation) || asText(rawSituation)
+    if (firstText) {
+      events = [{ type: 'user_initial_question', text: firstText }]
+    }
+  }
   if (events.length === 0) return null
 
   const apiKey = process.env.OPENAI_API_KEY
@@ -89,9 +95,12 @@ Return ONLY JSON:
 
 Rules:
 - Use the dialogue events, not a concatenated raw prompt.
+- If there is only one user_initial_question, still formalize it: correct obvious spelling, spacing, accents, punctuation, and language mixing when the intended meaning is clear.
 - If the user confirms a clarification hypothesis, apply the confirmed meaning.
 - If the user corrects a referent, replace the ambiguous referent with the correction.
 - canonical_situation must preserve the user's intention, actors, facts, relations, requested action and useful context.
+- Do not preserve typing artifacts such as split words ("contest er"), untranslated fragments ("result of midterms"), or missing hyphens when the correction is obvious.
+- header_subject must be only the subject, never the domain label, and must contain at least 3 meaningful words.
 - If any user message contains a URL, preserve that URL verbatim in canonical_situation unless the user explicitly withdraws it.
 - A user-provided URL is usable context, not a reason to ask a clarification by itself.
 - Do not keep clarification scaffolding such as "Précisions", "C'est bien cela", or the system question.
