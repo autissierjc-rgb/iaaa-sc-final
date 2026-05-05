@@ -40,6 +40,34 @@ import type {
   ConcreteTheatre,
 } from '@/lib/resources/resourceContract'
 
+function hasExplicitUrl(value: string): boolean {
+  return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
+}
+
+function explicitUrls(value: string): string[] {
+  const seen = new Set<string>()
+  return (value.match(/\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/gi) ?? [])
+    .map((match) => match.replace(/[),.;:!?]+$/g, ''))
+    .filter((url) => {
+      const key = url.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
+function dialogueText(value: unknown): string {
+  if (!Array.isArray(value)) return ''
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') return ''
+      const text = (item as Record<string, unknown>).text
+      return typeof text === 'string' ? text : ''
+    })
+    .filter(Boolean)
+    .join('\n')
+}
+
 const FAST_CARD_PROMPT = `You are the IAAA Situation Card engine.
 
 ${SC_INTERPRETATION_AUTHORITY}
@@ -1144,6 +1172,7 @@ function siteAnalysisFallbackCard({
     /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(situation) ||
     /\b(site|page|plateforme|application|app|service|outil)\b/i.test(situation) ||
     resources.some((resource) => resource.type === 'site-brief')
+  const hasExplicitUrlSignal = hasExplicitUrl(situation)
   if (frame === 'general_analysis' && !hasExplicitSiteSignal) return null
   if (!brief && frame !== 'site_analysis' && frame !== 'startup_investment') return null
   const excerpt = brief?.excerpt ?? ''
@@ -1181,15 +1210,21 @@ function siteAnalysisFallbackCard({
       insight_fr:
         productIsEstablished
           ? `${company} doit d’abord être compris par ce que son site rend vérifiable : promesse, cible, usage et preuves visibles. L’analyse investisseur vient ensuite, pas avant.`
-          : `SC n’a pas encore identifié avec certitude le contenu utile de ${company}. Elle ne doit donc pas inventer son activité.`,
+          : hasExplicitUrlSignal
+            ? `L’URL de ${company} a été prise en compte, mais l’extraction/recherche serveur n’a pas produit assez de contenu exploitable pour établir précisément son activité. SC doit donc rester prudente au lieu d’inventer.`
+            : `SC n’a pas encore identifié avec certitude le contenu utile de ${company}. Elle ne doit donc pas inventer son activité.`,
       insight_en:
         productIsEstablished
           ? `${company} should first be understood through what its website makes verifiable: promise, target users, use case, and visible proof. Investor analysis comes after that, not before.`
           : `SC has not yet identified ${company}'s official site or useful content with certainty. It must not invent its activity.`,
-        main_vulnerability_fr: productIsEstablished ? vulnerability : `Le point fragile est l’identification incertaine du contenu utile et donc l’impossibilité de dire concrètement ce que fait ${company}.`,
+        main_vulnerability_fr: productIsEstablished ? vulnerability : hasExplicitUrlSignal
+          ? `Le point fragile est l’échec ou l’insuffisance de l’extraction du site : l’URL existe, mais le contenu utile reste trop pauvre pour conclure.`
+          : `Le point fragile est l’identification incertaine du contenu utile et donc l’impossibilité de dire concrètement ce que fait ${company}.`,
       main_vulnerability_en:
         `The fragile point is the gap between ${company}'s visible promise and observable proof of market, usage, and differentiation.`,
-      asymmetry_fr: productIsEstablished ? asymmetry : `La lecture utile dépend d’abord d’une source exploitable ; sans elle, l’activité réelle de ${company} ne doit pas être inventée.`,
+      asymmetry_fr: productIsEstablished ? asymmetry : hasExplicitUrlSignal
+        ? `L’utilisateur a fourni une URL, mais SC ne doit exploiter que le contenu public effectivement extrait ou retrouvé par recherche serveur.`
+        : `La lecture utile dépend d’abord d’une source exploitable ; sans elle, l’activité réelle de ${company} ne doit pas être inventée.`,
       asymmetry_en:
         `${company} can make a promise legible on its website, but the analysis must verify what customers, usage, revenue, or partnerships already prove.`,
       key_signal_fr: keySignal,
@@ -1316,7 +1351,9 @@ function siteAnalysisFallbackCard({
             `La contradiction centrale est là : un site peut rendre une promesse claire sans prouver que le marché suit. Pour juger ${company} sur ${market}, il faut donc distinguer quatre niveaux : ce que l’entreprise dit faire, pour qui elle le fait, quelle douleur elle résout, et quelles preuves externes confirment déjà l’usage.\n\n` +
             `Le point de bascule ne sera pas une meilleure formulation du site, mais une preuve observable. ${proofSentence} Si ces signaux deviennent vérifiables, l’analyse peut passer d’un avis sur le positionnement à une vraie lecture de potentiel. Sinon, la carte doit rester prudente.`
           : `SC n’a pas encore une compréhension suffisante du contenu utile de ${company}. La carte ne doit donc pas inventer une activité, une cible ou un segment à partir d’un nom seul.\n\n` +
-            `La bonne lecture est une suspension prudente : il faut d’abord obtenir un contenu exploitable, puis seulement séparer produit, cible, usage, preuves visibles et angles morts.\n\n` +
+            (hasExplicitUrlSignal
+              ? `L’URL a bien été fournie, mais l’extraction directe et la recherche serveur n’ont pas encore donné assez de matière publique exploitable. La bonne lecture consiste donc à dire précisément ce manque, pas à conclure sur ${market}.\n\n`
+              : `La bonne lecture est une suspension prudente : il faut d’abord obtenir un contenu exploitable, puis seulement séparer produit, cible, usage, preuves visibles et angles morts.\n\n`) +
             `Le prochain signal utile n’est pas une conclusion sur ${market}, mais une source exploitable : description claire, éléments de preuve, clients, cas d’usage ou tarification visible.`,
       lecture_systeme_en:
         productIsEstablished
@@ -2588,7 +2625,7 @@ function completeSituationCard(
 
 async function fetchResourcesFast(situation: string): Promise<ResourceItem[]> {
   const timeout = new Promise<ResourceItem[]>((resolve) => {
-    setTimeout(() => resolve([]), 8000)
+    setTimeout(() => resolve([]), hasExplicitUrl(situation) ? 15000 : 8000)
   })
 
   try {
@@ -3173,6 +3210,18 @@ export async function POST(req: NextRequest) {
     })
     const analysisText = canonicalDialogue?.canonical_situation ||
       applyDialogueClarifications(hasUserAdditions ? text : rawDisplayText || text)
+    const urlSourceText = [
+      text,
+      rawDisplayText,
+      canonicalDialogue?.canonical_situation ?? '',
+      typeof original_situation === 'string' ? original_situation : '',
+      dialogueText(dialogue_events),
+    ].filter(Boolean).join('\n')
+    const hasUrlInFlow = hasExplicitUrl(urlSourceText)
+    const urlAugmentedAnalysisText =
+      hasUrlInFlow && !hasExplicitUrl(analysisText)
+        ? `${analysisText}\n${explicitUrls(urlSourceText).join('\n')}`
+        : analysisText
     const previousContract = conversation_contract && typeof conversation_contract === 'object'
       ? conversation_contract as ConversationContract
       : undefined
@@ -3245,7 +3294,7 @@ export async function POST(req: NextRequest) {
       },
     }
 
-    if (canonicalDialogue && canonicalDialogue.can_generate === false && canonicalDialogue.next_question) {
+    if (canonicalDialogue && canonicalDialogue.can_generate === false && canonicalDialogue.next_question && !hasUrlInFlow) {
       return NextResponse.json({
         gate: 'CLARIFY',
         questions: [canonicalDialogue.next_question],
@@ -3255,7 +3304,7 @@ export async function POST(req: NextRequest) {
 
     const explicitPrudentGeneration = Boolean(generate_prudently)
     const earlyReadinessGate = situationReadinessGate({
-      situation: analysisText,
+      situation: urlAugmentedAnalysisText,
       intentContext,
       resources: sanitizeResources(rawResources),
       forceGenerate: explicitPrudentGeneration,
@@ -3265,7 +3314,8 @@ export async function POST(req: NextRequest) {
       earlyReadinessGate.status === 'ask_user' &&
       earlyReadinessGate.reason !== 'site_content_insufficient' &&
       earlyReadinessGate.question &&
-      !explicitPrudentGeneration
+      !explicitPrudentGeneration &&
+      !hasUrlInFlow
 
     if (shouldStopForEarlyReadiness) {
       return NextResponse.json({
@@ -3278,7 +3328,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    if (intentGate.shouldClarify && !refine_acknowledged) {
+    if (intentGate.shouldClarify && !refine_acknowledged && !hasUrlInFlow) {
       return NextResponse.json({
         gate: 'CLARIFY',
         questions: intentGate.questions,
@@ -3287,7 +3337,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (mode !== 'generate' && mode !== 'generate_full') {
-      if (inputQuality.questions.length > 0) {
+      if (inputQuality.questions.length > 0 && !hasUrlInFlow) {
         return NextResponse.json({
           gate: 'CLARIFY',
           questions: clarifyQuestions,
@@ -3295,7 +3345,7 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      if (coverage.status === 'clarify' && !hasUsableInterpretation) {
+      if (coverage.status === 'clarify' && !hasUsableInterpretation && !hasUrlInFlow) {
         return NextResponse.json({
           gate: 'CLARIFY',
           questions: clarifyQuestions,
@@ -3303,7 +3353,7 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      if (refineQuestions.length > 0 && !refine_acknowledged) {
+      if (refineQuestions.length > 0 && !refine_acknowledged && !hasUrlInFlow) {
         return NextResponse.json({
           gate: 'REFINE_OPTIONAL',
           questions: refineQuestions,
@@ -3321,23 +3371,23 @@ export async function POST(req: NextRequest) {
       ? astrolabe_branches
       : inferAstrolabeBranches(analysisText, intentContext)
     const providedResources = sanitizeResources(rawResources)
-    const webNeeded = shouldUseWeb(analysisText)
+    const webNeeded = hasUrlInFlow || shouldUseWeb(urlAugmentedAnalysisText)
     const rawFetchedResources =
       providedResources.length > 0
         ? providedResources
         : webNeeded
-          ? await fetchResourcesFast(analysisText)
+          ? await fetchResourcesFast(urlAugmentedAnalysisText)
           : []
     const resources = await enrichResourcesWithSiteUnderstanding({
-      situation: analysisText,
+      situation: urlAugmentedAnalysisText,
       resources: rawFetchedResources,
       intentContext,
     })
     const readinessGate = situationReadinessGate({
-      situation: analysisText,
+      situation: urlAugmentedAnalysisText,
       intentContext,
       resources,
-      forceGenerate: explicitPrudentGeneration,
+      forceGenerate: explicitPrudentGeneration || hasUrlInFlow,
     })
     const resourcesStatus =
       rawFetchedResources.length > 0
@@ -3346,7 +3396,7 @@ export async function POST(req: NextRequest) {
           ? 'unavailable'
           : 'not_needed'
 
-    if (readinessGate.status === 'ask_user' && readinessGate.question && !explicitPrudentGeneration) {
+    if (readinessGate.status === 'ask_user' && readinessGate.question && !explicitPrudentGeneration && !hasUrlInFlow) {
       return NextResponse.json({
         gate: 'CLARIFY',
         questions: [readinessGate.question],

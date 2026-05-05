@@ -92,6 +92,8 @@ Rules:
 - If the user confirms a clarification hypothesis, apply the confirmed meaning.
 - If the user corrects a referent, replace the ambiguous referent with the correction.
 - canonical_situation must preserve the user's intention, actors, facts, relations, requested action and useful context.
+- If any user message contains a URL, preserve that URL verbatim in canonical_situation unless the user explicitly withdraws it.
+- A user-provided URL is usable context, not a reason to ask a clarification by itself.
 - Do not keep clarification scaffolding such as "Précisions", "C'est bien cela", or the system question.
 - Do not invent facts. If still unclear, set can_generate=false and give one next_question.`,
           },

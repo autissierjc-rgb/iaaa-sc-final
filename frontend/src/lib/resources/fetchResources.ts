@@ -292,9 +292,12 @@ async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs =
 
 async function fetchRequestedUrlResources(query: string): Promise<ResourceItem[]> {
   const urls = extractRequestedUrls(query).slice(0, 2)
-  const results = await Promise.all(urls.map((url) => crawlRequestedSite(url)))
+  const [directResults, tavilyExtracted] = await Promise.all([
+    Promise.all(urls.map((url) => crawlRequestedSite(url))),
+    fetchTavilyExtractUrls(urls),
+  ])
 
-  return sanitizeResources(results.flat().filter(Boolean) as ResourceItem[])
+  return sanitizeResources([...directResults.flat(), ...tavilyExtracted].filter(Boolean) as ResourceItem[])
 }
 
 function hostname(value: string): string {
@@ -461,6 +464,11 @@ function resourceSearchText(resource: ResourceItem): string {
 function isRelevantResource(resource: ResourceItem, query: string): boolean {
   const haystack = resourceSearchText(resource)
   if (!haystack) return false
+  if (isDirectSiteResource(resource)) {
+    const requestedDomains = extractRequestedDomains(query)
+    const host = hostname(resource.url)
+    if (requestedDomains.length === 0 || requestedDomains.includes(host)) return true
+  }
 
   const queryText = normalizeSearchText(query)
   const queryKeywords = searchKeywords(query)
@@ -725,6 +733,47 @@ async function fetchTavilyPlan(plan: TavilySearchPlan): Promise<ResourceItem[]> 
         }
         })
       : []
+  )
+}
+
+async function fetchTavilyExtractUrls(urls: string[]): Promise<ResourceItem[]> {
+  const apiKey = process.env.TAVILY_API_KEY
+  if (!apiKey || urls.length === 0) return []
+
+  const response = await fetchWithTimeout(
+    'https://api.tavily.com/extract',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        urls,
+        extract_depth: 'basic',
+      }),
+    },
+    6500
+  )
+
+  if (!response?.ok) return []
+  const data = await response.json()
+  const results = Array.isArray(data.results) ? data.results : []
+  return sanitizeResources(
+    results.map((item: Record<string, unknown>) => {
+      const url = String(item.url ?? '')
+      const raw = String(item.raw_content ?? item.content ?? item.text ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+      const title = String(item.title ?? (hostname(url) || url))
+      const excerpt = raw.length > 3200 ? `${raw.slice(0, 3197).trim()}...` : raw
+      return {
+        title,
+        url,
+        type: 'requested-site',
+        source: 'Tavily extract',
+        excerpt,
+        reliability: 'tavily:extract',
+      } satisfies ResourceItem
+    }).filter((resource: ResourceItem) => resource.url && String(resource.excerpt ?? '').length > 80)
   )
 }
 
