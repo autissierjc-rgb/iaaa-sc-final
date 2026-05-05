@@ -23,7 +23,7 @@ export default function PricingPreview() {
       <div className="max-w-content mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
-          <p className="label-eyebrow mb-4">Pricing</p>
+          <p className="label-eyebrow mb-4">Offres</p>
           <h2
             className="heading-display mb-3"
             style={{
@@ -33,13 +33,13 @@ export default function PricingPreview() {
               fontWeight: 400,
             }}
           >
-            One platform. Three layers.
+            Une plateforme. Trois niveaux de lecture.
           </h2>
           <p
             className="text-sm font-sans max-w-sm mx-auto"
             style={{ color: 'var(--text-secondary)', fontWeight: 300 }}
           >
-            From personal reflection to professional analysis to organisational governance.
+            De la clarification personnelle à l'analyse professionnelle et à la gouvernance des organisations.
           </p>
         </div>
 
@@ -57,7 +57,7 @@ export default function PricingPreview() {
             className="text-xs font-sans tracking-[0.08em] uppercase"
             style={{ color: 'var(--text-muted)' }}
           >
-            See full feature comparison â†’
+            Voir le détail des offres →
           </Link>
         </div>
       </div>

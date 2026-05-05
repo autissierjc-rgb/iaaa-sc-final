@@ -3,7 +3,7 @@
 /**
  * IAAA · OfferModal
  * Pop-up Offres — déclenché par le bouton "Offres" de la home.
- * Trois colonnes : Clarity (freemium), SIS (abonnement à venir), IAAA+ (devis).
+ * Trois colonnes : Clarity, SIS, IAAA+.
  */
 
 import { useEffect } from 'react'
@@ -27,8 +27,8 @@ const TIERS = [
       'Cap et trajectoires',
       'Partage public ou privé',
     ],
-    cta:     'Commencer gratuitement',
-    ctaHref: '/register?tier=clarity',
+    cta:     'CLARITY WEBSITE',
+    ctaHref: '/clarity',
     ctaStyle: 'primary',
     note:    null,
   },
@@ -36,7 +36,7 @@ const TIERS = [
     id:     'sis',
     name:   'SIS',
     badge:  null,
-    status: 'Abonnement — à venir',
+    status: 'Collectif Pro · Situation Intelligence System',
     statusColor: '#C8951A',
     statusBg:    '#FFF7E6',
     desc:   'Pour les professionnels, analystes, consultants et équipes qui ont besoin de structurer des situations complexes à partir de documents.',
@@ -45,16 +45,16 @@ const TIERS = [
       'Mode collaboratif',
       'Historique et traçabilité',
     ],
-    cta:     'Être notifié du lancement',
-    ctaHref: 'mailto:hello@situationcard.com?subject=SIS — notification lancement',
+    cta:     'SIS WEBSITE',
+    ctaHref: '/sis-system',
     ctaStyle: 'secondary',
-    note:    'Disponibilité annoncée prochainement.',
+    note:    null,
   },
   {
     id:     'plus',
     name:   'IAAA+',
     badge:  'Gouvernance',
-    status: 'Sur devis',
+    status: 'Resonance Engine Navigator',
     statusColor: '#E8C84A',
     statusBg:    'rgba(232,200,74,0.15)',
     desc:   'Pour les organisations, institutions et environnements critiques qui ont besoin d\'une infrastructure de lecture collective, souveraine et traçable.',
@@ -63,8 +63,8 @@ const TIERS = [
       'Hébergement Europe (OVH)',
       'Configuration sur mesure',
     ],
-    cta:     'Demander un devis',
-    ctaHref: 'mailto:enterprise@situationcard.com?subject=IAAA+ — demande de devis',
+    cta:     'IAAA+ WEBSITE',
+    ctaHref: 'https://iaaa.fr/agence.html',
     ctaStyle: 'gold',
     note:    null,
   },
@@ -118,36 +118,37 @@ export default function OfferModal({ onClose }: Props) {
         </div>
 
         {/* Tiers */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 0, maxHeight: '70vh', overflowY: 'auto' }}>
           {TIERS.map((tier, i) => (
             <div key={tier.id} style={{
               padding:      '24px 24px 28px',
               borderRight:  i < 2 ? '1px solid #F0EBE0' : 'none',
               display:      'flex',
               flexDirection:'column',
-              background:   tier.id === 'plus' ? '#1A2E5A' : '#fff',
+              background:   '#fff',
+              minHeight: 360,
             }}>
 
               {/* Name + status */}
               <div style={{ marginBottom: '16px' }}>
-                <p style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: tier.id === 'plus' ? '#E8C84A' : '#1A2E5A', marginBottom: '8px' }}>
+                <p style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '18px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: tier.id === 'plus' ? '#1A2E5A' : '#1A2E5A', marginBottom: '8px' }}>
                   {tier.name}
                 </p>
-                <span style={{ display: 'inline-block', background: tier.id === 'plus' ? 'rgba(232,200,74,0.2)' : tier.statusBg, color: tier.id === 'plus' ? '#E8C84A' : tier.statusColor, fontSize: '11px', fontWeight: 500, padding: '3px 10px', borderRadius: '4px' }}>
+                <span style={{ display: 'inline-block', background: tier.statusBg, color: tier.statusColor, fontSize: '11px', fontWeight: 500, padding: '3px 10px', borderRadius: '4px' }}>
                   {tier.status}
                 </span>
               </div>
 
               {/* Description */}
-              <p style={{ fontSize: '13px', color: tier.id === 'plus' ? 'rgba(255,255,255,0.65)' : '#7A6A5A', lineHeight: 1.75, marginBottom: '16px', flex: 1 }}>
+              <p style={{ fontSize: '13px', color: '#7A6A5A', lineHeight: 1.75, marginBottom: '16px', flex: 1 }}>
                 {tier.desc}
               </p>
 
               {/* Features */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '20px' }}>
                 {tier.detail.map((item, j) => (
-                  <div key={j} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px', color: tier.id === 'plus' ? 'rgba(255,255,255,0.5)' : '#9A8860', lineHeight: 1.5 }}>
-                    <span style={{ color: tier.id === 'plus' ? '#E8C84A' : '#C8951A', fontSize: '9px', marginTop: '4px', flexShrink: 0 }}>◆</span>
+                  <div key={j} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px', color: '#9A8860', lineHeight: 1.5 }}>
+                    <span style={{ color: '#C8951A', fontSize: '9px', marginTop: '4px', flexShrink: 0 }}>◆</span>
                     {item}
                   </div>
                 ))}
@@ -165,7 +166,7 @@ export default function OfferModal({ onClose }: Props) {
                 </Link>
               )}
               {tier.ctaStyle === 'secondary' && (
-                <a href={tier.ctaHref} style={{
+                <Link href={tier.ctaHref} onClick={onClose} style={{
                   display: 'block', textAlign: 'center',
                   background: 'transparent', color: '#1A2E5A',
                   border: '1px solid #E8E0D0',
@@ -173,10 +174,10 @@ export default function OfferModal({ onClose }: Props) {
                   fontSize: '12px', textDecoration: 'none',
                 }}>
                   {tier.cta}
-                </a>
+                </Link>
               )}
               {tier.ctaStyle === 'gold' && (
-                <a href={tier.ctaHref} style={{
+                <a href={tier.ctaHref} target="_blank" rel="noreferrer" style={{
                   display: 'block', textAlign: 'center',
                   background: '#E8C84A', color: '#1A2E5A',
                   padding: '10px 16px', borderRadius: '7px',
@@ -197,7 +198,7 @@ export default function OfferModal({ onClose }: Props) {
         {/* Footer */}
         <div style={{ background: '#F5F0E8', padding: '12px 28px', borderTop: '1px solid #E8E0D0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <p style={{ fontSize: '11px', color: '#9A8860' }}>
-            Questions ? <a href="mailto:hello@situationcard.com" style={{ color: '#1A2E5A', textDecoration: 'none', borderBottom: '1px solid #C8951A', paddingBottom: '1px' }}>hello@situationcard.com</a>
+            Questions ? <a href="mailto:contact@situationcard.com" style={{ color: '#1A2E5A', textDecoration: 'none', borderBottom: '1px solid #C8951A', paddingBottom: '1px' }}>contact@situationcard.com</a>
           </p>
           <Link href="/pricing" onClick={onClose} style={{ fontSize: '11px', color: '#9A8860', textDecoration: 'none' }}>
             Voir la page offres complète →

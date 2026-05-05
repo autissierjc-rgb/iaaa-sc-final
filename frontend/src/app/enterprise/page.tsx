@@ -1,6 +1,6 @@
 /**
  * IAAA · /enterprise
- * Bouton 3 de la home — IAAA+ gouvernance collective
+ * Page IAAA+.
  */
 
 import type { Metadata } from 'next'
@@ -11,134 +11,149 @@ export const metadata: Metadata = {
   description: 'Rendre les décisions lisibles, traçables et partageables. Infrastructure de lecture pour systèmes complexes.',
 }
 
-export default function EnterprisePage() {
-  return (
-    <main style={{ background: '#1A2E5A', minHeight: '100vh', fontFamily: 'var(--font-dm-sans, system-ui, sans-serif)', color: '#fff' }}>
+type Lang = 'FR' | 'EN'
 
-      <nav style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', padding: '13px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '11px', color: '#E8C84A', textDecoration: 'none', letterSpacing: '0.12em' }}>SITUATION CARD</Link>
+const COPY = {
+  FR: {
+    title: 'Rendre les décisions lisibles, traçables et partageables.',
+    intro: 'IAAA+ est une infrastructure de lecture des systèmes complexes. Elle structure ce qui est vu, compris et engagé.',
+    pillars: [
+      { n: '01', title: 'Gouvernance', lead: 'Qui voit quoi. Qui interprète. Qui valide. Qui engage.', body: 'Chaque décision devient lisible. Chaque responsabilité devient explicite. Les systèmes complexes ne tombent pas en panne par manque d’information ; ils tombent en panne par manque de lecture partagée.' },
+      { n: '02', title: 'Mode collaboratif', lead: 'Une situation n’est jamais lue par une seule personne.', body: 'Lectures multi-acteurs sur une même Situation Card. Chaque contributeur apporte sa propre lecture. Le résultat n’est pas un consensus forcé : c’est une compréhension partagée, ou des désaccords clairement identifiés.' },
+      { n: '03', title: 'Traçabilité', lead: 'Les décisions cessent d’être implicites.', body: 'Historique complet des cartes. Évolution dans le temps. Qui a contribué quoi. Ce qui a changé entre deux lectures d’une même situation.' },
+    ],
+    dataTitle: 'Souveraineté des données',
+    dataLead: 'Vos données restent en Europe. Vos analyses restent les vôtres.',
+    dataBody: 'Les organisations qui utilisent IAAA+ traitent des informations sensibles. Ce qu’elles analysent ne doit pas circuler au-delà de leur périmètre.',
+    dataCards: [
+      { t: 'Hébergement', b: 'Infrastructure OVH, France. Données exclusivement en Europe. Aucun transfert hors UE.' },
+      { t: 'Chiffrement', b: 'Données chiffrées en transit et au repos. Vos analyses ne sont lisibles par personne d’autre.' },
+      { t: 'Accès', b: 'Droits configurables par rôle. Ce que voit chaque personne dans votre organisation est défini par vous.' },
+    ],
+    ren: 'Le Resonance Engine Navigator (REN) est une technologie développée par IAAA+. REN agit comme une couche de navigation cognitive qui vient compléter les grands modèles d’IA (OpenAI, Claude, Mistral…), en se concentrant sur trois choses : cohérence, structure et qualité du raisonnement.',
+    forWho: 'Pour qui',
+    audiences: ['Grandes entreprises', 'Institutions publiques', 'Organisations multi-acteurs', 'Environnements critiques'],
+    footer: 'Un même système. Trois niveaux de lecture.',
+  },
+  EN: {
+    title: 'Making decisions readable, traceable, and shareable.',
+    intro: 'IAAA+ is a reading infrastructure for complex systems. It structures what is seen, understood, and committed.',
+    pillars: [
+      { n: '01', title: 'Governance', lead: 'Who sees what. Who interprets. Who validates. Who commits.', body: 'Every decision becomes readable. Every responsibility becomes explicit. Complex systems do not fail only because they lack information; they fail because they lack shared reading.' },
+      { n: '02', title: 'Collaborative Mode', lead: 'A situation is never read by one person alone.', body: 'Multi-actor readings on the same Situation Card. Each contributor brings their own reading. The result is not forced consensus: it is shared understanding, or clearly identified disagreement.' },
+      { n: '03', title: 'Traceability', lead: 'Decisions stop being implicit.', body: 'Complete card history. Evolution over time. Who contributed what. What changed between two readings of the same situation.' },
+    ],
+    dataTitle: 'Data Sovereignty',
+    dataLead: 'Your data stays in Europe. Your analyses remain yours.',
+    dataBody: 'Organizations using IAAA+ handle sensitive information. What they analyze must not circulate outside their perimeter.',
+    dataCards: [
+      { t: 'Hosting', b: 'OVH infrastructure, France. Data exclusively in Europe. No transfer outside the EU.' },
+      { t: 'Encryption', b: 'Data encrypted in transit and at rest. Your analyses are not readable by anyone else.' },
+      { t: 'Access', b: 'Role-based permissions. What each person in your organization can see is defined by you.' },
+    ],
+    ren: 'The Resonance Engine Navigator (REN) is a technology developed by IAAA+. REN acts as a cognitive navigation layer that complements large AI models (OpenAI, Claude, Mistral...) by focusing on three things: coherence, structure, and reasoning quality.',
+    forWho: 'For whom',
+    audiences: ['Large companies', 'Public institutions', 'Multi-stakeholder organizations', 'Critical environments'],
+    footer: 'One system. Three levels of reading.',
+  },
+} as const
+
+function readLang(value: string | string[] | undefined): Lang {
+  return value === 'en' ? 'EN' : 'FR'
+}
+
+export default function EnterprisePage({
+  searchParams,
+}: {
+  searchParams?: { lang?: string | string[] }
+}) {
+  const lang = readLang(searchParams?.lang)
+  const copy = COPY[lang]
+  const suffix = `?lang=${lang.toLowerCase()}`
+
+  return (
+    <main style={{ background: '#F5F0E8', minHeight: '100vh', fontFamily: 'var(--font-dm-sans, system-ui, sans-serif)', color: '#1A2E5A' }}>
+
+      <nav style={{ background: '#fff', borderBottom: '1px solid #E8E0D0', padding: '13px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Link href={`/sis${suffix}`} style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '11px', color: '#1A2E5A', textDecoration: 'none', letterSpacing: '0.12em' }}>SITUATION CARD</Link>
         <div style={{ display: 'flex', gap: '20px', fontSize: '12px' }}>
-          <Link href="/clarity" style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>Clarity</Link>
-          <Link href="/sis"     style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>SIS</Link>
-          <a href="mailto:enterprise@situationcard.com" style={{ color: '#E8C84A', textDecoration: 'none', borderBottom: '1px solid #E8C84A', paddingBottom: '1px' }}>Demander une démo</a>
+          <Link href={`/clarity${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>Clarity</Link>
+          <Link href={`/sis-system${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>SIS</Link>
+          <a href="https://iaaa.fr/agence.html" target="_blank" rel="noreferrer" style={{ color: '#1A2E5A', textDecoration: 'none', borderBottom: '1px solid #C8951A', paddingBottom: '1px' }}>IAAA+ WEBSITE</a>
         </div>
       </nav>
 
-      {/* Hero */}
-      <div style={{ padding: '60px 36px 0' }}>
-        <p style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '10px', color: '#E8C84A', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '14px' }}>IAAA+</p>
-        <h1 style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', fontWeight: 400, color: '#fff', lineHeight: 1.2, marginBottom: '14px' }}>
-          Rendre les décisions lisibles,<br />traçables et partageables.
+      <section style={{ padding: '64px 36px 48px', maxWidth: 980, margin: '0 auto', textAlign: 'center' }}>
+        <h1 style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: 'clamp(2.4rem, 6vw, 4.2rem)', fontWeight: 700, color: '#1A2E5A', letterSpacing: '0.14em', lineHeight: 1.08, marginBottom: 20 }}>
+          IAAA+
         </h1>
-        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, maxWidth: '500px', marginBottom: '14px' }}>
-          IAAA+ est une infrastructure de lecture des systèmes complexes. Elle structure ce qui est vu, compris et engagé.
+        <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: 'clamp(1.5rem, 3vw, 2.1rem)', fontStyle: 'italic', color: '#C8951A', lineHeight: 1.28, marginBottom: 18 }}>
+          {copy.title}
         </p>
-        <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: '17px', fontStyle: 'italic', color: '#E8C84A', marginBottom: '52px' }}>
-          IAAA+ ne décide pas. IAAA+ rend la décision explicite.
+        <p style={{ fontSize: 14, color: '#6F6255', lineHeight: 1.8, maxWidth: 640, margin: '0 auto' }}>
+          {copy.intro}
         </p>
-      </div>
+      </section>
 
-      {/* Pillars */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '0 36px' }}>
-        {[
-          { n: '01', title: 'Gouvernance', lead: 'Qui voit quoi. Qui interprète. Qui valide. Qui engage.', body: 'Chaque décision devient lisible. Chaque responsabilité devient explicite. Les systèmes complexes ne tombent pas en panne par manque d\'information — ils tombent en panne par manque de lecture partagée.' },
-          { n: '02', title: 'Mode collaboratif', lead: 'Une situation n\'est jamais lue par une seule personne.', body: 'Lectures multi-acteurs sur une même Situation Card. Chaque contributeur apporte sa propre lecture. Le résultat n\'est pas un consensus forcé : c\'est une compréhension partagée, ou des désaccords clairement identifiés.' },
-          { n: '03', title: 'Traçabilité', lead: 'Les décisions cessent d\'être implicites.', body: 'Historique complet des cartes. Évolution dans le temps. Qui a contribué quoi. Ce qui a changé entre deux lectures d\'une même situation.' },
-        ].map((p, i, arr) => (
-          <div key={p.n} style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: '20px', padding: '24px 0', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', fontFamily: 'var(--font-cormorant, serif)', paddingTop: '2px' }}>{p.n}</p>
-            <div>
-              <p style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '10px', color: '#E8C84A', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '7px' }}>{p.title}</p>
-              <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: '16px', fontStyle: 'italic', color: '#fff', lineHeight: 1.5, marginBottom: '8px' }}>{p.lead}</p>
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.52)', lineHeight: 1.8 }}>{p.body}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Souveraineté */}
-      <div style={{ background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '40px 36px' }}>
-        <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>Souveraineté des données</p>
-        <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: '17px', fontStyle: 'italic', color: '#fff', marginBottom: '8px' }}>Vos données restent en Europe. Vos analyses restent les vôtres.</p>
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, marginBottom: '22px', maxWidth: '540px' }}>
-          Les organisations qui utilisent IAAA+ traitent des informations sensibles. Ce qu'elles analysent ne doit pas circuler au-delà de leur périmètre.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-          {[
-            { t: 'Hébergement', b: 'Infrastructure OVH, France. Données exclusivement en Europe. Aucun transfert hors UE.' },
-            { t: 'Chiffrement',  b: 'Données chiffrées en transit et au repos. Vos analyses ne sont lisibles par personne d\'autre.' },
-            { t: 'Accès',       b: 'Droits configurables par rôle. Ce que voit chaque personne dans votre organisation est défini par vous.' },
-          ].map(c => (
-            <div key={c.t} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', padding: '14px' }}>
-              <p style={{ fontSize: '11px', color: '#E8C84A', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '6px' }}>{c.t}</p>
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.52)', lineHeight: 1.65 }}>{c.b}</p>
+      <section style={{ background: '#fff', borderTop: '1px solid #E8E0D0', borderBottom: '1px solid #E8E0D0', padding: '12px 36px' }}>
+        <div style={{ maxWidth: 980, margin: '0 auto' }}>
+          {copy.pillars.map((p, i) => (
+            <div key={p.n} style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 20, padding: '24px 0', borderBottom: i < copy.pillars.length - 1 ? '1px solid #F0EBE0' : 'none' }}>
+              <p style={{ fontSize: 11, color: '#C8951A', fontFamily: 'var(--font-cormorant, serif)', paddingTop: 2 }}>{p.n}</p>
+              <div>
+                <p style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: 11, color: '#1A2E5A', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 7 }}>{p.title}</p>
+                <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: 17, fontStyle: 'italic', color: '#1A2E5A', lineHeight: 1.5, marginBottom: 8 }}>{p.lead}</p>
+                <p style={{ fontSize: 13, color: '#6F6255', lineHeight: 1.8 }}>{p.body}</p>
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Connectivité */}
-      <div style={{ background: 'rgba(255,255,255,0.04)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '40px 36px' }}>
-        <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>Connectivité</p>
-        <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: '17px', fontStyle: 'italic', color: '#fff', marginBottom: '8px' }}>IAAA+ s'intègre là où votre information existe déjà.</p>
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, marginBottom: '22px', maxWidth: '560px' }}>
-          Vous n'avez pas à changer vos outils ni vos flux. IAAA+ peut recevoir des situations depuis vos systèmes, générer des cartes automatiquement, et restituer les résultats là où vous en avez besoin.
+      <section style={{ padding: '42px 36px', maxWidth: 980, margin: '0 auto' }}>
+        <p style={{ fontSize: 10, color: '#9A8860', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 16 }}>{copy.dataTitle}</p>
+        <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: 18, fontStyle: 'italic', color: '#1A2E5A', marginBottom: 8 }}>{copy.dataLead}</p>
+        <p style={{ fontSize: 13, color: '#6F6255', lineHeight: 1.8, marginBottom: 22, maxWidth: 620 }}>
+          {copy.dataBody}
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          {[
-            { t: 'Entrée',        b: 'Vos systèmes envoient une situation à IAAA+. La carte est générée et disponible immédiatement.' },
-            { t: 'Sortie',        b: 'Les cartes générées sont exportables et intégrables dans vos flux de travail existants.' },
-            { t: 'Automatisation', b: 'IAAA+ peut surveiller des sources internes et déclencher une analyse dès qu\'une condition est remplie.' },
-            { t: 'Intégration',   b: 'Les résultats apparaissent dans l\'outil que vos équipes utilisent déjà. Pas d\'interface supplémentaire.' },
-          ].map(c => (
-            <div key={c.t} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '7px', padding: '14px 16px' }}>
-              <p style={{ fontSize: '11px', color: '#E8C84A', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: '6px' }}>{c.t}</p>
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.65 }}>{c.b}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
+          {copy.dataCards.map(c => (
+            <div key={c.t} style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 16, boxShadow: '0 10px 24px rgba(26,46,90,0.05)' }}>
+              <p style={{ fontSize: 11, color: '#C8951A', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>{c.t}</p>
+              <p style={{ fontSize: 12, color: '#6F6255', lineHeight: 1.65 }}>{c.b}</p>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Mise en place */}
-      <div style={{ background: 'rgba(255,255,255,0.05)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '40px 36px' }}>
-        <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>Mise en place</p>
-        <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: '17px', fontStyle: 'italic', color: '#fff', marginBottom: '8px' }}>Chaque organisation est différente. On en parle.</p>
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, maxWidth: '520px' }}>
-          La configuration, la formation des équipes et l'intégration avec vos systèmes existants dépendent de votre contexte. Il n'y a pas de formule standard. Contactez-nous et nous définirons ensemble ce qui fait sens.
-        </p>
-      </div>
+      <section style={{ background: '#fff', borderTop: '1px solid #E8E0D0', borderBottom: '1px solid #E8E0D0', padding: '42px 36px' }}>
+        <div style={{ maxWidth: 980, margin: '0 auto' }}>
+          <p style={{ fontSize: 10, color: '#9A8860', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 16 }}>Resonance Engine Navigator</p>
+          <p style={{ fontSize: 13, color: '#6F6255', lineHeight: 1.8, maxWidth: 720, marginBottom: 24 }}>
+            {copy.ren}
+          </p>
+          <a href="https://iaaa.fr/agence.html" target="_blank" rel="noreferrer" style={{ display: 'inline-block', background: '#E8C84A', color: '#1A2E5A', fontSize: 11, fontFamily: 'var(--font-cinzel, serif)', letterSpacing: '0.12em', padding: '13px 28px', borderRadius: 6, textDecoration: 'none', fontWeight: 600 }}>
+            IAAA+ WEBSITE
+          </a>
+        </div>
+      </section>
 
-      {/* Pour qui */}
-      <div style={{ background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '32px 36px' }}>
-        <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '14px' }}>Pour qui</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-          {['Grandes entreprises', 'Institutions publiques', 'Organisations multi-acteurs', 'Environnements critiques'].map(item => (
-            <div key={item} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', padding: '11px 13px', fontSize: '12px', color: 'rgba(255,255,255,0.55)' }}>{item}</div>
+      <section style={{ padding: '34px 36px', maxWidth: 980, margin: '0 auto' }}>
+        <p style={{ fontSize: 10, color: '#9A8860', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 14 }}>{copy.forWho}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+          {copy.audiences.map(item => (
+            <div key={item} style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 6, padding: '12px 14px', fontSize: 12, color: '#6F6255' }}>{item}</div>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* CTA */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '44px 36px', textAlign: 'center' }}>
-        <span style={{ display: 'inline-block', background: 'rgba(232,200,74,0.2)', color: '#E8C84A', fontSize: '11px', fontWeight: 500, padding: '3px 10px', borderRadius: '4px', marginBottom: '16px' }}>
-          Sur devis
-        </span>
-        <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: '20px', color: '#fff', marginBottom: '9px' }}>Intéressé par IAAA+ pour votre organisation ?</p>
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', marginBottom: '24px', lineHeight: 1.7 }}>
-          Nous travaillons avec un nombre limité d'organisations par secteur.<br />Décrivez votre situation — nous vous répondons sous quelques jours.
-        </p>
-        <a href="mailto:enterprise@situationcard.com" style={{ display: 'inline-block', background: '#E8C84A', color: '#1A2E5A', fontSize: '11px', fontFamily: 'var(--font-cinzel, serif)', letterSpacing: '0.12em', padding: '13px 28px', borderRadius: '6px', textDecoration: 'none', fontWeight: 600 }}>
-          DEMANDER UNE DÉMO
-        </a>
-      </div>
-
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '16px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: '13px', fontStyle: 'italic', color: 'rgba(255,255,255,0.25)' }}>Un même système. Trois niveaux de lecture.</p>
-        <div style={{ display: 'flex', gap: '18px', fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>
-          <Link href="/clarity" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>← Clarity</Link>
-          <Link href="/sis"     style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}>← SIS</Link>
+      <footer style={{ borderTop: '1px solid #E8E0D0', padding: '16px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F5F0E8' }}>
+        <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: 14, fontStyle: 'italic', color: '#9A8860' }}>{copy.footer}</p>
+        <div style={{ display: 'flex', gap: 18, fontSize: 12 }}>
+          <Link href={`/clarity${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>← Clarity</Link>
+          <Link href={`/sis-system${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>← SIS</Link>
         </div>
-      </div>
+      </footer>
 
     </main>
   )

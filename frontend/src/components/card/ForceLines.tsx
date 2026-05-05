@@ -9,9 +9,9 @@ const BRANCH_DESC_FR: Record<string, string> = {
   III:  'Ce qui pousse, soutient ou accélère la situation.',
   IV:   'Ce qui oppose, fragilise ou met sous pression.',
   V:    "Ce qui limite l'action et réduit les marges.",
-  VI:   'Ce qui reste flou, instable ou difficile à vérifier.',
+  VI:   'Ce que l’analyse risque de ne pas voir alors que cela peut renverser la lecture.',
   VII:  "Les rythmes, délais et fenêtres d'action.",
-  VIII: 'Les lieux, distances, frontières et zones de contact.',
+  VIII: 'Les récits, croyances, réputations et lectures qui orientent les comportements.',
 }
 const BRANCH_DESC_EN: Record<string, string> = {
   I:    'Those who act, influence or block.',
@@ -19,9 +19,9 @@ const BRANCH_DESC_EN: Record<string, string> = {
   III:  'What pushes, sustains or accelerates the situation.',
   IV:   'What opposes, weakens or puts under pressure.',
   V:    'What limits action and reduces room to manoeuvre.',
-  VI:   'What remains unclear, unstable or hard to verify.',
+  VI:   'What the analysis may miss even though it could reverse the reading.',
   VII:  'The rhythms, deadlines and windows for action.',
-  VIII: 'The places, distances, borders and contact zones.',
+  VIII: 'The narratives, beliefs, reputations and readings that shape behaviour.',
 }
 
 const COLORS = ['#E0DCD4', '#B8D4F0', '#F0CA70', '#E87C7C']
@@ -38,6 +38,9 @@ export default function ForceLines({ scores, lang }: { scores: Score[]; lang: La
     <div style={{ width: '100%' }}>
       {scores.map((s, i) => {
         const desc = lang === 'FR' ? BRANCH_DESC_FR[s.branch] : BRANCH_DESC_EN[s.branch]
+        const name = s.branch === 'VI'
+          ? (lang === 'FR' ? 'Incertitudes' : 'Uncertainties')
+          : (lang === 'FR' ? s.name : s.name_en)
         return (
           <div key={i} style={{ marginBottom: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
@@ -45,7 +48,7 @@ export default function ForceLines({ scores, lang }: { scores: Score[]; lang: La
                 {s.branch}
               </span>
               <span style={{ fontSize: 10, color: TXT2, width: 72, flexShrink: 0, fontWeight: 500 }}>
-                {lang === 'FR' ? s.name : s.name_en}
+                {name}
               </span>
               <div style={{ flex: 1, height: 5, background: '#EDEAE4', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{
