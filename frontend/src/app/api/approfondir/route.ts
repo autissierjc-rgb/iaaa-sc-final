@@ -78,10 +78,7 @@ export async function POST(req: NextRequest) {
         }
       : routedIntentContext
     const arbre = existingArbre ?? (await analyzeWithArbreACames(text, resources, intentContext))
-    const concreteTheatre =
-      (sc as SituationCard | undefined)?.concrete_theatre ??
-      (sc as SituationCard | undefined)?.coverage_check?.concrete_theatre ??
-      buildConcreteTheatre({ situation: text, arbre, resources, intentContext })
+    const concreteTheatre = buildConcreteTheatre({ situation: text, arbre, resources, intentContext })
     const effectiveSc = {
       ...(sc as SituationCard | undefined),
       intent_context: intentContext,
