@@ -19,6 +19,7 @@ const TXT2   = '#5a6a7a'
 const TXT3   = '#9aabb8'
 const BDR    = 'rgba(26,42,58,0.1)'
 const BDR_G  = 'rgba(184,154,106,0.25)'
+const IAAA_LOGO_SRC = '/pictos/logo-iaaa.jpg'
 const LAST_SC_STORAGE_KEY = 'iaaa:last-situation-card:v1'
 const LAST_SC_STORAGE_VERSION = 8
 
@@ -705,7 +706,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
         <div style={{ padding: '10px 14px 8px', background: `linear-gradient(to right, ${NAVY}, #2A4A80)`, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', flexShrink: 0, textDecoration: 'none' }}>
             <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(200,168,64,0.4)' }}>
-              <Image src="/pictos/LOOGO IAAA+.jpg" alt="IAAA+" width={26} height={26} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+              <Image src={IAAA_LOGO_SRC} alt="IAAA+" width={26} height={26} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
             </div>
           </Link>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -777,7 +778,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
       <div style={{ padding: '10px 14px 8px', background: `linear-gradient(to right, ${NAVY}, #2A4A80)`, display: 'flex', alignItems: 'center', gap: 8 }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', flexShrink: 0, textDecoration: 'none' }}>
           <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(200,168,64,0.4)' }}>
-            <Image src="/pictos/LOOGO IAAA+.jpg" alt="IAAA+" width={26} height={26} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+            <Image src={IAAA_LOGO_SRC} alt="IAAA+" width={26} height={26} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
           </div>
         </Link>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1019,7 +1020,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
         <div style={{ position: 'absolute', inset: 0, zIndex: 20, background: BG_P, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ padding: '10px 14px 8px', background: `linear-gradient(to right, ${NAVY}, #2A4A80)`, display: 'flex', alignItems: 'center', gap: 8, borderBottom: `1px solid ${BDR_G}` }}>
             <div style={{ width: 24, height: 24, borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(200,168,64,0.4)', flexShrink: 0 }}>
-              <Image src="/pictos/LOOGO IAAA+.jpg" alt="IAAA+" width={24} height={24} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+              <Image src={IAAA_LOGO_SRC} alt="IAAA+" width={24} height={24} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.45)', letterSpacing: '.12em', fontFamily: "'Cinzel',serif", marginBottom: 2 }}>
@@ -1630,7 +1631,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
         <header style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', padding: '16px 36px', background: BG, borderBottom: `1px solid ${BDR}`, position: 'sticky', top: 0, zIndex: 100 }}>
           <Link href="/sis" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <div style={{ width: 46, height: 46, borderRadius: '50%', overflow: 'hidden', border: `1px solid ${BDR_G}` }}>
-              <Image src="/pictos/LOOGO IAAA+.jpg" alt="IAAA+" width={46} height={46} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+              <Image src={IAAA_LOGO_SRC} alt="IAAA+" width={46} height={46} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 500, color: NAVY, fontFamily: "'Cinzel',serif", letterSpacing: '.02em' }}>Situation Card</div>
@@ -1842,7 +1843,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
           <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
             <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
               <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: `1px solid ${BDR_G}` }}>
-                <Image src="/pictos/LOOGO IAAA+.jpg" alt="IAAA+" width={32} height={32} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+                <Image src={IAAA_LOGO_SRC} alt="IAAA+" width={32} height={32} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
               </div>
               <span style={{ fontFamily: "'Cinzel',serif", fontSize: 11, color: TXT3 }}>situationcard.com</span>
             </Link>

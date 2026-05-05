@@ -66,7 +66,7 @@ export async function buildCanonicalSituationFromDialogue({
   if (!apiKey) return null
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 7000)
+  const timeout = setTimeout(() => controller.abort(), 12000)
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -77,7 +77,7 @@ export async function buildCanonicalSituationFromDialogue({
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: process.env.OPENAI_INTENT_MODEL || 'gpt-4o-mini',
+        model: process.env.OPENAI_CANONICAL_MODEL || process.env.OPENAI_INTENT_MODEL || 'gpt-4o',
         temperature: 0,
         response_format: { type: 'json_object' },
         messages: [
@@ -95,11 +95,11 @@ Return ONLY JSON:
 
 Rules:
 - Use the dialogue events, not a concatenated raw prompt.
-- If there is only one user_initial_question, still formalize it: correct obvious spelling, spacing, accents, punctuation, and language mixing when the intended meaning is clear.
+- You are the only authority for understanding and formalizing the user's intended question before SC generation.
+- If there is only one user_initial_question, still rewrite it as a clean, natural question in the user's language when the intended meaning is clear.
 - If the user confirms a clarification hypothesis, apply the confirmed meaning.
 - If the user corrects a referent, replace the ambiguous referent with the correction.
 - canonical_situation must preserve the user's intention, actors, facts, relations, requested action and useful context.
-- Do not preserve typing artifacts such as split words ("contest er"), untranslated fragments ("result of midterms"), or missing hyphens when the correction is obvious.
 - header_subject must be only the subject, never the domain label, and must contain at least 3 meaningful words.
 - If any user message contains a URL, preserve that URL verbatim in canonical_situation unless the user explicitly withdraws it.
 - A user-provided URL is usable context, not a reason to ask a clarification by itself.
