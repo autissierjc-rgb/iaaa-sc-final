@@ -1215,7 +1215,15 @@ type DialogueEvent = {
 }
 
 function canonicalSituationFromResponse(data: any, fallback: string): string {
-  const canonical = String(data?.coverage_check?.conversation_contract?.canonical_situation ?? '').trim()
+  const canonical = String(
+    data?.submitted_situation_fr ??
+    data?.submitted_situation_en ??
+    data?.sc?.submitted_situation_fr ??
+    data?.sc?.submitted_situation_en ??
+    data?.coverage_check?.conversation_contract?.canonical_situation ??
+    data?.sc?.coverage_check?.conversation_contract?.canonical_situation ??
+    ''
+  ).trim()
   return canonical || fallback
 }
 

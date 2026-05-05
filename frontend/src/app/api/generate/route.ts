@@ -3247,7 +3247,10 @@ export async function POST(req: NextRequest) {
       (interpretedRequest.user_question?.trim().length ?? 0) >= 20 &&
       (Boolean(interpretedRequest.expected_answer_shape?.trim()) || interpretedRequest.confidence >= 0.55)
     const displayText = normalizeSubmittedSituation(
-      interpretedRequest.user_question || rawDisplayText || text
+      canonicalDialogue?.canonical_situation ||
+      interpretedRequest.user_question ||
+      rawDisplayText ||
+      text
     )
     const intentContext = situationIntentRouter(analysisText, interpretedRequest)
     const conversationContract = buildConversationContract({
@@ -3256,9 +3259,9 @@ export async function POST(req: NextRequest) {
       previous: carriedPreviousContract,
     })
     const canonicalSubmittedText = normalizeSubmittedSituation(
-      conversationContract.canonical_situation ||
       canonicalDialogue?.canonical_situation ||
       interpretedRequest.user_question ||
+      conversationContract.canonical_situation ||
       displayText
     )
     const initialScopeContext = detectScopeContext(analysisText)

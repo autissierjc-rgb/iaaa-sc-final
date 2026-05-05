@@ -88,7 +88,7 @@ export async function buildCanonicalSituationFromDialogue({
 Return ONLY JSON:
 {
   "canonical_situation": "faithful formalized user question in the user's language",
-  "header_subject": "3+ meaningful words, no domain label",
+  "header_subject": "polished subject phrase, 3+ meaningful words, no domain label",
   "can_generate": true,
   "next_question": ""
 }
@@ -97,10 +97,13 @@ Rules:
 - Use the dialogue events, not a concatenated raw prompt.
 - You are the only authority for understanding and formalizing the user's intended question before SC generation.
 - If there is only one user_initial_question, still rewrite it as a clean, natural question in the user's language when the intended meaning is clear.
+- canonical_situation must not preserve obvious spelling, agreement, conjugation or punctuation errors when the intended question is clear.
 - If the user confirms a clarification hypothesis, apply the confirmed meaning.
 - If the user corrects a referent, replace the ambiguous referent with the correction.
 - canonical_situation must preserve the user's intention, actors, facts, relations, requested action and useful context.
 - header_subject must be only the subject, never the domain label, and must contain at least 3 meaningful words.
+- header_subject must be a clean noun phrase, not a copied fragment of the user's rough spelling or grammar.
+- For example, turn "trump peuvent ils conteste les resultat des election des midterm" into canonical_situation "Donald Trump peut-il contester les résultats des élections de mi-mandat ?" and header_subject "contestation résultats élections mi-mandat".
 - If any user message contains a URL, preserve that URL verbatim in canonical_situation unless the user explicitly withdraws it.
 - A user-provided URL is usable context, not a reason to ask a clarification by itself.
 - Do not keep clarification scaffolding such as "Précisions", "C'est bien cela", or the system question.
