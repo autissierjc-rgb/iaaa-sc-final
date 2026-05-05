@@ -9,6 +9,16 @@ const HORS_SOL_PATTERNS = [
   /\bcanal concret\b/i,
   /\bpreuve qui relie le risque à un mécanisme\b/i,
   /\ble récit devient plus fort que les traces\b/i,
+  /\bgeneral_analysis\b/i,
+  /\bquel acteur, quel geste, quelle règle ou quelle preuve\b/i,
+  /\btransformer l[’']hypothèse en fait observable\b/i,
+  /\bdes éléments visibles existent\b/i,
+  /\bleur portée reste à établir par des preuves concrètes\b/i,
+  /\bun objet visible garde un rôle\b/i,
+  /\bDirigeants et partis\s*\(/i,
+  /\bOpinion publique\s*\(/i,
+  /\bMédias et récits publics\s*\(/i,
+  /\bCalendrier politique\s*\(/i,
 ]
 
 function normalize(value: string): string {

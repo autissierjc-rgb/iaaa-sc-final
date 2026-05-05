@@ -165,7 +165,7 @@ function inferTension(input: string, intent: RequestIntentType): string {
     return 'un événement local peut déplacer des seuils militaires, économiques, diplomatiques ou narratifs'
   }
 
-  if (intent === 'understand') return 'des éléments visibles existent, mais leur portée reste à établir par des preuves concrètes'
+  if (intent === 'understand') return 'la question demande de distinguer ce qui est établi, plausible et encore à vérifier'
   if (intent === 'decide') return 'plusieurs options restent ouvertes, mais elles ne protègent pas les mêmes risques'
   if (intent === 'evaluate') return 'la valeur apparente doit être confrontée aux preuves disponibles et aux risques d’exécution'
   if (intent === 'prepare') return 'la réussite dépend moins de l’intention que de la traduction en gestes, preuves et séquence'

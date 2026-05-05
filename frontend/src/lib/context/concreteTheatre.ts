@@ -21,10 +21,12 @@ function normalizeKey(value: string): string {
 function isInternalAnchor(value: string): boolean {
   const normalized = normalizeKey(value)
   if (/^(que|quoi|qui|comment|pourquoi|où|ou)$/.test(normalized)) return true
+  if (/^[a-z]+(?:_[a-z]+)+$/i.test(value.trim())) return true
   if (/\b(que\s+fait|que\s+propose|qu['’]en\s+penser|est[-\s]?ce\s+int[ée]ressant|comment\s+r[ée]agir)\b/i.test(value)) return true
   return [
     /\bclarify_[a-z_]+\b/i,
     /\bunderstand_situation\b/i,
+    /\bgeneral_analysis\b/i,
     /\bacteurs?\s+(directs?|influents?|capables?|engag[ée]s?|impliqu[ée]s?|concern[ée]s?)\b/i,
     /\bmanager,\s*[ée]quipe,\s*d[ée]cideur r[ée]el\b/i,
     /\bpersonne qui porte la charge\b/i,
@@ -56,11 +58,21 @@ function isInternalAnchor(value: string): boolean {
   ].some((pattern) => pattern.test(value))
 }
 
+function cleanAnchor(value: string): string {
+  return compact(value)
+    .replace(/\s*\([^)]{8,}\)/g, '')
+    .replace(/\b(?:general_analysis|understand_situation|site_analysis|startup_investment|personal_relationship)\b/gi, '')
+    .replace(/\b(?:Acteurs directs|Acteurs influents|Acteurs capables de bloquer ou d’accélérer la situation|Acteurs visibles|Contraintes matérielles|Règles et institutions|Récit dominant)\b/gi, '')
+    .replace(/[.;:]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function unique(items: string[], max = 8): string[] {
   const seen = new Set<string>()
   const result: string[] = []
-  for (const item of items.map(compact).filter(Boolean)) {
-    const cleaned = item.replace(/[.;:]+$/g, '').trim()
+  for (const item of items.map(cleanAnchor).filter(Boolean)) {
+    const cleaned = item.trim()
     if (cleaned.length < 3 || cleaned.length > 120) continue
     if (isInternalAnchor(cleaned)) continue
     const key = normalizeKey(cleaned)

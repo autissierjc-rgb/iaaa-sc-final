@@ -489,6 +489,13 @@ function ensureList(value: unknown, fallback: string[]): string[] {
 function cleanPublicText(text: string): string {
   return text
     .replace(/\n{2,}\s*(?:Ressources|Resources|Sources)\b[\s\S]*$/i, '')
+    .replace(/\b(?:general_analysis|understand_situation|site_analysis|startup_investment|personal_relationship)\b/gi, '')
+    .replace(/\bLa question décisive est simple\s*:\s*quel acteur, quel geste, quelle règle ou quelle preuve peut transformer l[’']hypothèse en fait observable\s*\??/gi, '')
+    .replace(/\bDes éléments visibles existent, mais leur portée reste à établir par des preuves concrètes\.?/gi, '')
+    .replace(/\bUn objet visible garde un rôle parce qu[’']il condense des rapports de confiance, de preuve et de pouvoir\.?/gi, '')
+    .replace(/\bLa situation tient encore par\s+et\s+/gi, 'La situation tient encore par ')
+    .replace(/\s*\((?:peuvent?|transforme|rendent?|réduit|ouvrent?|donnent?|gardent?|portent?|cadre|condense)[^)]{8,}\)/gi, '')
+    .replace(/\bDirigeants et partis,\s*Institutions,\s*Opinion publique,\s*Médias et récits publics,\s*Calendrier politique\b/gi, '')
     .replace(/\bCe qui l’affaiblit\s*\n+\s*,\s*c[’']est\b/gi, 'Ce qui l’affaiblit\n\nC’est')
     .replace(/\bCe qui l'affaiblit\s*\n+\s*,\s*c[’']est\b/gi, "Ce qui l'affaiblit\n\nC’est")
     .replace(/\bCe qui l’affaiblit\s*,\s*c[’']est\b/gi, 'Ce qui l’affaiblit, c’est')

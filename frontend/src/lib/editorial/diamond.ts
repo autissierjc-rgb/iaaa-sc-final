@@ -164,7 +164,7 @@ function concreteList(items: string[] | undefined, fallback: string, max = 4): s
 
 function publicHoldingSentence(theatre: SituationCard['concrete_theatre'] | undefined, tension: string): string {
   if (!theatre || theatre.anchors.length === 0) {
-    return `${capitalizeFirst(tension)}. La situation reste ouverte tant qu’aucun fait précis ne transforme cette tension en décision, coût ou rupture observable.`
+    return `${capitalizeFirst(tension)}. La situation reste ouverte tant qu’aucun fait précis ne la transforme en décision, coût ou rupture observable.`
   }
 
   if (theatre.domain === 'governance') {
@@ -181,8 +181,8 @@ function publicHoldingSentence(theatre: SituationCard['concrete_theatre'] | unde
 
   const actors = concreteList(theatre.actors, 'les acteurs nommés')
   if (hasConcreteItems(theatre.mechanisms)) {
-    const mechanisms = concreteList(theatre.mechanisms, 'les mécanismes concrets')
-    return `${capitalizeFirst(tension)}. La situation tient encore par ${actors} et ${mechanisms}, tant qu’aucune trace observable ne transforme l’hypothèse en fait établi.`
+    const mechanisms = concreteList(theatre.mechanisms, 'les faits à vérifier')
+    return `${capitalizeFirst(tension)}. La situation tient encore par ${actors} et ${mechanisms}, tant qu’aucune trace située ne permet de conclure.`
   }
   return `${capitalizeFirst(tension)}. La situation tient encore par ${actors}, mais il manque les faits concrets qui permettraient de dire ce que ces acteurs font réellement.`
 }
@@ -704,7 +704,7 @@ function buildUnderstandingDeepFallback(sc?: SituationCard): DeepReading {
     approfondir_fr: polishDiamondText(
       `${DIAMOND_DEEP_HEADINGS_FR[0]}\n\n` +
       (hasRealTheatre
-        ? `${objectSentence} se comprend par le théâtre réel déjà visible${anchors ? ` : ${anchors}` : ''}. La question décisive est simple : quel acteur, quel geste, quelle règle ou quelle preuve peut transformer l’hypothèse en fait observable ?\n\n`
+        ? `${objectSentence} se comprend par les éléments déjà situés${anchors ? ` : ${anchors}` : ''}. L’enjeu est de montrer comment ces éléments peuvent modifier une décision, un blocage, un usage, une relation ou une preuve disponible.\n\n`
         : `${objectSentence} reste insuffisamment sourcé pour être démontré. Le point solide, à ce stade, est la demande elle-même : comprendre l’objet, son activité réelle, les acteurs concernés et les preuves disponibles avant de conclure.\n\n`) +
       `${DIAMOND_DEEP_HEADINGS_FR[1]}\n\n` +
       `${hasRealTheatre ? publicHoldingSentence(theatre, tension) : `${capitalizeFirst(tension)}. Ce qui tient encore, c’est la possibilité de clarifier l’objet sans inventer les faits manquants.`}\n\n` +
