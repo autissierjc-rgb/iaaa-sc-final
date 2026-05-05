@@ -185,7 +185,7 @@ export default function AtlasPage() {
       <header style={{ background: BG, borderBottom: `1px solid ${BDR}`, padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100 }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <div style={{ width: 38, height: 38, borderRadius: '50%', overflow: 'hidden', border: `1px solid ${BDR_G}` }}>
-            <Image src="/pictos/LOOGO IAAA+.jpg" alt="IAAA+" width={38} height={38} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized/>
+            <Image src="/pictos/logo-iaaa.jpg" alt="IAAA+" width={38} height={38} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized/>
           </div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 500, color: NAVY, fontFamily: "'Cinzel', serif" }}>Situation Card</div>

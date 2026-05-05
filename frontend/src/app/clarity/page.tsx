@@ -81,9 +81,9 @@ export default function ClarityPage({
     <main style={{ background: '#F5F0E8', minHeight: '100vh', fontFamily: 'var(--font-dm-sans, system-ui, sans-serif)', color: '#1A2E5A' }}>
 
       <nav style={{ background: '#fff', borderBottom: '1px solid #E8E0D0', padding: '13px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href={`/sis${suffix}`} style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '11px', color: '#1A2E5A', textDecoration: 'none', letterSpacing: '0.12em' }}>SITUATION CARD</Link>
+        <Link href={`/${suffix}`} style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '11px', color: '#1A2E5A', textDecoration: 'none', letterSpacing: '0.12em' }}>SITUATION CARD</Link>
         <div style={{ display: 'flex', gap: '20px', fontSize: '12px', color: '#9A8860' }}>
-          <Link href={`/sis${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>{copy.home}</Link>
+          <Link href={`/${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>{copy.home}</Link>
           <Link href={`/enterprise${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>IAAA+</Link>
           <Link href="/login" style={{ color: '#1A2E5A', textDecoration: 'none', borderBottom: '1px solid #C8951A', paddingBottom: '1px' }}>{copy.login}</Link>
         </div>
@@ -132,7 +132,7 @@ export default function ClarityPage({
           <p style={{ fontSize: '13px', color: '#9A8860', marginBottom: '20px', lineHeight: 1.7 }}>
             {copy.start}
           </p>
-          <Link href={`/sis${suffix}`} style={{ display: 'inline-block', background: '#1A2E5A', color: '#fff', fontSize: '12px', fontWeight: 500, padding: '11px 28px', borderRadius: '7px', textDecoration: 'none' }}>
+          <Link href={`/${suffix}`} style={{ display: 'inline-block', background: '#1A2E5A', color: '#fff', fontSize: '12px', fontWeight: 500, padding: '11px 28px', borderRadius: '7px', textDecoration: 'none' }}>
             {copy.cta}
           </Link>
         </div>

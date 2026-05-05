@@ -75,7 +75,7 @@ export default function EnterprisePage({
     <main style={{ background: '#F5F0E8', minHeight: '100vh', fontFamily: 'var(--font-dm-sans, system-ui, sans-serif)', color: '#1A2E5A' }}>
 
       <nav style={{ background: '#fff', borderBottom: '1px solid #E8E0D0', padding: '13px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href={`/sis${suffix}`} style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '11px', color: '#1A2E5A', textDecoration: 'none', letterSpacing: '0.12em' }}>SITUATION CARD</Link>
+        <Link href={`/${suffix}`} style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '11px', color: '#1A2E5A', textDecoration: 'none', letterSpacing: '0.12em' }}>SITUATION CARD</Link>
         <div style={{ display: 'flex', gap: '20px', fontSize: '12px' }}>
           <Link href={`/clarity${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>Clarity</Link>
           <Link href={`/sis-system${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>SIS</Link>

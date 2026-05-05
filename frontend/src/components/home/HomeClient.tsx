@@ -1729,7 +1729,10 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
                   aria-label={lang === 'FR' ? 'Nouvelle situation' : 'New situation'}
                   style={{ width: 36, height: 36, border: `1px solid ${BDR}`, background: BG_P, cursor: 'pointer', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                 >
-                  <Image src="/pictos/refresh-button.png" alt="" width={30} height={30} style={{ objectFit: 'contain', display: 'block' }} unoptimized />
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={TXT2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                    <path d="M21 3v6h-6" />
+                  </svg>
                 </button>
                 <div style={{ justifySelf: 'end' }}>
                   <Boussole mode={effectiveCompassMode} onClick={handleGenerate} disabled={compassDisabled} />

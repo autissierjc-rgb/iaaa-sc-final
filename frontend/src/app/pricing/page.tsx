@@ -116,13 +116,13 @@ export default function PricingPage({
 
       {/* Nav */}
       <nav style={{ background: '#fff', borderBottom: '1px solid #E8E0D0', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-        <Link href={`/sis?lang=${lang.toLowerCase()}`} style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '13px', color: '#1A2E5A', textDecoration: 'none', letterSpacing: '0.1em' }}>
+        <Link href={`/?lang=${lang.toLowerCase()}`} style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '13px', color: '#1A2E5A', textDecoration: 'none', letterSpacing: '0.1em' }}>
           SITUATION CARD
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <Link href="/pricing?lang=fr" style={{ fontSize: '12px', color: lang === 'FR' ? '#1A2E5A' : '#9A8860', textDecoration: 'none', fontWeight: lang === 'FR' ? 600 : 400 }}>FR</Link>
           <Link href="/pricing?lang=en" style={{ fontSize: '12px', color: lang === 'EN' ? '#1A2E5A' : '#9A8860', textDecoration: 'none', fontWeight: lang === 'EN' ? 600 : 400 }}>EN</Link>
-          <Link href={`/sis?lang=${lang.toLowerCase()}`} style={{ fontSize: '12px', color: '#9A8860', textDecoration: 'none' }}>{copy.back}</Link>
+          <Link href={`/?lang=${lang.toLowerCase()}`} style={{ fontSize: '12px', color: '#9A8860', textDecoration: 'none' }}>{copy.back}</Link>
         </div>
       </nav>
 
