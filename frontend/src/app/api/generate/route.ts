@@ -3255,6 +3255,12 @@ export async function POST(req: NextRequest) {
       intentContext,
       previous: carriedPreviousContract,
     })
+    const canonicalSubmittedText = normalizeSubmittedSituation(
+      conversationContract.canonical_situation ||
+      canonicalDialogue?.canonical_situation ||
+      interpretedRequest.user_question ||
+      displayText
+    )
     const initialScopeContext = detectScopeContext(analysisText)
     const coverage = coverageCheck(analysisText)
     const inputQuality = inputQualityGate(analysisText)
@@ -3605,7 +3611,8 @@ export async function POST(req: NextRequest) {
       generation_status: baseSc.generation_status ?? 'ok',
       resources_status: resourcesStatus,
     }
-    const sc: SituationCard = sanitizeSituationCardPublicText(enforceHeaderContract(
+    const sc: SituationCard = {
+      ...sanitizeSituationCardPublicText(enforceHeaderContract(
       applyEntityExplanationsToSituationCard(
         intentContext.interpreted_request?.question_type === 'causal_attribution'
           ? {
@@ -3633,7 +3640,10 @@ export async function POST(req: NextRequest) {
           : assembledSc
       ),
       displayText
-    ))
+      )),
+      submitted_situation_fr: canonicalSubmittedText,
+      submitted_situation_en: canonicalSubmittedText,
+    }
 
     return NextResponse.json({ gate: 'GENERATE', sc })
   } catch (err: any) {

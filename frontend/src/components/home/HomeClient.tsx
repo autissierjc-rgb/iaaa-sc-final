@@ -500,6 +500,8 @@ function SituationCardPanel({ sc, lang, onExpand }: {
   const [headerDomain, headerTopic] = headerSubject.includes('·')
     ? headerSubject.split('·').map((part) => part.trim())
     : ['', headerSubject]
+  const headerDisplayDomain = headerDomain || 'Situation'
+  const headerDisplayTopic = headerTopic || headerSubject
 
   const cleanLectureText = (value: string) =>
     value
@@ -710,9 +712,20 @@ function SituationCardPanel({ sc, lang, onExpand }: {
             <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.45)', letterSpacing: '.12em', fontFamily: "'Cinzel',serif", marginBottom: 2 }}>
               POWERED BY IAAA+ · SITUATION CARD
             </div>
-            <div style={{ fontSize: 13, color: '#fff', fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.3 }}>
-              {submitted ? headerSubject : degradedTitle}
-            </div>
+            {submitted ? (
+              <>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', fontFamily: "'Cinzel',serif", letterSpacing: '.08em', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {headerDisplayDomain}
+                </div>
+                <div style={{ fontSize: 13, color: '#fff', fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.18, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {headerDisplayTopic}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: '#fff', fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.3 }}>
+                {degradedTitle}
+              </div>
+            )}
           </div>
           <button onClick={onExpand} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 4, padding: '4px 6px', cursor: 'pointer', color: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center' }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -772,10 +785,10 @@ function SituationCardPanel({ sc, lang, onExpand }: {
             POWERED BY IAAA+ · SITUATION CARD
           </div>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', fontFamily: "'Cinzel',serif", letterSpacing: '.08em', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {headerDomain || 'Situation'}
+            {headerDisplayDomain}
           </div>
           <div style={{ fontSize: 13, color: '#fff', fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.18, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {headerTopic || headerSubject}
+            {headerDisplayTopic}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -1020,8 +1033,13 @@ function SituationCardPanel({ sc, lang, onExpand }: {
                     : (lang === 'FR' ? 'Ressources' : 'Resources')}
               </div>
               {title && (
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.25, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {headerSubject}
+                <div style={{ marginTop: 2, minWidth: 0 }}>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.72)', fontFamily: "'Cinzel',serif", letterSpacing: '.08em', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {headerDisplayDomain}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.82)', fontFamily: "'Cormorant Garamond',serif", fontStyle: 'italic', lineHeight: 1.18, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {headerDisplayTopic}
+                  </div>
                 </div>
               )}
             </div>
