@@ -1629,7 +1629,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
       <div style={{ minHeight: '100vh', background: BG }}>
         {/* HEADER */}
         <header style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', padding: '16px 36px', background: BG, borderBottom: `1px solid ${BDR}`, position: 'sticky', top: 0, zIndex: 100 }}>
-          <Link href="/sis" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <div style={{ width: 46, height: 46, borderRadius: '50%', overflow: 'hidden', border: `1px solid ${BDR_G}` }}>
               <Image src={IAAA_LOGO_SRC} alt="IAAA+" width={46} height={46} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
             </div>
