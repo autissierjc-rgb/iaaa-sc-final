@@ -89,11 +89,11 @@ export type Lang = 'FR' | 'EN'
 // ── Mapping branches ──────────────────────────────────────────────────────────
 export const BRANCH_FR: Record<string, string> = {
   I:'Acteurs', II:'Intérêts', III:'Forces', IV:'Tensions',
-  V:'Contraintes', VI:'Incertitude', VII:'Temps', VIII:'Espace',
+  V:'Contraintes', VI:'Incertitudes', VII:'Temps', VIII:'Perception',
 }
 export const BRANCH_EN: Record<string, string> = {
   I:'Actors', II:'Interests', III:'Forces', IV:'Tensions',
-  V:'Constraints', VI:'Uncertainty', VII:'Time', VIII:'Space',
+  V:'Constraints', VI:'Uncertainties', VII:'Time', VIII:'Perception',
 }
 
 // ── Trajectory colors — du type au hex ───────────────────────────────────────

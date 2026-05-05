@@ -1,4 +1,4 @@
-import HomeClient from '@/components/home/HomeClient'
+import { redirect } from 'next/navigation'
 
 export const metadata = {
   title: 'Situation Card — Comprendre les situations complexes',
@@ -6,7 +6,7 @@ export const metadata = {
 }
 
 export default function HomePage() {
-  return <HomeClient />
+  redirect('/sis')
 }
 
 

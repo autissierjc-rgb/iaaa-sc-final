@@ -1,27 +1,36 @@
 'use client'
 
-﻿'use client'
-
 /**
- * IAAA Â· Footer V2
- * Liens complets : produit + lÃ©gal + situationcard.com
+ * IAAA · Footer V2
+ * Liens complets : produit + légal + situationcard.com
  */
 
 import Link from 'next/link'
 
-const PRODUCT_LINKS = [
-  { label: 'Atlas',       href: '/library'    },
-  { label: 'Pricing',     href: '/pricing'    },
-  { label: 'IAAA+',       href: '/enterprise' },
-  { label: 'About',       href: '/about'      },
-  { label: 'Contact',     href: '/contact'    },
-]
+type FooterLang = 'FR' | 'EN'
 
-const LEGAL_LINKS = [
-  { label: 'Privacy',           href: '/privacy'    },
-  { label: 'Terms',             href: '/terms'      },
-  { label: 'Mentions lÃ©gales',  href: '/legal'      },
-]
+const FOOTER_LINKS = {
+  FR: {
+    product: [
+      { label: 'Atlas', href: '/library?lang=fr' },
+      { label: 'Offres', href: '/pricing?lang=fr' },
+      { label: 'IAAA+', href: '/enterprise?lang=fr' },
+      { label: 'À propos', href: '/about?lang=fr' },
+      { label: 'Contact', href: '/contact?lang=fr' },
+    ],
+    legal: [{ label: 'Confidentialité', href: '/privacy?lang=fr' }],
+  },
+  EN: {
+    product: [
+      { label: 'Atlas', href: '/library?lang=en' },
+      { label: 'Plans', href: '/pricing?lang=en' },
+      { label: 'IAAA+', href: '/enterprise?lang=en' },
+      { label: 'About', href: '/about?lang=en' },
+      { label: 'Contact', href: '/contact?lang=en' },
+    ],
+    legal: [{ label: 'Privacy', href: '/privacy?lang=en' }],
+  },
+} as const
 
 const linkStyle: React.CSSProperties = {
   fontSize:      '11px',
@@ -31,7 +40,9 @@ const linkStyle: React.CSSProperties = {
   transition:    'color 0.15s',
 }
 
-export default function Footer() {
+export default function Footer({ lang = 'FR' }: { lang?: FooterLang }) {
+  const links = FOOTER_LINKS[lang]
+
   return (
     <footer style={{
       background:   '#fff',
@@ -63,7 +74,7 @@ export default function Footer() {
 
         {/* Product links */}
         <nav style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {PRODUCT_LINKS.map(({ label, href }) => (
+          {links.product.map(({ label, href }) => (
             <Link key={href} href={href} style={linkStyle}
               onMouseEnter={e => (e.currentTarget.style.color = '#5A6A8A')}
               onMouseLeave={e => (e.currentTarget.style.color = '#9A8860')}
@@ -75,7 +86,7 @@ export default function Footer() {
 
         {/* Legal + domain */}
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-          {LEGAL_LINKS.map(({ label, href }) => (
+          {links.legal.map(({ label, href }) => (
             <Link key={href} href={href} style={linkStyle}
               onMouseEnter={e => (e.currentTarget.style.color = '#5A6A8A')}
               onMouseLeave={e => (e.currentTarget.style.color = '#9A8860')}

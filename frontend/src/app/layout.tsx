@@ -42,24 +42,24 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'IAAA — Situation Intelligence Platform',
+    default: 'IAAA — Plateforme de Situation Intelligence',
     template: '%s · IAAA',
   },
   description:
-    'Turn a complex situation into a clear Situation Card. Understand forces, tensions, and trajectories in seconds.',
+    'Transformez une situation complexe en Situation Card claire. Comprenez les forces, les tensions et les trajectoires en quelques secondes.',
   metadataBase: new URL('https://iaaa.app'),
   openGraph: {
     type: 'website',
-    locale: 'en_US',
+    locale: 'fr_FR',
     url: 'https://iaaa.app',
     siteName: 'IAAA',
-    title: 'IAAA — Situation Intelligence Platform',
-    description: 'Turn a complex situation into a clear Situation Card.',
+    title: 'IAAA — Plateforme de Situation Intelligence',
+    description: 'Transformez une situation complexe en Situation Card claire.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'IAAA — Situation Intelligence Platform',
-    description: 'Turn a complex situation into a clear Situation Card.',
+    title: 'IAAA — Plateforme de Situation Intelligence',
+    description: 'Transformez une situation complexe en Situation Card claire.',
   },
   robots: {
     index: true,
@@ -74,7 +74,7 @@ export default function RootLayout({
 }) {
   return (
     <html
-      lang="en"
+      lang="fr"
       className={`${cormorant.variable} ${dmSans.variable} ${dmMono.variable} ${cinzel.variable}`}
     >
       <body className="antialiased" style={{ background: '#F5F3EE', color: '#1a2a3a' }}>

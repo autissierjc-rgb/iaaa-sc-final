@@ -33,7 +33,7 @@ const EXAMPLE_PROMPTS_FR = [
 export default function HeroSection() {
   const [situation, setSituation]   = useState('')
   const [activeTab, setActiveTab]   = useState<'text' | 'docs' | 'images'>('text')
-  const [lang, setLang]             = useState<'EN' | 'FR'>('EN')
+  const [lang, setLang]             = useState<'EN' | 'FR'>('FR')
   const [showOffers, setShowOffers] = useState(false)
   const router    = useRouter()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -421,13 +421,13 @@ export default function HeroSection() {
       {/* ── FOOTER ──────────────────────────────────────────────────── */}
       <footer style={{ background:'#fff', borderTop:'1px solid #E8E0D0', padding:'14px 28px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', gap:'18px', flexWrap:'wrap' }}>
+          <span style={{ fontSize:'11px', color:'#9A8860' }}>{lang === 'EN' ? 'Low carbon mode' : 'Mode bas carbone'}</span>
           {[
-            lang === 'EN' ? 'Low carbon mode' : 'Mode bas carbone',
-            lang === 'EN' ? 'About'           : 'À propos',
-            'Contact',
-            lang === 'EN' ? 'Privacy'         : 'Confidentialité',
-          ].map(label => (
-            <span key={label} style={{ fontSize:'11px', color:'#9A8860', cursor:'pointer' }}>{label}</span>
+            { label: lang === 'EN' ? 'About' : 'À propos', href: `/about?lang=${lang.toLowerCase()}` },
+            { label: 'Contact', href: `/contact?lang=${lang.toLowerCase()}` },
+            { label: lang === 'EN' ? 'Privacy' : 'Confidentialité', href: `/privacy?lang=${lang.toLowerCase()}` },
+          ].map(({ label, href }) => (
+            <Link key={label} href={href} style={{ fontSize:'11px', color:'#9A8860', textDecoration: 'none' }}>{label}</Link>
           ))}
         </div>
         <span style={{ fontSize:'11px', color:'#9A8860' }}>situationcard.com</span>

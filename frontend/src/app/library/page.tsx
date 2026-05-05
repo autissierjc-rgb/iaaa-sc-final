@@ -279,8 +279,8 @@ export default function AtlasPage() {
             </div>
             <div style={{ fontSize: 12, color: TXT2, lineHeight: 1.6 }}>{L.certifyDesc}</div>
           </div>
-          <a href="mailto:certification@iaaa.fr" style={{ flexShrink: 0, padding: '8px 18px', background: NAVY, color: '#fff', borderRadius: 8, fontSize: 12, textDecoration: 'none', fontWeight: 500 }}>
-            certification@iaaa.fr →
+          <a href="mailto:contact@situationcard.com" style={{ flexShrink: 0, padding: '8px 18px', background: NAVY, color: '#fff', borderRadius: 8, fontSize: 12, textDecoration: 'none', fontWeight: 500 }}>
+            contact@situationcard.com →
           </a>
         </div>
       </main>
@@ -288,7 +288,7 @@ export default function AtlasPage() {
       <footer style={{ background: BG_P, borderTop: `1px solid ${BDR}`, padding: '12px 32px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: 16 }}>
-            {[{ l: lang === 'FR' ? 'À propos' : 'About', h: '/about' }, { l: 'Contact', h: '/contact' }, { l: lang === 'FR' ? 'Mentions légales' : 'Legal', h: '/legal' }].map(item => (
+            {[{ l: lang === 'FR' ? 'À propos' : 'About', h: `/about?lang=${lang.toLowerCase()}` }, { l: 'Contact', h: `/contact?lang=${lang.toLowerCase()}` }, { l: lang === 'FR' ? 'Confidentialité' : 'Privacy', h: `/privacy?lang=${lang.toLowerCase()}` }].map(item => (
               <Link key={item.l} href={item.h} style={{ fontSize: 11, color: TXT3, textDecoration: 'none' }}>{item.l}</Link>
             ))}
           </div>
