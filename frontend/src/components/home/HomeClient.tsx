@@ -1485,7 +1485,16 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
         try { localStorage.removeItem(LAST_SC_STORAGE_KEY) } catch {}
         setScData(null); setScLoading(false); return
       }
-      if (scData2.sc) { setScData(scData2.sc) }
+      if (scData2.sc) {
+        setScData(scData2.sc)
+        const canonicalText = canonicalSituationFromResponse(scData2.sc, text)
+        setActiveSituation(canonicalText)
+        setChatMsgs(prev => prev.map((msg, index) =>
+          index === prev.length - 1 && msg.kind === 'user'
+            ? { ...msg, text: canonicalText }
+            : msg
+        ))
+      }
       setAnswers([])
       setDialogueNotes([])
       setCompassMode('idle'); setScLoading(false)
