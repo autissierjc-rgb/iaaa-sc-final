@@ -1,0 +1,580 @@
+import { NextRequest, NextResponse } from 'next/server'
+import Anthropic from '@anthropic-ai/sdk'
+import {
+  computeState,
+  getStateLabel,
+  AstrolabeBranch,
+  RadarScores,
+} from '@/lib/scoring'
+
+const client = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+})
+
+const BLOCK_MARKERS = [
+  "confirme que j'ai raison",
+  "prouve que j'ai raison",
+  "dis-moi que j'ai raison",
+  "confirm i'm right",
+  "prove i'm right",
+  "tell me i'm right",
+  'valide ma décision',
+  'valide mon choix',
+]
+
+const STATUS_MARKERS = [
+  'où en est',
+  'ou en est',
+  'where are we',
+  "what's happening",
+  'what is happening',
+  'latest on',
+  'update on',
+  'que se passe-t-il',
+  'que se passe t-il',
+  'status of',
+  'état de',
+  'etat de',
+  'how is the',
+  'comment va',
+  'où en sommes',
+  'ou en sommes',
+  'how are things',
+  'news on',
+]
+
+const PERSONAL_MARKERS = [
+  ' je ',
+  " j'",
+  ' mon ',
+  ' ma ',
+  ' mes ',
+  ' moi ',
+  ' my ',
+  " i'm ",
+  " i'd ",
+  " i've ",
+]
+
+const ORG_MARKERS = [
+  'équipe',
+  'equipe',
+  'board',
+  'comex',
+  'ceo',
+  'cfo',
+  'dg ',
+  'pdg',
+  'entreprise',
+  'client',
+  'projet',
+  'project',
+  'ong',
+  'ngo',
+  'manager',
+  'associé',
+  'associe',
+  'fondateur',
+  'startup',
+  'organisation',
+  'organization',
+  'institution',
+  'direction',
+]
+
+const ANALYSIS_MARKERS = [
+  'analyse',
+  'analyze',
+  'structure',
+  'situation card',
+  ' sc ',
+  'diagnostic',
+  'trajectoire',
+  'trajectory',
+  'vulnérabilité',
+  'vulnerability',
+  'fais une',
+  'génère',
+  'generate',
+  'create a card',
+  'make a card',
+]
+
+type GateMode = 'FLASH' | 'GENERATE' | 'CLARIFY' | 'BLOCK'
+
+type FlashResponse = {
+  etat_actuel: string
+  etat_actuel_en: string
+  lecture: string
+  lecture_en: string
+}
+
+type ClarifyResponse = {
+  questions: string[]
+}
+
+type Trajectory = {
+  type: 'stabilization' | 'escalation' | 'regime_shift'
+  title_fr: string
+  title_en: string
+  description_fr: string
+  description_en: string
+  signal_fr: string
+  signal_en: string
+}
+
+type SituationCard = {
+  title_fr: string
+  title_en: string
+  submitted_situation_fr: string
+  submitted_situation_en: string
+  insight_fr: string
+  insight_en: string
+  main_vulnerability_fr: string
+  main_vulnerability_en: string
+  asymmetry_fr: string
+  asymmetry_en: string
+  key_signal_fr: string
+  key_signal_en: string
+  radar: RadarScores
+  trajectories: Trajectory[]
+  cap: {
+    hook_fr: string
+    hook_en: string
+    watch_fr: string
+    watch_en: string
+  }
+  movements_fr: string[]
+  movements_en: string[]
+  avertissement_fr: string
+  avertissement_en: string
+  lecture_systeme_fr: string
+  lecture_systeme_en: string
+  state_index_final?: number
+  state_label?: string
+  state_label_en?: string
+}
+
+const FLASH_PROMPT = `You are IAAA — a structural intelligence system.
+Return ONLY raw JSON. No markdown.
+{"etat_actuel":"(FR)","etat_actuel_en":"(EN)","lecture":"(FR)","lecture_en":"(EN)"}
+Rules: 2 sentences max. No jargon. No preamble. Structurally honest if data lacking.`
+
+const CLARIFY_PROMPT = `You are IAAA — structural intelligence.
+Return ONLY: {"questions":["q1","q2"]}
+Max 2 questions. Short. Same language as input.`
+
+const FAST_CARD_PROMPT = `You are the IAAA Situation Card engine.
+
+Return ONLY valid minified JSON on one line. No markdown. No preamble.
+
+{
+  "title_fr": "",
+  "title_en": "",
+  "submitted_situation_fr": "",
+  "submitted_situation_en": "",
+  "insight_fr": "",
+  "insight_en": "",
+  "main_vulnerability_fr": "",
+  "main_vulnerability_en": "",
+  "asymmetry_fr": "",
+  "asymmetry_en": "",
+  "key_signal_fr": "",
+  "key_signal_en": "",
+  "radar": {
+    "impact": 0,
+    "urgency": 0,
+    "uncertainty": 0,
+    "reversibility": 0
+  },
+  "trajectories": [
+    {
+      "type": "stabilization",
+      "title_fr": "",
+      "title_en": "",
+      "description_fr": "",
+      "description_en": "",
+      "signal_fr": "",
+      "signal_en": ""
+    },
+    {
+      "type": "escalation",
+      "title_fr": "",
+      "title_en": "",
+      "description_fr": "",
+      "description_en": "",
+      "signal_fr": "",
+      "signal_en": ""
+    },
+    {
+      "type": "regime_shift",
+      "title_fr": "",
+      "title_en": "",
+      "description_fr": "",
+      "description_en": "",
+      "signal_fr": "",
+      "signal_en": ""
+    }
+  ],
+  "cap": {
+    "hook_fr": "",
+    "hook_en": "",
+    "watch_fr": "",
+    "watch_en": ""
+  },
+  "movements_fr": ["", "", ""],
+  "movements_en": ["", "", ""],
+  "avertissement_fr": "",
+  "avertissement_en": "",
+  "lecture_systeme_fr": "",
+  "lecture_systeme_en": ""
+}
+
+Rules:
+- concise
+- insight max 2 short sentences
+- trajectories max 1 short sentence each
+- movements max 4 words each
+- lecture_systeme max 2 short sentences
+- valid JSON only
+- one single line`
+
+const LECTURE_PANEL_PROMPT = `You are the IAAA structural reading engine.
+
+Your task: Produce a concise structural reading of the situation for the Lectures panel.
+
+Return ONLY valid JSON. No markdown. No preamble.
+
+{
+  "lecture_systeme_fr": "",
+  "lecture_systeme_en": ""
+}
+
+Rules:
+- 2 to 4 short paragraphs maximum
+- approximately 120 to 180 words per language
+- no sources
+- no jargon
+- no bullet points
+- no moralizing
+- explain the internal logic of the situation
+- identify the structural tension
+- identify what holds the situation together
+- identify what could make it shift
+- written for a decision-maker, not for an academic analyst
+- elegant, clear, sober
+- French and English must both be natural, not literal
+- valid JSON only`
+
+function detectGate(text: string): GateMode {
+  const t = ` ${text.toLowerCase()} `
+  if (BLOCK_MARKERS.some((m) => t.includes(m))) return 'BLOCK'
+  if (ANALYSIS_MARKERS.some((m) => t.includes(m))) return 'GENERATE'
+  if (ORG_MARKERS.some((m) => t.includes(m))) return 'GENERATE'
+  if (STATUS_MARKERS.some((m) => t.includes(m))) return 'FLASH'
+  if (PERSONAL_MARKERS.some((m) => t.includes(m))) return 'CLARIFY'
+  return 'GENERATE'
+}
+
+function extractTextContent(content: Array<{ type: string; text?: string }>): string {
+  return content
+    .filter((block) => block.type === 'text' && typeof block.text === 'string')
+    .map((block) => block.text as string)
+    .join('')
+    .replace(/```json|```/g, '')
+    .trim()
+}
+
+function parseJSON(raw: string): Record<string, unknown> {
+  const clean = raw.replace(/```json|```/g, '').trim()
+
+  const attempts = [
+    clean,
+    clean
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/\r?\n/g, ' '),
+  ]
+
+  for (const candidate of attempts) {
+    try {
+      return JSON.parse(candidate)
+    } catch {}
+  }
+
+  const first = clean.indexOf('{')
+  const last = clean.lastIndexOf('}')
+  if (first !== -1 && last !== -1 && last > first) {
+    const sliced = clean
+      .slice(first, last + 1)
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/\r?\n/g, ' ')
+    return JSON.parse(sliced)
+  }
+
+  throw new Error('Model returned invalid or truncated JSON')
+}
+
+function enrichWithScoring(
+  sc: Record<string, unknown>,
+  branches: AstrolabeBranch[]
+): SituationCard {
+  const radar = sc.radar as RadarScores | undefined
+  if (!radar) return sc as SituationCard
+
+  const state =
+    branches.length > 0
+      ? computeState(branches, radar)
+      : Math.round(
+          Math.max(
+            0,
+            Math.min(
+              100,
+              radar.impact * 0.3 +
+                radar.urgency * 0.25 +
+                radar.uncertainty * 0.25 +
+                (100 - radar.reversibility) * 0.2
+            )
+          )
+        )
+
+  return {
+    ...(sc as SituationCard),
+    state_index_final: state,
+    state_label: getStateLabel(state, 'fr'),
+    state_label_en: getStateLabel(state, 'en'),
+  }
+}
+
+function buildFallbackCard(
+  situation: string,
+  branches: AstrolabeBranch[] = []
+): SituationCard {
+  const base: SituationCard = {
+    title_fr: 'Lecture indisponible',
+    title_en: 'Reading unavailable',
+    submitted_situation_fr: situation,
+    submitted_situation_en: situation,
+    insight_fr:
+      "La structure générale est détectée mais la carte complète n'a pas pu être finalisée.",
+    insight_en:
+      'The general structure was detected but the full card could not be finalized.',
+    main_vulnerability_fr:
+      'La formulation actuelle demande une lecture plus stable pour isoler le point de rupture.',
+    main_vulnerability_en:
+      'The current wording still needs a more stable reading to isolate the failure point.',
+    asymmetry_fr:
+      "Le signal existe, mais sa formalisation complète n'est pas encore stabilisée.",
+    asymmetry_en:
+      'The signal exists, but its full formalization is not yet stabilized.',
+    key_signal_fr: 'Surveiller si la même difficulté se répète.',
+    key_signal_en: 'Watch whether the same difficulty repeats.',
+    radar: {
+      impact: 55,
+      urgency: 50,
+      uncertainty: 65,
+      reversibility: 55,
+    },
+    trajectories: [
+      {
+        type: 'stabilization',
+        title_fr: 'Clarification',
+        title_en: 'Clarification',
+        description_fr:
+          'La situation devient lisible si les éléments manquants sont explicités.',
+        description_en:
+          'The situation becomes readable if missing elements are made explicit.',
+        signal_fr: 'Les points flous sont nommés.',
+        signal_en: 'Missing points are named.',
+      },
+      {
+        type: 'escalation',
+        title_fr: 'Confusion prolongée',
+        title_en: 'Extended confusion',
+        description_fr:
+          "La situation reste active mais sans point d'appui clair.",
+        description_en:
+          'The situation remains active without a clear anchor point.',
+        signal_fr: 'Les mêmes ambiguïtés reviennent.',
+        signal_en: 'The same ambiguities return.',
+      },
+      {
+        type: 'regime_shift',
+        title_fr: 'Reformulation',
+        title_en: 'Reframing',
+        description_fr:
+          'La lecture change de nature quand le vrai problème est reformulé.',
+        description_en:
+          'The reading changes in nature when the real issue is reframed.',
+        signal_fr: 'Une meilleure formulation apparaît.',
+        signal_en: 'A better framing appears.',
+      },
+    ],
+    cap: {
+      hook_fr: 'Voir avant de conclure',
+      hook_en: 'See before deciding',
+      watch_fr: 'Reformulation plus précise',
+      watch_en: 'A more precise reframing',
+    },
+    movements_fr: ['clarifier', 'reformuler', 'observer'],
+    movements_en: ['clarify', 'reframe', 'observe'],
+    avertissement_fr:
+      'Ne pas forcer une conclusion sur une structure encore incomplète.',
+    avertissement_en:
+      'Do not force a conclusion on a still incomplete structure.',
+    lecture_systeme_fr:
+      "La carte complète n'a pas pu être stabilisée. La logique de situation existe, mais la sortie formelle doit être réparée.",
+    lecture_systeme_en:
+      'The full card could not be stabilized. The situation logic exists, but the formal output still needs repair.',
+  }
+
+  return enrichWithScoring(base, branches)
+}
+
+async function generateFastCard(
+  situation: string,
+  branches: AstrolabeBranch[] = []
+): Promise<SituationCard> {
+  try {
+    const msg = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1100,
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'user',
+          content: `${FAST_CARD_PROMPT}\n\nSituation:\n${situation}`,
+        },
+      ],
+    })
+
+    const raw = extractTextContent(msg.content as Array<{ type: string; text?: string }>)
+    const sc = parseJSON(raw)
+    return enrichWithScoring(sc, branches)
+  } catch (err) {
+    console.error('generateFastCard fallback:', err)
+    return buildFallbackCard(situation, branches)
+  }
+}
+
+async function generateFlash(text: string): Promise<FlashResponse | null> {
+  try {
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 220,
+      messages: [
+        {
+          role: 'user',
+          content: `${FLASH_PROMPT}\n\nQuestion: ${text}`,
+        },
+      ],
+    })
+
+    const raw = extractTextContent(msg.content as Array<{ type: string; text?: string }>)
+    return JSON.parse(raw) as FlashResponse
+  } catch {
+    return null
+  }
+}
+
+async function generateClarify(text: string): Promise<string[]> {
+  try {
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 120,
+      messages: [
+        {
+          role: 'user',
+          content: `${CLARIFY_PROMPT}\n\nSituation: ${text}`,
+        },
+      ],
+    })
+
+    const raw = extractTextContent(msg.content as Array<{ type: string; text?: string }>)
+    const parsed = JSON.parse(raw) as ClarifyResponse
+    return Array.isArray(parsed.questions) ? parsed.questions : []
+  } catch {
+    return []
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const {
+      situation,
+      mode,
+      lang = 'fr',
+      astrolabe_branches,
+    }: {
+      situation?: string
+      mode?: string
+      lang?: 'fr' | 'en'
+      astrolabe_branches?: AstrolabeBranch[]
+    } = await req.json()
+
+    if (!situation?.trim()) {
+      return NextResponse.json({ error: 'No situation' }, { status: 400 })
+    }
+
+    const text = situation.trim()
+    const branches = astrolabe_branches ?? []
+
+    if (mode === 'generate' || mode === 'generate_full') {
+      const sc = await generateFastCard(text, branches)
+      const lecturePanel = await generateLecturePanel(text)
+
+      const finalSc: SituationCard = {
+        ...sc,
+        lecture_systeme_fr:
+          lecturePanel.lecture_systeme_fr || sc.lecture_systeme_fr,
+        lecture_systeme_en:
+          lecturePanel.lecture_systeme_en || sc.lecture_systeme_en,
+      }
+
+      return NextResponse.json({ gate: 'GENERATE', sc: finalSc })
+    }
+
+    const gate = detectGate(text)
+
+    if (gate === 'BLOCK') {
+      const reason =
+        lang === 'fr'
+          ? "Cette formulation ne permet pas d'analyse structurelle."
+          : 'This formulation does not allow structural analysis.'
+      return NextResponse.json({ gate: 'BLOCK', reason })
+    }
+
+    if (gate === 'FLASH') {
+      const flash = await generateFlash(text)
+      if (flash) {
+        return NextResponse.json({ gate: 'FLASH', flash })
+      }
+      return NextResponse.json({ gate: 'GENERATE' })
+    }
+
+    if (gate === 'CLARIFY') {
+      const questions = await generateClarify(text)
+      return NextResponse.json({ gate: 'CLARIFY', questions })
+    }
+
+    return NextResponse.json({ gate: 'GENERATE' })
+  } catch (err: unknown) {
+    const error = err as {
+      message?: string
+      status?: number
+      response?: unknown
+      error?: unknown
+    }
+
+    console.error('generate error FULL:', err)
+    console.error('generate error message:', error?.message)
+    console.error('generate error status:', error?.status)
+    console.error(
+      'generate error response:',
+      error?.response ?? error?.error ?? null
+    )
+
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}

@@ -97,7 +97,7 @@ export default function SituationCardPanel({ sc, lang, onExpand }: {
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', flexShrink: 0, textDecoration: 'none' }}>
           <div style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', border: '1px solid rgba(200,168,64,0.4)' }}>
-            <Image src="/pictos/LOOGO IAAA+.jpg" alt="IAAA+" width={26} height={26}
+            <Image src="/pictos/LOOGO-IAAA.jpg" alt="IAAA+" width={26} height={26}
               style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
           </div>
         </Link>
