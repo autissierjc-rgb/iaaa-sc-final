@@ -88,6 +88,8 @@ InterpretationService
   ->
 DialogueGate
   ->
+RiskAdviceGuard
+  ->
 ResourceService
   ->
 ConcreteTheatreBuilder
@@ -111,6 +113,63 @@ Chaque etape doit produire un contrat type, testable et loggable.
 
 Aucun service ne doit modifier silencieusement le contrat produit par un autre
 service.
+
+## 4a. RiskAdviceGuard
+
+La V2 doit proteger les domaines reglementes ou a fort enjeu.
+
+Module cible :
+
+```txt
+src/lib/safety/RiskAdviceGuard.ts
+```
+
+Principe :
+
+```txt
+SC ne donne pas une decision professionnelle prescriptive.
+SC produit une carte de situation, des questions, des risques, des options a
+verifier, et renvoie vers les professionnels competents quand l'enjeu est
+reglemente ou vital.
+```
+
+Domaines sensibles :
+
+- medical / sante ;
+- juridique ;
+- financier / investissement / credit ;
+- assurance ;
+- emploi / RH ;
+- education et acces ;
+- logement ;
+- aides publiques ;
+- droits fondamentaux ;
+- mineurs ;
+- securite / violence.
+
+Contrat cible :
+
+```ts
+{
+  domain_risk: 'normal' | 'regulated' | 'high_stakes' | 'blocked'
+  advice_mode: 'analysis_only' | 'professional_referral' | 'emergency_referral' | 'refuse'
+  allowed_outputs: string[]
+  forbidden_outputs: string[]
+  required_disclaimer?: string
+  human_review_required: boolean
+}
+```
+
+Regles :
+
+- sante : pas de diagnostic ni traitement personnalise ;
+- droit : pas d'avis juridique personnalise ;
+- finance : pas de conseil d'investissement personnalise ;
+- emploi, education, aides publiques et droits fondamentaux : prudence renforcee
+  car la carte peut toucher a des decisions reglementees ou discriminatoires ;
+- urgence ou danger : orienter vers aide urgente ou professionnel qualifie ;
+- rester utile : structurer les faits, les questions, les sources, les preuves et
+  les seuils, sans franchir la ligne du conseil prescriptif.
 
 ## 4bis. Archive de generation
 
