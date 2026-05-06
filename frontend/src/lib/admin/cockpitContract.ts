@@ -67,6 +67,13 @@ export const COCKPIT_TRACKS: CockpitTrack[] = [
         note: 'Les cas de regression existent, mais ils ne sont pas encore affiches comme indicateurs dans l admin.',
       },
       {
+        id: 'calibration-benchmark',
+        label: 'Benchmark 10 SC fictives',
+        source: 'src/lib/governance/scCalibrationBenchmark.md',
+        reliability: 'partial',
+        note: 'La grille produit existe maintenant: Insight, Vulnerability, Trajectories, Key Signal et Global Usefulness.',
+      },
+      {
         id: 'user-feedback',
         label: 'Retours utilisateurs sur cartes',
         source: 'a creer',
