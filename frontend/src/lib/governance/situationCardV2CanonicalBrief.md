@@ -368,6 +368,8 @@ Regles :
 
 - si URL presente : detectUrl -> extract -> site brief ;
 - si extraction echoue : search sur domaine / fallback ;
+- le service serveur peut utiliser Tavily ou un autre extract/search provider,
+  mais les cles restent toujours cote serveur ;
 - les sources doivent etre adaptees au domaine ;
 - les ressources ne doivent pas ralentir la SC courte ;
 - les sources profondes peuvent enrichir Lectures, Approfondir ou Enquete.
