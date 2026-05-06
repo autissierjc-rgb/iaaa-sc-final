@@ -57,6 +57,12 @@ export default async function AdminLayout({
                 Users
               </Link>
               <Link
+                href="/admin/cockpit"
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                Cockpit
+              </Link>
+              <Link
                 href="/admin/ideas"
                 className="text-gray-300 hover:text-white transition-colors"
               >
