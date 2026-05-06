@@ -3206,24 +3206,17 @@ export async function POST(req: NextRequest) {
       typeof original_situation === 'string' && original_situation.trim()
         ? normalizeSubmittedSituation(original_situation.trim())
         : normalizeSubmittedSituation(text)
+    const hasUserAdditions =
+      typeof original_situation === 'string' &&
+      original_situation.trim() &&
+      normalizeSubmittedSituation(text) !== rawDisplayText
     const canonicalDialogue = await buildCanonicalSituationFromDialogue({
       rawSituation: text,
       originalSituation: typeof original_situation === 'string' ? original_situation : undefined,
       dialogueEvents: dialogue_events,
     })
-    if (!canonicalDialogue?.canonical_situation) {
-      return NextResponse.json({
-        gate: 'CLARIFY',
-        questions: [
-          'Je n’ai pas pu formaliser correctement votre demande. Pouvez-vous la reformuler en une phrase claire ?',
-        ],
-        coverage_check: {
-          canonicalization_status: 'unavailable',
-          canonicalization_rule: 'GPT formalization is required before SC generation.',
-        },
-      })
-    }
-    const analysisText = canonicalDialogue.canonical_situation
+    const analysisText = canonicalDialogue?.canonical_situation ||
+      applyDialogueClarifications(hasUserAdditions ? text : rawDisplayText || text)
     const urlSourceText = [
       text,
       rawDisplayText,
