@@ -27,6 +27,20 @@ export const COCKPIT_TRACKS: CockpitTrack[] = [
         note: 'Le moteur actuel genere bien les cartes, mais il ne persiste pas encore chaque appel dans une table admin.',
       },
       {
+        id: 'generation-events',
+        label: 'Journal des generations',
+        source: 'src/lib/contracts/generationArchive.ts',
+        reliability: 'missing',
+        note: 'A creer en V2: un GenerationEvent minimal pour chaque generation, sans stocker le texte brut par defaut.',
+      },
+      {
+        id: 'card-snapshots',
+        label: 'Snapshots de cartes',
+        source: 'src/lib/contracts/generationArchive.ts',
+        reliability: 'missing',
+        note: 'A creer seulement avec une regle de confidentialite claire: snapshot_allowed, snapshot_private ou metadata_only.',
+      },
+      {
         id: 'backend-usage-events',
         label: 'Evenements usage backend',
         source: 'backend usage_events',

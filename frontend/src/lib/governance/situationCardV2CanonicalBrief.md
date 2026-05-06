@@ -112,12 +112,54 @@ Chaque etape doit produire un contrat type, testable et loggable.
 Aucun service ne doit modifier silencieusement le contrat produit par un autre
 service.
 
+## 4bis. Archive de generation
+
+La V2 doit distinguer les cartes sauvegardees par l'utilisateur et les
+generations produites par le moteur.
+
+Chaque generation doit produire au minimum un `GenerationEvent` :
+
+- date ;
+- surface generee : SC, Lecture, Approfondir, Ressources ou Enquete ;
+- langue ;
+- domaine ;
+- famille de tension ;
+- intention ;
+- statut DialogueGate ;
+- statut ressources ;
+- statut QualityGate ;
+- latence ;
+- erreurs eventuelles ;
+- hash ou taille de l'input, sans exposer le texte brut par defaut.
+
+Le contenu complet de la carte ne doit etre conserve que dans un
+`GeneratedCardSnapshot` si la politique de confidentialite l'autorise.
+
+Modes de confidentialite :
+
+```txt
+metadata_only      journaliser l'evenement sans contenu de carte
+snapshot_allowed   conserver un snapshot de carte
+snapshot_private   conserver un snapshot prive, non public
+do_not_store        ne rien conserver hors reponse immediate
+```
+
+Regles :
+
+- ne jamais exposer les inputs bruts sensibles dans le cockpit ;
+- ne jamais stocker une carte privee comme ressource publique ;
+- separer `GenerationEvent` de `GeneratedCardSnapshot` ;
+- permettre a l'admin de mesurer activite, qualite, erreurs et latence sans
+  transformer SC en outil de surveillance ;
+- garder les cartes sauvegardees par l'utilisateur dans un flux distinct.
+
 ## 5. Modules cibles
 
 Organisation recommandee :
 
 ```txt
 src/lib/contracts/
+src/lib/archive/
 src/lib/interpretation/
 src/lib/dialogue/
 src/lib/domain/
@@ -655,6 +697,9 @@ points.
 
 Le cockpit admin doit exposer :
 
+- nombre de generations ;
+- statut archive : metadata only, snapshot, private ou do not store ;
+- taux de snapshots conserves ;
 - confidence d'interpretation ;
 - domaine detecte ;
 - famille de tension ;
@@ -675,14 +720,16 @@ Ces details ne sont pas affiches a l'utilisateur final sauf mode admin.
 Ne pas tout brancher d'un coup.
 
 1. Creer les contrats et documents canoniques.
-2. Implementer `InterpretationService` + `DialogueGate`.
-3. Implementer `ScoringEngine` depuis la formule canonique.
-4. Implementer `ResourceService` + `SourceRouter`.
-5. Implementer `ConcreteTheatreBuilder`.
-6. Implementer `WritingEngine` + `QualityGate`.
-7. Implementer `BlindSpotEngine`.
-8. Brancher progressivement a l'API `generate`.
-9. Ajouter cockpit admin et benchmark visible.
+2. Creer `GenerationEvent` et `GeneratedCardSnapshot`, sans forcer encore la
+   persistence.
+3. Implementer `InterpretationService` + `DialogueGate`.
+4. Implementer `ScoringEngine` depuis la formule canonique.
+5. Implementer `ResourceService` + `SourceRouter`.
+6. Implementer `ConcreteTheatreBuilder`.
+7. Implementer `WritingEngine` + `QualityGate`.
+8. Implementer `BlindSpotEngine`.
+9. Brancher progressivement a l'API `generate`.
+10. Ajouter cockpit admin et benchmark visible.
 
 ## 21. Regle anti-patch V2
 

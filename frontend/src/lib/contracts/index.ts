@@ -1,5 +1,6 @@
 export * from './common'
 export * from './dialogue'
+export * from './generationArchive'
 export * from './inquiry'
 export * from './interpretation'
 export * from './quality'

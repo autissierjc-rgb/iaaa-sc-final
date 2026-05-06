@@ -354,6 +354,34 @@ Le benchmark doit donc penaliser deux erreurs :
 - un Approfondir qui cache ou dilue les angles morts ;
 - une enquete qui alourdit l'experience initiale au lieu de rester optionnelle.
 
+## Archive, traces et confidentialite
+
+Le benchmark doit aussi verifier que la V2 peut mesurer la qualite sans
+confondre journalisation et sauvegarde utilisateur.
+
+Chaque generation doit pouvoir produire :
+
+- un `GenerationEvent` minimal, oriente activite, latence, statut ressources,
+  domaine, tension, QualityGate et erreur eventuelle ;
+- un `GeneratedCardSnapshot` seulement si la confidentialite l'autorise.
+
+Erreurs a penaliser :
+
+- aucune trace exploitable pour comprendre une regression ;
+- stockage automatique du texte brut sensible ;
+- confusion entre une carte generee, une carte sauvegardee et une carte
+  publique ;
+- absence de statut ressources ou de latence dans le cockpit ;
+- impossibilite de relier une mauvaise sortie a son interpretation, son
+  domaine, son scoring ou son QualityGate.
+
+Regle :
+
+```txt
+Toutes les generations doivent etre mesurables.
+Toutes les cartes ne doivent pas etre conservees.
+```
+
 ## Regle d'usage
 
 Avant une evolution majeure du moteur SC, tester ce set et noter les sorties.
