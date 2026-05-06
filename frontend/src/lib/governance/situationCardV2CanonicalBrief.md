@@ -435,6 +435,13 @@ src/lib/scoring/radarScoring.ts
 src/lib/scoring/stateLabels.ts
 ```
 
+Note de migration :
+
+Dans la V1, `src/lib/scoring.ts` existe deja et contient la formule historique
+validee. Tant que la V1 reste active, la fondation V2 peut vivre dans
+`src/lib/scoringV2/` pour eviter tout conflit de chemin. Le basculement final
+pourra renommer ou fusionner proprement lorsque la V1 sera retiree.
+
 Origine canonique retrouvee :
 
 ```txt
