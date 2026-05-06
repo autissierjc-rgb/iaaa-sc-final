@@ -76,6 +76,33 @@ export const COCKPIT_TRACKS: CockpitTrack[] = [
     ],
   },
   {
+    id: 'tensions',
+    label: 'Scoring et tensions',
+    signals: [
+      {
+        id: 'astrolabe-heuristics',
+        label: 'Scores Astrolabe actuels',
+        source: 'src/app/api/generate/route.ts',
+        reliability: 'partial',
+        note: 'Le scoring existe, mais il reste disperse dans des heuristiques comme guerre, crise, attribution causale, site, personnel ou decision.',
+      },
+      {
+        id: 'domain-detection',
+        label: 'Detection de domaine',
+        source: 'src/lib/coverage/detectDomain.ts',
+        reliability: 'partial',
+        note: 'Les domaines sont detectes, mais ils ne forment pas encore un referentiel canonique de familles de tension.',
+      },
+      {
+        id: 'canonical-tension-families',
+        label: 'Referentiel familles de tension',
+        source: 'src/lib/tensions/tensionFamilies.ts',
+        reliability: 'missing',
+        note: 'A creer plus tard: crise institutionnelle, guerre, lien affectif, startup, management, site, droit, sante, ecole et adolescence.',
+      },
+    ],
+  },
+  {
     id: 'resources',
     label: 'Ressources et web',
     signals: [
