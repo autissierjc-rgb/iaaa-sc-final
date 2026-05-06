@@ -612,6 +612,77 @@ La redaction doit produire un effet diamant :
 - comprendre la bascule possible ;
 - savoir quoi observer.
 
+La redaction diamant tient toujours deux plans :
+
+Fond :
+
+- structure reelle ;
+- vulnerabilite centrale ;
+- acteurs, seuils et preuves ;
+- contradiction ;
+- angle mort qui peut renverser la lecture.
+
+Forme :
+
+- style d'essai court ;
+- phrases nettes ;
+- tension narrative ;
+- pas de jargon interne ;
+- pas de notice ;
+- pas de logico visible ;
+- une phrase diamant memorisable.
+
+Chaque SC doit produire au moins une phrase diamant :
+
+```txt
+Une phrase courte, dense, partageable, qui condense le fond sans trahir la
+complexite.
+```
+
+Contrat cible :
+
+```ts
+type DiamondSentence = {
+  text_fr: string
+  role: 'thesis' | 'vulnerability' | 'tipping_point' | 'key_signal'
+  must_be_public: boolean
+}
+```
+
+La redaction doit aussi enoncer les probabilites quand la situation l'exige.
+
+Elle doit distinguer :
+
+```txt
+etabli       preuve ou source solide
+probable     faisceau d'indices fort
+plausible    hypothese raisonnable mais non tranchee
+hypothese    piste a tester
+inconnu      element absent ou non verifiable
+```
+
+Regle :
+
+- ne pas transformer une probabilite en certitude ;
+- ne pas cacher une probabilite derriere une prudence molle ;
+- donner si possible un exemple avere ou probable ;
+- dire quelle preuve ferait changer le statut ;
+- separer exemples averes, exemples probables et exemples simplement
+  plausibles.
+
+Contrat cible :
+
+```ts
+type ProbabilityAssessment = {
+  claim_fr: string
+  status: 'established' | 'probable' | 'plausible' | 'hypothesis' | 'unknown'
+  probability_label_fr: string
+  confidence: number
+  examples: ExampleEvidence[]
+  missing_proof_fr?: string
+}
+```
+
 La Main Vulnerability est le centre du diamant.
 
 Elle doit nommer une fragilite structurelle precise :

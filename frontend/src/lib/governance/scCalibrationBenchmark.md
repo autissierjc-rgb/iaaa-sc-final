@@ -322,6 +322,41 @@ Le systeme tient par une promesse implicite que les parties continuent
 d'utiliser publiquement tout en cessant d'y croire operationnellement.
 ```
 
+## Probabilites et exemples
+
+Le benchmark doit verifier que la SC sait enoncer un degre d'affirmation.
+
+Une bonne carte ne dit pas seulement "c'est incertain". Elle distingue :
+
+- ce qui est etabli ;
+- ce qui est probable ;
+- ce qui est plausible ;
+- ce qui reste une hypothese ;
+- ce qui est inconnu.
+
+Elle doit pouvoir donner des exemples averes ou probables sans les confondre.
+
+Mauvais :
+
+```txt
+Il est possible que la situation evolue.
+```
+
+Bon :
+
+```txt
+Le risque n'est pas etabli, mais il devient probable si deux indices convergent :
+un acteur capable d'agir change de position, et une procedure lui donne un
+levier verifiable.
+```
+
+Critere de qualite :
+
+```txt
+La carte doit indiquer le statut de ses affirmations et la preuve qui ferait
+changer ce statut.
+```
+
 ## Lecture, Approfondir et enquete
 
 Le benchmark doit verifier la structure cible suivante :

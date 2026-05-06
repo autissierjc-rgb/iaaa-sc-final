@@ -1,5 +1,50 @@
 import type { TraceMeta } from './common'
 
+export type DiamondSentenceRole =
+  | 'thesis'
+  | 'vulnerability'
+  | 'tipping_point'
+  | 'key_signal'
+
+export type DiamondSentence = {
+  text_fr: string
+  text_en?: string
+  role: DiamondSentenceRole
+  must_be_public: boolean
+}
+
+export type SubstanceFormContract = {
+  substance_fr: string[]
+  form_fr: string[]
+  diamond_sentence: DiamondSentence
+}
+
+export type AssertionStatus =
+  | 'established'
+  | 'probable'
+  | 'plausible'
+  | 'hypothesis'
+  | 'unknown'
+
+export type ExampleEvidence = {
+  text_fr: string
+  text_en?: string
+  status: AssertionStatus
+  source_ids?: string[]
+}
+
+export type ProbabilityAssessment = {
+  claim_fr: string
+  claim_en?: string
+  status: AssertionStatus
+  probability_label_fr: string
+  probability_label_en?: string
+  confidence: number
+  examples: ExampleEvidence[]
+  missing_proof_fr?: string
+  missing_proof_en?: string
+}
+
 export type SituationCardViewContract = {
   title_fr: string
   title_en?: string
@@ -42,6 +87,9 @@ export type ApprofondirContract = {
 }
 
 export type WritingContract = {
+  substance_form: SubstanceFormContract
+  diamond_sentences: DiamondSentence[]
+  probability_assessments: ProbabilityAssessment[]
   situation_card: SituationCardViewContract
   trajectories: TrajectoryContract[]
   lecture: LectureContract
