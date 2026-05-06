@@ -30,6 +30,7 @@ import { buildConcreteTheatre } from '@/lib/context/concreteTheatre'
 import { applyEntityExplanationsToSituationCard } from '@/lib/text/entityExplanations'
 import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
+import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
 import type {
   ArbreACamesAnalysis,
   PatternContext,
@@ -3184,6 +3185,7 @@ function applyPatternContextToCard(
 }
 
 export async function POST(req: NextRequest) {
+  const requestStartedAt = Date.now()
   try {
     const {
       situation,
@@ -3489,6 +3491,20 @@ export async function POST(req: NextRequest) {
           }),
           displayText
         ))
+        recordGenerationTrace({
+          status: 'partial',
+          gate: 'GENERATE',
+          route: '/api/generate',
+          durationMs: Date.now() - requestStartedAt,
+          inputChars: analysisText.length,
+          domain: effectiveCoverageForGeneration.domain,
+          intentType: intentContext.interpreted_request?.intent_type,
+          questionType: intentContext.interpreted_request?.question_type,
+          resourcesStatus,
+          resourcesCount: resources.length,
+          modelPath: 'fallback',
+          errorKind: error instanceof Error ? error.name : 'UnknownError',
+        })
         return NextResponse.json({ gate: 'GENERATE', sc: fallbackSc })
       }
     }
@@ -3648,6 +3664,19 @@ export async function POST(req: NextRequest) {
       submitted_situation_en: canonicalSubmittedText,
     }
 
+    recordGenerationTrace({
+      status: sc.generation_status === 'partial' ? 'partial' : 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      durationMs: Date.now() - requestStartedAt,
+      inputChars: analysisText.length,
+      domain: effectiveCoverageForGeneration.domain,
+      intentType: intentContext.interpreted_request?.intent_type,
+      questionType: intentContext.interpreted_request?.question_type,
+      resourcesStatus,
+      resourcesCount: resources.length,
+      modelPath: prebuiltSiteCard ? 'local' : 'openai',
+    })
     return NextResponse.json({ gate: 'GENERATE', sc })
   } catch (err: any) {
     console.error('generate error FULL:', err)
@@ -3657,6 +3686,14 @@ export async function POST(req: NextRequest) {
       'generate error response:',
       err?.response ?? err?.error ?? null
     )
+    recordGenerationTrace({
+      status: 'error',
+      gate: 'ERROR',
+      route: '/api/generate',
+      durationMs: Date.now() - requestStartedAt,
+      inputChars: 0,
+      errorKind: err instanceof Error ? err.name : 'UnknownError',
+    })
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
