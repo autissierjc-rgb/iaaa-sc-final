@@ -1,5 +1,6 @@
 export * from './common'
 export * from './dialogue'
+export * from './expertisesMetiers'
 export * from './generationArchive'
 export * from './inquiry'
 export * from './interpretation'

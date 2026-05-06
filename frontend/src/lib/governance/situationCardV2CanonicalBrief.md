@@ -256,6 +256,7 @@ src/lib/contracts/
 src/lib/archive/
 src/lib/interpretation/
 src/lib/dialogue/
+src/lib/expertisesMetiers/
 src/lib/domain/
 src/lib/tensions/
 src/lib/metiers/
@@ -372,17 +373,30 @@ Note historique :
 Cette evolution peut modifier le scoring : VI peut devenir plus structurant
 qu'avant, mais doit rester justifie par le theatre reel.
 
-## 9. Domain / Tension / Metier Router
+## 9. ExpertisesMetiers Router
 
 Modules cibles :
 
 ```txt
-src/lib/domain/domainAtlas.ts
-src/lib/tensions/tensionFamilies.ts
-src/lib/metiers/metierAtlas.ts
+src/lib/expertisesMetiers/ExpertisesMetiersRouter.ts
+src/lib/expertisesMetiers/domainPlaybooks.ts
+src/lib/expertisesMetiers/metierLenses.ts
 ```
 
-Chaque famille doit fournir :
+Note de vocabulaire :
+
+Ne pas appeler cette base "Atlas" afin de ne pas la confondre avec l'Astrolabe
+public de SC.
+
+`ExpertisesMetiers` n'est pas une encyclopedie. C'est un repertoire des
+questions expertes :
+
+```txt
+quoi chercher, quelles preuves attendre, quels angles morts tester,
+quelles sources consulter, quels seuils surveiller.
+```
+
+Chaque expertise domaine ou metier doit fournir :
 
 ```ts
 {
@@ -440,7 +454,7 @@ consultant, syndicaliste, juge, fonctionnaire, ONG terrain, analyste, DSI,
 product manager, entrepreneur social
 ```
 
-Une famille n'est pas une etiquette. Elle doit guider :
+Une expertise metier n'est pas une etiquette. Elle doit guider :
 
 - les acteurs a chercher ;
 - les preuves attendues ;
