@@ -4,6 +4,7 @@ import type { InterpretationContract } from './interpretation'
 import type { QualityGateContract } from './quality'
 import type { ResourceServiceContract } from './resources'
 import type { ScoringContract } from './scoring'
+import type { SharePolicyContract } from './share'
 import type { ConcreteTheatreContract } from './theatre'
 import type { WritingContract } from './writing'
 
@@ -16,6 +17,7 @@ export type SituationCardV2Contract = {
   inquiry: InquiryContract
   writing: WritingContract
   quality: QualityGateContract
+  share_policy?: SharePolicyContract
   generated_at: string
   contract_version: 'v2-draft'
 }

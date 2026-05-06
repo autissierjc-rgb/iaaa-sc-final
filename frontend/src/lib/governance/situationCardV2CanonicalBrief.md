@@ -153,6 +153,41 @@ Regles :
   transformer SC en outil de surveillance ;
 - garder les cartes sauvegardees par l'utilisateur dans un flux distinct.
 
+## 4ter. Partage public des SC
+
+Le partage reseaux sociaux est distinct de la recherche de signaux sociaux.
+
+Une SC ne peut etre partagee que si elle existe comme snapshot stable et qu'une
+politique de partage l'autorise.
+
+Contrats cibles :
+
+```txt
+SharePolicyContract
+ShareMetadataContract
+SharedSituationCardContract
+```
+
+Ordre propre :
+
+1. `GeneratedCardSnapshot` ;
+2. `SharePolicy` ;
+3. page publique ou restreinte `/sc/[slug]` ;
+4. metadata OpenGraph : titre, description, image, langue ;
+5. boutons : copier lien, email, LinkedIn, X, WhatsApp, Facebook.
+
+Regles :
+
+- une SC personnelle ou sensible n'est jamais partageable brute par defaut ;
+- proposer une version anonymisee si le sujet est personnel, familial, sante,
+  travail sensible ou relationnel ;
+- distinguer `private`, `restricted`, `public`, `anonymized_public` ;
+- ne pas confondre "public" avec "indexable partout" ;
+- les boutons de partage ne doivent apparaitre que si `SharePolicy` autorise le
+  partage ;
+- le partage doit utiliser un titre court, un resume propre et une image OG
+  stable, pas le texte brut de la carte.
+
 ## 5. Modules cibles
 
 Organisation recommandee :
