@@ -77,7 +77,7 @@ export default function GenerateV2Tester() {
   const [response, setResponse] = useState<GenerateV2Response | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string>('Pret.')
-  const [inquiryOpen, setInquiryOpen] = useState(false)
+  const [evidenceSearchRequested, setEvidenceSearchRequested] = useState(false)
 
   const firstBlindSpots = useMemo(
     () => response?.inquiry?.blind_spots?.slice(0, 3) ?? [],
@@ -88,7 +88,7 @@ export default function GenerateV2Tester() {
     setLoading(true)
     setError(null)
     setResponse(null)
-    setInquiryOpen(false)
+    setEvidenceSearchRequested(false)
     setStatusMessage('Appel de /api/generate-v2 en cours...')
 
     try {
@@ -235,47 +235,59 @@ export default function GenerateV2Tester() {
         </div>
       )}
 
-      {response?.ok && firstBlindSpots.length > 0 && (
-        <div style={{ marginTop: 14 }}>
-          <button
-            type="button"
-            data-testid="generate-v2-inquiry-button"
-            onClick={() => setInquiryOpen((value) => !value)}
-            style={{
-              border: '1px solid #C8951A',
-              color: '#1A2E5A',
-              background: inquiryOpen ? '#F8EFD8' : '#fff',
-              borderRadius: 8,
-              padding: '10px 14px',
-              fontSize: 13,
-              cursor: 'pointer',
-            }}
-          >
-            {inquiryOpen ? 'Masquer l’enquete' : 'Lancer l’enquete'}
-          </button>
-          <span style={{ marginLeft: 10, color: '#8B8174', fontSize: 12 }}>
-            {firstBlindSpots.length} piste(s) sur ce test
-          </span>
-        </div>
-      )}
+      {firstBlindSpots.length > 0 && (
+        <>
+          <div style={{ marginTop: 14, ...miniCardStyle() }}>
+            <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+              angles morts integres a la reponse
+            </p>
+            <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
+              Ces pistes ne sont pas une enquete externe. Elles sont la matiere que SC doit integrer dans Lecture
+              et Approfondir : ce qui manque, ce qui ferait changer la conclusion, et quelle preuve chercher.
+            </p>
+          </div>
 
-      {inquiryOpen && firstBlindSpots.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
-          {firstBlindSpots.map((blindSpot) => (
-            <div key={blindSpot.blind_spot} style={miniCardStyle()}>
-              <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
-                contrat admin · {inquiryLevelLabel(blindSpot.level)}
-              </p>
-              <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{blindSpot.blind_spot}</h3>
-              <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.45 }}>
-                {publicInquiryQuestion(blindSpot.blind_spot)}
-              </p>
-              <p style={{ margin: '8px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
-                Preuve attendue : {blindSpot.decisive_evidence}
-              </p>
-            </div>
-          ))}
-        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
+            {firstBlindSpots.map((blindSpot) => (
+              <div key={blindSpot.blind_spot} style={miniCardStyle()}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+                  contrat admin · {inquiryLevelLabel(blindSpot.level)}
+                </p>
+                <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{blindSpot.blind_spot}</h3>
+                <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.45 }}>
+                  {publicInquiryQuestion(blindSpot.blind_spot)}
+                </p>
+                <p style={{ margin: '8px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                  Preuve attendue : {blindSpot.decisive_evidence}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <button
+              type="button"
+              data-testid="generate-v2-evidence-search-button"
+              onClick={() => setEvidenceSearchRequested(true)}
+              style={{
+                border: '1px solid #C8951A',
+                color: '#1A2E5A',
+                background: evidenceSearchRequested ? '#F8EFD8' : '#fff',
+                borderRadius: 8,
+                padding: '10px 14px',
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              Chercher les preuves
+            </button>
+            <span style={{ marginLeft: 10, color: '#8B8174', fontSize: 12 }}>
+              {evidenceSearchRequested
+                ? 'Recherche probatoire non branchee : prochaine brique EvidenceSearch.'
+                : 'future enquete web / sources, non branchee dans ce banc d essai'}
+            </span>
+          </div>
+        </>
       )}
     </section>
   )

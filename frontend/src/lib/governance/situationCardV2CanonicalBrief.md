@@ -47,14 +47,15 @@ Elle doit etre generee depuis :
 
 1. une interpretation canonique de l'intention ;
 2. un dialogue gate clair ;
-3. un theatre reel concret ;
-4. une famille de tension / domaine / metier ;
-5. des ressources adaptees ;
+3. une famille de tension / domaine / metier ;
+4. des ressources rapides adaptees ;
+5. un theatre reel concret ;
 6. un scoring coherent ;
-7. une redaction diamant ;
-8. un moteur d'enquete des angles morts ;
+7. une preparation des incertitudes et angles morts integree a la reponse ;
+8. une redaction diamant ;
 9. un Quality Gate silencieux ;
-10. un benchmark de calibration.
+10. un benchmark de calibration ;
+11. une enquete probatoire externe uniquement si l'utilisateur la lance.
 
 ## 3. Regle majeure d'interpretation
 
@@ -90,21 +91,23 @@ DialogueGate
   ->
 RiskAdviceGuard
   ->
+ExpertisesMetiers / Domain Router
+  ->
 ResourceService
   ->
 ConcreteTheatreBuilder
   ->
-Domain / Tension / Metier Router
-  ->
 ScoringEngine
   ->
-WritingEngine
+BlindSpotPreparation
   ->
-BlindSpot / Inquiry Engine
+WritingEngine
   ->
 QualityGate
   ->
 Situation Card / Lectures / Approfondir / Ressources
+  ->
+EvidenceSearch / Enquete probatoire a la demande
   ->
 Admin Cockpit / Telemetry / Benchmark
 ```
@@ -113,6 +116,17 @@ Chaque etape doit produire un contrat type, testable et loggable.
 
 Aucun service ne doit modifier silencieusement le contrat produit par un autre
 service.
+
+Note importante :
+
+```txt
+La preparation des angles morts fait partie de la reponse.
+Elle nourrit SC, Lecture et Approfondir.
+
+Le bouton d'enquete ne sert pas a preparer l'enquete.
+Il sert uniquement a chercher des preuves externes : web, sources officielles,
+documents, bases metier ou signaux sociaux selon le domaine.
+```
 
 ## 4a. RiskAdviceGuard
 
