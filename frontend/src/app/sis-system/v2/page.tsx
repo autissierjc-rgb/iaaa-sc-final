@@ -12,6 +12,7 @@ import {
   summarizePipelineRun,
 } from '@/lib/pipeline/PipelineTelemetry'
 import { buildCalibrationEvidence } from '@/lib/quality/CalibrationEvidence'
+import { buildBlindSpotInquiry } from '@/lib/inquiry/BlindSpotEngine'
 
 const NEXT_STEPS = [
   'Brancher une route V2 separee, sans toucher a /sis.',
@@ -59,6 +60,24 @@ export default function SisSystemV2Page() {
     concrete_anchor_count: 4,
     has_diamond_sentence: true,
     has_observable_signal: true,
+  })
+  const sampleInquiry = buildBlindSpotInquiry({
+    interpretation: {
+      domain: 'startup_market',
+      situation_soumise: 'Evaluer une compagnie avant de la rejoindre avec sa startup.',
+      angle: 'decision professionnelle et risque de partenariat',
+      user_need: 'Comprendre ce qui manque avant de decider.',
+    },
+    theatre: {
+      actors: ['fondateur', 'startup', 'compagnie cible'],
+      institutions: ['cadre legal', 'investisseurs eventuels'],
+      constraints: ['cadre legal a verifier', 'preuve client manquante', 'dependance de decision'],
+      evidence: [
+        { label: 'site public', level: 'established', source_ids: ['sample-site'] },
+        { label: 'promesse produit', level: 'plausible', source_ids: ['sample-site'] },
+      ],
+      unknowns: ['clients reels', 'revenus verifies', 'conditions juridiques', 'role exact de l utilisateur'],
+    },
   })
 
   return (
@@ -126,6 +145,39 @@ export default function SisSystemV2Page() {
                   Budget {stage.latency_budget_ms} ms · {stage.blocks_generation ? 'bloquant' : 'non bloquant'}
                 </p>
               </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: 760 }}>
+              <h2 style={{ margin: 0, fontSize: 15 }}>Enquete angles morts</h2>
+              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
+                Approfondir reste une page enrichie. L enquete est un declencheur separe : elle part des incertitudes
+                et transforme chaque angle mort en piste, source possible, signal observable et preuve decisive.
+              </p>
+            </div>
+            <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.blind_spots.length}</strong> pistes exemple</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.should_offer_inquiry ? 'oui' : 'non'}</strong> bouton propose</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.trace.duration_ms} ms</strong> contrat local</div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <button type="button" style={{ border: '1px solid #C8951A', color: '#1A2E5A', background: '#F8EFD8', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>
+              {sampleInquiry.inquiry_button_label_fr}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10, marginTop: 16 }}>
+            {sampleInquiry.blind_spots.slice(0, 4).map((blindSpot) => (
+              <div key={blindSpot.blind_spot} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>{blindSpot.level}</p>
+                <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{blindSpot.blind_spot}</h3>
+                <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>{blindSpot.decisive_evidence}</p>
+              </div>
             ))}
           </div>
         </section>
