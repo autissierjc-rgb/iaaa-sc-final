@@ -128,7 +128,50 @@ Il sert uniquement a chercher des preuves externes : web, sources officielles,
 documents, bases metier ou signaux sociaux selon le domaine.
 ```
 
-## 4a. RiskAdviceGuard
+## 4a. Recherche+
+
+`Recherche+` est l'enquete probatoire externe lancee a la demande.
+
+Elle ne remplace pas SC, Lecture ou Approfondir. Elle ne doit pas introduire de
+signaux faibles non verifies dans la reponse principale.
+
+Role :
+
+- transformer les angles morts en requetes de preuve ;
+- chercher des pistes sur web, sources officielles, documents, bases metier et
+  signaux sociaux publics lorsque c'est legalement accessible ;
+- classer les resultats comme piste, signal faible, source solide,
+  contradiction ou source inaccessible ;
+- expliquer ce que chaque signal suggere ;
+- expliquer ce qu'il ne prouve pas ;
+- proposer l'etape de verification suivante.
+
+Introduction obligatoire :
+
+```txt
+Recherche+ cherche des pistes et signaux faibles. Ces elements ne sont pas des
+conclusions. Ils servent a orienter une verification ulterieure.
+```
+
+Canaux possibles selon domaine et acces :
+
+- web public ;
+- sources officielles ;
+- agences et medias locaux ;
+- bases metier ;
+- documents publics ;
+- Reddit public, forums specialises, GitHub public, LinkedIn public ;
+- X ou Facebook uniquement si l'acces legal/API existe et si le domaine le
+  justifie.
+
+Regle de separation :
+
+```txt
+SC / Lecture / Approfondir = reponse structurelle.
+Recherche+ = pistes externes separees, non conclusives.
+```
+
+## 4b. RiskAdviceGuard
 
 La V2 doit proteger les domaines reglementes ou a fort enjeu.
 

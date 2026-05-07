@@ -123,6 +123,21 @@ export const SITUATION_CARD_V2_PIPELINE: V2PipelineBlueprint = {
       purpose: 'Verifier fidelite, header, theatre reel, scoring, ressources, risques et phrase diamant.',
       failure_policy: 'Retourner warnings internes et corrections ciblees sans exposer la notice au public.',
     },
+    {
+      id: 'recherche-plus',
+      order: 10,
+      label: 'Recherche+',
+      owner_layer: 'resources',
+      status: 'passive',
+      input_contracts: ['BlindSpotInquiry', 'ResourcePlan', 'RiskAdviceDecision'],
+      output_contracts: ['RecherchePlusContract'],
+      latency_budget_ms: 0,
+      blocks_generation: false,
+      purpose:
+        'Enquete probatoire externe a la demande : chercher pistes, signaux faibles, sources et contradictions sans conclure automatiquement.',
+      failure_policy:
+        'Ne jamais melanger les signaux faibles a SC, Lecture ou Approfondir; afficher limites, absence d acces et verification suivante.',
+    },
   ],
 }
 
