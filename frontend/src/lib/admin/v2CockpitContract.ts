@@ -110,6 +110,15 @@ export const V2_FOUNDATION_BRICKS: V2FoundationBrick[] = [
     files: ['src/lib/contracts/generationArchive.ts', 'src/lib/governance'],
     note: 'Autorise un snapshot prive admin au lancement pour apprendre des vraies questions/reponses.',
   },
+  {
+    id: 'generate-v2-dry-run',
+    label: 'Route generate-v2 dry run',
+    layer: 'api / pipeline',
+    status: 'wired',
+    commit: 'pending',
+    files: ['src/app/api/generate-v2/route.ts'],
+    note: 'Expose une route V2 separee qui renvoie les contrats interpretation, dialogue, theatre, scoring, enquete et trace pipeline sans remplacer /sis.',
+  },
 ]
 
 export function statusLabel(status: V2FoundationStatus): string {
