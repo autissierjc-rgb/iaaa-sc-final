@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import GenerateV2Tester from './GenerateV2Tester'
 import {
   V2_FOUNDATION_BRICKS,
   statusLabel,
@@ -236,6 +237,8 @@ export default function SisSystemV2Page() {
             ))}
           </div>
         </section>
+
+        <GenerateV2Tester />
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
           {V2_FOUNDATION_BRICKS.map((brick) => (
