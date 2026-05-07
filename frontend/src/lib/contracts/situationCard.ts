@@ -1,4 +1,5 @@
 import type { DialogueGateContract } from './dialogue'
+import type { ExpertisesMetiersContract } from './expertisesMetiers'
 import type { InquiryContract } from './inquiry'
 import type { InterpretationContract } from './interpretation'
 import type { QualityGateContract } from './quality'
@@ -14,6 +15,7 @@ export type SituationCardV2Contract = {
   dialogue_gate: DialogueGateContract
   safety: RiskAdviceGuardContract
   resources: ResourceServiceContract
+  expertises_metiers: ExpertisesMetiersContract
   theatre: ConcreteTheatreContract
   scoring: ScoringContract
   inquiry: InquiryContract
