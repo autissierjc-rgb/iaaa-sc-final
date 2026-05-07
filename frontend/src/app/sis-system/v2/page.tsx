@@ -3,6 +3,10 @@ import {
   V2_FOUNDATION_BRICKS,
   statusLabel,
 } from '@/lib/admin/v2CockpitContract'
+import {
+  SITUATION_CARD_V2_PIPELINE,
+  pipelineTotals,
+} from '@/lib/pipeline/V2PipelineBlueprint'
 
 const NEXT_STEPS = [
   'Brancher une route V2 separee, sans toucher a /sis.',
@@ -20,6 +24,7 @@ function statusColor(status: string) {
 export default function SisSystemV2Page() {
   const passive = V2_FOUNDATION_BRICKS.filter((brick) => brick.status === 'passive').length
   const wired = V2_FOUNDATION_BRICKS.filter((brick) => brick.status === 'wired').length
+  const pipeline = pipelineTotals(SITUATION_CARD_V2_PIPELINE)
 
   return (
     <main style={{ minHeight: '100vh', background: '#F5F0E8', color: '#1A2E5A', padding: '28px' }}>
@@ -51,12 +56,43 @@ export default function SisSystemV2Page() {
             { value: V2_FOUNDATION_BRICKS.length, label: 'briques V2 commitees', color: '#1A2E5A' },
             { value: passive, label: 'fondations passives', color: '#378ADD' },
             { value: wired, label: 'briques branchees au public', color: '#1D9E75' },
+            { value: pipeline.stage_count, label: 'etapes pipeline', color: '#C8951A' },
           ].map((item) => (
             <div key={item.label} style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18 }}>
               <div style={{ color: item.color, fontSize: 30, fontWeight: 700 }}>{item.value}</div>
               <div style={{ color: '#8B8174', fontSize: 12, marginTop: 4 }}>{item.label}</div>
             </div>
           ))}
+        </section>
+
+        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div style={{ maxWidth: 760 }}>
+              <h2 style={{ margin: 0, fontSize: 15 }}>Pipeline contractuel</h2>
+              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
+                {SITUATION_CARD_V2_PIPELINE.principle}
+              </p>
+            </div>
+            <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
+              <div><strong style={{ color: '#1A2E5A' }}>{pipeline.total_latency_budget_ms} ms</strong> budget cumule</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{pipeline.blocking_stages}</strong> etapes bloquantes</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12, marginTop: 16 }}>
+            {SITUATION_CARD_V2_PIPELINE.stages.map((stage) => (
+              <article key={stage.id} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 14, background: '#FCFAF6' }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+                  {String(stage.order).padStart(2, '0')} · {stage.owner_layer}
+                </p>
+                <h3 style={{ margin: '6px 0 0', fontSize: 14 }}>{stage.label}</h3>
+                <p style={{ color: '#6F6255', lineHeight: 1.55, fontSize: 12, margin: '8px 0 0' }}>{stage.purpose}</p>
+                <p style={{ color: '#8B8174', fontSize: 11, margin: '10px 0 0' }}>
+                  Budget {stage.latency_budget_ms} ms · {stage.blocks_generation ? 'bloquant' : 'non bloquant'}
+                </p>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
