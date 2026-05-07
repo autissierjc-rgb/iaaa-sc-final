@@ -73,6 +73,7 @@ export default function SisSystemV2Page() {
     theatre: {
       actors: ['fondateur de la startup', 'equipe FlexUp', 'clients utilisateurs'],
       institutions: ['cadre legal du travail', 'investisseurs eventuels'],
+      procedures: ['conditions d entree au partenariat', 'verification juridique', 'preuve client'],
       constraints: [
         'cadre legal du travail a verifier',
         'preuve client manquante',
