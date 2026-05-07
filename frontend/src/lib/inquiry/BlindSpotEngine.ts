@@ -25,6 +25,16 @@ function inquiryFor(item: string, input: BlindSpotEngineInput): BlindSpotInquiry
   const level = levelFor(item)
   const actors = input.theatre.actors.slice(0, 3)
   const institutions = input.theatre.institutions.slice(0, 3)
+  const normalized = item.toLowerCase()
+  const subject = normalized.includes('client')
+    ? 'La preuve attendue est un client identifiable, un usage repete ou un temoignage verifiable.'
+    : normalized.includes('revenu') || normalized.includes('traction')
+      ? 'La preuve attendue est une trace de revenus, de traction ou de decision d achat.'
+      : normalized.includes('droit') || normalized.includes('legal') || normalized.includes('juridique')
+        ? 'La preuve attendue est un cadre juridique applicable, une clause, un avis qualifie ou une limite reglementaire.'
+        : normalized.includes('role') || normalized.includes('place') || normalized.includes('partenariat')
+          ? 'La preuve attendue est une clarification du role, du pouvoir de decision et des engagements reciproques.'
+          : undefined
 
   return {
     blind_spot: item,
@@ -45,6 +55,7 @@ function inquiryFor(item: string, input: BlindSpotEngineInput): BlindSpotInquiry
     observable_signal:
       'Un fait, une decision, un message, un document ou un changement de comportement rend cet angle visible.',
     decisive_evidence:
+      subject ??
       level === 'documentary'
         ? 'Une source verifiable qui confirme ou infirme directement le point manquant.'
         : 'Une precision qui relie l angle mort a un acteur, un geste, une contrainte ou une consequence observable.',

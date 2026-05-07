@@ -66,19 +66,28 @@ export default function SisSystemV2Page() {
   const sampleInquiry = buildBlindSpotInquiry({
     interpretation: {
       domain: 'startup_market',
-      situation_soumise: 'Evaluer une compagnie avant de la rejoindre avec sa startup.',
-      angle: 'decision professionnelle et risque de partenariat',
-      user_need: 'Comprendre ce qui manque avant de decider.',
+      situation_soumise: 'Evaluer FlexUp avant de rejoindre la compagnie avec sa startup.',
+      angle: 'decision de partenariat et risque de dependance',
+      user_need: 'Savoir ce qui doit etre verifie avant de s engager.',
     },
     theatre: {
-      actors: ['fondateur', 'startup', 'compagnie cible'],
-      institutions: ['cadre legal', 'investisseurs eventuels'],
-      constraints: ['cadre legal a verifier', 'preuve client manquante', 'dependance de decision'],
-      evidence: [
-        { label: 'site public', level: 'established', source_ids: ['sample-site'] },
-        { label: 'promesse produit', level: 'plausible', source_ids: ['sample-site'] },
+      actors: ['fondateur de la startup', 'equipe FlexUp', 'clients utilisateurs'],
+      institutions: ['cadre legal du travail', 'investisseurs eventuels'],
+      constraints: [
+        'cadre legal du travail a verifier',
+        'preuve client manquante',
+        'conditions d entree au partenariat',
       ],
-      unknowns: ['clients reels', 'revenus verifies', 'conditions juridiques', 'role exact de l utilisateur'],
+      evidence: [
+        { label: 'site public FlexUp', level: 'established', source_ids: ['sample-site'] },
+        { label: 'promesse de collaboration et de partage de valeur', level: 'plausible', source_ids: ['sample-site'] },
+      ],
+      unknowns: [
+        'clients actifs identifiables',
+        'revenus ou traction verifies',
+        'compatibilite avec le droit du travail et le droit des societes',
+        'place exacte de la startup dans le partenariat',
+      ],
     },
   })
 
@@ -161,9 +170,9 @@ export default function SisSystemV2Page() {
               </p>
             </div>
             <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
-              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.blind_spots.length}</strong> pistes exemple</div>
-              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.should_offer_inquiry ? 'oui' : 'non'}</strong> bouton propose</div>
-              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.trace.duration_ms} ms</strong> contrat local</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.blind_spots.length}</strong> pistes a verifier</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.should_offer_inquiry ? 'pret' : 'non pret'}</strong> enquete</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.trace.duration_ms} ms</strong> sans appel web</div>
             </div>
           </div>
 
@@ -175,7 +184,9 @@ export default function SisSystemV2Page() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10, marginTop: 16 }}>
             {sampleInquiry.blind_spots.slice(0, 4).map((blindSpot) => (
               <div key={blindSpot.blind_spot} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
-                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>{blindSpot.level}</p>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+                  {blindSpot.level === 'documentary' ? 'preuve documentaire' : blindSpot.level === 'structural' ? 'rapport cache' : 'precision utilisateur'}
+                </p>
                 <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{blindSpot.blind_spot}</h3>
                 <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>{blindSpot.decisive_evidence}</p>
               </div>

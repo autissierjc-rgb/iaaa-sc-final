@@ -24,8 +24,8 @@ export default function InquiryPreview({ buttonLabel, blindSpotCount }: InquiryP
       </summary>
 
       <p data-testid="inquiry-preview-status" style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.6, margin: '10px 0 0' }}>
-        Contrat pret : {blindSpotCount} piste(s) d enquete identifiee(s). Le lancement profond restera separe
-        de la generation rapide pour ne pas alourdir Approfondir.
+        Enquete prete : {blindSpotCount} piste(s) a verifier. Le lancement profond restera separe de la generation
+        rapide pour ne pas alourdir Approfondir.
       </p>
     </details>
   )
