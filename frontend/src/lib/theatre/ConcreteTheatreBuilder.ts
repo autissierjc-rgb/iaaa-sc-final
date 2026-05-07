@@ -1,5 +1,6 @@
 import type {
   ConcreteTheatreContract,
+  ExpertisesMetiersContract,
   InterpretationContract,
   ResourceServiceContract,
   TheatreEvidence,
@@ -8,6 +9,7 @@ import type {
 export type ConcreteTheatreBuilderInput = {
   interpretation: InterpretationContract
   resources?: ResourceServiceContract
+  expertises?: ExpertisesMetiersContract
 }
 
 const DATE_PATTERN = /\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}|janvier|fevrier|février|mars|avril|mai|juin|juillet|aout|août|septembre|octobre|novembre|decembre|décembre)\b/gi
@@ -74,16 +76,19 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
   const dates = extractDates(text)
   const evidence = evidenceFromResources(input.resources)
   const sourceNames = unique((input.resources?.public_sources ?? []).map((resource) => resource.source))
+  const playbook = input.expertises?.domain_playbook
   const actors = unique([
     ...interpretation.entity_explanations.map((entity) => entity.label),
     ...namedAnchors,
+    ...(playbook?.typical_actors ?? []),
   ]).slice(0, 12)
 
-  const institutions = unique(
-    actors.filter((actor) =>
+  const institutions = unique([
+    ...(playbook?.typical_institutions ?? []),
+    ...actors.filter((actor) =>
       /\b(cour|congres|congrès|etat|état|ministere|ministère|parti|onu|ue|commission|tribunal|entreprise|startup|ecole|école|hopital|hôpital)\b/i.test(actor),
     ),
-  )
+  ]).slice(0, 12)
 
   const present = [
     ...actors,
@@ -102,17 +107,24 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
     institutions,
     dates,
     places: [],
-    procedures: [],
+    procedures: unique(playbook?.procedures_or_rules ?? []).slice(0, 10),
     visible_actions: interpretation.must_answer_first
       ? ['tester une hypothese avant elargissement']
       : [],
-    constraints: [],
+    constraints: unique([
+      ...(playbook?.procedures_or_rules ?? []),
+      ...(input.expertises?.evidence_to_seek ?? []).map((item) => `preuve attendue: ${item}`),
+    ]).slice(0, 10),
     evidence,
     unknowns: [
       ...(interpretation.needs_clarification ? [interpretation.clarification_question ?? 'precision utilisateur manquante'] : []),
+      ...(input.expertises?.blind_spots_to_test ?? []),
       ...missing,
-    ],
-    missing_anchors: missing,
+    ].slice(0, 12),
+    missing_anchors: unique([
+      ...(input.expertises?.blind_spots_to_test ?? []),
+      ...missing,
+    ]).slice(0, 12),
     trace: {
       service: 'ConcreteTheatreBuilder',
       version: 'v2-foundation',
@@ -122,6 +134,7 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
         `actors=${actors.length}`,
         `evidence=${evidence.length}`,
         `missing_anchors=${missing.length}`,
+        input.expertises ? `expertise_playbook=${input.expertises.domain_playbook.id}` : 'expertise_playbook=none',
       ],
     },
   }

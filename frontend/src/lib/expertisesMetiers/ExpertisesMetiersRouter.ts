@@ -14,12 +14,31 @@ function uniqueText(items: string[]): string[] {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)))
 }
 
+function playbookDomainFor(interpretation: InterpretationContract) {
+  const text = [
+    interpretation.raw_input,
+    interpretation.situation_soumise,
+    interpretation.object_of_analysis,
+    interpretation.angle,
+  ].join(' ')
+
+  if (
+    interpretation.domain === 'geopolitics' &&
+    /\b(election|elections|electoral|midterm|mi[- ]mandat|resultat|resultats|certification|contester|contestation|coup d[' ]?etat|congres|cour supreme)\b/i.test(text)
+  ) {
+    return 'institutional_crisis' as const
+  }
+
+  return interpretation.domain
+}
+
 export function routeExpertisesMetiers(
   input: ExpertisesMetiersRouterInput,
 ): ExpertisesMetiersContract {
   const started = Date.now()
   const domain = input.interpretation.domain
-  const domainPlaybook = getDomainPlaybook(domain)
+  const playbookDomain = playbookDomainFor(input.interpretation)
+  const domainPlaybook = getDomainPlaybook(playbookDomain)
   const metierLenses = getMetierLensesForDomain(domain)
 
   return {
@@ -47,6 +66,7 @@ export function routeExpertisesMetiers(
       status: 'ok',
       notes: [
         `domain=${domain}`,
+        `playbook_domain=${playbookDomain}`,
         `metier_lenses=${metierLenses.length}`,
         'ExpertisesMetiers is an expertise map, not an encyclopedia.',
       ],

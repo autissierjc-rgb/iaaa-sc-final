@@ -8,6 +8,7 @@ import { planResources } from '@/lib/resources'
 import { runRiskAdviceGuard } from '@/lib/safety'
 import { computeStateV2 } from '@/lib/scoringV2'
 import { buildConcreteTheatre } from '@/lib/theatre'
+import { routeExpertisesMetiers } from '@/lib/expertisesMetiers'
 import type { AstrolabeBranchV2, RadarScoreV2 } from '@/lib/contracts'
 
 export const dynamic = 'force-dynamic'
@@ -94,7 +95,8 @@ export async function POST(request: NextRequest) {
   const dialogue = runDialogueGate({ interpretation })
   const safety = runRiskAdviceGuard({ interpretation })
   const resources = planResources({ interpretation })
-  const theatre = buildConcreteTheatre({ interpretation, resources })
+  const expertises = routeExpertisesMetiers({ interpretation })
+  const theatre = buildConcreteTheatre({ interpretation, resources, expertises })
   const inquiry = buildBlindSpotInquiry({ interpretation, theatre })
 
   const counts = {
@@ -130,6 +132,7 @@ export async function POST(request: NextRequest) {
     interpretation,
     safety,
     resources,
+    expertises,
     theatre,
     scoring,
     inquiry,
