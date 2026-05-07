@@ -27,6 +27,7 @@ type GenerateV2Response = {
       blind_spot: string
       level: string
       decisive_evidence: string
+      observable_signal?: string
     }>
   }
   pipeline_trace?: {
@@ -67,6 +68,34 @@ function miniCardStyle(): React.CSSProperties {
     padding: 12,
     background: '#FCFAF6',
   }
+}
+
+function inquiryLevelLabel(level: string) {
+  if (level === 'documentary') return 'preuve documentaire'
+  if (level === 'structural') return 'angle structurel'
+  return 'precision utilisateur'
+}
+
+function publicInquiryQuestion(blindSpot: string) {
+  if (blindSpot === 'relais institutionnel') {
+    return 'Quel relais institutionnel pourrait transformer la contestation en acte officiel ?'
+  }
+  if (blindSpot === 'regle exploitable') {
+    return 'Quelle regle electorale pourrait etre utilisee pour retarder ou deplacer le resultat ?'
+  }
+  if (blindSpot === 'acteur capable de bloquer') {
+    return 'Qui possede vraiment le levier pour certifier, retarder, juger ou legitimer la contestation ?'
+  }
+  if (blindSpot.toLowerCase().includes('client')) {
+    return 'Quels clients ou usages prouvent que la promesse est deja adoptee ?'
+  }
+  if (blindSpot.toLowerCase().includes('revenu') || blindSpot.toLowerCase().includes('traction')) {
+    return 'Quelle trace montre que l interet devient usage, revenu ou decision d achat ?'
+  }
+  if (blindSpot.toLowerCase().includes('droit') || blindSpot.toLowerCase().includes('juridique')) {
+    return 'Quelle contrainte juridique pourrait changer les conditions d adoption ?'
+  }
+  return `Que faut-il verifier concretement derriere : ${blindSpot} ?`
 }
 
 export default function GenerateV2Tester() {
@@ -235,9 +264,16 @@ export default function GenerateV2Tester() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
           {firstBlindSpots.map((blindSpot) => (
             <div key={blindSpot.blind_spot} style={miniCardStyle()}>
-              <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>{blindSpot.level}</p>
+              <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+                contrat admin · {inquiryLevelLabel(blindSpot.level)}
+              </p>
               <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{blindSpot.blind_spot}</h3>
-              <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>{blindSpot.decisive_evidence}</p>
+              <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.45 }}>
+                {publicInquiryQuestion(blindSpot.blind_spot)}
+              </p>
+              <p style={{ margin: '8px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                Preuve attendue : {blindSpot.decisive_evidence}
+              </p>
             </div>
           ))}
         </div>
