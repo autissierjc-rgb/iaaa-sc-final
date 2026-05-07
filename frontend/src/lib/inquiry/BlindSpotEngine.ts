@@ -273,6 +273,25 @@ function situatedInquiry(
           'Le risque juridique peut etre deja traite par la structure contractuelle si les roles, responsabilites et statuts sont clairement definis.',
       }
     }
+
+    if (
+      normalized.includes('role') ||
+      normalized.includes('place') ||
+      normalized.includes('partenariat') ||
+      normalized.includes('conditions d entree')
+    ) {
+      return {
+        why_it_matters:
+          'La place exacte dans le partenariat decide si la startup gagne un levier, un client, une dependance ou une contrainte nouvelle.',
+        where_to_look: ['conditions d entree', 'contrat propose', 'modele de revenus', 'droits de decision', 'obligations reciproques'],
+        observable_signal:
+          'Le role devient clair quand le partenariat nomme qui decide, qui paie, qui porte le risque et qui peut sortir.',
+        decisive_evidence:
+          'Une clarification du role exact, du pouvoir de decision, des engagements reciproques et des conditions de sortie.',
+        counter_hypothesis:
+          'Le partenariat peut rester interessant si la place de la startup est limitee, reversible et compatible avec ses propres priorites.',
+      }
+    }
   }
 
   if (

@@ -15,6 +15,7 @@ import {
 } from '@/lib/pipeline/PipelineTelemetry'
 import { buildCalibrationEvidence } from '@/lib/quality/CalibrationEvidence'
 import { buildBlindSpotInquiry } from '@/lib/inquiry/BlindSpotEngine'
+import { inquiryLevelLabel, publicInquiryQuestion } from './inquiryDisplay'
 
 const NEXT_STEPS = [
   'Brancher une route V2 separee, sans toucher a /sis.',
@@ -186,10 +187,15 @@ export default function SisSystemV2Page() {
             {sampleInquiry.blind_spots.slice(0, 4).map((blindSpot) => (
               <div key={blindSpot.blind_spot} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
                 <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
-                  {blindSpot.level === 'documentary' ? 'preuve documentaire' : blindSpot.level === 'structural' ? 'rapport cache' : 'precision utilisateur'}
+                  contrat admin · {inquiryLevelLabel(blindSpot.level)}
                 </p>
                 <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{blindSpot.blind_spot}</h3>
-                <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>{blindSpot.decisive_evidence}</p>
+                <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.45 }}>
+                  {publicInquiryQuestion(blindSpot.blind_spot)}
+                </p>
+                <p style={{ margin: '8px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                  Preuve attendue : {blindSpot.decisive_evidence}
+                </p>
               </div>
             ))}
           </div>

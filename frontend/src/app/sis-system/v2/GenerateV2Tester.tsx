@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { inquiryLevelLabel, publicInquiryQuestion } from './inquiryDisplay'
 
 type GenerateV2Response = {
   ok?: boolean
@@ -68,34 +69,6 @@ function miniCardStyle(): React.CSSProperties {
     padding: 12,
     background: '#FCFAF6',
   }
-}
-
-function inquiryLevelLabel(level: string) {
-  if (level === 'documentary') return 'preuve documentaire'
-  if (level === 'structural') return 'angle structurel'
-  return 'precision utilisateur'
-}
-
-function publicInquiryQuestion(blindSpot: string) {
-  if (blindSpot === 'relais institutionnel') {
-    return 'Quel relais institutionnel pourrait transformer la contestation en acte officiel ?'
-  }
-  if (blindSpot === 'regle exploitable') {
-    return 'Quelle regle electorale pourrait etre utilisee pour retarder ou deplacer le resultat ?'
-  }
-  if (blindSpot === 'acteur capable de bloquer') {
-    return 'Qui possede vraiment le levier pour certifier, retarder, juger ou legitimer la contestation ?'
-  }
-  if (blindSpot.toLowerCase().includes('client')) {
-    return 'Quels clients ou usages prouvent que la promesse est deja adoptee ?'
-  }
-  if (blindSpot.toLowerCase().includes('revenu') || blindSpot.toLowerCase().includes('traction')) {
-    return 'Quelle trace montre que l interet devient usage, revenu ou decision d achat ?'
-  }
-  if (blindSpot.toLowerCase().includes('droit') || blindSpot.toLowerCase().includes('juridique')) {
-    return 'Quelle contrainte juridique pourrait changer les conditions d adoption ?'
-  }
-  return `Que faut-il verifier concretement derriere : ${blindSpot} ?`
 }
 
 export default function GenerateV2Tester() {
