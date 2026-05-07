@@ -1,0 +1,96 @@
+import Link from 'next/link'
+import {
+  V2_FOUNDATION_BRICKS,
+  statusLabel,
+} from '@/lib/admin/v2CockpitContract'
+
+const NEXT_STEPS = [
+  'Brancher une route V2 separee, sans toucher a /sis.',
+  'Afficher une generation contractuelle de test dans ce cockpit.',
+  'Ajouter Launch Learning Snapshot en base, avec suppression et mode sensible.',
+  'Tester le benchmark canonique avant tout remplacement public.',
+]
+
+function statusColor(status: string) {
+  if (status === 'wired') return '#1D9E75'
+  if (status === 'passive') return '#378ADD'
+  return '#8B8174'
+}
+
+export default function SisSystemV2Page() {
+  const passive = V2_FOUNDATION_BRICKS.filter((brick) => brick.status === 'passive').length
+  const wired = V2_FOUNDATION_BRICKS.filter((brick) => brick.status === 'wired').length
+
+  return (
+    <main style={{ minHeight: '100vh', background: '#F5F0E8', color: '#1A2E5A', padding: '28px' }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+        <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+          <Link href="/sis-system?lang=fr" style={{ color: '#9A8860', fontSize: 12, textDecoration: 'none' }}>
+            ← SIS system
+          </Link>
+          <Link href="/sis" style={{ color: '#9A8860', fontSize: 12, textDecoration: 'none' }}>
+            /sis
+          </Link>
+        </nav>
+
+        <section style={{ marginBottom: 26 }}>
+          <p style={{ color: '#C8951A', fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Situation Card V2
+          </p>
+          <h1 style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: 'clamp(2.4rem, 5vw, 4.2rem)', lineHeight: 1, margin: 0 }}>
+            Fondations visibles
+          </h1>
+          <p style={{ maxWidth: 760, color: '#6F6255', lineHeight: 1.7, fontSize: 14, marginTop: 14 }}>
+            Cette page montre les briques V2 deja commitees. Elles existent dans le code,
+            mais ne remplacent pas encore le flux public de <span style={{ fontFamily: 'monospace' }}>/sis</span>.
+          </p>
+        </section>
+
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 20 }}>
+          {[
+            { value: V2_FOUNDATION_BRICKS.length, label: 'briques V2 commitees', color: '#1A2E5A' },
+            { value: passive, label: 'fondations passives', color: '#378ADD' },
+            { value: wired, label: 'briques branchees au public', color: '#1D9E75' },
+          ].map((item) => (
+            <div key={item.label} style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18 }}>
+              <div style={{ color: item.color, fontSize: 30, fontWeight: 700 }}>{item.value}</div>
+              <div style={{ color: '#8B8174', fontSize: 12, marginTop: 4 }}>{item.label}</div>
+            </div>
+          ))}
+        </section>
+
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
+          {V2_FOUNDATION_BRICKS.map((brick) => (
+            <article key={brick.id} style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 15 }}>{brick.label}</h2>
+                  <p style={{ margin: '5px 0 0', color: '#9A8860', fontFamily: 'monospace', fontSize: 11 }}>{brick.layer}</p>
+                </div>
+                <span style={{ color: statusColor(brick.status), border: `1px solid ${statusColor(brick.status)}`, borderRadius: 999, padding: '4px 8px', fontSize: 11 }}>
+                  {statusLabel(brick.status)}
+                </span>
+              </div>
+              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, marginTop: 14 }}>{brick.note}</p>
+              <div style={{ borderTop: '1px solid #F0EBE0', marginTop: 14, paddingTop: 12 }}>
+                <p style={{ margin: 0, color: '#8B8174', fontSize: 11 }}>Commit <span style={{ fontFamily: 'monospace', color: '#1A2E5A' }}>{brick.commit}</span></p>
+                <ul style={{ margin: '8px 0 0', paddingLeft: 16 }}>
+                  {brick.files.map((file) => (
+                    <li key={file} style={{ color: '#8B8174', fontFamily: 'monospace', fontSize: 11, lineHeight: 1.7 }}>{file}</li>
+                  ))}
+                </ul>
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginTop: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 15 }}>Prochain branchement prudent</h2>
+          <ol style={{ color: '#6F6255', lineHeight: 1.8, fontSize: 13 }}>
+            {NEXT_STEPS.map((step) => <li key={step}>{step}</li>)}
+          </ol>
+        </section>
+      </div>
+    </main>
+  )
+}
