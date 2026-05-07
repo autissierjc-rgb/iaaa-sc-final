@@ -200,6 +200,8 @@ Modes de confidentialite :
 metadata_only      journaliser l'evenement sans contenu de carte
 snapshot_allowed   conserver un snapshot de carte
 snapshot_private   conserver un snapshot prive, non public
+private_learning_snapshot conserver question et reponse en prive admin pour
+                  apprendre pendant le lancement
 do_not_store        ne rien conserver hors reponse immediate
 ```
 
@@ -211,6 +213,26 @@ Regles :
 - permettre a l'admin de mesurer activite, qualite, erreurs et latence sans
   transformer SC en outil de surveillance ;
 - garder les cartes sauvegardees par l'utilisateur dans un flux distinct.
+
+Mode lancement :
+
+```txt
+Launch Learning Mode
+```
+
+Pendant les premiers temps, SC peut conserver la question utilisateur et la
+reponse generee en `private_learning_snapshot` afin de comprendre les vraies
+demandes, les sorties ratees et les calibrages necessaires.
+
+Conditions :
+
+- stockage prive admin uniquement ;
+- jamais public automatiquement ;
+- suppression possible ;
+- marquage clair dans la politique de confidentialite ;
+- sujets sensibles ou high stakes : metadata_only ou snapshot fortement protege
+  selon `RiskAdviceGuard` ;
+- partage public seulement apres action explicite de l'utilisateur.
 
 ## 4ter. Partage public des SC
 

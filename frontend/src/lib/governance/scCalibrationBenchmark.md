@@ -462,6 +462,23 @@ Toutes les generations doivent etre mesurables.
 Toutes les cartes ne doivent pas etre conservees.
 ```
 
+Exception de lancement controlee :
+
+```txt
+Launch Learning Mode
+```
+
+Au lancement, un `private_learning_snapshot` peut conserver question et reponse
+SC pour permettre l'amelioration produit.
+
+Le benchmark doit verifier que ce mode reste :
+
+- prive admin ;
+- supprimable ;
+- non public par defaut ;
+- distinct du partage public ;
+- limite ou renforce pour les sujets sensibles detectes par `RiskAdviceGuard`.
+
 ## Regle d'usage
 
 Avant une evolution majeure du moteur SC, tester ce set et noter les sorties.

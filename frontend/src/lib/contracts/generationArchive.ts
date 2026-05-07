@@ -4,6 +4,7 @@ export type GenerationPrivacyMode =
   | 'metadata_only'
   | 'snapshot_allowed'
   | 'snapshot_private'
+  | 'private_learning_snapshot'
   | 'do_not_store'
 
 export type GenerationSurface =
@@ -42,6 +43,8 @@ export type GeneratedCardSnapshot = {
   generation_event_id: string
   created_at: string
   privacy_mode: Exclude<GenerationPrivacyMode, 'metadata_only' | 'do_not_store'>
+  admin_learning_only: boolean
+  user_deletable: boolean
   card_version: string
   canonical_question: string
   header_domain: string
