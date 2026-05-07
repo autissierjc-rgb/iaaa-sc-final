@@ -119,6 +119,15 @@ export const V2_FOUNDATION_BRICKS: V2FoundationBrick[] = [
     files: ['src/app/api/generate-v2/route.ts'],
     note: 'Expose une route V2 separee qui renvoie les contrats interpretation, dialogue, theatre, scoring, enquete et trace pipeline sans remplacer /sis.',
   },
+  {
+    id: 'codex-session-protocol',
+    label: 'Protocole session Codex',
+    layer: 'governance / admin-cockpit',
+    status: 'wired',
+    commit: 'pending',
+    files: ['src/lib/governance/codexSessionProtocol.md'],
+    note: 'Fixe les regles de branche, status, build, commit, .env.local et anti-patch avant toute session V2.',
+  },
 ]
 
 export function statusLabel(status: V2FoundationStatus): string {
