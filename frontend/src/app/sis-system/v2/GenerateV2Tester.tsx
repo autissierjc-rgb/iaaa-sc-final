@@ -31,6 +31,16 @@ type GenerateV2Response = {
       observable_signal?: string
     }>
   }
+  quality?: {
+    ok?: boolean
+    requires_section_regeneration?: boolean
+    issues?: Array<{
+      level: string
+      code: string
+      message: string
+      field?: string
+    }>
+  }
   pipeline_trace?: {
     total_duration_ms?: number
     blocking_failure?: boolean
@@ -223,6 +233,14 @@ export default function GenerateV2Tester() {
               blocking failure: {response.pipeline_trace?.blocking_failure ? 'oui' : 'non'}
             </p>
           </div>
+
+          <div style={miniCardStyle()}>
+            <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>quality</p>
+            <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{response.quality?.ok ? 'ok' : 'a verifier'}</h3>
+            <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11 }}>
+              issues: {response.quality?.issues?.length ?? 0}
+            </p>
+          </div>
         </div>
       )}
 
@@ -232,6 +250,20 @@ export default function GenerateV2Tester() {
           <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 13, lineHeight: 1.55 }}>
             {response.interpretation?.situation_soumise}
           </p>
+        </div>
+      )}
+
+      {response?.quality?.issues && response.quality.issues.length > 0 && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>quality gate</p>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18, color: '#6F6255', fontSize: 12, lineHeight: 1.6 }}>
+            {response.quality.issues.slice(0, 4).map((item) => (
+              <li key={`${item.code}-${item.field ?? 'contract'}`}>
+                <strong style={{ color: item.level === 'error' ? '#B23A3A' : '#1A2E5A' }}>{item.code}</strong>
+                {' '}· {item.message}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

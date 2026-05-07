@@ -9,6 +9,7 @@ import { runRiskAdviceGuard } from '@/lib/safety'
 import { computeStateV2 } from '@/lib/scoringV2'
 import { buildConcreteTheatre } from '@/lib/theatre'
 import { routeExpertisesMetiers } from '@/lib/expertisesMetiers'
+import { runContractQualityGate } from '@/lib/quality'
 import type { AstrolabeBranchV2, RadarScoreV2 } from '@/lib/contracts'
 
 export const dynamic = 'force-dynamic'
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest) {
     radar: buildDraftRadar(counts),
     trace_notes: ['dry_run_generate_v2=true'],
   })
+  const quality = runContractQualityGate({ interpretation, theatre, scoring, inquiry })
 
   const pipeline_trace = buildPipelineRunTrace({
     id: `generate-v2-${Date.now()}`,
@@ -122,7 +124,12 @@ export async function POST(request: NextRequest) {
       { stage_id: 'theatre', duration_ms: theatre.trace.duration_ms ?? 0, outcome: theatre.trace.status === 'ok' ? 'ok' : 'warning' },
       { stage_id: 'blind-spots', duration_ms: inquiry.trace.duration_ms ?? 0, outcome: inquiry.trace.status === 'ok' ? 'ok' : 'warning' },
       { stage_id: 'scoring', duration_ms: scoring.trace.duration_ms ?? 0, outcome: scoring.trace.status === 'ok' ? 'ok' : 'warning' },
-      { stage_id: 'quality', duration_ms: 0, outcome: 'skipped', warnings: ['WritingEngine not wired in dry-run route.'] },
+      {
+        stage_id: 'quality',
+        duration_ms: quality.trace.duration_ms ?? 0,
+        outcome: quality.trace.status === 'error' ? 'failed' : quality.trace.status === 'partial' ? 'warning' : 'ok',
+        warnings: quality.issues.map((item) => `${item.code}: ${item.message}`),
+      },
     ],
   })
 
@@ -138,6 +145,7 @@ export async function POST(request: NextRequest) {
     theatre,
     scoring,
     inquiry,
+    quality,
     pipeline_trace,
   })
 }
