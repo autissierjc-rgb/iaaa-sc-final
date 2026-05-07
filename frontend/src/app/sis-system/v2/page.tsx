@@ -7,6 +7,10 @@ import {
   SITUATION_CARD_V2_PIPELINE,
   pipelineTotals,
 } from '@/lib/pipeline/V2PipelineBlueprint'
+import {
+  buildPipelineRunTrace,
+  summarizePipelineRun,
+} from '@/lib/pipeline/PipelineTelemetry'
 
 const NEXT_STEPS = [
   'Brancher une route V2 separee, sans toucher a /sis.',
@@ -25,6 +29,18 @@ export default function SisSystemV2Page() {
   const passive = V2_FOUNDATION_BRICKS.filter((brick) => brick.status === 'passive').length
   const wired = V2_FOUNDATION_BRICKS.filter((brick) => brick.status === 'wired').length
   const pipeline = pipelineTotals(SITUATION_CARD_V2_PIPELINE)
+  const sampleTrace = buildPipelineRunTrace({
+    id: 'v2-sample-trace',
+    route: '/api/generate-v2',
+    blueprint: SITUATION_CARD_V2_PIPELINE,
+    created_at: '2026-05-07T00:00:00.000Z',
+    measurements: SITUATION_CARD_V2_PIPELINE.stages.map((stage) => ({
+      stage_id: stage.id,
+      duration_ms: Math.round(stage.latency_budget_ms * 0.42),
+      outcome: 'ok',
+    })),
+  })
+  const sampleSummary = summarizePipelineRun(sampleTrace)
 
   return (
     <main style={{ minHeight: '100vh', background: '#F5F0E8', color: '#1A2E5A', padding: '28px' }}>
@@ -91,6 +107,34 @@ export default function SisSystemV2Page() {
                   Budget {stage.latency_budget_ms} ms · {stage.blocks_generation ? 'bloquant' : 'non bloquant'}
                 </p>
               </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: 760 }}>
+              <h2 style={{ margin: 0, fontSize: 15 }}>Mesure des generations</h2>
+              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
+                La V2 separe ce qui est conserve de ce qui est mesure. Toutes les generations peuvent produire une trace
+                technique de pipeline, mais toutes les cartes n ont pas vocation a etre conservees.
+              </p>
+            </div>
+            <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleTrace.total_duration_ms} ms</strong> exemple trace</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleSummary.over_budget}</strong> etape hors budget</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleSummary.failed}</strong> echec bloquant</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 16 }}>
+            {sampleTrace.steps.map((step) => (
+              <div key={step.stage_id} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
+                <p style={{ margin: 0, color: '#1A2E5A', fontFamily: 'monospace', fontSize: 11 }}>{step.stage_id}</p>
+                <p style={{ margin: '7px 0 0', color: step.over_budget ? '#B23A3A' : '#1D9E75', fontSize: 12 }}>
+                  {step.duration_ms} / {step.budget_ms} ms · {step.outcome}
+                </p>
+              </div>
             ))}
           </div>
         </section>

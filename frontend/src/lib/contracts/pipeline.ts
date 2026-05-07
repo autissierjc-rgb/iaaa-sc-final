@@ -20,3 +20,26 @@ export type V2PipelineBlueprint = {
   principle: string
   stages: V2PipelineStage[]
 }
+
+export type V2PipelineStepOutcome = 'ok' | 'warning' | 'skipped' | 'failed'
+
+export type V2PipelineStepTrace = {
+  stage_id: string
+  outcome: V2PipelineStepOutcome
+  duration_ms: number
+  budget_ms: number
+  over_budget: boolean
+  warnings: string[]
+  error_kind?: string
+}
+
+export type V2PipelineRunTrace = {
+  id: string
+  created_at: string
+  pipeline_id: string
+  route: string
+  total_duration_ms: number
+  total_budget_ms: number
+  blocking_failure: boolean
+  steps: V2PipelineStepTrace[]
+}
