@@ -61,8 +61,93 @@ function situatedInquiry(
       'responsable electoral',
       'gouverneur',
       'parti',
+      'relais institutionnel',
+      'regle exploitable',
+      'acteur capable',
+      'bloquer',
+      'pression',
     ])
   ) {
+    if (normalized.includes('relais institutionnel')) {
+      return {
+        why_it_matters:
+          'Le risque ne vient pas seulement de Trump ; il devient institutionnel si des relais acceptent de donner une procedure a la contestation.',
+        where_to_look: [
+          'Parti republicain',
+          'responsables electoraux locaux',
+          'gouverneurs',
+          'Congres',
+          'tribunaux',
+        ],
+        observable_signal:
+          'Un responsable ou une institution reprend la contestation et la transforme en refus, recours, consigne ou delai officiel.',
+        decisive_evidence:
+          'Une prise de position, un acte procedural ou un document reliant la contestation de Trump a un relais institutionnel identifiable.',
+        counter_hypothesis:
+          'Trump peut contester publiquement sans bascule si aucun relais institutionnel ne convertit ce refus en procedure.',
+      }
+    }
+
+    if (normalized.includes('regle exploitable')) {
+      return {
+        why_it_matters:
+          'Une crise electorale progresse souvent par une regle utilisee a contre-emploi : delai, recours, certification, recomptage ou competence locale.',
+        where_to_look: [
+          'regles de certification des Etats',
+          'delais de recours',
+          'procedures de recomptage',
+          'reglements du Congres',
+          'decisions de justice',
+        ],
+        observable_signal:
+          'Une regle ordinaire est invoquee pour retarder, contester ou delegitimer un resultat dans un Etat cle.',
+        decisive_evidence:
+          'Un texte, un recours ou une decision montrant quelle regle precise est mobilisee pour bloquer ou deplacer le resultat.',
+        counter_hypothesis:
+          'La contestation reste limitee si les regles disponibles ne permettent pas de retarder ou modifier les etapes electorales.',
+      }
+    }
+
+    if (normalized.includes('acteur capable') || normalized.includes('bloquer')) {
+      return {
+        why_it_matters:
+          'La question decisive est de savoir qui possede reellement un levier : certifier, retarder, juger, mobiliser ou legitimer.',
+        where_to_look: [
+          'autorites electorales locales',
+          'secretaires d Etat',
+          'gouverneurs',
+          'juges',
+          'leaders partisans',
+        ],
+        observable_signal:
+          'Un acteur disposant d un levier formel annonce un refus, retarde une etape ou soutient une contestation procedurale.',
+        decisive_evidence:
+          'Un acte public d un acteur habilite : refus de certification, recours depose, injonction judiciaire, consigne partisane ou calendrier modifie.',
+        counter_hypothesis:
+          'Le risque reste surtout narratif si les acteurs capables de bloquer maintiennent les procedures ordinaires.',
+      }
+    }
+
+    if (normalized.includes('pression')) {
+      return {
+        why_it_matters:
+          'La pression devient dangereuse quand elle cible les personnes qui administrent ou valident le resultat.',
+        where_to_look: [
+          'responsables electoraux locaux',
+          'menaces publiques',
+          'consignes de mobilisation',
+          'medias allies',
+          'reactions des autorites',
+        ],
+        observable_signal:
+          'Des responsables electoraux sont nommes, menaces, pousses a retarder ou a justifier publiquement leur decision.',
+        decisive_evidence:
+          'Une trace de pression coordonnee : declaration, campagne, menace documentee, plainte ou mesure de protection.',
+        counter_hypothesis:
+          'Une pression diffuse peut augmenter le bruit politique sans produire de blocage si les responsables restent proteges et suivis.',
+      }
+    }
+
     if (normalized.includes('certification')) {
       return {
         why_it_matters:
