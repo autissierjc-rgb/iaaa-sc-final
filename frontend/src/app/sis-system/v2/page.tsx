@@ -11,6 +11,7 @@ import {
   buildPipelineRunTrace,
   summarizePipelineRun,
 } from '@/lib/pipeline/PipelineTelemetry'
+import { buildCalibrationEvidence } from '@/lib/quality/CalibrationEvidence'
 
 const NEXT_STEPS = [
   'Brancher une route V2 separee, sans toucher a /sis.',
@@ -41,6 +42,24 @@ export default function SisSystemV2Page() {
     })),
   })
   const sampleSummary = summarizePipelineRun(sampleTrace)
+  const sampleCalibration = buildCalibrationEvidence({
+    insight:
+      'La V2 ne cherche pas un meilleur prompt, mais une chaine de contrats qui rend visible la comprehension, le theatre reel, le scoring et la qualite.',
+    main_vulnerability:
+      'La fragilite centrale serait de brancher la generation publique avant que chaque couche puisse prouver ce qu elle consomme et ce qu elle produit.',
+    trajectories: [
+      'Fondations passives',
+      'Branchement route V2 separee',
+      'Remplacement public apres benchmark',
+    ],
+    key_signal:
+      'Le signal decisif sera une carte test qui passe le benchmark sans hors-sol, sans header faible et sans clarification inutile.',
+    global_usefulness:
+      'Cette page aide a piloter la refonte en montrant les contrats poses, leur ordre, leur mesure et les criteres qui diront si une SC est utile.',
+    concrete_anchor_count: 4,
+    has_diamond_sentence: true,
+    has_observable_signal: true,
+  })
 
   return (
     <main style={{ minHeight: '100vh', background: '#F5F0E8', color: '#1A2E5A', padding: '28px' }}>
@@ -134,6 +153,33 @@ export default function SisSystemV2Page() {
                 <p style={{ margin: '7px 0 0', color: step.over_budget ? '#B23A3A' : '#1D9E75', fontSize: 12 }}>
                   {step.duration_ms} / {step.budget_ms} ms · {step.outcome}
                 </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: 760 }}>
+              <h2 style={{ margin: 0, fontSize: 15 }}>Calibration diamant</h2>
+              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
+                Le benchmark historique reste separe du scoring d etat. Il mesure si une carte produit un vrai effet
+                de lecture : insight, vulnerabilite, trajectoires, signal cle et utilite globale.
+              </p>
+            </div>
+            <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleCalibration.total} / 25</strong> exemple</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleCalibration.average}</strong> moyenne</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleCalibration.verdict}</strong> verdict</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10, marginTop: 16 }}>
+            {sampleCalibration.criteria.map((criterion) => (
+              <div key={criterion.id} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
+                <p style={{ margin: 0, color: '#1A2E5A', fontSize: 13, fontWeight: 700 }}>{criterion.label}</p>
+                <p style={{ margin: '7px 0 0', color: '#C8951A', fontSize: 18, fontWeight: 700 }}>{criterion.score} / 5</p>
+                <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>{criterion.evidence}</p>
               </div>
             ))}
           </div>
