@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import GenerateV2Tester from './GenerateV2Tester'
-import InquiryPreview from './InquiryPreview'
 import {
   V2_FOUNDATION_BRICKS,
   statusLabel,
@@ -14,8 +13,6 @@ import {
   summarizePipelineRun,
 } from '@/lib/pipeline/PipelineTelemetry'
 import { buildCalibrationEvidence } from '@/lib/quality/CalibrationEvidence'
-import { buildBlindSpotInquiry } from '@/lib/inquiry/BlindSpotEngine'
-import { inquiryLevelLabel, publicInquiryQuestion } from './inquiryDisplay'
 
 const NEXT_STEPS = [
   'Brancher une route V2 separee, sans toucher a /sis.',
@@ -63,34 +60,6 @@ export default function SisSystemV2Page() {
     concrete_anchor_count: 4,
     has_diamond_sentence: true,
     has_observable_signal: true,
-  })
-  const sampleInquiry = buildBlindSpotInquiry({
-    interpretation: {
-      domain: 'startup_market',
-      situation_soumise: 'Evaluer FlexUp avant de rejoindre la compagnie avec sa startup.',
-      angle: 'decision de partenariat et risque de dependance',
-      user_need: 'Savoir ce qui doit etre verifie avant de s engager.',
-    },
-    theatre: {
-      actors: ['fondateur de la startup', 'equipe FlexUp', 'clients utilisateurs'],
-      institutions: ['cadre legal du travail', 'investisseurs eventuels'],
-      procedures: ['conditions d entree au partenariat', 'verification juridique', 'preuve client'],
-      constraints: [
-        'cadre legal du travail a verifier',
-        'preuve client manquante',
-        'conditions d entree au partenariat',
-      ],
-      evidence: [
-        { label: 'site public FlexUp', level: 'established', source_ids: ['sample-site'] },
-        { label: 'promesse de collaboration et de partage de valeur', level: 'plausible', source_ids: ['sample-site'] },
-      ],
-      unknowns: [
-        'clients actifs identifiables',
-        'revenus ou traction verifies',
-        'compatibilite avec le droit du travail et le droit des societes',
-        'place exacte de la startup dans le partenariat',
-      ],
-    },
   })
 
   return (
@@ -158,45 +127,6 @@ export default function SisSystemV2Page() {
                   Budget {stage.latency_budget_ms} ms · {stage.blocks_generation ? 'bloquant' : 'non bloquant'}
                 </p>
               </article>
-            ))}
-          </div>
-        </section>
-
-        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
-            <div style={{ maxWidth: 760 }}>
-              <h2 style={{ margin: 0, fontSize: 15 }}>Enquete angles morts</h2>
-              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
-                Approfondir reste une page enrichie. L enquete est un declencheur separe : elle part des incertitudes
-                et transforme chaque angle mort en piste, source possible, signal observable et preuve decisive.
-              </p>
-            </div>
-            <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
-              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.blind_spots.length}</strong> pistes a verifier</div>
-              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.should_offer_inquiry ? 'pret' : 'non pret'}</strong> enquete</div>
-              <div><strong style={{ color: '#1A2E5A' }}>{sampleInquiry.trace.duration_ms} ms</strong> sans appel web</div>
-            </div>
-          </div>
-
-          <InquiryPreview
-            buttonLabel={sampleInquiry.inquiry_button_label_fr}
-            blindSpotCount={sampleInquiry.blind_spots.length}
-          />
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10, marginTop: 16 }}>
-            {sampleInquiry.blind_spots.slice(0, 4).map((blindSpot) => (
-              <div key={blindSpot.blind_spot} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
-                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
-                  contrat admin · {inquiryLevelLabel(blindSpot.level)}
-                </p>
-                <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{blindSpot.blind_spot}</h3>
-                <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.45 }}>
-                  {publicInquiryQuestion(blindSpot.blind_spot)}
-                </p>
-                <p style={{ margin: '8px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
-                  Preuve attendue : {blindSpot.decisive_evidence}
-                </p>
-              </div>
             ))}
           </div>
         </section>

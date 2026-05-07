@@ -77,6 +77,7 @@ export default function GenerateV2Tester() {
   const [response, setResponse] = useState<GenerateV2Response | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string>('Pret.')
+  const [inquiryOpen, setInquiryOpen] = useState(false)
 
   const firstBlindSpots = useMemo(
     () => response?.inquiry?.blind_spots?.slice(0, 3) ?? [],
@@ -87,6 +88,7 @@ export default function GenerateV2Tester() {
     setLoading(true)
     setError(null)
     setResponse(null)
+    setInquiryOpen(false)
     setStatusMessage('Appel de /api/generate-v2 en cours...')
 
     try {
@@ -233,7 +235,31 @@ export default function GenerateV2Tester() {
         </div>
       )}
 
-      {firstBlindSpots.length > 0 && (
+      {response?.ok && firstBlindSpots.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <button
+            type="button"
+            data-testid="generate-v2-inquiry-button"
+            onClick={() => setInquiryOpen((value) => !value)}
+            style={{
+              border: '1px solid #C8951A',
+              color: '#1A2E5A',
+              background: inquiryOpen ? '#F8EFD8' : '#fff',
+              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            {inquiryOpen ? 'Masquer l’enquete' : 'Lancer l’enquete'}
+          </button>
+          <span style={{ marginLeft: 10, color: '#8B8174', fontSize: 12 }}>
+            {firstBlindSpots.length} piste(s) sur ce test
+          </span>
+        </div>
+      )}
+
+      {inquiryOpen && firstBlindSpots.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
           {firstBlindSpots.map((blindSpot) => (
             <div key={blindSpot.blind_spot} style={miniCardStyle()}>
