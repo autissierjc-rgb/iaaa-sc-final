@@ -74,6 +74,7 @@ export default function GenerateV2Tester() {
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState<GenerateV2Response | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string>('Pret.')
 
   const firstBlindSpots = useMemo(
     () => response?.inquiry?.blind_spots?.slice(0, 3) ?? [],
@@ -84,6 +85,7 @@ export default function GenerateV2Tester() {
     setLoading(true)
     setError(null)
     setResponse(null)
+    setStatusMessage('Appel de /api/generate-v2 en cours...')
 
     try {
       const result = await fetch('/api/generate-v2', {
@@ -93,9 +95,15 @@ export default function GenerateV2Tester() {
       })
       const payload = await result.json()
       setResponse(payload)
-      if (!result.ok) setError(payload?.message ?? payload?.error ?? 'Erreur generate-v2')
+      if (!result.ok) {
+        setError(payload?.message ?? payload?.error ?? 'Erreur generate-v2')
+        setStatusMessage('Erreur recue.')
+      } else {
+        setStatusMessage('Reponse recue.')
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Erreur inconnue')
+      setStatusMessage('Erreur reseau ou JSON.')
     } finally {
       setLoading(false)
     }
@@ -112,6 +120,7 @@ export default function GenerateV2Tester() {
         </div>
         <button
           type="button"
+          data-testid="generate-v2-test-button"
           onClick={runTest}
           disabled={loading || input.trim().length === 0}
           style={{
@@ -130,6 +139,7 @@ export default function GenerateV2Tester() {
       </div>
 
       <textarea
+        data-testid="generate-v2-input"
         value={input}
         onChange={(event) => setInput(event.target.value)}
         rows={3}
@@ -147,6 +157,10 @@ export default function GenerateV2Tester() {
           resize: 'vertical',
         }}
       />
+
+      <p data-testid="generate-v2-status" style={{ color: '#8B8174', fontSize: 12, margin: '8px 0 0' }}>
+        {statusMessage}
+      </p>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
         {EXAMPLES.map((example) => (

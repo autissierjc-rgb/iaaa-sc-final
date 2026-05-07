@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import GenerateV2Tester from './GenerateV2Tester'
+import InquiryPreview from './InquiryPreview'
 import {
   V2_FOUNDATION_BRICKS,
   statusLabel,
@@ -166,11 +167,10 @@ export default function SisSystemV2Page() {
             </div>
           </div>
 
-          <div style={{ marginTop: 14 }}>
-            <button type="button" style={{ border: '1px solid #C8951A', color: '#1A2E5A', background: '#F8EFD8', borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>
-              {sampleInquiry.inquiry_button_label_fr}
-            </button>
-          </div>
+          <InquiryPreview
+            buttonLabel={sampleInquiry.inquiry_button_label_fr}
+            blindSpotCount={sampleInquiry.blind_spots.length}
+          />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10, marginTop: 16 }}>
             {sampleInquiry.blind_spots.slice(0, 4).map((blindSpot) => (
