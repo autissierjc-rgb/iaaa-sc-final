@@ -589,6 +589,122 @@ function sanitizeSituationCardPublicText(sc: SituationCard): SituationCard {
   return sanitizeScPublicValue(sc) as SituationCard
 }
 
+const PUBLIC_HORS_SOL_PATTERNS = [
+  /\bne se r[ée]sume pas [aà] une inqui[ée]tude g[ée]n[ée]rale\b/i,
+  /\bcrainte formul[ée]e\b/i,
+  /\bcapacit[ée] concr[èe]te des acteurs\b/i,
+  /\brelais capables de la porter, de la l[ée]galiser, de la financer, de la m[ée]diatiser ou de la bloquer\b/i,
+  /\bun objet visible\b/i,
+  /\btension [aà] rendre v[ée]rifiable\b/i,
+  /\bcanal concret\b/i,
+  /\bacteur ou relais\b/i,
+  /\bdes [ée]l[ée]ments visibles existent\b/i,
+  /\bpreuve qui relie le risque [aà] un m[ée]canisme\b/i,
+  /\ble r[ée]cit devient plus fort que les traces\b/i,
+]
+
+function cleanConcreteItems(values: unknown[] = [], max = 5): string[] {
+  const seen = new Set<string>()
+  const items: string[] = []
+  for (const value of values.flatMap((item) => Array.isArray(item) ? item : [item])) {
+    const text = cleanPublicText(String(value ?? ''))
+      .replace(/\s*\([^)]{8,}\)/g, '')
+      .replace(/[.;:]+$/g, '')
+      .trim()
+    if (!text || text.length < 3 || text.length > 120) continue
+    if (/^(general_analysis|understand_situation|site_analysis|startup_investment|personal_relationship)$/i.test(text)) continue
+    const key = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    items.push(text)
+    if (items.length >= max) break
+  }
+  return items
+}
+
+function publicList(items: string[], fallback: string): string {
+  const clean = cleanConcreteItems(items, 5)
+  if (clean.length === 0) return fallback
+  if (clean.length === 1) return clean[0]
+  if (clean.length === 2) return `${clean[0]} et ${clean[1]}`
+  return `${clean.slice(0, -1).join(', ')} et ${clean[clean.length - 1]}`
+}
+
+function countPublicAnchors(text: string, theatre?: ConcreteTheatre): number {
+  if (!theatre) return 0
+  const normalized = cleanPublicText(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const anchors = cleanConcreteItems([
+    theatre.actors,
+    theatre.institutions,
+    theatre.procedures,
+    theatre.places,
+    theatre.dates,
+    theatre.precedents,
+    theatre.relays,
+    theatre.blockers,
+    theatre.mechanisms,
+    theatre.thresholds,
+  ], 40)
+  return anchors.filter((anchor) => normalized.includes(anchor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())).length
+}
+
+function looksHorsSol(text: unknown, theatre?: ConcreteTheatre): boolean {
+  const value = cleanPublicText(String(text ?? ''))
+  if (!value) return false
+  if (PUBLIC_HORS_SOL_PATTERNS.some((pattern) => pattern.test(value))) return true
+  return Boolean(theatre?.anchors?.length) && value.length > 160 && countPublicAnchors(value, theatre) === 0
+}
+
+function groundedLectureFr(situation: string, theatre?: ConcreteTheatre): string {
+  const question = cleanPublicText(situation).replace(/[.;:]+$/g, '')
+  if (!theatre) {
+    return `${capitalizeFirst(question)} doit être traité à partir de la question posée, sans importer de cadre abstrait.\n\nLa lecture doit d’abord séparer ce qui est établi, ce qui est plausible, ce qui manque et ce qui ferait changer la conclusion.\n\nLe point à surveiller est la première trace vérifiable qui relie la question à un acteur, une décision, un lieu, une règle ou un geste observable.`
+  }
+
+  if (theatre.domain === 'governance') {
+    const actors = publicList(theatre.actors, 'les acteurs politiques nommés')
+    const institutions = publicList(theatre.institutions, 'les institutions concernées')
+    const procedures = publicList(theatre.procedures, 'les procédures électorales ou institutionnelles')
+    const evidence = publicList(theatre.evidence_to_watch, 'les actes publics vérifiables')
+    return `${capitalizeFirst(question)} doit être lu dans un théâtre institutionnel précis : ${actors}, ${institutions} et ${procedures}.\n\nLa question n’est pas une crainte abstraite. Elle devient sérieuse seulement si un acteur identifiable utilise une règle, une procédure, un recours, une consigne ou un calendrier pour déplacer le résultat ou bloquer sa reconnaissance.\n\nLe point de bascule serait visible dans ${evidence}. Sans cette trace, la lecture doit rester prudente : risque possible, capacité à établir, acte non démontré.`
+  }
+
+  if (theatre.domain === 'personal') {
+    const actors = publicList(theatre.actors, 'les personnes concernées')
+    const mechanisms = publicList(theatre.mechanisms, 'les gestes et silences du lien')
+    const evidence = publicList(theatre.evidence_to_watch, 'les prochains signes concrets')
+    return `${capitalizeFirst(question)} doit rester attaché à la scène relationnelle concrète : ${actors}, ${mechanisms}.\n\nLa situation ne demande pas de transformer un signe, un silence ou une émotion en certitude. Elle demande de regarder comment le lien se répare, se clarifie ou se ferme dans les gestes suivants.\n\nLe signal utile sera ${evidence}. C’est là que l’ambiguïté devient lisible sans inventer une intention à la place des personnes.`
+  }
+
+  if (theatre.domain === 'startup_vc') {
+    const actors = publicList(theatre.actors, 'l’entreprise, l’utilisateur et les partenaires possibles')
+    const procedures = publicList(theatre.procedures, 'le parcours produit et la décision de collaboration')
+    const evidence = publicList(theatre.evidence_to_watch, 'les preuves d’usage, clients, revenus ou conditions visibles')
+    return `${capitalizeFirst(question)} doit être lu comme une décision de compréhension et d’évaluation : ${actors}.\n\nLa carte ne doit pas juger une promesse seule. Elle doit distinguer ce que l’offre dit faire, pour qui, avec quelles contraintes juridiques ou économiques, et ce qui est déjà prouvé par ${procedures}.\n\nLe point de bascule viendra de ${evidence}. Tant que ces preuves manquent, l’intérêt peut être réel mais reste à vérifier avant de rejoindre, investir ou engager une startup.`
+  }
+
+  const anchors = publicList(theatre.anchors, 'les faits et acteurs déjà présents')
+  const evidence = publicList(theatre.evidence_to_watch, 'les preuves à surveiller')
+  return `${capitalizeFirst(question)} doit être lu à partir du théâtre réel déjà disponible : ${anchors}.\n\nLa lecture reste solide seulement si elle montre qui agit, qui bloque, quelle règle ou contrainte pèse, et quelle trace permettrait de confirmer ou d’infirmer l’hypothèse.\n\nLe point utile à surveiller est ${evidence}. Sans ce lien, la carte doit rester prudente plutôt que remplir les vides par un récit général.`
+}
+
+function enforceAntiHorsSol(sc: SituationCard, situation: string): SituationCard {
+  const theatre = sc.concrete_theatre ?? sc.coverage_check?.concrete_theatre
+  const groundedLecture = groundedLectureFr(situation, theatre)
+  const groundedInsight = groundedLecture.split('\n\n')[0]
+  const groundedSignal = theatre
+    ? `Surveiller ${publicList(theatre.evidence_to_watch, 'la première trace vérifiable')} : c’est ce qui permet de passer d’une hypothèse à une lecture établie.`
+    : 'Surveiller la première trace vérifiable qui relie la question à un acteur, une décision ou un geste observable.'
+
+  return {
+    ...sc,
+    insight_fr: looksHorsSol(sc.insight_fr, theatre) ? groundedInsight : sc.insight_fr,
+    asymmetry_fr: looksHorsSol(sc.asymmetry_fr, theatre) ? 'La carte doit montrer le passage entre hypothèse, acteurs capables d’agir et preuve observable, sans remplacer ce qui manque par une formule générale.' : sc.asymmetry_fr,
+    key_signal_fr: looksHorsSol(sc.key_signal_fr, theatre) ? groundedSignal : sc.key_signal_fr,
+    lecture_systeme_fr: looksHorsSol(sc.lecture_systeme_fr, theatre) ? groundedLecture : sc.lecture_systeme_fr,
+  }
+}
+
 function stripEntityExplanations(text: string): string {
   return cleanPublicText(text)
     .replace(/\s*\([^)]{8,}\)/g, '')
@@ -3614,8 +3730,7 @@ export async function POST(req: NextRequest) {
       generation_status: baseSc.generation_status ?? 'ok',
       resources_status: resourcesStatus,
     }
-    const sc: SituationCard = {
-      ...sanitizeSituationCardPublicText(enforceHeaderContract(
+    const publicSc = sanitizeSituationCardPublicText(enforceHeaderContract(
       applyEntityExplanationsToSituationCard(
         intentContext.interpreted_request?.question_type === 'causal_attribution'
           ? {
@@ -3643,7 +3758,9 @@ export async function POST(req: NextRequest) {
           : assembledSc
       ),
       displayText
-      )),
+      ))
+    const sc: SituationCard = {
+      ...enforceAntiHorsSol(publicSc, displayText),
       submitted_situation_fr: canonicalSubmittedText,
       submitted_situation_en: canonicalSubmittedText,
     }
