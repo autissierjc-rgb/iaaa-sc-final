@@ -613,6 +613,14 @@ function cleanConcreteItems(values: unknown[] = [], max = 5): string[] {
       .trim()
     if (!text || text.length < 3 || text.length > 120) continue
     if (/^(general_analysis|understand_situation|site_analysis|startup_investment|personal_relationship)$/i.test(text)) continue
+    if (/[?]/.test(text)) continue
+    if (/^(que|quoi|comment|pourquoi|est-ce|es-ce|peut-il|peut elle|faut-il)\b/i.test(text)) continue
+    if (/\b(?:question|demande|objet|tension)\s+(?:demande|interpr[ée]t[ée]e?|utile|soumise)\b/i.test(text)) continue
+    if (/^(?:objet|tension)\s+interpr[ée]t[ée]e?\s*:/i.test(text)) continue
+    if (/^sources?\s+(?:externes?|m[ée]dias?|publiques?|web)$/i.test(text)) continue
+    if (/^(?:france\s*24|reuters|afp|ap|associated press|le monde|le figaro|bbc|cnn)$/i.test(text)) continue
+    if (/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+\d{1,2}\s+\w+\s+\d{4}|\bGMT\b|\d{1,2}\s*:\s*\d{2}\s*:\s*\d{2}/i.test(text)) continue
+    if (/\b(?:doit|devrait|pourrait)-?il\b/i.test(text)) continue
     const key = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     if (seen.has(key)) continue
     seen.add(key)
@@ -628,6 +636,16 @@ function publicList(items: string[], fallback: string): string {
   if (clean.length === 1) return clean[0]
   if (clean.length === 2) return `${clean[0]} et ${clean[1]}`
   return `${clean.slice(0, -1).join(', ')} et ${clean[clean.length - 1]}`
+}
+
+function usefulPublicList(items: string[], fallback: string): string {
+  const value = publicList(items, fallback)
+    .replace(/(?:^|,\s*)sources?\s+externes?(?=,|$)/gi, '')
+    .replace(/\s*,\s*,+/g, ', ')
+    .replace(/^\s*,\s*/, '')
+    .replace(/\s*,\s*$/g, '')
+    .trim()
+  return value || fallback
 }
 
 function countPublicAnchors(text: string, theatre?: ConcreteTheatre): number {
@@ -662,29 +680,29 @@ function groundedLectureFr(situation: string, theatre?: ConcreteTheatre): string
   }
 
   if (theatre.domain === 'governance') {
-    const actors = publicList(theatre.actors, 'les acteurs politiques nommés')
-    const institutions = publicList(theatre.institutions, 'les institutions concernées')
-    const procedures = publicList(theatre.procedures, 'les procédures électorales ou institutionnelles')
-    const evidence = publicList(theatre.evidence_to_watch, 'les actes publics vérifiables')
+    const actors = usefulPublicList(theatre.actors, 'les acteurs politiques nommés')
+    const institutions = usefulPublicList(theatre.institutions, 'les institutions concernées')
+    const procedures = usefulPublicList(theatre.procedures, 'les procédures électorales ou institutionnelles')
+    const evidence = usefulPublicList(theatre.evidence_to_watch, 'les actes publics vérifiables')
     return `${capitalizeFirst(question)} doit être lu dans un théâtre institutionnel précis : ${actors}, ${institutions} et ${procedures}.\n\nLa question n’est pas une crainte abstraite. Elle devient sérieuse seulement si un acteur identifiable utilise une règle, une procédure, un recours, une consigne ou un calendrier pour déplacer le résultat ou bloquer sa reconnaissance.\n\nLe point de bascule serait visible dans ${evidence}. Sans cette trace, la lecture doit rester prudente : risque possible, capacité à établir, acte non démontré.`
   }
 
   if (theatre.domain === 'personal') {
-    const actors = publicList(theatre.actors, 'les personnes concernées')
-    const mechanisms = publicList(theatre.mechanisms, 'les gestes et silences du lien')
-    const evidence = publicList(theatre.evidence_to_watch, 'les prochains signes concrets')
+    const actors = usefulPublicList(theatre.actors, 'les personnes concernées')
+    const mechanisms = usefulPublicList(theatre.mechanisms, 'les gestes et silences du lien')
+    const evidence = usefulPublicList(theatre.evidence_to_watch, 'les prochains signes concrets')
     return `${capitalizeFirst(question)} doit rester attaché à la scène relationnelle concrète : ${actors}, ${mechanisms}.\n\nLa situation ne demande pas de transformer un signe, un silence ou une émotion en certitude. Elle demande de regarder comment le lien se répare, se clarifie ou se ferme dans les gestes suivants.\n\nLe signal utile sera ${evidence}. C’est là que l’ambiguïté devient lisible sans inventer une intention à la place des personnes.`
   }
 
   if (theatre.domain === 'startup_vc') {
-    const actors = publicList(theatre.actors, 'l’entreprise, l’utilisateur et les partenaires possibles')
-    const procedures = publicList(theatre.procedures, 'le parcours produit et la décision de collaboration')
-    const evidence = publicList(theatre.evidence_to_watch, 'les preuves d’usage, clients, revenus ou conditions visibles')
+    const actors = usefulPublicList(theatre.actors, 'l’entreprise, l’utilisateur et les partenaires possibles')
+    const procedures = usefulPublicList(theatre.procedures, 'le parcours produit et la décision de collaboration')
+    const evidence = usefulPublicList(theatre.evidence_to_watch, 'les preuves d’usage, clients, revenus ou conditions visibles')
     return `${capitalizeFirst(question)} doit être lu comme une décision de compréhension et d’évaluation : ${actors}.\n\nLa carte ne doit pas juger une promesse seule. Elle doit distinguer ce que l’offre dit faire, pour qui, avec quelles contraintes juridiques ou économiques, et ce qui est déjà prouvé par ${procedures}.\n\nLe point de bascule viendra de ${evidence}. Tant que ces preuves manquent, l’intérêt peut être réel mais reste à vérifier avant de rejoindre, investir ou engager une startup.`
   }
 
-  const anchors = publicList(theatre.anchors, 'les faits et acteurs déjà présents')
-  const evidence = publicList(theatre.evidence_to_watch, 'les preuves à surveiller')
+  const anchors = usefulPublicList(theatre.anchors, 'les faits et acteurs déjà présents')
+  const evidence = usefulPublicList(theatre.evidence_to_watch, 'les preuves à surveiller')
   return `${capitalizeFirst(question)} doit être lu à partir du théâtre réel déjà disponible : ${anchors}.\n\nLa lecture reste solide seulement si elle montre qui agit, qui bloque, quelle règle ou contrainte pèse, et quelle trace permettrait de confirmer ou d’infirmer l’hypothèse.\n\nLe point utile à surveiller est ${evidence}. Sans ce lien, la carte doit rester prudente plutôt que remplir les vides par un récit général.`
 }
 
@@ -693,13 +711,13 @@ function enforceAntiHorsSol(sc: SituationCard, situation: string): SituationCard
   const groundedLecture = groundedLectureFr(situation, theatre)
   const groundedInsight = groundedLecture.split('\n\n')[0]
   const groundedSignal = theatre
-    ? `Surveiller ${publicList(theatre.evidence_to_watch, 'la première trace vérifiable')} : c’est ce qui permet de passer d’une hypothèse à une lecture établie.`
+    ? `Surveiller ${usefulPublicList(theatre.evidence_to_watch, 'la première trace vérifiable')} : c’est ce qui permet de passer d’une hypothèse à une lecture établie.`
     : 'Surveiller la première trace vérifiable qui relie la question à un acteur, une décision ou un geste observable.'
 
   return {
     ...sc,
     insight_fr: looksHorsSol(sc.insight_fr, theatre) ? groundedInsight : sc.insight_fr,
-    asymmetry_fr: looksHorsSol(sc.asymmetry_fr, theatre) ? 'La carte doit montrer le passage entre hypothèse, acteurs capables d’agir et preuve observable, sans remplacer ce qui manque par une formule générale.' : sc.asymmetry_fr,
+    asymmetry_fr: looksHorsSol(sc.asymmetry_fr, theatre) ? `Le point fragile est le lien entre ${usefulPublicList(theatre?.actors ?? [], 'les acteurs nommés')}, ${usefulPublicList(theatre?.procedures ?? [], 'les règles ou gestes disponibles')} et ${usefulPublicList(theatre?.evidence_to_watch ?? [], 'la preuve observable')}. Sans ce lien, l’hypothèse reste possible mais non établie.` : sc.asymmetry_fr,
     key_signal_fr: looksHorsSol(sc.key_signal_fr, theatre) ? groundedSignal : sc.key_signal_fr,
     lecture_systeme_fr: looksHorsSol(sc.lecture_systeme_fr, theatre) ? groundedLecture : sc.lecture_systeme_fr,
   }
@@ -2197,10 +2215,16 @@ function completeSituationCard(
     ? sc.radar
     : { impact: 55, urgency: 50, uncertainty: 60, reversibility: 45 }
   const understands = isUnderstandingRequest(sc) && !isPersonalRelationship
+  const understoodTheatre = sc.concrete_theatre ?? sc.coverage_check?.concrete_theatre
   const object = interpretedObject(sc)
   const tension = interpretedTension(sc)
   const objectLabel = object || 'l’objet de la question'
   const trajectorySubject = conciseTrajectorySubject(objectLabel)
+  const understoodActors = usefulPublicList(understoodTheatre?.actors ?? [], 'les acteurs habilités')
+  const understoodProcedures = usefulPublicList(understoodTheatre?.procedures ?? [], 'une règle, une procédure ou un geste vérifiable')
+  const understoodEvidence = usefulPublicList(understoodTheatre?.evidence_to_watch ?? [], 'une trace publique vérifiable')
+  const understoodRelays = usefulPublicList(understoodTheatre?.relays ?? understoodTheatre?.institutions ?? [], 'un relais identifiable')
+  const understoodThresholds = usefulPublicList(understoodTheatre?.thresholds ?? [], 'un seuil observable')
   const objectSentence = capitalizeFirst(objectLabel)
   const objectDe = afterDe(objectLabel)
   const isExperienceExplanation = isExperienceExplanationFrame(sc.intent_context)
@@ -2222,29 +2246,29 @@ function completeSituationCard(
     ? [
         {
           type: 'stabilization',
-          title_fr: 'Mécanisme clarifié',
+          title_fr: 'Relais vérifié',
           title_en: 'Clarified role',
-          description_fr: `La situation se clarifie si ${trajectorySubject} est relié à des acteurs, des moyens d’action et des preuves observables.`,
+          description_fr: `La situation se clarifie si ${understoodActors} peut être relié à ${understoodProcedures} et à ${understoodEvidence}.`,
           description_en: 'The situation clarifies when actors, means of action, and observable proof are linked.',
-          signal_fr: 'Un fait, une décision ou un canal vérifiable permet de distinguer crainte, capacité et acte.',
+          signal_fr: `Un fait situé permet de distinguer hypothèse, capacité réelle et acte : ${understoodEvidence}.`,
           signal_en: 'A fact, decision, or verifiable channel separates fear, capacity, and action.',
         },
         {
           type: 'escalation',
-          title_fr: 'Crainte amplifiée',
+          title_fr: 'Procédure activée',
           title_en: 'Hollow ritual',
-          description_fr: `La pression augmente si ${trajectorySubject} devient un récit dominant sans preuve proportionnée.`,
+          description_fr: `La pression augmente si ${understoodRelays} donne une forme active à ${trajectorySubject} : recours, refus, consigne, blocage, calendrier déplacé ou pression publique.`,
           description_en: 'Pressure rises if the issue becomes a dominant narrative without proportional proof.',
-          signal_fr: 'Des accusations, procédures, consignes ou refus publics durcissent les positions.',
+          signal_fr: `Le signal est un passage de la parole à ${understoodProcedures}.`,
           signal_en: 'Accusations, procedures, instructions, or public refusals harden positions.',
         },
         {
           type: 'regime_shift',
-          title_fr: 'Seuil rendu visible',
+          title_fr: 'Seuil prouvé',
           title_en: 'Proof displaced',
-          description_fr: 'La logique change quand ce qui restait supposé devient une décision, un coût, une preuve ou un blocage public.',
+          description_fr: `La logique change si ${understoodThresholds} devient visible et ferme les contre-hypothèses.`,
           description_en: 'The logic shifts when what was assumed becomes a decision, cost, proof, or public blockage.',
-          signal_fr: 'Un acteur capable d’agir change de registre et rend la tension vérifiable.',
+          signal_fr: `La preuve utile relie un acteur nommé, une règle mobilisée et ${understoodEvidence}.`,
           signal_en: 'An actor able to act changes register and makes the tension verifiable.',
         },
       ]
@@ -2283,9 +2307,9 @@ function completeSituationCard(
       }
     : understands
     ? {
-        hook_fr: 'Une crainte ne devient structurante que lorsqu’elle trouve un relais capable d’agir.',
+        hook_fr: `Une hypothèse devient sérieuse quand ${understoodActors} peut lui donner une forme observable.`,
         hook_en: 'A concern becomes structuring only when it finds a channel able to act.',
-        watch_fr: 'Surveiller les actes qui transforment la crainte en capacité : décision, procédure, blocage, consigne, calendrier ou preuve.',
+        watch_fr: `Surveiller ${understoodEvidence} : c’est ce qui permet de passer du soupçon à une lecture établie.`,
         watch_en: 'Watch acts that turn concern into capacity: decision, procedure, blockage, instruction, calendar, or proof.',
       }
     : sc.cap && typeof sc.cap === 'object'
@@ -2901,21 +2925,26 @@ function buildFallbackCard(
     intentContext?.decision_type !== 'evaluate_investment'
   const objectLabel = cleanPublicText(interpreted?.object_of_analysis ?? '').replace(/[.;:]+$/g, '') || 'l’objet de la question'
   const trajectorySubject = conciseTrajectorySubject(objectLabel)
+  const fallbackActors = usefulPublicList(arbre.acteurs ?? [], 'les acteurs habilités')
+  const fallbackProcedures = usefulPublicList([...(arbre.contraintes ?? []), ...(arbre.rapports_de_force ?? [])], 'une règle, une procédure ou un geste vérifiable')
+  const fallbackEvidence = usefulPublicList([...(arbre.temps ?? []), ...(arbre.temporalites ?? []), ...(arbre.incertitudes ?? [])], 'une trace publique vérifiable')
+  const fallbackRelays = usefulPublicList([...(arbre.acteurs ?? []), ...(arbre.forces ?? [])], 'un relais identifiable')
+  const fallbackThresholds = usefulPublicList([...(arbre.tensions ?? []), ...(arbre.vulnerabilites ?? [])], 'un seuil observable')
   const objectSentence = capitalizeFirst(objectLabel)
   const objectDe = afterDe(objectLabel)
   const tensionLabel = cleanPublicText(interpreted?.implicit_tension ?? '').replace(/[.;:]+$/g, '') || 'un format visible continue à organiser confiance, preuve et décision'
   const understandingInsight =
-    `${objectSentence} met en tension ce qui est craint, ce qui est possible et ce qui est prouvable. Le point décisif est la capacité réelle des acteurs à transformer cette tension en décision, blocage ou changement observable.`
+    `${objectSentence} doit être lu à partir de ${fallbackActors}. Le point décisif est de savoir quel acteur peut utiliser ${fallbackProcedures} pour produire un effet observable.`
   const understandingVulnerability =
-    'Le point fragile est le passage entre crainte, intention, capacité réelle et acte vérifiable.'
+    `Le point fragile est le lien entre ${fallbackActors}, ${fallbackProcedures} et ${fallbackEvidence}.`
   const understandingAsymmetry =
-    'La tension peut être largement commentée, mais elle ne devient lisible qu’en identifiant qui peut réellement agir, bloquer ou légitimer.'
+    `Ce qui peut être commenté publiquement ne devient structurant que si ${fallbackRelays} lui donne une forme vérifiable.`
   const understandingSignal =
-    'Le signal clé serait un acte vérifiable : décision, refus, procédure, pression organisée, changement de calendrier ou prise de position qui modifie les marges d’action.'
+    `Le signal clé est ${fallbackEvidence} : une trace qui relie un acteur nommé, une règle mobilisée et une conséquence observable.`
   const understandingLecture =
-    `${objectSentence} ne se résume pas à une inquiétude générale. La situation se joue dans l’écart entre une crainte formulée et la capacité concrète des acteurs à la traduire en acte : décision, blocage, procédure, pression publique ou déplacement du calendrier.\n\n` +
-    `La contradiction centrale tient à ceci : ${tensionLabel}. Une perception peut devenir politiquement puissante avant d’être prouvée, mais elle ne devient structurante que si elle rencontre des relais capables de la porter, de la légaliser, de la financer, de la médiatiser ou de la bloquer.\n\n` +
-    `Le point de bascule sera observable. Il apparaîtra lorsqu’un acteur, une institution ou un canal changera de registre : recours, refus, consigne publique, arbitrage, calendrier modifié ou preuve qui rend impossible de traiter la situation comme une simple inquiétude.`
+    `${objectSentence} doit être lu à partir de son théâtre réel : ${fallbackActors}. La question utile est de savoir quel acteur peut agir, bloquer, légitimer ou déplacer la situation par ${fallbackProcedures}.\n\n` +
+    `La contradiction centrale tient à ceci : ${tensionLabel}. Elle ne devient solide que si elle se relie à ${fallbackRelays}, puis à une trace vérifiable.\n\n` +
+    `Le point de bascule sera ${fallbackThresholds}. À ce moment-là, la carte ne parlera plus d’une hypothèse générale, mais d’un lien observable entre acteur, règle, acte et conséquence.`
   const siteFallback = siteAnalysisFallbackCard({
     situation,
     arbre,
@@ -3013,29 +3042,29 @@ function buildFallbackCard(
         ? [
             {
               type: 'stabilization',
-              title_fr: 'Mécanisme clarifié',
+              title_fr: 'Relais vérifié',
               title_en: 'Clarified role',
-              description_fr: `La situation se clarifie si ${trajectorySubject} est relié à des acteurs, des moyens d’action et des preuves observables.`,
+              description_fr: `La situation se clarifie si ${fallbackActors} peut être relié à ${fallbackProcedures} et à ${fallbackEvidence}.`,
               description_en: 'The situation clarifies if the object remains tied to the actual question.',
-              signal_fr: 'Un fait, une décision ou un canal vérifiable permet de distinguer crainte, capacité et acte.',
+              signal_fr: `Un fait situé permet de distinguer hypothèse, capacité réelle et acte : ${fallbackEvidence}.`,
               signal_en: 'One can state what is established, plausible, not established, and missing.',
             },
             {
               type: 'escalation',
-              title_fr: 'Crainte amplifiée',
+              title_fr: 'Procédure activée',
               title_en: 'Forced frame',
-              description_fr: `La pression augmente si ${trajectorySubject} devient un récit dominant sans preuve proportionnée.`,
+              description_fr: `La pression augmente si ${fallbackRelays} donne une forme active à ${trajectorySubject} : recours, refus, consigne, blocage, calendrier déplacé ou pression publique.`,
               description_en: 'Pressure rises if the object is replaced by a generic frame.',
-              signal_fr: 'Des accusations, procédures, consignes ou refus publics durcissent les positions.',
+              signal_fr: `Le signal est un passage de la parole à ${fallbackProcedures}.`,
               signal_en: 'The answer seems coherent, but no longer answers the exact question.',
             },
             {
               type: 'regime_shift',
-              title_fr: 'Seuil rendu visible',
+              title_fr: 'Seuil prouvé',
               title_en: 'Open inquiry',
-              description_fr: 'La logique change quand ce qui restait supposé devient une décision, un coût, une preuve ou un blocage public.',
+              description_fr: `La logique change si ${fallbackThresholds} devient visible et ferme les contre-hypothèses.`,
               description_en: 'The logic shifts when SC stops filling gaps and asks for the decisive proof or precision.',
-              signal_fr: 'Un acteur capable d’agir change de registre et rend la tension vérifiable.',
+              signal_fr: `La preuve utile relie un acteur nommé, une règle mobilisée et ${fallbackEvidence}.`,
               signal_en: 'A single question, source, or user follow-up becomes more useful than a conclusion.',
             },
           ]
@@ -3043,7 +3072,7 @@ function buildFallbackCard(
         : humanDevelopment ? humanDevelopmentTrajectories() : defaultTrajectories(arbre, situation),
       cap: {
         hook_fr: understands
-          ? 'Une crainte ne devient structurante que lorsqu’elle trouve un relais capable d’agir.'
+          ? `Une hypothèse devient sérieuse quand ${fallbackActors} peut lui donner une forme observable.`
           : isPersonalRelationship
           ? personalRelationshipCap().hook_fr
           : humanDevelopment
@@ -3053,7 +3082,7 @@ function buildFallbackCard(
           ? personalRelationshipCap().hook_en
           : 'What still holds is not necessarily what truly protects the system.',
         watch_fr: understands
-          ? 'Surveiller les actes qui transforment la crainte en capacité : décision, procédure, blocage, consigne, calendrier ou preuve.'
+          ? `Surveiller ${fallbackEvidence} : c’est ce qui permet de passer du soupçon à une lecture établie.`
           : isPersonalRelationship
           ? personalRelationshipCap().watch_fr
           : humanDevelopment

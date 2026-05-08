@@ -165,7 +165,18 @@ function hasDemonstrableTheatre(theatre: SituationCard['concrete_theatre'] | und
 }
 
 function concreteList(items: string[] | undefined, fallback: string, max = 4): string {
-  const cleaned = (items ?? []).map(compact).filter(Boolean).slice(0, max)
+  const cleaned = (items ?? [])
+    .map(compact)
+    .filter((item) => {
+      if (!item) return false
+      if (item.length > 120) return false
+      if (/[?]/.test(item)) return false
+      if (/^(general_analysis|understand_situation|site_analysis|startup_investment|personal_relationship)$/i.test(item)) return false
+      if (/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+\d{1,2}\s+\w+\s+\d{4}|\bGMT\b|\d{1,2}\s*:\s*\d{2}\s*:\s*\d{2}/i.test(item)) return false
+      if (/^(que|quoi|comment|pourquoi|est-ce|es-ce|peut-il|peut elle|faut-il)\b/i.test(item)) return false
+      return true
+    })
+    .slice(0, max)
   return readableList(cleaned, fallback)
 }
 
@@ -189,9 +200,9 @@ function publicHoldingSentence(theatre: SituationCard['concrete_theatre'] | unde
   const actors = concreteList(theatre.actors, 'les acteurs nommés')
   if (hasConcreteItems(theatre.mechanisms)) {
     const mechanisms = concreteList(theatre.mechanisms, 'les faits à vérifier')
-    return `${capitalizeFirst(tension)}. La situation tient encore par ${actors} et ${mechanisms}, tant qu’aucune trace située ne permet de conclure.`
+    return `${capitalizeFirst(tension)}. La situation tient encore tant que ${actors} restent reliés à ${mechanisms} sans qu’une trace située ferme les contre-hypothèses.`
   }
-  return `${capitalizeFirst(tension)}. La situation tient encore par ${actors}, mais il manque les faits concrets qui permettraient de dire ce que ces acteurs font réellement.`
+  return `${capitalizeFirst(tension)}. La situation tient encore parce que ${actors} sont identifiés, mais il manque le geste, la règle ou la preuve qui préciserait leur rôle réel.`
 }
 
 function publicWeakeningSentence(theatre: SituationCard['concrete_theatre'] | undefined): string {
@@ -226,7 +237,7 @@ function publicEscalationSentence(theatre: SituationCard['concrete_theatre'] | u
 
   const procedures = concreteList(theatre.procedures, 'une procédure ou un geste observable')
   const mechanisms = concreteList(theatre.mechanisms, 'un mécanisme concret')
-  return `L’escalade commence si ${procedures} ou ${mechanisms} change de fonction : ce qui était un signe devient alors une action, un blocage ou une contrainte visible.`
+  return `L’escalade commence si ${procedures} ou ${mechanisms} cesse d’être seulement possible et devient un acte visible : décision, refus, blocage, recours, pression publique ou coût assumé.`
 }
 
 function publicShiftSentence(theatre: SituationCard['concrete_theatre'] | undefined): string {
@@ -703,26 +714,38 @@ function buildUnderstandingDeepFallback(sc?: SituationCard): DeepReading {
   const objectSentence = capitalizeFirst(object)
   const tension = understoodTension(sc)
   const theatre = sc?.concrete_theatre ?? sc?.coverage_check?.concrete_theatre
-  const anchors = theatreAnchorText(theatre, 10)
+  const actors = concreteList(theatre?.actors, object, 5)
+  const institutions = concreteList(theatre?.institutions, 'les institutions ou cadres concernés', 5)
+  const procedures = concreteList(theatre?.procedures, 'les procédures, règles ou gestes à vérifier', 5)
+  const relays = concreteList(theatre?.relays, 'les relais capables de transformer la situation', 4)
+  const blockers = concreteList(theatre?.blockers, 'les acteurs capables de bloquer ou légitimer', 4)
+  const mechanisms = concreteList(theatre?.mechanisms, 'les mécanismes qui rendraient l’hypothèse concrète', 4)
+  const thresholds = concreteList(theatre?.thresholds, 'le seuil où l’hypothèse devient acte observable', 4)
   const evidence = concreteList(theatre?.evidence_to_watch, 'les traces concrètes qui permettraient de trancher', 5)
   const hasRealTheatre = hasDemonstrableTheatre(theatre)
+  const isGovernance = theatre?.domain === 'governance'
+  const isPersonal = theatre?.domain === 'personal'
 
   return {
     approfondir_fr: polishDiamondText(
       `${DIAMOND_DEEP_HEADINGS_FR[0]}\n\n` +
-      (hasRealTheatre
-        ? `${objectSentence} se comprend par les éléments déjà situés${anchors ? ` : ${anchors}` : ''}. L’enjeu est de montrer comment ces éléments peuvent modifier une décision, un blocage, un usage, une relation ou une preuve disponible.\n\n`
-        : `${objectSentence} reste insuffisamment sourcé pour être démontré. Le point solide, à ce stade, est la demande elle-même : comprendre l’objet, son activité réelle, les acteurs concernés et les preuves disponibles avant de conclure.\n\n`) +
+      (hasRealTheatre && isGovernance
+        ? `${objectSentence} doit être lu comme une hypothèse institutionnelle à tester. Les éléments centraux sont ${actors}, ${institutions} et ${procedures}. La question utile n’est pas seulement ce qui est redouté, mais quel acteur habilité pourrait transformer cette hypothèse en acte public.\n\n`
+        : hasRealTheatre && isPersonal
+        ? `${objectSentence} doit rester attaché à la scène relationnelle : ${actors}. La question utile n’est pas de deviner une intention cachée, mais de regarder quels gestes, silences, paroles ou limites donnent au lien une direction observable.\n\n`
+        : hasRealTheatre
+        ? `${objectSentence} doit être lu à partir des acteurs et contraintes déjà situés : ${actors}. La carte doit montrer quel geste, quelle règle, quelle dépendance ou quelle preuve peut transformer l’hypothèse en fait observable.\n\n`
+        : `${objectSentence} reste insuffisamment sourcé pour être démontré. Le point solide, à ce stade, est la demande elle-même : comprendre les acteurs concernés, les preuves disponibles et ce qui manque avant de conclure.\n\n`) +
       `${DIAMOND_DEEP_HEADINGS_FR[1]}\n\n` +
       `${hasRealTheatre ? publicHoldingSentence(theatre, tension) : `${capitalizeFirst(tension)}. Ce qui tient encore, c’est la possibilité de clarifier l’objet sans inventer les faits manquants.`}\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[2]}\n\n` +
       `${hasRealTheatre ? publicWeakeningSentence(theatre) : 'Ce qui l’affaiblit, c’est l’absence d’éléments vérifiables : source officielle, description produit, cible, preuves d’usage, clients, partenaires ou conditions concrètes.'}\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[3]}\n\n` +
-      `${hasRealTheatre ? publicEscalationSentence(theatre) : 'L’escalade serait une conclusion trop rapide : juger l’intérêt du projet avant d’avoir vérifié ce qu’il fait réellement et ce qui est prouvé.'}\n\n` +
+      `${hasRealTheatre && isGovernance ? `L’escalade commencerait si ${relays} ou ${blockers} donnaient une forme officielle à l’hypothèse : recours, refus, consigne, retard, certification contestée, décision judiciaire ou pression organisée.` : hasRealTheatre ? publicEscalationSentence(theatre) : 'L’escalade serait une conclusion trop rapide : juger l’intérêt du projet avant d’avoir vérifié ce qu’il fait réellement et ce qui est prouvé.'}\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[4]}\n\n` +
-      `${hasRealTheatre ? publicShiftSentence(theatre) : 'La bascule viendrait d’un élément simple et contrôlable : URL officielle, contenu du site, démonstration, client identifiable, métrique d’usage, revenu ou condition de partenariat.'}\n\n` +
+      `${hasRealTheatre && isGovernance ? `La bascule se produirait si ${thresholds} apparaissait dans ${evidence}. À ce moment-là, la lecture ne reposerait plus sur une crainte ou une vraisemblance, mais sur un lien entre acteur, règle, acte et conséquence.` : hasRealTheatre ? publicShiftSentence(theatre) : 'La bascule viendrait d’un élément simple et contrôlable : URL officielle, contenu du site, démonstration, client identifiable, métrique d’usage, revenu ou condition de partenariat.'}\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[5]}\n\n` +
-      `${hasRealTheatre ? `Le point à surveiller maintenant est ${evidence}.` : 'Le point à surveiller maintenant est la source qui permettra de lire le réel au lieu de combler le vide.'} La vérification utile tient en trois questions : ce qui manque, qui peut le confirmer, et quelle trace ferait changer la conclusion.`
+      `${hasRealTheatre ? `Il faut surveiller ${evidence}. Les angles morts utiles portent sur ${mechanisms}, ${relays} et ${blockers} : ce sont eux qui diraient si l’hypothèse reste un récit, devient une capacité, ou se transforme en acte.` : 'Le point à surveiller maintenant est la source qui permettra de lire le réel au lieu de combler le vide.'}`
     ),
     approfondir_en: polishDiamondText(
       `${DIAMOND_DEEP_HEADINGS_EN[0]}\n\n` +
