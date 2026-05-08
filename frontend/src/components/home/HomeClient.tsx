@@ -356,27 +356,10 @@ function ShareOptions({ lang }: { lang: 'FR' | 'EN' }) {
     if (typeof window !== 'undefined') setUrl(window.location.href)
   }, [])
 
-  const text = encodeURIComponent(lang === 'FR' ? 'Situation Card IAAA+' : 'IAAA+ Situation Card')
-  const encodedUrl = encodeURIComponent(url)
-  const links = [
-    { label: 'X', href: `https://twitter.com/intent/tweet?text=${text}&url=${encodedUrl}` },
-    { label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
-    { label: 'LinkedIn', href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}` },
-    { label: 'WhatsApp', href: `https://api.whatsapp.com/send?text=${text}%20${encodedUrl}` },
-  ]
-
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
       <button type="button" onClick={() => navigator.clipboard?.writeText(url).catch(() => {})} style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '6px 9px', fontSize: 12, cursor: 'pointer' }}>
         {lang === 'FR' ? 'Copier le lien' : 'Copy link'}
-      </button>
-      {links.map((link) => (
-        <a key={link.label} href={link.href} target="_blank" rel="noreferrer" style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '6px 9px', fontSize: 12, textDecoration: 'none' }}>
-          {link.label}
-        </a>
-      ))}
-      <button type="button" onClick={() => navigator.clipboard?.writeText(url).catch(() => {})} style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '6px 9px', fontSize: 12, cursor: 'pointer' }}>
-        Instagram
       </button>
     </div>
   )
