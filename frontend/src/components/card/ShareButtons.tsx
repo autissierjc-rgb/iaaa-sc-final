@@ -3,8 +3,8 @@
 /**
  * IAAA · ShareButtons V2
  *
- * Partage d'une Situation Card sur :
- *   LinkedIn, X, WhatsApp, Telegram, Facebook, Copy link
+ * Partage d'une Situation Card :
+ *   boutons conserves, connexion aux reseaux sociaux coupee.
  *
  * Pas d'SDK externe — URL schemes natifs uniquement.
  * S'active après sauvegarde de la carte (shareUrl non null).
@@ -18,41 +18,9 @@ interface Props {
   insight?: string
 }
 
-export default function ShareButtons({ url, title, insight }: Props) {
+export default function ShareButtons({ url }: Props) {
   const [copied, setCopied] = useState(false)
-
-  const shareText = insight
-    ? `${title} — ${insight}`
-    : title
-
-  const enc  = encodeURIComponent
-  const NETWORKS = [
-    {
-      label: 'LinkedIn',
-      href:  `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`,
-      color: '#0A66C2',
-    },
-    {
-      label: 'X',
-      href:  `https://x.com/intent/tweet?url=${enc(url)}&text=${enc(shareText)}`,
-      color: '#000',
-    },
-    {
-      label: 'WhatsApp',
-      href:  `https://wa.me/?text=${enc(shareText + ' — ' + url)}`,
-      color: '#25D366',
-    },
-    {
-      label: 'Telegram',
-      href:  `https://t.me/share/url?url=${enc(url)}&text=${enc(shareText)}`,
-      color: '#2AABEE',
-    },
-    {
-      label: 'Facebook',
-      href:  `https://www.facebook.com/sharer/sharer.php?u=${enc(url)}`,
-      color: '#1877F2',
-    },
-  ]
+  const NETWORKS = ['LinkedIn', 'X', 'WhatsApp', 'Telegram', 'Facebook']
 
   async function handleCopy() {
     try {
@@ -102,19 +70,19 @@ export default function ShareButtons({ url, title, insight }: Props) {
           {copied ? '✓ Copié' : '⬡ Lien'}
         </button>
 
-        {/* Social networks */}
-        {NETWORKS.map(({ label, href }) => (
-          <a
+        {/* Social labels: external network connection disabled. */}
+        {NETWORKS.map((label) => (
+          <button
             key={label}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
+            type="button"
+            onClick={handleCopy}
+            title="Réseau social désactivé : copie du lien uniquement"
             style={btnStyle}
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-gold-medium)' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)';   e.currentTarget.style.borderColor = 'var(--border-gold-subtle)' }}
           >
             {label}
-          </a>
+          </button>
         ))}
 
       </div>

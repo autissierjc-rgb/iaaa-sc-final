@@ -351,33 +351,30 @@ function ForceLines({ scores, lang }: {
 
 function ShareOptions({ lang }: { lang: 'FR' | 'EN' }) {
   const [url, setUrl] = useState('')
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') setUrl(window.location.href)
   }, [])
 
-  const text = encodeURIComponent(lang === 'FR' ? 'Situation Card IAAA+' : 'IAAA+ Situation Card')
-  const encodedUrl = encodeURIComponent(url)
-  const links = [
-    { label: 'X', href: `https://twitter.com/intent/tweet?text=${text}&url=${encodedUrl}` },
-    { label: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
-    { label: 'LinkedIn', href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}` },
-    { label: 'WhatsApp', href: `https://api.whatsapp.com/send?text=${text}%20${encodedUrl}` },
-  ]
+  const links = ['X', 'Facebook', 'LinkedIn', 'WhatsApp', 'Instagram']
+
+  function copyShareUrl() {
+    navigator.clipboard?.writeText(url).catch(() => {})
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1600)
+  }
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-      <button type="button" onClick={() => navigator.clipboard?.writeText(url).catch(() => {})} style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '6px 9px', fontSize: 12, cursor: 'pointer' }}>
-        {lang === 'FR' ? 'Copier le lien' : 'Copy link'}
+      <button type="button" onClick={copyShareUrl} style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '6px 9px', fontSize: 12, cursor: 'pointer' }}>
+        {copied ? (lang === 'FR' ? 'Lien copié' : 'Link copied') : (lang === 'FR' ? 'Copier le lien' : 'Copy link')}
       </button>
-      {links.map((link) => (
-        <a key={link.label} href={link.href} target="_blank" rel="noreferrer" style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '6px 9px', fontSize: 12, textDecoration: 'none' }}>
-          {link.label}
-        </a>
+      {links.map((label) => (
+        <button key={label} type="button" onClick={copyShareUrl} title={lang === 'FR' ? 'Réseau social désactivé : copie du lien uniquement' : 'Social sharing disabled: copies link only'} style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '6px 9px', fontSize: 12, cursor: 'pointer' }}>
+          {label}
+        </button>
       ))}
-      <button type="button" onClick={() => navigator.clipboard?.writeText(url).catch(() => {})} style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '6px 9px', fontSize: 12, cursor: 'pointer' }}>
-        Instagram
-      </button>
     </div>
   )
 }
