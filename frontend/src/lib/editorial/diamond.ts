@@ -878,12 +878,19 @@ export function buildGeneralDiamondDeepFallback({
     ? concreteTheatre.anchors.slice(0, 10)
     : concreteAnchors(situation, arbre)
   const anchorLine = readableList(
-    anchors.slice(0, 5),
+    anchors.filter((item) => !/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+\d{1,2}\s+\w+\s+\d{4}|\bGMT\b|\d{1,2}\s*:\s*\d{2}\s*:\s*\d{2}/i.test(item)).slice(0, 5),
     firstUseful(
       [arbre?.acteurs?.[0], arbre?.forces?.[0], sc?.submitted_situation_fr, situation],
       'les acteurs et faits déjà identifiés dans la situation'
     )
   )
+  const situatedActors = concreteList(concreteTheatre?.actors, anchorLine, 5)
+  const situatedInstitutions = concreteList(concreteTheatre?.institutions, 'les institutions, règles ou cadres concernés', 4)
+  const situatedProcedures = concreteList(concreteTheatre?.procedures, 'les décisions, procédures ou gestes qui donnent prise à la situation', 4)
+  const situatedMechanisms = concreteList(concreteTheatre?.mechanisms, 'les mécanismes concrets encore à préciser', 5)
+  const situatedThresholds = concreteList(concreteTheatre?.thresholds, 'le seuil où une parole, un coût ou un blocage devient observable', 5)
+  const situatedEvidence = concreteList(concreteTheatre?.evidence_to_watch, 'les traces vérifiables qui permettraient de trancher', 5)
+  const situatedMissing = concreteList(concreteTheatre?.missing_anchors, 'les acteurs, règles, dates ou preuves qui manquent encore', 4)
   const contradiction = firstUseful(
     [sc?.asymmetry_fr, arbre?.load_bearing_contradiction, sc?.insight_fr],
     'l’écart entre ce que la situation affiche et ce qu’elle ne parvient plus à protéger'
@@ -925,17 +932,17 @@ export function buildGeneralDiamondDeepFallback({
   return {
     approfondir_fr: polishDiamondText(
       `${DIAMOND_DEEP_HEADINGS_FR[0]}\n\n` +
-      `Le cœur concret de la situation se concentre autour de : ${anchorLine}. ${realTheatre(situation, scope)} ${mechanism} La question n’est donc pas seulement ce qui est annoncé, mais ce que cette configuration rend désormais possible, impossible ou coûteux.\n\n` +
+      `${capitalizeFirst(situation.replace(/[.;:]+$/g, ''))} doit être lu à partir de son théâtre réel, pas depuis une formule générale. Les éléments à tenir au centre sont ${situatedActors}. La première tâche est de distinguer ce qui est établi, ce qui est plausible, ce qui reste supposé et quelle preuve permettrait de trancher.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[1]}\n\n` +
-      `Ce qui tient encore, c’est la possibilité de contenir la tension dans un cadre lisible : une décision, une médiation, un rôle, un calendrier ou une limite acceptée. Les contraintes à traiter sont concrètes : ${constraints}. La stabilisation ne viendrait pas d’un retour magique au calme ; elle demanderait un mécanisme observable : ${stabilization}\n\n` +
+      `Ce qui tient encore, ce sont les cadres qui empêchent la situation de devenir purement narrative : ${situatedInstitutions}. Ils ne suffisent pas à conclure, mais ils disent où regarder : ${situatedProcedures}. Une lecture solide doit montrer comment ces cadres transforment, ou non, une hypothèse en acte réel.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[2]}\n\n` +
-      `Ce qui l’affaiblit, c’est l’asymétrie entre l’image que la situation peut encore donner et le coût qu’elle commence à produire : ${contradiction}. Le danger apparaît quand cette tension cesse d’être seulement racontée et devient visible dans un acte, une perte, un retard, un refus ou une décision publique.\n\n` +
+      `Ce qui l’affaiblit, c’est le risque de confondre une lecture plausible avec une preuve. ${sentence(contradiction)} Les points à éprouver sont ${situatedMechanisms}, parce que ce sont eux qui peuvent donner une forme concrète à ce qui resterait sinon une impression ou un récit.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[3]}\n\n` +
-      `L’escalade n’a pas besoin d’un événement spectaculaire. Elle commence quand un fait limité oblige quelqu’un à répondre publiquement : ${keySignal}. Dans ce scénario, ${escalation}\n\n` +
+      `L’escalade commence quand l’un des éléments situés change de registre : déclaration, décision, refus, procédure, déplacement de calendrier, mobilisation ou coût assumé. Le signal utile n’est pas une formule abstraite ; il doit apparaître dans ${situatedEvidence}.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[4]}\n\n` +
-      `La bascule se produit si la vulnérabilité cesse d’être contenue : ${vulnerability}. ${shift} À ce moment-là, la question n’est plus de savoir si la pression augmente ; elle est de savoir qui perd la capacité de tenir son rôle, son récit ou sa marge d’action.\n\n` +
+      `La bascule se produit lorsque ${situatedThresholds}. ${sentence(vulnerability)} À ce moment-là, la question n’est plus seulement ce qui est probable ; elle devient : qui peut agir, qui peut bloquer, et quelle trace ferme les contre-hypothèses.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[5]}\n\n` +
-      `Les signaux utiles doivent être observables : ${channels}. Il faut surtout surveiller ${uncertainties}. VI doit alors devenir une enquête : quelle absence peut renverser la lecture, et quelle preuve permettrait de la vérifier ? Le point clé reste simple : la situation bascule lorsque ce qui pouvait rester ambigu devient une décision, un coût ou un seuil que les acteurs ne peuvent plus éviter.`
+      `Il faut surveiller ${situatedEvidence}. L’incertitude utile n’est pas une liste générale ; elle porte sur ${situatedMissing}. La bonne enquête consiste à demander quelle absence peut vraiment renverser la lecture, qui peut la confirmer, et quel document, acte, témoignage, chiffre ou geste la rendrait vérifiable.`
     ),
     approfondir_en: polishDiamondText(
       `${DIAMOND_DEEP_HEADINGS_EN[0]}\n\n` +
