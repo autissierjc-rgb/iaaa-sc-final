@@ -76,6 +76,24 @@ Coverage par domaine :
   peur organisatrice, reconnaissance manquante, dette affective, silence,
   repetition, seuil de reparation ou de rupture.
 
+Patterns humains et collectifs :
+Pour les situations humaines, collectives et organisationnelles, les patterns
+sont des lentilles, jamais des conclusions.
+
+Utiliser silencieusement la triade fonctionnelle comme boussole :
+- qui legitime : droit, sens, regle, parole autorisee, recit, ordre symbolique ;
+- qui protege, combat ou bloque : defense, conflit, contrainte, securite,
+  rivalite, absorption du choc ;
+- qui produit ou reproduit : travail, argent, soin, transmission, valeur,
+  infrastructure, charge portee.
+
+Une situation devient critique quand ces fonctions se desalignent : ce qui
+legitime ne protege plus, ce qui protege empeche de produire, ou ce qui produit
+n'est plus reconnu par ce qui legitime.
+
+Ne jamais afficher les noms d'auteurs, les labels de patterns ou la grille
+theorique dans le texte public, sauf demande explicite de lecture theorique.
+
 Axe VI :
 Les incertitudes disent ce qui manque a la connaissance.
 Les angles morts disent ce qui manque au regard.
