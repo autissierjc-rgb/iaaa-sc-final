@@ -95,6 +95,9 @@ const EXAMPLES = [
   "Mon fils de 14 ans est passionne par la peche a la carpe, comment reagir apres son retrait dans la voiture ?",
 ]
 
+const GENERATE_V2_TIMEOUT_MS = 60000
+const SLOW_REQUEST_NOTICE_MS = 12000
+
 function panelStyle(): React.CSSProperties {
   return {
     background: '#fff',
@@ -158,7 +161,10 @@ export default function GenerateV2Tester() {
     setEvidenceSearchRequested(false)
     setStatusMessage('Appel de /api/generate-v2 en cours...')
     const controller = new AbortController()
-    const timeout = window.setTimeout(() => controller.abort(), 25000)
+    const slowNotice = window.setTimeout(() => {
+      setStatusMessage('Appel toujours en cours : attente du LLM referent ou du serveur local...')
+    }, SLOW_REQUEST_NOTICE_MS)
+    const timeout = window.setTimeout(() => controller.abort(), GENERATE_V2_TIMEOUT_MS)
 
     try {
       const result = await fetch('/api/generate-v2', {
@@ -177,13 +183,14 @@ export default function GenerateV2Tester() {
       }
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === 'AbortError') {
-        setError('Timeout generate-v2 : la route n a pas repondu en moins de 25 secondes.')
+        setError('Timeout generate-v2 : la route n a pas repondu en moins de 60 secondes.')
         setStatusMessage('Timeout.')
       } else {
         setError(caught instanceof Error ? caught.message : 'Erreur inconnue')
         setStatusMessage('Erreur reseau ou JSON.')
       }
     } finally {
+      window.clearTimeout(slowNotice)
       window.clearTimeout(timeout)
       setLoading(false)
     }
