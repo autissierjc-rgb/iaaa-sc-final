@@ -10,6 +10,7 @@ import { computeStateV2 } from '@/lib/scoringV2'
 import { buildConcreteTheatre } from '@/lib/theatre'
 import { routeExpertisesMetiers } from '@/lib/expertisesMetiers'
 import { runContractQualityGate } from '@/lib/quality'
+import { buildGenerationEvent } from '@/lib/archive'
 import type { AstrolabeBranchV2, RadarScoreV2 } from '@/lib/contracts'
 
 export const dynamic = 'force-dynamic'
@@ -111,6 +112,16 @@ export async function POST(request: NextRequest) {
     trace_notes: ['dry_run_generate_v2=true'],
   })
   const quality = runContractQualityGate({ interpretation, theatre, scoring, inquiry })
+  const generation_archive = buildGenerationEvent({
+    route: '/api/generate-v2',
+    raw_input: rawInput,
+    interpretation,
+    dialogue,
+    resources,
+    quality,
+    latency_ms: Date.now() - started,
+    tension_family: expertises.domain_playbook.id,
+  })
 
   const pipeline_trace = buildPipelineRunTrace({
     id: `generate-v2-${Date.now()}`,
@@ -146,6 +157,7 @@ export async function POST(request: NextRequest) {
     scoring,
     inquiry,
     quality,
+    generation_archive,
     pipeline_trace,
   })
 }

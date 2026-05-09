@@ -25,7 +25,8 @@ type GenerateV2Response = {
   }
   resources?: {
     status?: string
-    sources?: unknown[]
+    resources?: unknown[]
+    public_sources?: unknown[]
     needs_web?: boolean
   }
   theatre?: {
@@ -52,6 +53,24 @@ type GenerateV2Response = {
       message: string
       field?: string
     }>
+  }
+  generation_archive?: {
+    event?: {
+      privacy_mode?: string
+      raw_input_hash?: string
+      input_chars?: number
+      resources_count?: number
+      generation_status?: string
+      latency_ms?: number
+      domain?: string
+      intent?: string
+    }
+    archive_decision?: {
+      store_event?: boolean
+      store_snapshot?: boolean
+      privacy_mode?: string
+      reason?: string
+    }
   }
   pipeline_trace?: {
     total_duration_ms?: number
@@ -294,7 +313,17 @@ export default function GenerateV2Tester() {
             <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>resources</p>
             <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{response.resources?.status ?? 'non renseigne'}</h3>
             <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11 }}>
-              sources: {response.resources?.sources?.length ?? 0}
+              sources: {response.resources?.public_sources?.length ?? response.resources?.resources?.length ?? 0}
+            </p>
+          </div>
+
+          <div style={miniCardStyle()}>
+            <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>archive</p>
+            <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>
+              {response.generation_archive?.archive_decision?.privacy_mode ?? 'non renseigne'}
+            </h3>
+            <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11 }}>
+              snapshot: {response.generation_archive?.archive_decision?.store_snapshot ? 'oui' : 'non'}
             </p>
           </div>
         </div>
@@ -356,6 +385,35 @@ export default function GenerateV2Tester() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {response?.generation_archive?.event && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>generation event</p>
+          <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
+            Trace mesurable sans contenu brut : hash input, taille, domaine, intention, ressources, qualite et latence.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginTop: 10 }}>
+            {[
+              ['mode', response.generation_archive.event.privacy_mode],
+              ['hash', response.generation_archive.event.raw_input_hash],
+              ['input', `${response.generation_archive.event.input_chars ?? 0} chars`],
+              ['sources', String(response.generation_archive.event.resources_count ?? 0)],
+              ['status', response.generation_archive.event.generation_status],
+              ['latence', `${response.generation_archive.event.latency_ms ?? 0} ms`],
+            ].map(([label, value]) => (
+              <div key={label} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 10, background: '#fff' }}>
+                <p style={{ margin: 0, color: '#8B8174', fontFamily: 'monospace', fontSize: 10 }}>{label}</p>
+                <p style={{ margin: '5px 0 0', color: '#1A2E5A', fontSize: 12 }}>{value}</p>
+              </div>
+            ))}
+          </div>
+          {response.generation_archive.archive_decision?.reason && (
+            <p style={{ margin: '10px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+              {response.generation_archive.archive_decision.reason}
+            </p>
+          )}
         </div>
       )}
 
