@@ -111,6 +111,15 @@ export const V2_FOUNDATION_BRICKS: V2FoundationBrick[] = [
     note: 'Autorise un snapshot prive admin au lancement pour apprendre des vraies questions/reponses.',
   },
   {
+    id: 'reaction-telemetry',
+    label: 'Reaction telemetry',
+    layer: 'archive / quality',
+    status: 'passive',
+    commit: 'pending',
+    files: ['src/lib/contracts/generationArchive.ts', 'src/lib/archive/UserReactionTelemetry.ts'],
+    note: 'Classe les reactions utilisateur par couche canonique, type de reaction, intensite et termes indicateurs sans stocker le texte brut par defaut.',
+  },
+  {
     id: 'generate-v2-dry-run',
     label: 'Route generate-v2 dry run',
     layer: 'api / pipeline',

@@ -55,6 +55,48 @@ export type GeneratedCardSnapshot = {
   expires_at?: string
 }
 
+export type UserReactionLayer =
+  | 'interpretation'
+  | 'dialogue'
+  | 'safety'
+  | 'resources'
+  | 'expertisesMetiers'
+  | 'theatre'
+  | 'scoring'
+  | 'writing'
+  | 'quality'
+  | 'archive'
+  | 'share'
+  | 'UI/mobile'
+  | 'admin/cockpit'
+  | 'recherchePlus'
+  | 'performance'
+
+export type UserReactionKind =
+  | 'confusion'
+  | 'correction'
+  | 'approval'
+  | 'frustration'
+  | 'surprise_positive'
+  | 'request_deeper'
+  | 'request_action'
+  | 'bug_report'
+
+export type UserReactionEvent = {
+  id: string
+  created_at: string
+  generation_event_id?: string
+  session_id?: string
+  user_id?: string
+  message_hash: string
+  message_chars: number
+  probable_layers: UserReactionLayer[]
+  reaction_kind: UserReactionKind
+  intensity: 1 | 2 | 3
+  evidence_terms: string[]
+  privacy_mode: 'metadata_only' | 'private_learning_snapshot'
+}
+
 export type GenerationArchiveDecision = {
   store_event: boolean
   store_snapshot: boolean

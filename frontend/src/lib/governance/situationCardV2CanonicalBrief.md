@@ -461,6 +461,58 @@ Regles :
   transformer SC en outil de surveillance ;
 - garder les cartes sauvegardees par l'utilisateur dans un flux distinct.
 
+### Reaction telemetry
+
+La V2 doit aussi mesurer les reactions utilisateur apres une generation.
+
+Objectif :
+
+```txt
+Comprendre ce qui fait reagir, ou, et pourquoi.
+```
+
+Une reaction utilisateur doit etre rattachee, quand c'est possible, a une ou
+plusieurs couches canoniques :
+
+- interpretation ;
+- dialogue ;
+- resources ;
+- theatre ;
+- scoring ;
+- writing ;
+- quality ;
+- recherchePlus ;
+- UI/mobile ;
+- share ;
+- performance ;
+- safety.
+
+Elle doit aussi qualifier le type de reaction :
+
+- confusion ;
+- correction ;
+- approval ;
+- frustration ;
+- surprise_positive ;
+- request_deeper ;
+- request_action ;
+- bug_report.
+
+Regle de confidentialite :
+
+```txt
+Par defaut, stocker metadata seulement : hash du message, taille, couches
+probables, type de reaction, intensite et termes indicateurs.
+Le texte brut ne peut etre conserve qu'en private_learning_snapshot.
+```
+
+Utilite cockpit :
+
+```txt
+Sur 100 reactions, combien concernent la formalisation, le hors-sol, les
+ressources, le scoring, le diamant tranchant, Recherche+ ou l'interface ?
+```
+
 Mode lancement :
 
 ```txt

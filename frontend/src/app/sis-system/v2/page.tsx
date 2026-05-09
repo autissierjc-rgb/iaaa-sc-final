@@ -13,6 +13,7 @@ import {
   summarizePipelineRun,
 } from '@/lib/pipeline/PipelineTelemetry'
 import { buildCalibrationEvidence } from '@/lib/quality/CalibrationEvidence'
+import { buildUserReactionEvent } from '@/lib/archive'
 
 const NEXT_STEPS = [
   'Brancher une route V2 separee, sans toucher a /sis.',
@@ -61,6 +62,16 @@ export default function SisSystemV2Page() {
     has_diamond_sentence: true,
     has_observable_signal: true,
   })
+  const sampleReactions = [
+    "Le header ne formalise pas la question.",
+    "Waouh, le diamant tranchant touche juste.",
+    "Les ressources sont trop pauvres pour ce sujet.",
+    "Pourquoi le scoring met 49 alors que la crise est forte ?",
+  ].map((message) => buildUserReactionEvent({ message }))
+  const reactionLayerCounts = sampleReactions.reduce<Record<string, number>>((acc, reaction) => {
+    for (const layer of reaction.probable_layers) acc[layer] = (acc[layer] ?? 0) + 1
+    return acc
+  }, {})
 
   return (
     <main style={{ minHeight: '100vh', background: '#F5F0E8', color: '#1A2E5A', padding: '28px' }}>
@@ -127,6 +138,41 @@ export default function SisSystemV2Page() {
                   Budget {stage.latency_budget_ms} ms · {stage.blocks_generation ? 'bloquant' : 'non bloquant'}
                 </p>
               </article>
+            ))}
+          </div>
+        </section>
+
+        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: 760 }}>
+              <h2 style={{ margin: 0, fontSize: 15 }}>Reaction telemetry</h2>
+              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
+                Fondation passive : classer les reactions du chat par couche canonique, type, intensite et termes
+                indicateurs, sans conserver le texte brut par defaut.
+              </p>
+            </div>
+            <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleReactions.length}</strong> exemples</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{Object.keys(reactionLayerCounts).length}</strong> couches touchees</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10, marginTop: 16 }}>
+            {sampleReactions.map((reaction) => (
+              <div key={reaction.id} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>
+                  {reaction.reaction_kind} · intensite {reaction.intensity}
+                </p>
+                <p style={{ margin: '7px 0 0', color: '#1A2E5A', fontSize: 12 }}>
+                  couches : {reaction.probable_layers.join(', ')}
+                </p>
+                <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                  termes : {reaction.evidence_terms.length > 0 ? reaction.evidence_terms.join(', ') : 'aucun terme direct'}
+                </p>
+                <p style={{ margin: '7px 0 0', color: '#8B8174', fontFamily: 'monospace', fontSize: 10 }}>
+                  hash {reaction.message_hash} · {reaction.message_chars} chars
+                </p>
+              </div>
             ))}
           </div>
         </section>
