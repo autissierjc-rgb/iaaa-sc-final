@@ -184,6 +184,19 @@ type GenerateV2Response = {
   message?: string
 }
 
+type RecherchePlusResult = NonNullable<GenerateV2Response['recherche_plus']> & {
+  findings?: Array<{
+    target_blind_spot: string
+    status: string
+    channel: string
+    source_title: string
+    retrieved_at: string
+    what_it_suggests: string
+    what_it_does_not_prove: string
+    next_verification_step: string
+  }>
+}
+
 const EXAMPLES = [
   'Trump peut-il contester les resultats des elections de mi-mandat ?',
   "Que fait la compagnie FlexUp et qu'en penser pour eventuellement la rejoindre avec ma startup ?",
@@ -247,6 +260,9 @@ export default function GenerateV2Tester() {
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string>('Pret.')
   const [evidenceSearchRequested, setEvidenceSearchRequested] = useState(false)
+  const [recherchePlusLoading, setRecherchePlusLoading] = useState(false)
+  const [recherchePlusResult, setRecherchePlusResult] = useState<RecherchePlusResult | null>(null)
+  const [recherchePlusError, setRecherchePlusError] = useState<string | null>(null)
 
   const firstBlindSpots = useMemo(
     () => response?.inquiry?.blind_spots?.slice(0, 3) ?? [],
@@ -258,6 +274,8 @@ export default function GenerateV2Tester() {
     setError(null)
     setResponse(null)
     setEvidenceSearchRequested(false)
+    setRecherchePlusResult(null)
+    setRecherchePlusError(null)
     setStatusMessage('Appel de /api/generate-v2 en cours...')
     const controller = new AbortController()
     const slowNotice = window.setTimeout(() => {
@@ -296,6 +314,37 @@ export default function GenerateV2Tester() {
       window.clearTimeout(slowNotice)
       window.clearTimeout(timeout)
       setLoading(false)
+    }
+  }
+
+  async function runRecherchePlusPreview() {
+    if (!response?.recherche_plus) return
+
+    setEvidenceSearchRequested(true)
+    setRecherchePlusLoading(true)
+    setRecherchePlusError(null)
+
+    try {
+      const result = await fetch('/api/recherche-plus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contract: response.recherche_plus,
+          mode: 'simulated',
+        }),
+      })
+      const payload = await result.json()
+
+      if (!result.ok || !payload?.ok) {
+        setRecherchePlusError(payload?.message ?? payload?.error ?? 'Erreur Recherche+')
+        return
+      }
+
+      setRecherchePlusResult(payload.recherche_plus)
+    } catch (caught) {
+      setRecherchePlusError(caught instanceof Error ? caught.message : 'Erreur Recherche+ inconnue')
+    } finally {
+      setRecherchePlusLoading(false)
     }
   }
 
@@ -926,15 +975,16 @@ export default function GenerateV2Tester() {
             <button
               type="button"
               data-testid="generate-v2-evidence-search-button"
-              onClick={() => setEvidenceSearchRequested(true)}
+              onClick={runRecherchePlusPreview}
+              disabled={!response?.recherche_plus || recherchePlusLoading}
               style={{
                 border: '1px solid #C8951A',
                 color: evidenceSearchRequested ? '#fff' : '#1A2E5A',
-                background: evidenceSearchRequested ? '#1A2E5A' : '#fff',
+                background: recherchePlusLoading ? '#8B8174' : evidenceSearchRequested ? '#1A2E5A' : '#fff',
                 borderRadius: 8,
                 padding: '10px 14px',
                 fontSize: 13,
-                cursor: 'pointer',
+                cursor: recherchePlusLoading ? 'wait' : 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 9,
@@ -977,14 +1027,22 @@ export default function GenerateV2Tester() {
                   }}
                 />
               </span>
-              Lancer Recherche+
+              {recherchePlusLoading ? 'Recherche+ en cours' : 'Lancer Recherche+'}
             </button>
             <span style={{ marginLeft: 10, color: '#8B8174', fontSize: 12 }}>
-              {evidenceSearchRequested
-                ? 'Radar ouvert : cette brique ne lance pas encore d appel web.'
+              {recherchePlusResult
+                ? `${recherchePlusResult.findings?.length ?? 0} piste(s) simulee(s) retournee(s).`
+                : evidenceSearchRequested
+                  ? 'Radar ouvert : simulation sans appel web.'
                 : 'future enquete web / sources, separee de SC, Lecture et Approfondir'}
             </span>
           </div>
+
+          {recherchePlusError && (
+            <p style={{ margin: '10px 0 0', color: '#B23A3A', fontSize: 12 }}>
+              {recherchePlusError}
+            </p>
+          )}
 
           {evidenceSearchRequested && response?.recherche_plus?.targets && response.recherche_plus.targets.length > 0 && (
             <div style={{ marginTop: 12, ...miniCardStyle() }}>
@@ -1013,6 +1071,36 @@ export default function GenerateV2Tester() {
                         {target.safety_note}
                       </p>
                     )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {recherchePlusResult?.findings && recherchePlusResult.findings.length > 0 && (
+            <div style={{ marginTop: 12, ...miniCardStyle() }}>
+              <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+                Recherche+ · findings simules
+              </p>
+              <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
+                Resultats typés pour tester le flux. Ils ne prouvent rien encore et restent separes de la reponse publique.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10, marginTop: 10 }}>
+                {recherchePlusResult.findings.map((finding) => (
+                  <div key={`${finding.target_blind_spot}-${finding.status}`} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 10, background: '#fff' }}>
+                    <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>
+                      {finding.status} · {finding.channel}
+                    </p>
+                    <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 13 }}>{finding.source_title}</h3>
+                    <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                      {finding.what_it_suggests}
+                    </p>
+                    <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                      Ne prouve pas : {finding.what_it_does_not_prove}
+                    </p>
+                    <p style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 11, lineHeight: 1.45 }}>
+                      Suite : {finding.next_verification_step}
+                    </p>
                   </div>
                 ))}
               </div>
