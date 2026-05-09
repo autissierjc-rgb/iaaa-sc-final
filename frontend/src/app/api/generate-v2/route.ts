@@ -11,6 +11,8 @@ import { buildConcreteTheatre } from '@/lib/theatre'
 import { routeExpertisesMetiers } from '@/lib/expertisesMetiers'
 import { runContractQualityGate } from '@/lib/quality'
 import { buildGenerationEvent } from '@/lib/archive'
+import { composeDiamondWriting } from '@/lib/writing'
+import { runQualityGate } from '@/lib/quality'
 import type { AstrolabeBranchV2, RadarScoreV2 } from '@/lib/contracts'
 
 export const dynamic = 'force-dynamic'
@@ -115,7 +117,40 @@ export async function POST(request: NextRequest) {
     radar: buildDraftRadar(counts),
     trace_notes: ['dry_run_generate_v2=true'],
   })
-  const quality = runContractQualityGate({ interpretation, theatre, scoring, inquiry })
+  const writing = composeDiamondWriting({
+    interpretation,
+    safety,
+    expertises_metiers: expertises,
+    theatre,
+    scoring,
+  })
+  const contractQuality = runContractQualityGate({ interpretation, theatre, scoring, inquiry })
+  const writingQuality = runQualityGate({ interpretation, theatre, scoring, writing })
+  const quality = {
+    ...writingQuality,
+    ok: contractQuality.ok && writingQuality.ok,
+    issues: [...contractQuality.issues, ...writingQuality.issues],
+    requires_section_regeneration:
+      contractQuality.requires_section_regeneration || writingQuality.requires_section_regeneration,
+    sections_to_regenerate: Array.from(new Set([
+      ...contractQuality.sections_to_regenerate,
+      ...writingQuality.sections_to_regenerate,
+    ])),
+    trace: {
+      ...writingQuality.trace,
+      status: (!contractQuality.ok || !writingQuality.ok)
+        ? 'error' as const
+        : (contractQuality.issues.length + writingQuality.issues.length > 0)
+          ? 'partial' as const
+          : 'ok' as const,
+      notes: [
+        ...(contractQuality.trace.notes ?? []),
+        ...(writingQuality.trace.notes ?? []),
+        `contract_issues=${contractQuality.issues.length}`,
+        `writing_issues=${writingQuality.issues.length}`,
+      ],
+    },
+  }
   const generation_archive = buildGenerationEvent({
     route: '/api/generate-v2',
     raw_input: rawInput,
@@ -139,6 +174,7 @@ export async function POST(request: NextRequest) {
       { stage_id: 'theatre', duration_ms: theatre.trace.duration_ms ?? 0, outcome: theatre.trace.status === 'ok' ? 'ok' : 'warning' },
       { stage_id: 'blind-spots', duration_ms: inquiry.trace.duration_ms ?? 0, outcome: inquiry.trace.status === 'ok' ? 'ok' : 'warning' },
       { stage_id: 'scoring', duration_ms: scoring.trace.duration_ms ?? 0, outcome: scoring.trace.status === 'ok' ? 'ok' : 'warning' },
+      { stage_id: 'writing', duration_ms: writing.trace.duration_ms ?? 0, outcome: writing.trace.status === 'ok' ? 'ok' : 'warning' },
       {
         stage_id: 'quality',
         duration_ms: quality.trace.duration_ms ?? 0,
@@ -160,6 +196,7 @@ export async function POST(request: NextRequest) {
     theatre,
     scoring,
     inquiry,
+    writing,
     quality,
     generation_archive,
     pipeline_trace,

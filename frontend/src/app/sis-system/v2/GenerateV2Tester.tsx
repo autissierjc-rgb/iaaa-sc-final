@@ -72,6 +72,27 @@ type GenerateV2Response = {
       reason?: string
     }
   }
+  writing?: {
+    situation_card?: {
+      title_fr?: string
+      insight_fr?: string
+      main_vulnerability_fr?: string
+      key_signal_fr?: string
+    }
+    lecture?: {
+      text_fr?: string
+      word_count_fr?: number
+    }
+    diamond_sentences?: Array<{
+      text_fr: string
+      role: string
+    }>
+    probability_assessments?: Array<{
+      probability_label_fr?: string
+      claim_fr?: string
+      confidence?: number
+    }>
+  }
   pipeline_trace?: {
     total_duration_ms?: number
     blocking_failure?: boolean
@@ -427,6 +448,41 @@ export default function GenerateV2Tester() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {response?.writing?.situation_card && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>writing contract</p>
+          <h3 style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 14 }}>
+            {response.writing.situation_card.title_fr}
+          </h3>
+          <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
+            {response.writing.situation_card.insight_fr}
+          </p>
+          <p style={{ margin: '10px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.55 }}>
+            <strong>Vulnerabilite :</strong> {response.writing.situation_card.main_vulnerability_fr}
+          </p>
+          <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.55 }}>
+            <strong>Signal :</strong> {response.writing.situation_card.key_signal_fr}
+          </p>
+          {response.writing.diamond_sentences?.[0]?.text_fr && (
+            <p style={{ margin: '10px 0 0', color: '#C8951A', fontSize: 13, lineHeight: 1.45, fontStyle: 'italic' }}>
+              {response.writing.diamond_sentences[0].text_fr}
+            </p>
+          )}
+        </div>
+      )}
+
+      {response?.writing?.lecture?.text_fr && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>lecture minimale</p>
+          <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.6 }}>
+            {response.writing.lecture.text_fr}
+          </p>
+          <p style={{ margin: '8px 0 0', color: '#8B8174', fontSize: 11 }}>
+            {response.writing.lecture.word_count_fr ?? 0} mots
+          </p>
         </div>
       )}
 
