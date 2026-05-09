@@ -248,6 +248,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       diamond_sentence: {
         text_fr: diamondText,
         role: 'thesis',
+        style: 'diamant_tranchant',
         must_be_public: true,
       },
     },
@@ -255,11 +256,13 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       {
         text_fr: diamondText,
         role: 'thesis',
+        style: 'diamant_tranchant',
         must_be_public: true,
       },
       {
         text_fr: compactSentence(`Le point fragile est ${blindSpot}.`),
         role: 'vulnerability',
+        style: 'diamond',
         must_be_public: true,
       },
     ],
@@ -353,7 +356,7 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
     '- insight_fr : 2 phrases maximum ;',
     '- lecture_fr : 2 paragraphes courts maximum ;',
     '- approfondir_analysis_fr : 4 a 6 phrases ;',
-    '- diamond_sentence_fr : une phrase courte, dense et partageable.',
+    '- diamond_sentence_fr : diamant tranchant, une phrase courte, dense et partageable qui nomme la contradiction centrale sans prudence molle ni accusation gratuite.',
     '',
     'Retourne uniquement un JSON avec ces cles :',
     '{',
@@ -441,6 +444,7 @@ async function composeWithOpenAI(input: WritingEngineInput, local: WritingContra
         {
           text_fr: diamondText,
           role: 'thesis',
+          style: 'diamant_tranchant',
           must_be_public: true,
         },
         ...local.diamond_sentences.slice(1),

@@ -994,6 +994,40 @@ La redaction doit produire un effet diamant :
 - comprendre la bascule possible ;
 - savoir quoi observer.
 
+### Diamant tranchant
+
+La phrase diamant canonique doit etre un `diamant tranchant`.
+
+Elle ne doit pas etre prudente au point de devenir molle. Elle doit nommer la
+contradiction centrale avec nettete, sans sensationnalisme et sans depasser les
+preuves disponibles.
+
+Elle tranche la forme, pas la preuve :
+
+- elle condense la tension ;
+- elle nomme ce que le systeme tente de proteger ;
+- elle montre ce qui devient impossible a ignorer ;
+- elle transforme la prudence en precision, pas en hesitation.
+
+Exemples de ton :
+
+```txt
+Le groupe ne defend plus une decision ; il defend le droit de ne pas voir
+qu'elle echoue.
+
+L'organisation appelle prudence ce qui est devenu une strategie d'evitement.
+
+La vulnerabilite n'est plus l'erreur ; c'est l'interdiction implicite de la
+reconnaitre.
+```
+
+Garde-fou :
+
+```txt
+Diamant tranchant ne veut pas dire accusation gratuite.
+Il dit plus clairement ce que le theatre reel permet deja de soutenir.
+```
+
 La redaction diamant tient toujours deux plans :
 
 Fond :

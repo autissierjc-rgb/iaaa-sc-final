@@ -10,6 +10,7 @@ export type DiamondSentence = {
   text_fr: string
   text_en?: string
   role: DiamondSentenceRole
+  style?: 'diamond' | 'diamant_tranchant'
   must_be_public: boolean
 }
 
