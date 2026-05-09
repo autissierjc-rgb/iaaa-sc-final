@@ -162,14 +162,14 @@ export default function SisSystemV2Page() {
         <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
             <div style={{ maxWidth: 760 }}>
-              <h2 style={{ margin: 0, fontSize: 15 }}>Calibration diamant</h2>
+              <h2 style={{ margin: 0, fontSize: 15 }}>Exemple de calibration diamant</h2>
               <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
-                Le benchmark historique reste separe du scoring d etat. Il mesure si une carte produit un vrai effet
-                de lecture : insight, vulnerabilite, trajectoires, signal cle et utilite globale.
+                Bloc statique de reference. Il montre la grille historique, mais ne note pas encore la generation testee :
+                le vrai score sera branche lorsque WritingEngine produira SC, Lecture et Approfondir.
               </p>
             </div>
             <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
-              <div><strong style={{ color: '#1A2E5A' }}>{sampleCalibration.total} / 25</strong> exemple</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{sampleCalibration.total} / 25</strong> exemple statique</div>
               <div><strong style={{ color: '#1A2E5A' }}>{sampleCalibration.average}</strong> moyenne</div>
               <div><strong style={{ color: '#1A2E5A' }}>{sampleCalibration.verdict}</strong> verdict</div>
             </div>
