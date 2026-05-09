@@ -21,6 +21,42 @@ function joinVisible(items: string[], fallback: string): string {
   return items.length > 0 ? items.slice(0, 4).join(', ') : fallback
 }
 
+function normalizeAnchor(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function unique(items: string[]): string[] {
+  return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)))
+}
+
+function isPublicPlaceholder(item: string): boolean {
+  const normalized = normalizeAnchor(item)
+  return [
+    'acteurs directs',
+    'acteurs visibles',
+    'acteurs impliques',
+    'personnes impliquees',
+    'dirigeant ou candidat nomme',
+    'contraintes materielles',
+    'regles et institutions',
+    'recit dominant',
+    'sources externes',
+    'general analysis',
+    'general_analysis',
+    'understand situation',
+    'understand_situation',
+  ].includes(normalized)
+}
+
+function publicAnchors(items: string[], fallback: string, max = 4): string {
+  const cleaned = unique(items).filter((item) => !isPublicPlaceholder(item))
+  return (cleaned.length > 0 ? cleaned : [fallback]).slice(0, max).join(', ')
+}
+
 function namedAction(items: string[], fallback: string): string {
   return items.length > 0 ? items[0] : fallback
 }
@@ -74,10 +110,11 @@ function probabilityFromTheatre(theatre: ConcreteTheatreContract): ProbabilityAs
 export function composeDiamondWriting(input: WritingEngineInput): WritingContract {
   const started = Date.now()
   const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
-  const actors = joinVisible(input.theatre.actors, 'les acteurs directement impliques')
-  const institutions = joinVisible(input.theatre.institutions, 'les institutions concernees')
-  const evidence = joinVisible(input.expertises_metiers.evidence_to_seek, 'les preuves observables')
-  const blindSpot = joinVisible(input.expertises_metiers.blind_spots_to_test, 'ce qui manque au regard')
+  const title = input.interpretation.header_subject
+  const actors = publicAnchors(input.theatre.actors, 'les acteurs habilites')
+  const institutions = publicAnchors(input.theatre.institutions, 'les institutions concernees')
+  const evidence = publicAnchors(input.expertises_metiers.evidence_to_seek, 'une trace verifiable')
+  const blindSpot = publicAnchors(input.expertises_metiers.blind_spots_to_test, 'le relais qui transforme l hypothese en acte')
   const firstProcedure = namedAction(input.theatre.procedures, 'une procedure verifiable')
   const firstEvidence = namedAction(input.expertises_metiers.evidence_to_seek, 'une preuve publique')
   const tension = tensionLabel(input)
@@ -91,11 +128,31 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     ...input.scoring.scoring_warnings,
   ].filter((item): item is string => Boolean(item))
 
+  const scInsight = compactSentence(
+    `${subject} ne se tranche pas par une declaration seule. Le point decisif est le passage entre ${tension}, ${firstProcedure} et les leviers detenus par ${institutions}.`,
+    360,
+  )
+  const vulnerability = compactSentence(
+    `La vulnerabilite centrale est ${blindSpot} : sans ce relais, la situation reste une crainte ; avec lui, elle peut devenir un acte opposable.`,
+    320,
+  )
+  const asymmetry = compactSentence(
+    `${actors} rendent la tension visible, mais ${institutions} peuvent lui donner, ou lui refuser, une forme effective.`,
+  )
+  const keySignal = compactSentence(
+    `Signal cle : ${firstEvidence} reliant un acteur habilite, une regle et une consequence observable.`,
+  )
   const lecture = [
-    `${subject} met en jeu ${actors}, mais la decision se deplace surtout dans ${institutions}.`,
-    `La question utile est de separer la contestation visible de la capacite reelle a produire ${firstProcedure}.`,
-    `Le point fragile reste ${blindSpot} : sans ce lien, la lecture reste une hypothese a tester.`,
-    `Le signal utile serait ${firstEvidence} reliant un acteur habilite, une regle et une consequence observable.`,
+    `${subject} se joue comme un test de passage : une inquietude ou une hypothese devient serieuse seulement si elle rencontre ${institutions}.`,
+    `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
+    vulnerability,
+    keySignal,
+  ].join(' ')
+  const approfondirAnalysis = [
+    `Le fond de la situation tient a la transformation possible d un recit en procedure.`,
+    `Les acteurs visibles sont ${actors}, mais les points d appui sont ${institutions}.`,
+    `Ce qu il faut etablir n est pas seulement l intention, mais le lien entre ${firstProcedure}, ${evidence} et ${blindSpot}.`,
+    `La lecture reste donc prudente : ${probability.probability_label_fr.toLowerCase()}, tant que la preuve decisive manque.`,
   ].join(' ')
 
   return {
@@ -132,12 +189,12 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     ],
     probability_assessments: [probability],
     situation_card: {
-      title_fr: input.interpretation.header_subject,
+      title_fr: title,
       submitted_situation_fr: input.interpretation.situation_soumise,
-      insight_fr: compactSentence(lecture, 420),
-      main_vulnerability_fr: compactSentence(`La vulnerabilite centrale est ${blindSpot} : c est la zone ou une crainte peut, ou non, devenir un acte opposable.`),
-      asymmetry_fr: compactSentence(`${actors} rendent la tension visible, mais ${institutions} detiennent les leviers qui peuvent la bloquer ou la rendre effective.`),
-      key_signal_fr: compactSentence(`Signal cle : ${firstEvidence} relie un acteur habilite, une regle et une consequence observable.`),
+      insight_fr: scInsight,
+      main_vulnerability_fr: vulnerability,
+      asymmetry_fr: asymmetry,
+      key_signal_fr: keySignal,
     },
     trajectories: [
       {
@@ -164,12 +221,12 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       word_count_fr: countWords(lecture),
     },
     approfondir: {
-      analysis_fr: lecture,
+      analysis_fr: approfondirAnalysis,
       sections_fr: [
         {
           id: 'fond',
           title: 'Fond',
-          body: `Acteurs : ${actors}. Institutions : ${institutions}. Preuves a verifier : ${evidence}.`,
+          body: `La question porte sur une transformation : ce qui est dit ou redoute peut-il devenir une action reconnue par ${institutions} ? Les acteurs a suivre sont ${actors}.`,
         },
         {
           id: 'forme',
@@ -179,7 +236,12 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
         {
           id: 'probabilites',
           title: 'Probabilites',
-          body: `${probability.probability_label_fr} : ${probability.claim_fr}`,
+          body: `${probability.probability_label_fr} : ${probability.claim_fr} La preuve qui ferait changer le statut est ${firstEvidence}.`,
+        },
+        {
+          id: 'angles-morts',
+          title: 'Incertitudes / angles morts',
+          body: `A verifier : ${blindSpot}. Ces points doivent etre relies a ${evidence}, sans quoi ils restent des hypotheses.`,
         },
       ],
     },
