@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
   const interpretation = await interpretSituation({
     raw_input: rawInput,
-    mode: body.interpretation_mode ?? 'referent_llm',
+    mode: body.interpretation_mode ?? 'local_contract',
   })
   const dialogue = runDialogueGate({ interpretation })
   const safety = runRiskAdviceGuard({ interpretation })
