@@ -7,10 +7,12 @@ import type {
   SituationQuestionType,
 } from '../contracts'
 import { interpretRequestWithModel } from '../intent/modelIntentInterpreter'
+import { interpretRequest } from '../intent/interpretRequest'
 import type { InterpretedRequest, SituationDomain } from '../resources/resourceContract'
 
 export type InterpretationServiceInput = {
   raw_input: string
+  mode?: 'referent_llm' | 'local_contract'
   reference_model?: {
     provider: ReferenceModelProvider
     model: string
@@ -169,12 +171,16 @@ export async function interpretSituation(
 ): Promise<InterpretationContract> {
   const started = Date.now()
   const rawInput = input.raw_input.trim()
-  const interpreted = await interpretRequestWithModel(rawInput)
+  const localMode = input.mode === 'local_contract'
+  const interpreted = localMode ? interpretRequest(rawInput) : await interpretRequestWithModel(rawInput)
   const domain = mapDomain(interpreted.domain)
+  const referenceModel = localMode
+    ? { provider: 'local' as const, model: 'local-contract' }
+    : input.reference_model ?? DEFAULT_REFERENCE_MODEL
 
   return {
     raw_input: rawInput,
-    reference_model: input.reference_model ?? DEFAULT_REFERENCE_MODEL,
+    reference_model: referenceModel,
     intent: interpreted.intent_type as SituationIntent,
     domain,
     question_type: questionType(interpreted.question_type),
@@ -196,10 +202,14 @@ export async function interpretSituation(
       service: 'InterpretationService',
       version: 'v2-foundation',
       duration_ms: Date.now() - started,
-      model: input.reference_model?.model ?? DEFAULT_REFERENCE_MODEL.model,
+      model: referenceModel.model,
       confidence: interpreted.confidence,
       status: 'ok',
-      notes: ['LLM referent or legacy interpreter adapter produced canonical interpretation'],
+      notes: [
+        localMode
+          ? 'Local contract interpreter used for cockpit dry-run.'
+          : 'LLM referent or legacy interpreter adapter produced canonical interpretation',
+      ],
     },
   }
 }

@@ -143,6 +143,7 @@ function layerLabel(stageId: string) {
 
 export default function GenerateV2Tester() {
   const [input, setInput] = useState(EXAMPLES[0])
+  const [interpretationMode, setInterpretationMode] = useState<'local_contract' | 'referent_llm'>('local_contract')
   const [loading, setLoading] = useState(false)
   const [response, setResponse] = useState<GenerateV2Response | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -170,7 +171,7 @@ export default function GenerateV2Tester() {
       const result = await fetch('/api/generate-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input }),
+        body: JSON.stringify({ input, interpretation_mode: interpretationMode }),
         signal: controller.signal,
       })
       const payload = await result.json()
@@ -223,6 +224,31 @@ export default function GenerateV2Tester() {
         >
           {loading ? 'Test en cours' : 'Tester generate-v2'}
         </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+        {[
+          ['local_contract', 'Contrat local rapide'],
+          ['referent_llm', 'LLM referent'],
+        ].map(([mode, label]) => (
+          <button
+            key={mode}
+            type="button"
+            onClick={() => setInterpretationMode(mode as 'local_contract' | 'referent_llm')}
+            disabled={loading}
+            style={{
+              border: `1px solid ${interpretationMode === mode ? '#C8951A' : '#E1D6C2'}`,
+              color: interpretationMode === mode ? '#1A2E5A' : '#8B8174',
+              background: interpretationMode === mode ? '#F8EFD8' : '#fff',
+              borderRadius: 999,
+              padding: '7px 10px',
+              fontSize: 11,
+              cursor: loading ? 'wait' : 'pointer',
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <textarea

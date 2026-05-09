@@ -18,6 +18,7 @@ export const dynamic = 'force-dynamic'
 type GenerateV2Body = {
   input?: string
   raw_input?: string
+  interpretation_mode?: 'referent_llm' | 'local_contract'
 }
 
 const ASTROLABE_TEMPLATE: Array<Omit<AstrolabeBranchV2, 'score' | 'is_primary' | 'rationale_fr'>> = [
@@ -93,7 +94,10 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const interpretation = await interpretSituation({ raw_input: rawInput })
+  const interpretation = await interpretSituation({
+    raw_input: rawInput,
+    mode: body.interpretation_mode ?? 'referent_llm',
+  })
   const dialogue = runDialogueGate({ interpretation })
   const safety = runRiskAdviceGuard({ interpretation })
   const expertises = routeExpertisesMetiers({ interpretation })
