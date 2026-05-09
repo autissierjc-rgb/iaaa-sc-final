@@ -10,6 +10,11 @@ export const FORBIDDEN_PUBLIC_PHRASES = [
   "l'incertitude complique la decision",
   'il faut surveiller l evolution',
   "il faut surveiller l'evolution",
+  'doit etre lu par son theatre reel',
+  'doit être lu par son théâtre réel',
+  'le fond de la carte',
+  'preuves attendues',
+  'passive deterministic writing scaffold',
   'general_analysis',
   'understand_situation',
 ]

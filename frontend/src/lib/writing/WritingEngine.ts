@@ -21,6 +21,33 @@ function joinVisible(items: string[], fallback: string): string {
   return items.length > 0 ? items.slice(0, 4).join(', ') : fallback
 }
 
+function namedAction(items: string[], fallback: string): string {
+  return items.length > 0 ? items[0] : fallback
+}
+
+function tensionLabel(input: WritingEngineInput): string {
+  const haystack = [
+    input.interpretation.header_subject,
+    input.interpretation.situation_soumise,
+    input.interpretation.object_of_analysis,
+    input.interpretation.domain,
+  ].join(' ').toLowerCase()
+
+  if (haystack.includes('election') || haystack.includes('certification') || haystack.includes('contester')) {
+    return 'la contestation elle-meme'
+  }
+
+  if (haystack.includes('startup') || haystack.includes('compagnie') || haystack.includes('site') || haystack.includes('url')) {
+    return 'la promesse affichee'
+  }
+
+  if (haystack.includes('amie') || haystack.includes('fils') || haystack.includes('famille') || haystack.includes('couple')) {
+    return 'le signe affectif'
+  }
+
+  return 'l hypothese elle-meme'
+}
+
 function probabilityFromTheatre(theatre: ConcreteTheatreContract): ProbabilityAssessment {
   const hasEvidence = theatre.evidence.length > 0
   const hasMissing = theatre.missing_anchors.length > 0
@@ -48,11 +75,15 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const started = Date.now()
   const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
   const actors = joinVisible(input.theatre.actors, 'les acteurs directement impliques')
+  const institutions = joinVisible(input.theatre.institutions, 'les institutions concernees')
   const evidence = joinVisible(input.expertises_metiers.evidence_to_seek, 'les preuves observables')
   const blindSpot = joinVisible(input.expertises_metiers.blind_spots_to_test, 'ce qui manque au regard')
+  const firstProcedure = namedAction(input.theatre.procedures, 'une procedure verifiable')
+  const firstEvidence = namedAction(input.expertises_metiers.evidence_to_seek, 'une preuve publique')
+  const tension = tensionLabel(input)
   const probability = probabilityFromTheatre(input.theatre)
   const diamondText = compactSentence(
-    `${subject} ne se comprend pas par son recit seul : la bascule se joue quand ${actors} transforment ${evidence} en decision observable.`,
+    `Le risque ne tient pas a ${tension} ; il commence quand ${institutions} donnent une forme procedurale a ${firstProcedure}.`,
   )
 
   const publicWarnings = [
@@ -61,10 +92,10 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   ].filter((item): item is string => Boolean(item))
 
   const lecture = [
-    `${subject} doit etre lu par son theatre reel : ${actors}.`,
-    `Le fond de la carte tient a la difference entre ce qui est affirme, ce qui est probable et ce qui reste a prouver.`,
-    `Le point fragile se situe dans ${blindSpot}.`,
-    `Le signal utile est le moment ou ${evidence} devient verifiable, public ou opposable.`,
+    `${subject} met en jeu ${actors}, mais la decision se deplace surtout dans ${institutions}.`,
+    `La question utile est de separer la contestation visible de la capacite reelle a produire ${firstProcedure}.`,
+    `Le point fragile reste ${blindSpot} : sans ce lien, la lecture reste une hypothese a tester.`,
+    `Le signal utile serait ${firstEvidence} reliant un acteur habilite, une regle et une consequence observable.`,
   ].join(' ')
 
   return {
@@ -104,21 +135,21 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       title_fr: input.interpretation.header_subject,
       submitted_situation_fr: input.interpretation.situation_soumise,
       insight_fr: compactSentence(lecture, 420),
-      main_vulnerability_fr: compactSentence(`Le point fragile est ${blindSpot}.`),
-      asymmetry_fr: compactSentence(`Ce qui est visible chez ${actors} peut masquer ${blindSpot}.`),
-      key_signal_fr: compactSentence(`Signal cle : ${evidence} devient observable ou verifiable.`),
+      main_vulnerability_fr: compactSentence(`La vulnerabilite centrale est ${blindSpot} : c est la zone ou une crainte peut, ou non, devenir un acte opposable.`),
+      asymmetry_fr: compactSentence(`${actors} rendent la tension visible, mais ${institutions} detiennent les leviers qui peuvent la bloquer ou la rendre effective.`),
+      key_signal_fr: compactSentence(`Signal cle : ${firstEvidence} relie un acteur habilite, une regle et une consequence observable.`),
     },
     trajectories: [
       {
         type: 'stabilization',
         title_fr: 'Clarification',
-        description_fr: 'La situation se clarifie si les preuves attendues confirment le role des acteurs nommes.',
-        signal_fr: `Un element verifiable apparait : ${evidence}.`,
+        description_fr: 'La situation se clarifie si un acteur habilite confirme publiquement son role ou ses limites.',
+        signal_fr: `Un element verifiable apparait : ${firstEvidence}.`,
       },
       {
         type: 'escalation',
         title_fr: 'Tension accrue',
-        description_fr: 'La pression augmente si le recit devient plus fort que les preuves disponibles.',
+        description_fr: 'La pression augmente si la contestation trouve un relais capable de ralentir ou delegitimer la procedure.',
         signal_fr: `Le manque critique reste : ${blindSpot}.`,
       },
       {
@@ -138,7 +169,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
         {
           id: 'fond',
           title: 'Fond',
-          body: `Acteurs : ${actors}. Preuves attendues : ${evidence}.`,
+          body: `Acteurs : ${actors}. Institutions : ${institutions}. Preuves a verifier : ${evidence}.`,
         },
         {
           id: 'forme',
@@ -158,7 +189,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       version: 'v2-foundation',
       duration_ms: Date.now() - started,
       status: 'ok',
-      notes: ['Passive deterministic writing scaffold; final prose remains LLM-backed later.'],
+      notes: ['Deterministic writing contract; final prose remains LLM-backed later.'],
     },
   }
 }
