@@ -33,6 +33,31 @@ function issue(level: QualityIssue['level'], code: string, message: string, fiel
   return { level, code, message, field }
 }
 
+const FORBIDDEN_THEORY_LABELS = [
+  'Goffman',
+  'Douglas',
+  'Crozier',
+  'Friedberg',
+  'Bourdieu',
+  'Mauss',
+  'Boltanski',
+  'Thevenot',
+  'Thévenot',
+  'Schein',
+  'Argyris',
+  'Janis',
+  'Turner',
+  'Girard',
+  'Marx',
+  'Levi-Strauss',
+  'Lévi-Strauss',
+  'Dumezil',
+  'Dumézil',
+  'triade fonctionnelle',
+  'patterns humains',
+  'patterns collectifs',
+]
+
 export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const started = Date.now()
   const issues: QualityIssue[] = []
@@ -41,6 +66,12 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
 
   for (const phrase of forbidden) {
     issues.push(issue('error', 'FORBIDDEN_PUBLIC_PHRASE', `Forbidden public phrase detected: ${phrase}.`, 'writing'))
+  }
+
+  for (const label of FORBIDDEN_THEORY_LABELS) {
+    if (text.includes(label)) {
+      issues.push(issue('error', 'FORBIDDEN_THEORY_LABEL', `Forbidden public theory label detected: ${label}.`, 'writing'))
+    }
   }
 
   if (input.interpretation.header_subject.trim().split(/\s+/).length < 3) {

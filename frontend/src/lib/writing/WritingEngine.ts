@@ -7,6 +7,7 @@ import type {
   ScoringContract,
   WritingContract,
 } from '../contracts'
+import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { cleanModelText, parseModelJSON } from '../ai/json'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
 
@@ -16,6 +17,7 @@ export type WritingEngineInput = {
   expertises_metiers: ExpertisesMetiersContract
   theatre: ConcreteTheatreContract
   scoring: ScoringContract
+  patterns?: HumanCollectivePatternContext
 }
 
 export type WritingEngineMode = 'local_contract' | 'referent_llm'
@@ -153,6 +155,31 @@ function withTraceNote(writing: WritingContract, note: string): WritingContract 
       ...writing.trace,
       notes: [...(writing.trace.notes ?? []), note],
     },
+  }
+}
+
+function patternWritingContext(patterns?: HumanCollectivePatternContext) {
+  if (!patterns || patterns.selected_patterns.length === 0) {
+    return {
+      selected_lenses: [],
+      dumezil_balance: patterns?.dumezil_balance,
+      rule: patterns?.trace.rule ?? 'patterns_are_lenses_not_conclusions',
+      public_use:
+        'Aucune lentille humaine ou collective dominante. Ne pas forcer une grille theorique.',
+    }
+  }
+
+  return {
+    selected_lenses: patterns.selected_patterns.slice(0, 4).map((pattern) => ({
+      hypothesis: pattern.hypothesis,
+      observable_signal: pattern.observable_signal,
+      inquiry_question: pattern.inquiry_question,
+      confidence: pattern.confidence,
+    })),
+    dumezil_balance: patterns.dumezil_balance,
+    rule: patterns.trace.rule,
+    public_use:
+      'Utiliser ces lentilles pour affiner roles, vulnerabilite, asymetrie, signal et phrase diamant. Ne jamais exposer les labels ni les auteurs.',
   }
 }
 
@@ -348,6 +375,7 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
       interpretation: input.interpretation,
       theatre: input.theatre,
       expertises_metiers: input.expertises_metiers,
+      patterns: patternWritingContext(input.patterns),
       scoring: input.scoring,
       required_output_shape: Object.keys(local.situation_card),
       existing_probability_assessment: local.probability_assessments[0],
