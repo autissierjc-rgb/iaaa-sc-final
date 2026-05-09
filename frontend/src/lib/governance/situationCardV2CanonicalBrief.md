@@ -513,6 +513,14 @@ Sur 100 reactions, combien concernent la formalisation, le hors-sol, les
 ressources, le scoring, le diamant tranchant, Recherche+ ou l'interface ?
 ```
 
+Capture V2 :
+
+- `/api/reactions-v2` transforme une reaction de chat en `UserReactionEvent` ;
+- la route ne persiste rien tant que la couche archive n'a pas de stockage valide ;
+- le mode par defaut reste `metadata_only` ;
+- le texte brut ne doit pas etre retourne ni conserve hors mode
+  `private_learning_snapshot` explicitement autorise.
+
 Mode lancement :
 
 ```txt
