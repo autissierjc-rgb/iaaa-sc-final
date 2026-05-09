@@ -233,7 +233,71 @@ Regles :
 - rester utile : structurer les faits, les questions, les sources, les preuves et
   les seuils, sans franchir la ligne du conseil prescriptif.
 
-## 4bis. Archive de generation
+## 4c. Patterns humains et collectifs
+
+La V2 doit pouvoir lire les situations humaines et les organisations humaines
+avec une meme profondeur structurelle, sans psychologie sauvage.
+
+Document canonique :
+
+```txt
+src/lib/governance/humanCollectivePatterns.md
+```
+
+Principe :
+
+```txt
+SC lit les situations comme des systemes de roles, interets, recits, desirs,
+dettes, pouvoirs, tabous et rapports materiels.
+
+Les patterns sont des lentilles, pas des conclusions.
+```
+
+Deux mouvements sont autorises :
+
+- individu vers organisation : un cas personnel peut etre lu comme une
+  micro-organisation faite de roles, loyautes, dettes, regles implicites,
+  ressources rares, pouvoirs et seuils de reparation ;
+- organisation vers individu : une entreprise, un Etat, une equipe ou une
+  institution peut etre lue comme un sujet collectif qui protege une image,
+  repete des defenses, evite certains tabous et peut sacrifier sa fonction a son
+  recit.
+
+Socle theorique indicatif :
+
+- Goffman : face, role public, reparation ;
+- Douglas : tabou et norme invisible ;
+- Crozier-Friedberg : pouvoir discret et zones d'incertitude ;
+- Bourdieu : capital symbolique et reconnaissance ;
+- Mauss : don, dette et loyaute ;
+- Boltanski-Thevenot : justification et recits moraux ;
+- Schein : culture profonde ;
+- Argyris / Janis : routines defensives et groupthink ;
+- Turner : seuils, passages et crises de statut ;
+- Girard : desir mimetique, rivalite, bouc emissaire ;
+- Marx : rapports materiels, travail, valeur et ideologie ;
+- Levi-Strauss : oppositions symboliques et frontieres.
+
+Role dans le pipeline :
+
+- `theatre` : identifier roles reels, tabous, dettes, oppositions et acteurs qui
+  portent la charge ;
+- `resources` : distinguer sources internes, besoin web, preuve externe et
+  Recherche+ ;
+- `scoring` : augmenter la pression si perte de face publique, tabou, defense
+  de l'image contre la fonction, dette explosive ou rivalite mimetique ;
+- `inquiry` : transformer le pattern en question observable et preuve attendue ;
+- `writing` : nourrir fond, forme, phrase diamant et probabilites sans exposer
+  le jargon theorique.
+
+Regle diamant :
+
+```txt
+Une organisation bascule quand elle cesse de proteger sa fonction et commence a
+proteger son image.
+```
+
+## 4d. Archive de generation
 
 La V2 doit distinguer les cartes sauvegardees par l'utilisateur et les
 generations produites par le moteur.
