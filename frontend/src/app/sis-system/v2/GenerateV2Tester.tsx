@@ -157,12 +157,15 @@ export default function GenerateV2Tester() {
     setResponse(null)
     setEvidenceSearchRequested(false)
     setStatusMessage('Appel de /api/generate-v2 en cours...')
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 25000)
 
     try {
       const result = await fetch('/api/generate-v2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ input }),
+        signal: controller.signal,
       })
       const payload = await result.json()
       setResponse(payload)
@@ -173,9 +176,15 @@ export default function GenerateV2Tester() {
         setStatusMessage('Reponse recue.')
       }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Erreur inconnue')
-      setStatusMessage('Erreur reseau ou JSON.')
+      if (caught instanceof DOMException && caught.name === 'AbortError') {
+        setError('Timeout generate-v2 : la route n a pas repondu en moins de 25 secondes.')
+        setStatusMessage('Timeout.')
+      } else {
+        setError(caught instanceof Error ? caught.message : 'Erreur inconnue')
+        setStatusMessage('Erreur reseau ou JSON.')
+      }
     } finally {
+      window.clearTimeout(timeout)
       setLoading(false)
     }
   }
