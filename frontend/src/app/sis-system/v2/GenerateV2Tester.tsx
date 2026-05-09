@@ -162,6 +162,7 @@ type GenerateV2Response = {
     diamond_sentences?: Array<{
       text_fr: string
       role: string
+      style?: string
     }>
     probability_assessments?: Array<{
       probability_label_fr?: string
@@ -268,6 +269,15 @@ export default function GenerateV2Tester() {
 
   const firstBlindSpots = useMemo(
     () => response?.inquiry?.blind_spots?.slice(0, 3) ?? [],
+    [response],
+  )
+  const sharpDiamond = useMemo(
+    () => response?.writing?.diamond_sentences?.find((sentence) => sentence.style === 'diamant_tranchant')
+      ?? response?.writing?.diamond_sentences?.[0],
+    [response],
+  )
+  const sharpDiamondIssues = useMemo(
+    () => response?.quality?.issues?.filter((item) => item.field === 'writing.diamond_sentences') ?? [],
     [response],
   )
 
@@ -883,6 +893,37 @@ export default function GenerateV2Tester() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {sharpDiamond?.text_fr && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+            diamant tranchant
+          </p>
+          <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 15, lineHeight: 1.45, fontStyle: 'italic' }}>
+            {sharpDiamond.text_fr}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+            <span style={{ border: '1px solid #D8C79B', borderRadius: 999, padding: '5px 8px', color: '#1A2E5A', fontSize: 11 }}>
+              style : {sharpDiamond.style ?? 'diamond'}
+            </span>
+            <span style={{ border: '1px solid #F0EBE0', borderRadius: 999, padding: '5px 8px', color: '#6F6255', fontSize: 11 }}>
+              {sharpDiamond.text_fr.length} caracteres
+            </span>
+            <span style={{ border: '1px solid #F0EBE0', borderRadius: 999, padding: '5px 8px', color: '#6F6255', fontSize: 11 }}>
+              role : {sharpDiamond.role}
+            </span>
+          </div>
+          {sharpDiamondIssues.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              {sharpDiamondIssues.map((item) => (
+                <p key={item.code} style={{ margin: '5px 0 0', color: item.level === 'error' ? '#B23A3A' : '#A66B00', fontSize: 11, lineHeight: 1.45 }}>
+                  {item.code} · {item.message}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
