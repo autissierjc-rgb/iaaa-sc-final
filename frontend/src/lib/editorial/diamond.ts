@@ -612,6 +612,64 @@ function frenchSiteProduct(company: string, product: string): string {
   return product
 }
 
+function siteEvaluationAngle(situation: string): 'go_to_market' | 'investment' | 'partnership' | 'work_platform' | 'product_usage' | 'media_source' | 'understand_activity' {
+  const text = compact(situation).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (/\b(go[-\s]?to[-\s]?market|gtm|lancement|launch|vendre|vente|commercial|acquisition|distribution|pitch|presenter|presenter|positionnement|pricing|prix|canal|segment)\b/.test(text)) return 'go_to_market'
+  if (/\b(investir|investissement|investisseur|due diligence|valorisation|traction|revenu|marge|cap table|acheter|acquerir|acquisition)\b/.test(text)) return 'investment'
+  if (/\b(rejoindre|partenariat|partenaire|collaborer|integration|integrer|alliance|avec ma startup|conditions de sortie|role exact)\b/.test(text)) return 'partnership'
+  if (/\b(travail|salar|salarial|freelance|remuneration|r[ée]mun[ée]ration|revenus partag[ée]s|contributeurs|equity|parts|statut social|droit du travail|fiscalit[ée])\b/.test(text)) return 'work_platform'
+  if (/\b(media|m[ée]dia|source|article|journal|presse|france 24|reuters|afp|apnews|ligne editorial|fiabilit[ée])\b/.test(text)) return 'media_source'
+  if (/\b(produit|usage|ux|utilisateur|onboarding|friction|r[ée]tention|fonctionnalit[ée]|utile|utilis[ée])\b/.test(text)) return 'product_usage'
+  return 'understand_activity'
+}
+
+function siteBlindSpotProfile(situation: string): { blindSpots: string; watch: string; question: string } {
+  switch (siteEvaluationAngle(situation)) {
+    case 'go_to_market':
+      return {
+        blindSpots: 'segment prioritaire, canal d’acquisition, message de vente, prix, preuve de valeur, conversion, rétention, cycle de décision et crédibilité du premier cas d’usage',
+        watch: 'le segment qui comprend immédiatement la promesse, le canal qui amène des conversations qualifiées, le message qui convertit et la preuve qui déclenche un essai ou un achat',
+        question: 'quel segment peut décider vite, par quel canal, avec quelle preuve et à quel prix ?',
+      }
+    case 'investment':
+      return {
+        blindSpots: 'traction, revenus, marge, rétention, concurrence, dépendance client, qualité de l’équipe, propriété intellectuelle, cap table et risques juridiques matériels',
+        watch: 'les métriques vérifiables, la qualité des revenus, la rétention, la différenciation défendable et les risques qui changeraient la valorisation',
+        question: 'quelle preuve ferait passer l’entreprise d’une promesse intéressante à un actif investissable ?',
+      }
+    case 'partnership':
+      return {
+        blindSpots: 'rôle exact de chaque partie, pouvoir de décision, répartition de valeur, dépendance créée, obligations contractuelles, conditions de sortie et compatibilité stratégique',
+        watch: 'la clarté du rôle, la gouvernance du partenariat, les obligations concrètes, la dépendance créée et le premier désaccord qui révélerait le rapport de force',
+        question: 'quel accord protège la valeur sans enfermer la startup dans une dépendance mal comprise ?',
+      }
+    case 'work_platform':
+      return {
+        blindSpots: 'droit du travail, statut social ou salarial, fiscalité, responsabilité, rémunération, propriété des contributions, conformité, rôle éventuel de l’État et coûts cachés',
+        watch: 'les statuts réels, les obligations sociales et fiscales, les responsabilités, les règles de rémunération et les zones où le modèle peut être requalifié',
+        question: 'quelle règle sociale, fiscale ou contractuelle pourrait rendre le modèle risqué ou impossible à opérer ?',
+      }
+    case 'media_source':
+      return {
+        blindSpots: 'fiabilité de la source, ligne éditoriale, dépendance à des sources secondaires, temporalité de publication, indépendance, angle de couverture et accès aux sources primaires',
+        watch: 'les sources primaires citées, la date, le média local ou international qui confirme, les contradictions entre récits et la séparation entre fait rapporté et interprétation',
+        question: 'que permet vraiment d’établir cette source, et que faut-il confirmer ailleurs ?',
+      }
+    case 'product_usage':
+      return {
+        blindSpots: 'friction d’usage, onboarding, moment de valeur, répétition d’usage, alternatives, différenciation perçue, rétention et preuve utilisateur',
+        watch: 'le premier usage réussi, le retour répété, le moment où l’utilisateur comprend la valeur et les raisons pour lesquelles il revient ou abandonne',
+        question: 'quel usage répété prouve que le produit résout un problème assez fort ?',
+      }
+    default:
+      return {
+        blindSpots: 'activité réelle, cible, promesse, cas d’usage, preuves visibles, différenciation, modèle économique et conditions concrètes de décision',
+        watch: 'la clarté de l’offre, les preuves d’usage, les clients ou partenaires vérifiables, la différenciation et le modèle qui rend la promesse crédible',
+        question: 'que fait réellement cette organisation, pour qui, avec quelle preuve et quelles limites ?',
+      }
+  }
+}
+
 function buildSiteDeepFallback({
   situation,
   sc,
@@ -665,8 +723,8 @@ function buildSiteDeepFallback({
     'Les preuves visibles restent à qualifier : clients, usages répétés, revenus, partenariats, rétention ou décisions d’achat.'
   const useCases = establishedField(lineAfterPrefix(excerpt, 'Cas d’usage visibles'))
   const differentiation = establishedField(lineAfterPrefix(excerpt, 'Différenciation visible'))
-  const criticalBlindSpots =
-    'cadre légal ou réglementaire, statut social et salarial, fiscalité, responsabilité, financement public, normes sociales, infrastructures et dépendance éventuelle à l’État'
+  const blindSpotProfile = siteBlindSpotProfile(situation)
+  const criticalBlindSpots = blindSpotProfile.blindSpots
   const market = /march[eé]\s+europ|europe|europ[eé]en/i.test(situation)
     ? 'le marché européen'
     : 'le marché visé'
@@ -689,7 +747,7 @@ function buildSiteDeepFallback({
       `${DIAMOND_DEEP_HEADINGS_FR[4]}\n\n` +
       `La bascule positive viendrait d’une preuve simple et vérifiable : un client identifiable, un usage répété, une métrique, un partenariat européen, un revenu, ou une démonstration qui montre pourquoi la solution est meilleure qu’une alternative. ${sentence(proofDetails.join(' '))} À ce moment-là, l’analyse peut passer de la prudence à l’évaluation du potentiel.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[5]}\n\n` +
-      `Il faut maintenant surveiller la cible réelle, le problème concret, la preuve d’usage, la différenciation et les angles morts décisifs : ${criticalBlindSpots}. La bonne question n’est pas seulement “est-ce une bonne startup ?”, mais “quelle preuve ou quelle contrainte ferait changer d’avis un client, un partenaire, un régulateur ou un investisseur ?”.`
+      `Il faut maintenant surveiller ${blindSpotProfile.watch}. La bonne question n’est pas seulement “est-ce intéressant ?”, mais “${blindSpotProfile.question}”.`
     ),
     approfondir_en: polishDiamondText(
       `${DIAMOND_DEEP_HEADINGS_EN[0]}\n\n` +

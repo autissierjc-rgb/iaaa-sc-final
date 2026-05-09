@@ -262,6 +262,36 @@ function pickSentence(resources: ResourceItem[], patterns: RegExp[], fallback: s
   return scored[0]?.sentence ?? fallback
 }
 
+function siteEvaluationAngle(situation: string): 'go_to_market' | 'investment' | 'partnership' | 'work_platform' | 'product_usage' | 'media_source' | 'understand_activity' {
+  const text = clean(situation).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  if (/\b(go[-\s]?to[-\s]?market|gtm|lancement|launch|vendre|vente|commercial|acquisition|distribution|pitch|presenter|positionnement|pricing|prix|canal|segment)\b/.test(text)) return 'go_to_market'
+  if (/\b(investir|investissement|investisseur|due diligence|valorisation|traction|revenu|marge|cap table|acheter|acquerir|acquisition)\b/.test(text)) return 'investment'
+  if (/\b(rejoindre|partenariat|partenaire|collaborer|integration|integrer|alliance|avec ma startup|conditions de sortie|role exact)\b/.test(text)) return 'partnership'
+  if (/\b(travail|salar|salarial|freelance|remuneration|revenus partages|contributeurs|equity|parts|statut social|droit du travail|fiscalite)\b/.test(text)) return 'work_platform'
+  if (/\b(media|source|article|journal|presse|france 24|reuters|afp|apnews|ligne editorial|fiabilite)\b/.test(text)) return 'media_source'
+  if (/\b(produit|usage|ux|utilisateur|onboarding|friction|retention|fonctionnalite|utile|utilise)\b/.test(text)) return 'product_usage'
+  return 'understand_activity'
+}
+
+function criticalBlindSpotsForSite(situation: string): string {
+  switch (siteEvaluationAngle(situation)) {
+    case 'go_to_market':
+      return 'Segment prioritaire, canal d’acquisition, message de vente, prix, preuve de valeur, conversion, rétention, cycle de décision et crédibilité du premier cas d’usage.'
+    case 'investment':
+      return 'Traction, revenus, marge, rétention, concurrence, dépendance client, qualité de l’équipe, propriété intellectuelle, cap table et risques juridiques matériels.'
+    case 'partnership':
+      return 'Rôle exact de chaque partie, pouvoir de décision, répartition de valeur, dépendance créée, obligations contractuelles, conditions de sortie et compatibilité stratégique.'
+    case 'work_platform':
+      return 'Droit du travail, statut social ou salarial, fiscalité, responsabilité, rémunération, propriété des contributions, conformité, rôle éventuel de l’État et coûts cachés.'
+    case 'media_source':
+      return 'Fiabilité de la source, ligne éditoriale, dépendance à des sources secondaires, temporalité de publication, indépendance, angle de couverture et accès aux sources primaires.'
+    case 'product_usage':
+      return 'Friction d’usage, onboarding, moment de valeur, répétition d’usage, alternatives, différenciation perçue, rétention et preuve utilisateur.'
+    default:
+      return 'Activité réelle, cible, promesse, cas d’usage, preuves visibles, différenciation, modèle économique et conditions concrètes de décision.'
+  }
+}
+
 function crawlSummary(resources: ResourceItem[]): ResourceItem | undefined {
   return resources.find((resource) => resource.type === 'site-crawl-summary')
 }
@@ -411,7 +441,7 @@ export async function buildSiteUnderstandingResource({
     : 'Angle demandé par l’utilisateur : évaluation du positionnement et de la preuve disponible.'
   const criticalBlindSpots = canonical?.critical_blind_spots_fr?.length
     ? canonical.critical_blind_spots_fr.join(' / ')
-    : 'Cadre légal ou réglementaire, statut social/salarial ou contractuel, fiscalité, responsabilité, financement public, normes sociales, infrastructures et coûts cachés à vérifier selon le modèle.'
+    : criticalBlindSpotsForSite(situation)
 
   const excerpt = [
     `FICHE SITE INTERNE - ${name}`,
