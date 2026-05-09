@@ -301,6 +301,18 @@ export default function GenerateV2Tester() {
 
   return (
     <section style={panelStyle()}>
+      <style>{`
+        @keyframes recherchePlusPulse {
+          0% { transform: scale(0.62); opacity: 0.42; }
+          70% { opacity: 0.12; }
+          100% { transform: scale(1.45); opacity: 0; }
+        }
+
+        @keyframes recherchePlusFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-1px); }
+        }
+      `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
         <div style={{ maxWidth: 760 }}>
           <h2 style={{ margin: 0, fontSize: 15 }}>Banc d essai generate-v2</h2>
@@ -917,14 +929,54 @@ export default function GenerateV2Tester() {
               onClick={() => setEvidenceSearchRequested(true)}
               style={{
                 border: '1px solid #C8951A',
-                color: '#1A2E5A',
-                background: evidenceSearchRequested ? '#F8EFD8' : '#fff',
+                color: evidenceSearchRequested ? '#fff' : '#1A2E5A',
+                background: evidenceSearchRequested ? '#1A2E5A' : '#fff',
                 borderRadius: 8,
                 padding: '10px 14px',
                 fontSize: 13,
                 cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 9,
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: evidenceSearchRequested ? '0 0 0 3px rgba(200, 149, 26, 0.14)' : 'none',
               }}
             >
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  border: `1px solid ${evidenceSearchRequested ? 'rgba(248,239,216,0.9)' : 'rgba(200,149,26,0.9)'}`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  animation: 'recherchePlusFloat 2.8s ease-in-out infinite',
+                  flex: '0 0 auto',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    inset: -4,
+                    borderRadius: '50%',
+                    border: `1px solid ${evidenceSearchRequested ? 'rgba(248,239,216,0.45)' : 'rgba(200,149,26,0.35)'}`,
+                    animation: 'recherchePlusPulse 2.4s ease-out infinite',
+                  }}
+                />
+                <span
+                  style={{
+                    width: 5,
+                    height: 5,
+                    borderRadius: '50%',
+                    background: evidenceSearchRequested ? '#F8EFD8' : '#C8951A',
+                    boxShadow: `0 0 8px ${evidenceSearchRequested ? 'rgba(248,239,216,0.55)' : 'rgba(200,149,26,0.35)'}`,
+                  }}
+                />
+              </span>
               Lancer Recherche+
             </button>
             <span style={{ marginLeft: 10, color: '#8B8174', fontSize: 12 }}>
