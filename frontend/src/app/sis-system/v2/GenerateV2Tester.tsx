@@ -79,6 +79,29 @@ type GenerateV2Response = {
       observable_signal?: string
     }>
   }
+  recherche_plus?: {
+    mode?: string
+    introduction_fr?: string
+    public_disclaimer_fr?: string
+    radar_tasks?: Array<{
+      family: string
+      label_fr: string
+      radar_question_fr: string
+      channels: string[]
+      suggested_queries: string[]
+      expected_evidence_fr: string[]
+      signal_classes: string[]
+      linked_blind_spots: string[]
+      caution_fr: string
+    }>
+    targets?: Array<{
+      blind_spot: string
+      question: string
+      expected_evidence: string
+      allowed_channels: string[]
+      safety_note?: string
+    }>
+  }
   quality?: {
     ok?: boolean
     requires_section_regeneration?: boolean
@@ -204,6 +227,7 @@ function layerLabel(stageId: string) {
     'expertises-metiers': 'expertisesMetiers',
     resources: 'resources',
     patterns: 'patterns',
+    'recherche-plus': 'recherchePlus',
     theatre: 'theatre',
     'blind-spots': 'inquiry',
     scoring: 'scoring',
@@ -718,6 +742,47 @@ export default function GenerateV2Tester() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {response?.recherche_plus?.radar_tasks && response.recherche_plus.radar_tasks.length > 0 && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+            Recherche+ · radar prepare
+          </p>
+          <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
+            {response.recherche_plus.introduction_fr}
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginTop: 10 }}>
+            {response.recherche_plus.radar_tasks.map((task) => (
+              <div key={task.family} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 10, background: '#fff' }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>
+                  {task.signal_classes.join(' · ')}
+                </p>
+                <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 13 }}>{task.label_fr}</h3>
+                <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                  {task.radar_question_fr}
+                </p>
+                <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                  Canaux : {task.channels.join(', ')}
+                </p>
+                <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                  Requetes : {task.suggested_queries.slice(0, 2).join(' · ')}
+                </p>
+                {task.linked_blind_spots.length > 0 && (
+                  <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                    Angles relies : {task.linked_blind_spots.join(', ')}
+                  </p>
+                )}
+                <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45, fontStyle: 'italic' }}>
+                  {task.caution_fr}
+                </p>
+              </div>
+            ))}
+          </div>
+          <p style={{ margin: '10px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+            {response.recherche_plus.public_disclaimer_fr}
+          </p>
         </div>
       )}
 

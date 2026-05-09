@@ -15,6 +15,7 @@ import { composeDiamondWritingWithMode } from '@/lib/writing'
 import { runQualityGate } from '@/lib/quality'
 import { selectHumanCollectivePatterns } from '@/lib/patterns/humanCollective'
 import { triadAstrolabeInfluence } from '@/lib/scoringV2'
+import { prepareRecherchePlus } from '@/lib/recherchePlus'
 import type { AstrolabeBranchV2, RadarScoreV2 } from '@/lib/contracts'
 
 export const dynamic = 'force-dynamic'
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
   const triad_astrolabe = triadAstrolabeInfluence(patterns.dumezil_balance)
   const theatre = buildConcreteTheatre({ interpretation, resources, expertises })
   const inquiry = buildBlindSpotInquiry({ interpretation, theatre })
+  const recherche_plus = prepareRecherchePlus({ resources, inquiry })
 
   const counts = {
     actors: theatre.actors.length,
@@ -200,6 +202,7 @@ export async function POST(request: NextRequest) {
         outcome: quality.trace.status === 'error' ? 'failed' : quality.trace.status === 'partial' ? 'warning' : 'ok',
         warnings: quality.issues.map((item) => `${item.code}: ${item.message}`),
       },
+      { stage_id: 'recherche-plus', duration_ms: recherche_plus.trace.duration_ms ?? 0, outcome: 'ok' },
     ],
   })
 
@@ -217,6 +220,7 @@ export async function POST(request: NextRequest) {
     theatre,
     scoring,
     inquiry,
+    recherche_plus,
     writing,
     quality,
     generation_archive,

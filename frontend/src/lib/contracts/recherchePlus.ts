@@ -1,5 +1,5 @@
 import type { TraceMeta } from './common'
-import type { SourceChannel } from './resources'
+import type { FunctionalResourceFamily, SourceChannel } from './resources'
 
 export type RecherchePlusChannel =
   | SourceChannel
@@ -15,7 +15,21 @@ export type RecherchePlusSignalStatus =
   | 'weak_signal'
   | 'solid_source'
   | 'contradiction'
+  | 'suspicious_absence'
   | 'not_accessible'
+  | 'next_verification'
+
+export type RecherchePlusRadarTask = {
+  family: FunctionalResourceFamily
+  label_fr: string
+  radar_question_fr: string
+  channels: RecherchePlusChannel[]
+  suggested_queries: string[]
+  expected_evidence_fr: string[]
+  signal_classes: RecherchePlusSignalStatus[]
+  linked_blind_spots: string[]
+  caution_fr: string
+}
 
 export type RecherchePlusTarget = {
   blind_spot: string
@@ -41,6 +55,7 @@ export type RecherchePlusFinding = {
 export type RecherchePlusContract = {
   mode: 'not_started' | 'prepared' | 'running' | 'completed' | 'failed'
   introduction_fr: string
+  radar_tasks: RecherchePlusRadarTask[]
   targets: RecherchePlusTarget[]
   findings: RecherchePlusFinding[]
   public_disclaimer_fr: string
