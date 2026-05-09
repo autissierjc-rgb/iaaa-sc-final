@@ -58,11 +58,37 @@ const FORBIDDEN_THEORY_LABELS = [
   'patterns collectifs',
 ]
 
+const SOFT_DIAMOND_PHRASES = [
+  'la situation est fragile',
+  'il faut rester prudent',
+  'il est important de',
+  'cela peut poser question',
+  'la situation est complexe',
+  'il faut surveiller',
+  'le manque de communication',
+]
+
+function hasSharpDiamond(writing: WritingContract): boolean {
+  return writing.diamond_sentences.some((sentence) => sentence.style === 'diamant_tranchant' && sentence.must_be_public)
+}
+
+function diamondText(writing: WritingContract): string {
+  return writing.diamond_sentences
+    .filter((sentence) => sentence.must_be_public)
+    .map((sentence) => sentence.text_fr)
+    .join(' ')
+}
+
 export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const started = Date.now()
   const issues: QualityIssue[] = []
   const text = publicText(input.writing)
   const forbidden = containsForbiddenPublicPhrase(text)
+  const publicDiamond = diamondText(input.writing)
+  const normalizedDiamond = publicDiamond
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 
   for (const phrase of forbidden) {
     issues.push(issue('error', 'FORBIDDEN_PUBLIC_PHRASE', `Forbidden public phrase detected: ${phrase}.`, 'writing'))
@@ -84,6 +110,21 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
 
   if (input.writing.diamond_sentences.length === 0) {
     issues.push(issue('error', 'MISSING_DIAMOND_SENTENCE', 'Writing must include at least one diamond sentence.', 'writing.diamond_sentences'))
+  }
+
+  if (!hasSharpDiamond(input.writing)) {
+    issues.push(issue('warning', 'MISSING_SHARP_DIAMOND', 'Writing should include a public diamant_tranchant sentence.', 'writing.diamond_sentences'))
+  }
+
+  if (publicDiamond && publicDiamond.length < 70) {
+    issues.push(issue('warning', 'WEAK_SHARP_DIAMOND', 'Diamond sentence looks too short to carry the central contradiction.', 'writing.diamond_sentences'))
+  }
+
+  for (const phrase of SOFT_DIAMOND_PHRASES) {
+    if (normalizedDiamond.includes(phrase)) {
+      issues.push(issue('warning', 'SOFT_SHARP_DIAMOND', `Diamond sentence sounds too soft or generic: ${phrase}.`, 'writing.diamond_sentences'))
+      break
+    }
   }
 
   if (input.writing.probability_assessments.length === 0) {
