@@ -176,6 +176,44 @@ SC / Lecture / Approfondir = reponse structurelle.
 Recherche+ = pistes externes separees, non conclusives.
 ```
 
+Regle radar :
+
+```txt
+Recherche+ ne cherche pas seulement des informations.
+Elle cherche les desalignements entre ce qui legitime, ce qui protege ou
+combat, et ce qui produit reellement.
+```
+
+Les resultats de Recherche+ doivent etre classes comme :
+
+- piste ;
+- signal faible ;
+- contradiction ;
+- source solide ;
+- absence suspecte ;
+- source inaccessible ;
+- verification suivante.
+
+Radar de legitimation :
+
+- ecarts entre discours officiel, droit, promesse, reputation et justification
+  publique ;
+- question : qui affirme la legitimite, et quelle trace la fragilise ?
+
+Radar protection / conflit :
+
+- blocages, attaques, tensions, litiges, sanctions, contre-discours, securite,
+  mobilisation et signaux sociaux ;
+- question : qui resiste, bloque, attaque ou protege, et par quel canal faible
+  cela devient visible ?
+
+Radar production / reproduction :
+
+- usage reel, clients, couts caches, charge portee, dependances, offres
+  d'emploi, maintenance, financement, infrastructures ;
+- question : qui porte reellement le systeme, et quel signe montre que cette
+  charge devient instable ?
+
 ## 4b. RiskAdviceGuard
 
 La V2 doit proteger les domaines reglementes ou a fort enjeu.
@@ -295,6 +333,52 @@ Regle diamant :
 ```txt
 Une organisation bascule quand elle cesse de proteger sa fonction et commence a
 proteger son image.
+```
+
+## 4c bis. ResourceService comme triade de preuves
+
+Les ressources ne doivent pas etre une simple liste de liens "sur le sujet".
+Elles doivent chercher des preuves fonctionnelles selon la triade :
+
+```txt
+Quelles sources montrent qui legitime, qui bloque ou protege, et qui produit ou
+porte reellement la charge ?
+```
+
+Trois paniers de ressources :
+
+### Ressources de legitimation
+
+Ce qui dit le droit, le sens, la regle, la parole officielle, la certification,
+la reputation ou la justification publique.
+
+Exemples : textes officiels, communiques, declarations publiques, decisions de
+justice, chartes, rapports institutionnels, presse de reference, reputation
+publique.
+
+### Ressources de protection / conflit
+
+Ce qui montre les rapports de force, blocages, risques, controverses,
+oppositions ou contre-discours.
+
+Exemples : contentieux, sanctions, conflits publics, syndicats, oppositions,
+incidents, forums specialises, signaux sociaux, OSINT public selon domaine.
+
+### Ressources de production / reproduction
+
+Ce qui montre le reel materiel : usage, clients, revenus, travail,
+infrastructure, financement, dependances, couts caches ou capacite a durer.
+
+Exemples : clients, revenus, offres d'emploi, pricing, chaine
+d'approvisionnement, financement, dependances, equipes, publications
+scientifiques, donnees de terrain.
+
+Regle :
+
+```txt
+Le web ne doit pas chercher plus large par defaut.
+Il doit chercher mieux : 1 a 3 canaux par fonction selon domaine, urgence,
+latence et besoin de preuve.
 ```
 
 ## 4d. Archive de generation

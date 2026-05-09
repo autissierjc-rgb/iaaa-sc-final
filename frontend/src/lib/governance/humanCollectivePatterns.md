@@ -121,6 +121,30 @@ qui legitime ne protege plus, ce qui protege empeche de produire, ou ce qui
 produit n'est plus reconnu par ce qui legitime.
 ```
 
+## Usage pour les ressources et Recherche+
+
+La triade ne sert pas seulement a lire ou ecrire. Elle sert aussi a orienter la
+recherche.
+
+ResourceService doit chercher des preuves fonctionnelles :
+
+- preuves de legitimation : droit, certification, parole officielle, reputation,
+  recit autorise ;
+- preuves de protection / conflit : blocages, oppositions, litiges, sanctions,
+  rapports de force, contre-discours ;
+- preuves de production / reproduction : usage, travail, clients, financement,
+  infrastructures, charge portee, dependances.
+
+Recherche+ va plus loin : elle devient un radar de detection. Elle cherche les
+desalignements, contradictions, absences suspectes et signaux faibles entre les
+trois fonctions.
+
+```txt
+Une bonne recherche ne demande pas seulement quelles sources parlent du sujet.
+Elle demande quelles sources montrent qui legitime, qui bloque, et qui produit
+reellement.
+```
+
 ## Familles de patterns
 
 ### Face / role public
