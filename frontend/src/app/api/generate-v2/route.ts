@@ -106,7 +106,6 @@ export async function POST(request: NextRequest) {
   const dialogue = runDialogueGate({ interpretation })
   const safety = runRiskAdviceGuard({ interpretation })
   const expertises = routeExpertisesMetiers({ interpretation })
-  const resources = planResources({ interpretation })
   const patterns = selectHumanCollectivePatterns({
     text: [
       interpretation.situation_soumise,
@@ -117,6 +116,7 @@ export async function POST(request: NextRequest) {
       expertises.writing_anchors.join(' '),
     ].join(' '),
   })
+  const resources = planResources({ interpretation, patterns })
   const triad_astrolabe = triadAstrolabeInfluence(patterns.dumezil_balance)
   const theatre = buildConcreteTheatre({ interpretation, resources, expertises })
   const inquiry = buildBlindSpotInquiry({ interpretation, theatre })

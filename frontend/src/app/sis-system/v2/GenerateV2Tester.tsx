@@ -25,6 +25,15 @@ type GenerateV2Response = {
   }
   resources?: {
     status?: string
+    functional_needs?: Array<{
+      family: string
+      label_fr: string
+      question_fr: string
+      channels: string[]
+      suggested_queries: string[]
+      expected_evidence_fr: string[]
+      priority: string
+    }>
     resources?: unknown[]
     public_sources?: unknown[]
     needs_web?: boolean
@@ -495,6 +504,11 @@ export default function GenerateV2Tester() {
                 <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.55 }}>
                   Statut : {response.resources?.status ?? 'non renseigne'} · sources publiques : {response.resources?.public_sources?.length ?? response.resources?.resources?.length ?? 0}
                 </p>
+                {response.resources?.functional_needs && response.resources.functional_needs.length > 0 && (
+                  <p style={{ margin: '8px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                    Triade : {response.resources.functional_needs.map((need) => `${need.label_fr} (${need.priority})`).join(' · ')}
+                  </p>
+                )}
               </div>
             </aside>
           </div>
@@ -674,6 +688,36 @@ export default function GenerateV2Tester() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {response?.resources?.functional_needs && response.resources.functional_needs.length > 0 && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+            ressources · triade de preuves
+          </p>
+          <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
+            Plan de recherche passif : quelles preuves chercher pour legitimer, proteger / contester, produire / maintenir.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginTop: 10 }}>
+            {response.resources.functional_needs.map((need) => (
+              <div key={need.family} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 10, background: '#fff' }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>
+                  priorite {need.priority}
+                </p>
+                <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 13 }}>{need.label_fr}</h3>
+                <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                  {need.question_fr}
+                </p>
+                <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                  Canaux : {need.channels.join(', ')}
+                </p>
+                <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                  Preuves : {need.expected_evidence_fr.join(', ')}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

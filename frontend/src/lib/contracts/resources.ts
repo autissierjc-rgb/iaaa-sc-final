@@ -16,6 +16,21 @@ export type SourceChannel =
 
 export type ResourceStatus = 'not_needed' | 'available' | 'partial' | 'failed' | 'timeout'
 
+export type FunctionalResourceFamily =
+  | 'legitimation'
+  | 'protection_conflict'
+  | 'production_reproduction'
+
+export type FunctionalResourceNeed = {
+  family: FunctionalResourceFamily
+  label_fr: string
+  question_fr: string
+  channels: SourceChannel[]
+  suggested_queries: string[]
+  expected_evidence_fr: string[]
+  priority: 'low' | 'medium' | 'high'
+}
+
 export type ResourceContract = {
   id: string
   title: string
@@ -31,6 +46,7 @@ export type ResourceContract = {
 
 export type ResourceServiceContract = {
   status: ResourceStatus
+  functional_needs: FunctionalResourceNeed[]
   requested_urls: string[]
   extracted_urls: string[]
   fallback_searches: string[]
