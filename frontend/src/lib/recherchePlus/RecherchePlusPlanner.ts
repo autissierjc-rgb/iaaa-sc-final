@@ -18,6 +18,9 @@ const INTRODUCTION_FR =
 const DISCLAIMER_FR =
   'Les resultats de Recherche+ restent separes de SC, Lecture et Approfondir tant qu ils ne sont pas verifies par une source exploitable.'
 
+const PRODUCT_BOUNDARY_FR =
+  'SIS repond vite. Recherche+ creuse loin : option IAAA+ separee pour verifier les sources sans ralentir la carte.'
+
 function signalClassesForFamily(family: RecherchePlusRadarTask['family']): RecherchePlusSignalStatus[] {
   if (family === 'legitimation') {
     return ['solid_source', 'contradiction', 'suspicious_absence', 'next_verification']
@@ -93,6 +96,8 @@ export function prepareRecherchePlus(input: RecherchePlusPlannerInput): Recherch
 
   return {
     mode: 'prepared',
+    access_tier: 'iaaa_plus',
+    product_boundary_fr: PRODUCT_BOUNDARY_FR,
     introduction_fr: INTRODUCTION_FR,
     radar_tasks: radarTasks,
     targets,

@@ -31,6 +31,12 @@ export type RecherchePlusRadarTask = {
   caution_fr: string
 }
 
+export type RecherchePlusAccessTier =
+  | 'sis_preview'
+  | 'iaaa_plus'
+  | 'iaaa_pro'
+  | 'admin'
+
 export type RecherchePlusTarget = {
   blind_spot: string
   question: string
@@ -54,6 +60,8 @@ export type RecherchePlusFinding = {
 
 export type RecherchePlusContract = {
   mode: 'not_started' | 'prepared' | 'running' | 'completed' | 'failed'
+  access_tier: RecherchePlusAccessTier
+  product_boundary_fr: string
   introduction_fr: string
   radar_tasks: RecherchePlusRadarTask[]
   targets: RecherchePlusTarget[]

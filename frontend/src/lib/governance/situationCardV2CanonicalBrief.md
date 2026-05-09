@@ -176,6 +176,43 @@ SC / Lecture / Approfondir = reponse structurelle.
 Recherche+ = pistes externes separees, non conclusives.
 ```
 
+Regle produit :
+
+```txt
+SIS repond vite.
+Recherche+ creuse loin.
+```
+
+SIS standard doit rester rapide et partageable :
+
+- Situation Card ;
+- Lecture ;
+- Approfondir ;
+- ressources simples ;
+- preparation des incertitudes et angles morts dans la reponse.
+
+Recherche+ appartient a IAAA+ / option avancee :
+
+- enquete structuree sur sources ;
+- resumes probatoires de sources ;
+- valeur probatoire ;
+- limites de preuve ;
+- contradictions ;
+- signaux faibles ;
+- prochaine verification ;
+- connecteurs web, sources officielles, bases metier et reseaux publics si
+  l'acces legal/API le permet.
+
+Recherche+ ne doit jamais bloquer la generation SIS. Elle peut etre lente,
+payante, limitee ou asynchrone sans degrader la SC rapide.
+
+Formule produit :
+
+```txt
+Situation Card montre ce qu'il faut comprendre.
+Recherche+ cherche ce qu'il faut verifier.
+```
+
 Regle radar :
 
 ```txt

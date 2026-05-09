@@ -81,6 +81,8 @@ type GenerateV2Response = {
   }
   recherche_plus?: {
     mode?: string
+    access_tier?: string
+    product_boundary_fr?: string
     introduction_fr?: string
     public_disclaimer_fr?: string
     radar_tasks?: Array<{
@@ -813,6 +815,12 @@ export default function GenerateV2Tester() {
           </p>
           <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
             {response.recherche_plus.introduction_fr}
+          </p>
+          <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.55, fontWeight: 700 }}>
+            {response.recherche_plus.product_boundary_fr}
+          </p>
+          <p style={{ margin: '6px 0 0', color: '#8B8174', fontFamily: 'monospace', fontSize: 10 }}>
+            acces produit : {response.recherche_plus.access_tier ?? 'iaaa_plus'}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginTop: 10 }}>
             {response.recherche_plus.radar_tasks.map((task) => (
