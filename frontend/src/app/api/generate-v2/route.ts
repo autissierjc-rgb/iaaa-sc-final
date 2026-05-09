@@ -13,6 +13,7 @@ import { runContractQualityGate } from '@/lib/quality'
 import { buildGenerationEvent } from '@/lib/archive'
 import { composeDiamondWritingWithMode } from '@/lib/writing'
 import { runQualityGate } from '@/lib/quality'
+import { selectHumanCollectivePatterns } from '@/lib/patterns/humanCollective'
 import type { AstrolabeBranchV2, RadarScoreV2 } from '@/lib/contracts'
 
 export const dynamic = 'force-dynamic'
@@ -105,6 +106,16 @@ export async function POST(request: NextRequest) {
   const safety = runRiskAdviceGuard({ interpretation })
   const expertises = routeExpertisesMetiers({ interpretation })
   const resources = planResources({ interpretation })
+  const patterns = selectHumanCollectivePatterns({
+    text: [
+      interpretation.situation_soumise,
+      interpretation.object_of_analysis,
+      interpretation.angle,
+      interpretation.user_need,
+      expertises.blind_spots_to_test.join(' '),
+      expertises.writing_anchors.join(' '),
+    ].join(' '),
+  })
   const theatre = buildConcreteTheatre({ interpretation, resources, expertises })
   const inquiry = buildBlindSpotInquiry({ interpretation, theatre })
 
@@ -175,6 +186,7 @@ export async function POST(request: NextRequest) {
       { stage_id: 'dialogue-gate', duration_ms: 1, outcome: dialogue.can_generate ? 'ok' : 'warning' },
       { stage_id: 'expertises-metiers', duration_ms: expertises.trace.duration_ms ?? 0, outcome: expertises.trace.status === 'ok' ? 'ok' : 'warning' },
       { stage_id: 'resources', duration_ms: resources.trace.duration_ms ?? 0, outcome: resources.status === 'failed' ? 'failed' : 'ok' },
+      { stage_id: 'patterns', duration_ms: 1, outcome: 'ok' },
       { stage_id: 'theatre', duration_ms: theatre.trace.duration_ms ?? 0, outcome: theatre.trace.status === 'ok' ? 'ok' : 'warning' },
       { stage_id: 'blind-spots', duration_ms: inquiry.trace.duration_ms ?? 0, outcome: inquiry.trace.status === 'ok' ? 'ok' : 'warning' },
       { stage_id: 'scoring', duration_ms: scoring.trace.duration_ms ?? 0, outcome: scoring.trace.status === 'ok' ? 'ok' : 'warning' },
@@ -197,6 +209,7 @@ export async function POST(request: NextRequest) {
     safety,
     resources,
     expertises,
+    patterns,
     theatre,
     scoring,
     inquiry,

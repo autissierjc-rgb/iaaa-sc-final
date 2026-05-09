@@ -29,6 +29,26 @@ type GenerateV2Response = {
     public_sources?: unknown[]
     needs_web?: boolean
   }
+  patterns?: {
+    selected_patterns?: Array<{
+      id: string
+      label_fr: string
+      confidence: number
+      hypothesis: string
+      observable_signal: string
+      inquiry_question: string
+    }>
+    dumezil_balance?: {
+      legitimize?: number
+      protect_fight?: number
+      produce_reproduce?: number
+    }
+    trace?: {
+      rule?: string
+      matched_patterns?: number
+      total_patterns?: number
+    }
+  }
   theatre?: {
     actors?: string[]
     institutions?: string[]
@@ -167,6 +187,7 @@ function layerLabel(stageId: string) {
     'risk-advice': 'safety',
     'expertises-metiers': 'expertisesMetiers',
     resources: 'resources',
+    patterns: 'patterns',
     theatre: 'theatre',
     'blind-spots': 'inquiry',
     scoring: 'scoring',
@@ -531,6 +552,18 @@ export default function GenerateV2Tester() {
           </div>
 
           <div style={miniCardStyle()}>
+            <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>patterns</p>
+            <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>
+              {response.patterns?.selected_patterns?.length ?? 0} lentille(s)
+            </h3>
+            <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11 }}>
+              {response.patterns?.trace?.rule === 'patterns_are_lenses_not_conclusions'
+                ? 'lentilles, pas conclusions'
+                : 'non renseigne'}
+            </p>
+          </div>
+
+          <div style={miniCardStyle()}>
             <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>archive</p>
             <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>
               {response.generation_archive?.archive_decision?.privacy_mode ?? 'non renseigne'}
@@ -567,6 +600,47 @@ export default function GenerateV2Tester() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {response?.patterns && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+            patterns humains et collectifs
+          </p>
+          <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
+            Diagnostic interne seulement : les patterns sont des lentilles, pas des conclusions publiques.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginTop: 10 }}>
+            {[
+              ['legitimer', response.patterns.dumezil_balance?.legitimize ?? 0],
+              ['proteger / combattre', response.patterns.dumezil_balance?.protect_fight ?? 0],
+              ['produire / reproduire', response.patterns.dumezil_balance?.produce_reproduce ?? 0],
+            ].map(([label, value]) => (
+              <div key={label} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 10, background: '#fff' }}>
+                <p style={{ margin: 0, color: '#8B8174', fontFamily: 'monospace', fontSize: 10 }}>{label}</p>
+                <p style={{ margin: '5px 0 0', color: '#1A2E5A', fontSize: 14, fontWeight: 700 }}>{value}</p>
+              </div>
+            ))}
+          </div>
+          {response.patterns.selected_patterns && response.patterns.selected_patterns.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
+              {response.patterns.selected_patterns.map((pattern) => (
+                <div key={pattern.id} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 10, background: '#fff' }}>
+                  <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>
+                    confiance {Math.round(pattern.confidence * 100)}%
+                  </p>
+                  <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 13 }}>{pattern.label_fr}</h3>
+                  <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                    {pattern.hypothesis}
+                  </p>
+                  <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                    Signal : {pattern.observable_signal}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
