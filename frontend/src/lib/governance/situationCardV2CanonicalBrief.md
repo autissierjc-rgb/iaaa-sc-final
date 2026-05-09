@@ -117,6 +117,11 @@ Chaque etape doit produire un contrat type, testable et loggable.
 Aucun service ne doit modifier silencieusement le contrat produit par un autre
 service.
 
+Aucune couche ne doit inventer une regle locale pour corriger un symptome.
+Si un comportement manque, il doit etre rattache a une regle canonique
+existante ou faire l'objet d'une modification explicite du brief canonique
+avant toute modification du code.
+
 Note importante :
 
 ```txt

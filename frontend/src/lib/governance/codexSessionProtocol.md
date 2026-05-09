@@ -63,3 +63,25 @@ Si un probleme ressemble a un cas particulier, ne pas produire un patch de cas.
 
 Corriger la couche canonique qui a produit le symptome et ajouter le cas au
 benchmark ou aux regressions si necessaire.
+
+## Regle anti-invention
+
+Quand un symptome apparait, Codex ne doit pas inventer une nouvelle regle
+locale.
+
+Procedure obligatoire :
+
+1. Identifier la couche canonique responsable.
+2. Relire les documents canoniques existants.
+3. Verifier si la regle existe deja.
+4. Si elle existe, corriger uniquement l'implementation de la couche concernee.
+5. Si elle n'existe pas, proposer explicitement une modification du document
+   canonique avant de modifier le code.
+6. Ne jamais creer une micro-regle ou un patch de cas pour traiter un symptome
+   isole.
+
+Question de controle :
+
+```txt
+Quelle regle canonique existante cette modification applique-t-elle ?
+```
