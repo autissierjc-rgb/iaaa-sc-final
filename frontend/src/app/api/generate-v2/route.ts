@@ -14,6 +14,7 @@ import { buildGenerationEvent } from '@/lib/archive'
 import { composeDiamondWritingWithMode } from '@/lib/writing'
 import { runQualityGate } from '@/lib/quality'
 import { selectHumanCollectivePatterns } from '@/lib/patterns/humanCollective'
+import { triadAstrolabeInfluence } from '@/lib/scoringV2'
 import type { AstrolabeBranchV2, RadarScoreV2 } from '@/lib/contracts'
 
 export const dynamic = 'force-dynamic'
@@ -116,6 +117,7 @@ export async function POST(request: NextRequest) {
       expertises.writing_anchors.join(' '),
     ].join(' '),
   })
+  const triad_astrolabe = triadAstrolabeInfluence(patterns.dumezil_balance)
   const theatre = buildConcreteTheatre({ interpretation, resources, expertises })
   const inquiry = buildBlindSpotInquiry({ interpretation, theatre })
 
@@ -210,6 +212,7 @@ export async function POST(request: NextRequest) {
     resources,
     expertises,
     patterns,
+    triad_astrolabe,
     theatre,
     scoring,
     inquiry,

@@ -820,6 +820,46 @@ Il doit combiner :
 - branches Astrolabe ;
 - seuils de coherence.
 
+Triade et Astrolabe :
+
+La triade fonctionnelle ne cree pas une neuvieme branche. Elle explique la
+fonction sociale des forces visibles et aide a comprendre pourquoi une branche
+devient forte ou dominante.
+
+```txt
+L'Astrolabe montre les lignes de force visibles.
+La triade explique ce que ces forces font dans le systeme.
+```
+
+Effets attendus :
+
+- `I Acteurs` : distinguer l'acteur qui legitime, celui qui protege / combat /
+  bloque, et celui qui produit ou porte la charge ;
+- `II Interets` : separer interet de legitimite, interet de protection et
+  interet de production / reproduction ;
+- `III Forces` : nommer les forces de legitimation, de defense / conflit et de
+  production / reproduction ;
+- `IV Tensions` : detecter les desalignements entre les trois fonctions ;
+- `V Contraintes` : separer contraintes normatives, conflictuelles et
+  materielles ;
+- `VI Incertitudes` : demander ce qui manque sur la legitimite, le blocage ou la
+  production reelle ;
+- `VII Temps` : distinguer rythme institutionnel, seuil conflictuel et usure
+  productive ;
+- `VIII Perception` : distinguer le recit qui legitime, le recit qui designe le
+  danger et le recit qui rend la charge acceptable.
+
+Regles de scoring :
+
+- domination de protection / conflit : peut renforcer `IV Tensions`,
+  `V Contraintes` et `VII Temps` ;
+- production non reconnue : peut renforcer `III Forces`, `V Contraintes` et
+  `VI Incertitudes` ;
+- legitimite fissuree : peut renforcer `I Acteurs`, `II Interets` et
+  `VIII Perception` ;
+- desalignement des trois fonctions : peut renforcer la pression globale, mais
+  doit rester verifie par le theatre reel et le radar.
+
 Garde-fous :
 
 - si `state_index_final > 70`, au moins une branche doit etre dominante ;

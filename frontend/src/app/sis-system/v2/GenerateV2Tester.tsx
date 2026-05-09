@@ -49,6 +49,13 @@ type GenerateV2Response = {
       total_patterns?: number
     }
   }
+  triad_astrolabe?: Array<{
+    function_id: string
+    label_fr: string
+    active: boolean
+    suggested_branches: string[]
+    rationale_fr: string
+  }>
   theatre?: {
     actors?: string[]
     institutions?: string[]
@@ -636,6 +643,32 @@ export default function GenerateV2Tester() {
                   </p>
                   <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
                     Signal : {pattern.observable_signal}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+          {response.triad_astrolabe && response.triad_astrolabe.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
+              {response.triad_astrolabe.map((item) => (
+                <div
+                  key={item.function_id}
+                  style={{
+                    border: `1px solid ${item.active ? '#D8C79B' : '#F0EBE0'}`,
+                    borderRadius: 8,
+                    padding: 10,
+                    background: item.active ? '#FCFAF6' : '#fff',
+                  }}
+                >
+                  <p style={{ margin: 0, color: item.active ? '#C8951A' : '#8B8174', fontFamily: 'monospace', fontSize: 10 }}>
+                    astrolabe · {item.active ? 'actif' : 'veille'}
+                  </p>
+                  <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 13 }}>{item.label_fr}</h3>
+                  <p style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 12 }}>
+                    Branches : {item.suggested_branches.join(', ')}
+                  </p>
+                  <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                    {item.rationale_fr}
                   </p>
                 </div>
               ))}

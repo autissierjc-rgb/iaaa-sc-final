@@ -145,6 +145,31 @@ Elle demande quelles sources montrent qui legitime, qui bloque, et qui produit
 reellement.
 ```
 
+## Usage pour l'Astrolabe
+
+La triade ne remplace pas les huit branches publiques. Elle aide a comprendre
+la fonction des forces detectees.
+
+```txt
+L'Astrolabe montre les lignes de force visibles.
+La triade explique ce que ces forces font dans le systeme.
+```
+
+Effet par branche :
+
+- Acteurs : qui legitime, qui protege ou bloque, qui produit ou porte la charge.
+- Interets : garder autorite, eviter perte ou attaque, maintenir valeur ou lien.
+- Forces : force de legitimation, force de defense / conflit, force productive.
+- Tensions : desalignement entre les fonctions.
+- Contraintes : norme, conflit, matiere.
+- Incertitudes : ce qui manque sur legitimite, blocage ou production reelle.
+- Temps : calendrier institutionnel, seuil conflictuel, usure lente.
+- Perception : recit qui legitime, recit qui designe le danger, recit qui rend
+  la charge acceptable.
+
+La triade peut expliquer pourquoi une branche monte, mais elle ne doit jamais
+gonfler le scoring sans theatre reel.
+
 ## Familles de patterns
 
 ### Face / role public
