@@ -11,7 +11,7 @@ import { buildConcreteTheatre } from '@/lib/theatre'
 import { routeExpertisesMetiers } from '@/lib/expertisesMetiers'
 import { runContractQualityGate } from '@/lib/quality'
 import { buildGenerationEvent } from '@/lib/archive'
-import { composeDiamondWriting } from '@/lib/writing'
+import { composeDiamondWritingWithMode } from '@/lib/writing'
 import { runQualityGate } from '@/lib/quality'
 import type { AstrolabeBranchV2, RadarScoreV2 } from '@/lib/contracts'
 
@@ -21,6 +21,7 @@ type GenerateV2Body = {
   input?: string
   raw_input?: string
   interpretation_mode?: 'referent_llm' | 'local_contract'
+  writing_mode?: 'referent_llm' | 'local_contract'
 }
 
 const ASTROLABE_TEMPLATE: Array<Omit<AstrolabeBranchV2, 'score' | 'is_primary' | 'rationale_fr'>> = [
@@ -117,13 +118,16 @@ export async function POST(request: NextRequest) {
     radar: buildDraftRadar(counts),
     trace_notes: ['dry_run_generate_v2=true'],
   })
-  const writing = composeDiamondWriting({
-    interpretation,
-    safety,
-    expertises_metiers: expertises,
-    theatre,
-    scoring,
-  })
+  const writing = await composeDiamondWritingWithMode(
+    {
+      interpretation,
+      safety,
+      expertises_metiers: expertises,
+      theatre,
+      scoring,
+    },
+    body.writing_mode ?? 'local_contract',
+  )
   const contractQuality = runContractQualityGate({ interpretation, theatre, scoring, inquiry })
   const writingQuality = runQualityGate({ interpretation, theatre, scoring, writing })
   const quality = {
