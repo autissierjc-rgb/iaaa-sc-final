@@ -15,10 +15,16 @@ export type PatternEvidenceMode =
   | 'public_sources'
   | 'recherche_plus'
 
+export type DumezilFunction =
+  | 'legitimize'
+  | 'protect_fight'
+  | 'produce_reproduce'
+
 export type HumanCollectivePattern = {
   id: string
   label_fr: string
   traditions: string[]
+  dumezil_functions: DumezilFunction[]
   applies_to: HumanCollectiveScale[]
   structure: string
   detects: string[]
@@ -41,6 +47,7 @@ export type SelectedHumanCollectivePattern = {
 
 export type HumanCollectivePatternContext = {
   selected_patterns: SelectedHumanCollectivePattern[]
+  dumezil_balance: Record<DumezilFunction, number>
   trace: {
     total_patterns: number
     matched_patterns: number
@@ -60,6 +67,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'face_role_public',
     label_fr: 'Face / role public',
     traditions: ['Goffman'],
+    dumezil_functions: ['legitimize', 'protect_fight'],
     applies_to: ['individual', 'family', 'couple', 'team', 'organization', 'institution', 'state'],
     structure: 'Un acteur protege une image publique ou une place relationnelle avant de traiter le fond.',
     detects: ['honte', 'humiliation', 'retrait', 'justification', 'image', 'reputation', 'face'],
@@ -74,6 +82,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'taboo_invisible_norm',
     label_fr: 'Tabou / norme invisible',
     traditions: ['Mary Douglas'],
+    dumezil_functions: ['legitimize'],
     applies_to: ['family', 'team', 'organization', 'institution', 'state', 'community'],
     structure: 'Le groupe evite un sujet parce que le nommer menacerait son ordre implicite.',
     detects: ['tabou', 'norme', 'interdit', 'impur', 'on ne dit pas', 'silence', 'malaise'],
@@ -88,6 +97,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'discretionary_power_zone',
     label_fr: 'Zone d incertitude / pouvoir discret',
     traditions: ['Crozier', 'Friedberg'],
+    dumezil_functions: ['protect_fight'],
     applies_to: ['team', 'organization', 'institution', 'state', 'community'],
     structure: 'Un acteur tient un levier parce qu il controle une incertitude, une competence ou un passage oblige.',
     detects: ['bloquer', 'ralentir', 'dependance', 'levier', 'decision', 'procedure', 'qui decide'],
@@ -102,6 +112,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'symbolic_capital_recognition',
     label_fr: 'Capital symbolique / reconnaissance',
     traditions: ['Bourdieu'],
+    dumezil_functions: ['legitimize', 'produce_reproduce'],
     applies_to: ['individual', 'family', 'team', 'organization', 'institution', 'state', 'community'],
     structure: 'Le conflit porte sur le rang, la legitimite ou la reconnaissance autant que sur l objet visible.',
     detects: ['reconnaissance', 'rang', 'statut', 'legitimite', 'prestige', 'invisible', 'merite'],
@@ -116,6 +127,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'gift_debt_loyalty',
     label_fr: 'Don / dette / loyaute',
     traditions: ['Mauss'],
+    dumezil_functions: ['produce_reproduce', 'legitimize'],
     applies_to: ['individual', 'family', 'couple', 'team', 'organization', 'community'],
     structure: 'Une dette implicite ou un don passe continue d organiser les obligations presentes.',
     detects: ['dette', 'loyaute', 'trahir', 'apres tout', 'obligation', 'don', 'service rendu'],
@@ -130,6 +142,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'moral_justification_regime',
     label_fr: 'Justification / recit moral',
     traditions: ['Boltanski', 'Thevenot'],
+    dumezil_functions: ['legitimize'],
     applies_to: ['individual', 'family', 'team', 'organization', 'institution', 'state', 'community'],
     structure: 'Les acteurs ne s opposent pas seulement sur les faits mais sur le monde moral qui rend une position legitime.',
     detects: ['justice', 'valeurs', 'merite', 'efficacite', 'tradition', 'mission', 'responsabilite'],
@@ -143,6 +156,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'deep_culture_contradiction',
     label_fr: 'Culture profonde / contradiction',
     traditions: ['Schein'],
+    dumezil_functions: ['produce_reproduce', 'legitimize'],
     applies_to: ['team', 'organization', 'institution', 'state', 'community'],
     structure: 'Les valeurs affichees et les comportements recompenses racontent deux organisations differentes.',
     detects: ['culture', 'valeurs', 'mission', 'discours', 'pratique', 'recompense', 'contradiction'],
@@ -157,6 +171,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'collective_defensive_routine',
     label_fr: 'Defense collective / refus d apprendre',
     traditions: ['Argyris', 'Janis'],
+    dumezil_functions: ['protect_fight'],
     applies_to: ['team', 'organization', 'institution', 'state', 'community'],
     structure: 'Le groupe protege sa coherence en evitant les signaux qui exigeraient d apprendre ou de changer.',
     detects: ['minimise', 'deni', 'on savait', 'signal faible', 'consensus', 'pression du groupe', 'defense'],
@@ -171,6 +186,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'threshold_status_passage',
     label_fr: 'Seuil / passage / statut',
     traditions: ['Turner'],
+    dumezil_functions: ['legitimize', 'produce_reproduce'],
     applies_to: ['individual', 'family', 'couple', 'team', 'organization', 'institution', 'community'],
     structure: 'Un ancien role ne contient plus la situation et un nouveau role n est pas encore stabilise.',
     detects: ['passage', 'seuil', 'transition', 'ancien role', 'nouveau role', 'statut', 'entre deux'],
@@ -184,6 +200,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'mimetic_rivalry_scapegoat',
     label_fr: 'Desir mimetique / bouc emissaire',
     traditions: ['Girard'],
+    dumezil_functions: ['protect_fight', 'legitimize'],
     applies_to: ['individual', 'family', 'couple', 'team', 'organization', 'institution', 'state', 'community'],
     structure: 'La rivalite se cristallise autour d un objet rendu desirable par le regard d autrui, ou une faute est transferee pour refaire de l unite.',
     detects: ['rivalite', 'jalousie', 'imitation', 'bouc emissaire', 'faute', 'accusation', 'unite'],
@@ -198,6 +215,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'material_relations_ideology',
     label_fr: 'Rapports materiels / ideologie',
     traditions: ['Marx'],
+    dumezil_functions: ['produce_reproduce', 'legitimize'],
     applies_to: ['team', 'organization', 'institution', 'state', 'community'],
     structure: 'Un recit moral ou naturel masque des rapports de travail, de valeur, de dependance ou d extraction.',
     detects: ['argent', 'travail', 'valeur', 'salaire', 'dependance', 'extraction', 'classe', 'ideologie', 'propriete'],
@@ -212,6 +230,7 @@ export const HUMAN_COLLECTIVE_PATTERNS: HumanCollectivePattern[] = [
     id: 'symbolic_opposition_boundary',
     label_fr: 'Oppositions symboliques / frontieres',
     traditions: ['Levi-Strauss'],
+    dumezil_functions: ['legitimize'],
     applies_to: ['individual', 'family', 'couple', 'team', 'organization', 'institution', 'state', 'community'],
     structure: 'Une opposition cachee organise la situation jusqu au moment ou un acteur brouille la frontiere.',
     detects: ['ancien', 'nouveau', 'loyaute', 'autonomie', 'terrain', 'siege', 'peuple', 'elite', 'frontiere', 'identite'],
@@ -237,6 +256,18 @@ export function selectHumanCollectivePatterns(input: {
     .filter((item) => item.hits.length > 0)
     .sort((a, b) => b.hits.length - a.hits.length)
 
+  const dumezil_balance: Record<DumezilFunction, number> = {
+    legitimize: 0,
+    protect_fight: 0,
+    produce_reproduce: 0,
+  }
+
+  for (const item of matched) {
+    for (const fn of item.pattern.dumezil_functions) {
+      dumezil_balance[fn] += item.hits.length
+    }
+  }
+
   return {
     selected_patterns: matched.slice(0, max).map(({ pattern, hits }) => ({
       id: pattern.id,
@@ -246,6 +277,7 @@ export function selectHumanCollectivePatterns(input: {
       observable_signal: pattern.observable_signals[0],
       inquiry_question: pattern.questions[0],
     })),
+    dumezil_balance,
     trace: {
       total_patterns: HUMAN_COLLECTIVE_PATTERNS.length,
       matched_patterns: matched.length,
@@ -253,4 +285,3 @@ export function selectHumanCollectivePatterns(input: {
     },
   }
 }
-

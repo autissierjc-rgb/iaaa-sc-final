@@ -68,6 +68,58 @@ patterns utilisables comme grilles structurelles.
   alienation.
 - Claude Levi-Strauss : oppositions symboliques, frontieres, recits qui
   reconcilient une contradiction.
+- Georges Dumezil : triade fonctionnelle, utile comme meta-grille de
+  classement : legitimer, proteger/combattre, produire/reproduire.
+
+## Meta-grille dumezilienne
+
+Dumezil ne doit pas etre traite comme un pattern supplementaire. Il sert de
+charpente pour organiser la masse des sources internes.
+
+La V2 peut indexer chaque pattern selon trois fonctions :
+
+### Legitimer
+
+Qui donne le droit, le sens, la regle, la parole autorisee, le recit ou l'ordre
+symbolique ?
+
+Exemples de lentilles proches : Goffman, Douglas, Bourdieu,
+Boltanski-Thevenot, Levi-Strauss.
+
+### Proteger / combattre
+
+Qui defend, impose, bloque, menace, absorbe le choc, designe un adversaire ou
+stabilise le conflit ?
+
+Exemples de lentilles proches : Crozier-Friedberg, Girard, Argyris, Janis.
+
+### Produire / reproduire
+
+Qui travaille, finance, nourrit, soigne, transmet, entretient, capte la valeur
+ou rend le systeme durable ?
+
+Exemples de lentilles proches : Marx, Mauss, Schein, care, travail invisible.
+
+Question SC :
+
+```txt
+Qui legitime ? Qui protege ou combat ? Qui produit ou porte la charge ?
+```
+
+Question de bascule :
+
+```txt
+Quelle fonction manque, domine les autres, ou pretend faire le travail d'une
+autre ?
+```
+
+Phrase diamant :
+
+```txt
+Une situation devient critique quand les trois fonctions se desalignent : ce
+qui legitime ne protege plus, ce qui protege empeche de produire, ou ce qui
+produit n'est plus reconnu par ce qui legitime.
+```
 
 ## Familles de patterns
 
@@ -211,4 +263,3 @@ Variante relationnelle :
 Un lien bascule quand ce qui devait rester un appui devient une preuve de
 honte, de dette ou de domination.
 ```
-
