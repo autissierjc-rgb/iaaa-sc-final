@@ -77,11 +77,26 @@ type GenerateV2Response = {
       title_fr?: string
       insight_fr?: string
       main_vulnerability_fr?: string
+      asymmetry_fr?: string
       key_signal_fr?: string
     }
+    trajectories?: Array<{
+      type: string
+      title_fr: string
+      description_fr: string
+      signal_fr: string
+    }>
     lecture?: {
       text_fr?: string
       word_count_fr?: number
+    }
+    approfondir?: {
+      analysis_fr?: string
+      sections_fr?: Array<{
+        id: string
+        title: string
+        body: string
+      }>
     }
     diamond_sentences?: Array<{
       text_fr: string
@@ -321,6 +336,99 @@ export default function GenerateV2Tester() {
         <p style={{ color: '#B23A3A', fontSize: 13, marginTop: 12 }}>
           {error}
         </p>
+      )}
+
+      {response?.ok && (
+        <div style={{ marginTop: 16, ...panelStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>apercu public v2</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginTop: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ ...miniCardStyle(), borderColor: '#D8C79B' }}>
+                <p style={{ margin: 0, color: '#8B8174', fontSize: 11 }}>
+                  {response.interpretation?.header_domain}
+                </p>
+                <h3 style={{ margin: '5px 0 0', color: '#1A2E5A', fontSize: 18, lineHeight: 1.25 }}>
+                  {response.writing?.situation_card?.title_fr ?? response.interpretation?.header_subject}
+                </h3>
+                <p style={{ margin: '10px 0 0', color: '#1A2E5A', fontSize: 13, lineHeight: 1.6 }}>
+                  {response.writing?.situation_card?.insight_fr}
+                </p>
+                {response.writing?.diamond_sentences?.[0]?.text_fr && (
+                  <p style={{ margin: '12px 0 0', color: '#C8951A', fontSize: 14, lineHeight: 1.45, fontStyle: 'italic' }}>
+                    {response.writing.diamond_sentences[0].text_fr}
+                  </p>
+                )}
+              </div>
+
+              <div style={{ ...miniCardStyle(), marginTop: 12 }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>lecture</p>
+                <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 13, lineHeight: 1.65 }}>
+                  {response.writing?.lecture?.text_fr}
+                </p>
+              </div>
+
+              <div style={{ ...miniCardStyle(), marginTop: 12 }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>approfondir enrichi</p>
+                <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 13, lineHeight: 1.65 }}>
+                  {response.writing?.approfondir?.analysis_fr}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 12 }}>
+                  {response.writing?.approfondir?.sections_fr?.map((section) => (
+                    <div key={section.id} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 10, background: '#fff' }}>
+                      <h4 style={{ margin: 0, color: '#1A2E5A', fontSize: 12 }}>{section.title}</h4>
+                      <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.5 }}>{section.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <aside style={{ minWidth: 0 }}>
+              <div style={miniCardStyle()}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>vulnerabilite</p>
+                <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.55 }}>
+                  {response.writing?.situation_card?.main_vulnerability_fr}
+                </p>
+              </div>
+
+              <div style={{ ...miniCardStyle(), marginTop: 10 }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>asymetrie</p>
+                <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.55 }}>
+                  {response.writing?.situation_card?.asymmetry_fr}
+                </p>
+              </div>
+
+              <div style={{ ...miniCardStyle(), marginTop: 10 }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>signal cle</p>
+                <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.55 }}>
+                  {response.writing?.situation_card?.key_signal_fr}
+                </p>
+              </div>
+
+              <div style={{ ...miniCardStyle(), marginTop: 10 }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>trajectoires</p>
+                {response.writing?.trajectories?.map((trajectory) => (
+                  <div key={trajectory.type} style={{ marginTop: 10 }}>
+                    <h4 style={{ margin: 0, color: '#1A2E5A', fontSize: 12 }}>{trajectory.title_fr}</h4>
+                    <p style={{ margin: '4px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                      {trajectory.description_fr}
+                    </p>
+                    <p style={{ margin: '4px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                      {trajectory.signal_fr}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ ...miniCardStyle(), marginTop: 10 }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>ressources</p>
+                <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.55 }}>
+                  Statut : {response.resources?.status ?? 'non renseigne'} · sources publiques : {response.resources?.public_sources?.length ?? response.resources?.resources?.length ?? 0}
+                </p>
+              </div>
+            </aside>
+          </div>
+        </div>
       )}
 
       {response?.ok && (
