@@ -925,14 +925,47 @@ export default function GenerateV2Tester() {
                 cursor: 'pointer',
               }}
             >
-              Chercher les preuves
+              Lancer Recherche+
             </button>
             <span style={{ marginLeft: 10, color: '#8B8174', fontSize: 12 }}>
               {evidenceSearchRequested
-                ? 'Recherche probatoire non branchee : prochaine brique EvidenceSearch.'
-                : 'future enquete web / sources, non branchee dans ce banc d essai'}
+                ? 'Radar ouvert : cette brique ne lance pas encore d appel web.'
+                : 'future enquete web / sources, separee de SC, Lecture et Approfondir'}
             </span>
           </div>
+
+          {evidenceSearchRequested && response?.recherche_plus?.targets && response.recherche_plus.targets.length > 0 && (
+            <div style={{ marginTop: 12, ...miniCardStyle() }}>
+              <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>
+                Recherche+ · preuves a chercher
+              </p>
+              <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
+                Ce panneau simule le depart de l enquete : il liste les cibles probatoires, les canaux autorises
+                et la preuve attendue. Aucun resultat externe n est encore integre.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10, marginTop: 10 }}>
+                {response.recherche_plus.targets.map((target) => (
+                  <div key={target.blind_spot} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 10, background: '#fff' }}>
+                    <h3 style={{ margin: 0, color: '#1A2E5A', fontSize: 13 }}>{target.blind_spot}</h3>
+                    <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                      {target.question}
+                    </p>
+                    <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                      Preuve : {target.expected_evidence}
+                    </p>
+                    <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                      Canaux : {target.allowed_channels.join(', ')}
+                    </p>
+                    {target.safety_note && (
+                      <p style={{ margin: '6px 0 0', color: '#A66B00', fontSize: 11, lineHeight: 1.45 }}>
+                        {target.safety_note}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </section>
