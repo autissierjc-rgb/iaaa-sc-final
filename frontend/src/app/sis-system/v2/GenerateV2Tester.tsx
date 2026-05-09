@@ -23,6 +23,17 @@ type GenerateV2Response = {
     state_index_final?: number
     state_label?: string
   }
+  resources?: {
+    status?: string
+    sources?: unknown[]
+    needs_web?: boolean
+  }
+  theatre?: {
+    actors?: string[]
+    institutions?: string[]
+    procedures?: string[]
+    unknowns?: string[]
+  }
   inquiry?: {
     blind_spots?: Array<{
       blind_spot: string
@@ -34,6 +45,7 @@ type GenerateV2Response = {
   quality?: {
     ok?: boolean
     requires_section_regeneration?: boolean
+    sections_to_regenerate?: string[]
     issues?: Array<{
       level: string
       code: string
@@ -50,6 +62,8 @@ type GenerateV2Response = {
       duration_ms: number
       budget_ms: number
       over_budget: boolean
+      warnings?: string[]
+      error_kind?: string
     }>
   }
   error?: string
@@ -79,6 +93,30 @@ function miniCardStyle(): React.CSSProperties {
     padding: 12,
     background: '#FCFAF6',
   }
+}
+
+function outcomeColor(outcome?: string) {
+  if (outcome === 'failed') return '#B23A3A'
+  if (outcome === 'warning') return '#A66B00'
+  if (outcome === 'skipped') return '#8B8174'
+  return '#1D9E75'
+}
+
+function layerLabel(stageId: string) {
+  const labels: Record<string, string> = {
+    interpretation: 'interpretation',
+    'dialogue-gate': 'dialogue',
+    'risk-advice': 'safety',
+    'expertises-metiers': 'expertisesMetiers',
+    resources: 'resources',
+    theatre: 'theatre',
+    'blind-spots': 'inquiry',
+    scoring: 'scoring',
+    writing: 'writing',
+    quality: 'quality',
+  }
+
+  return labels[stageId] ?? stageId
 }
 
 export default function GenerateV2Tester() {
@@ -241,6 +279,24 @@ export default function GenerateV2Tester() {
               issues: {response.quality?.issues?.length ?? 0}
             </p>
           </div>
+
+          <div style={miniCardStyle()}>
+            <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>theatre</p>
+            <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>
+              {(response.theatre?.actors?.length ?? 0) + (response.theatre?.institutions?.length ?? 0)} ancres
+            </h3>
+            <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11 }}>
+              inconnus: {response.theatre?.unknowns?.length ?? 0}
+            </p>
+          </div>
+
+          <div style={miniCardStyle()}>
+            <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>resources</p>
+            <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{response.resources?.status ?? 'non renseigne'}</h3>
+            <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11 }}>
+              sources: {response.resources?.sources?.length ?? 0}
+            </p>
+          </div>
         </div>
       )}
 
@@ -256,6 +312,11 @@ export default function GenerateV2Tester() {
       {response?.quality?.issues && response.quality.issues.length > 0 && (
         <div style={{ marginTop: 14, ...miniCardStyle() }}>
           <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>quality gate</p>
+          {response.quality.sections_to_regenerate && response.quality.sections_to_regenerate.length > 0 && (
+            <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.5 }}>
+              Couche a reprendre : {response.quality.sections_to_regenerate.join(', ')}
+            </p>
+          )}
           <ul style={{ margin: '8px 0 0', paddingLeft: 18, color: '#6F6255', fontSize: 12, lineHeight: 1.6 }}>
             {response.quality.issues.slice(0, 4).map((item) => (
               <li key={`${item.code}-${item.field ?? 'contract'}`}>
@@ -264,6 +325,37 @@ export default function GenerateV2Tester() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {response?.pipeline_trace?.steps && response.pipeline_trace.steps.length > 0 && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>diagnostic par couche</p>
+          <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
+            Ce tableau sert a eviter les patchs de cas : chaque symptome est rattache a la couche canonique qui le produit.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 10 }}>
+            {response.pipeline_trace.steps.map((step) => (
+              <div key={step.stage_id} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#fff' }}>
+                <p style={{ margin: 0, color: '#1A2E5A', fontFamily: 'monospace', fontSize: 11 }}>
+                  {layerLabel(step.stage_id)}
+                </p>
+                <p style={{ margin: '6px 0 0', color: outcomeColor(step.outcome), fontSize: 12, fontWeight: 700 }}>
+                  {step.outcome} · {step.duration_ms}/{step.budget_ms} ms
+                </p>
+                {step.over_budget && (
+                  <p style={{ margin: '6px 0 0', color: '#B23A3A', fontSize: 11 }}>
+                    Hors budget de latence.
+                  </p>
+                )}
+                {step.warnings && step.warnings.length > 0 && (
+                  <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                    {step.warnings[0]}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
