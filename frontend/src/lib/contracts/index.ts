@@ -1,4 +1,5 @@
 export * from './common'
+export * from './ctoWatch'
 export * from './dialogue'
 export * from './expertisesMetiers'
 export * from './generationArchive'
