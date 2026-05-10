@@ -138,6 +138,8 @@ export async function POST(request: NextRequest) {
         duration_ms: 0,
         status: 'skipped' as const,
         note_fr: 'Runner sources rapides desactive en mode admin_benchmark.',
+        provider: 'none' as const,
+        timeout_ms: 0,
       }
     : await runFastResourceRunner({
         interpretation,
@@ -270,6 +272,7 @@ export async function POST(request: NextRequest) {
     interpretation,
     safety,
     resources,
+    fast_resource_run: fastResourceRun,
     expertises,
     patterns,
     triad_astrolabe,

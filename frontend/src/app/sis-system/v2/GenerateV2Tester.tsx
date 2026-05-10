@@ -51,6 +51,16 @@ type GenerateV2Response = {
     fallback_searches?: string[]
     requested_urls?: string[]
   }
+  fast_resource_run?: {
+    status?: string
+    provider?: string
+    duration_ms?: number
+    timeout_ms?: number
+    query?: string
+    include_domains?: string[]
+    note_fr?: string
+    resources?: unknown[]
+  }
   patterns?: {
     selected_patterns?: Array<{
       id: string
@@ -739,6 +749,28 @@ export default function GenerateV2Tester() {
                   <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
                     Recherches rapides prevues : {response.resources.fallback_searches.slice(0, 2).join(' · ')}
                   </p>
+                )}
+                {response.fast_resource_run && (
+                  <div style={{ marginTop: 10, border: '1px solid #F0EBE0', borderRadius: 8, padding: 9, background: '#fff' }}>
+                    <p style={{ margin: 0, color: '#1A2E5A', fontSize: 11, fontWeight: 700 }}>
+                      Runner rapide : {response.fast_resource_run.status} · {response.fast_resource_run.provider} · {response.fast_resource_run.duration_ms} ms / {response.fast_resource_run.timeout_ms} ms
+                    </p>
+                    {response.fast_resource_run.query && (
+                      <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 10, lineHeight: 1.45 }}>
+                        Requete : {response.fast_resource_run.query}
+                      </p>
+                    )}
+                    {response.fast_resource_run.include_domains && response.fast_resource_run.include_domains.length > 0 && (
+                      <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 10, lineHeight: 1.45 }}>
+                        Domaines : {response.fast_resource_run.include_domains.slice(0, 6).join(', ')}
+                      </p>
+                    )}
+                    {response.fast_resource_run.note_fr && (
+                      <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 10, lineHeight: 1.45 }}>
+                        {response.fast_resource_run.note_fr}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             </aside>

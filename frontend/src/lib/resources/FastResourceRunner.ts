@@ -14,6 +14,10 @@ export type FastResourceRunnerResult = {
   duration_ms: number
   status: 'skipped' | 'ok' | 'empty' | 'timeout' | 'failed'
   note_fr: string
+  provider: 'none' | 'tavily_fast' | 'legacy_fetch_resources'
+  query?: string
+  include_domains?: string[]
+  timeout_ms: number
 }
 
 type FastResourceRunnerInput = {
@@ -195,9 +199,12 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       duration_ms: Date.now() - started,
       status: 'skipped',
       note_fr: 'Sources rapides non obligatoires pour cette situation.',
+      provider: 'none',
+      timeout_ms: timeoutMs,
     }
   }
 
+  const plan = fastSearchPlan(input)
   const query = [
     input.interpretation.situation_soumise,
     input.resource_plan.fallback_searches[0] ?? '',
@@ -215,6 +222,10 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
         duration_ms: Date.now() - started,
         status: 'timeout',
         note_fr: 'Le runner sources rapides a depasse son budget ; SIS continue avec une lecture prudente.',
+        provider: 'legacy_fetch_resources',
+        query: plan.query,
+        include_domains: plan.include_domains,
+        timeout_ms: timeoutMs,
       }
     }
 
@@ -230,6 +241,10 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       note_fr: resources.length > 0
         ? `Sources rapides attachees : ${resources.length}.`
         : 'Aucune source rapide exploitable trouvee dans le budget court.',
+      provider: fast.length > 0 ? 'tavily_fast' : 'legacy_fetch_resources',
+      query: plan.query,
+      include_domains: plan.include_domains,
+      timeout_ms: timeoutMs,
     }
   } catch {
     return {
@@ -237,6 +252,10 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       duration_ms: Date.now() - started,
       status: 'failed',
       note_fr: 'Le runner sources rapides a echoue ; SIS continue avec une lecture prudente.',
+      provider: 'tavily_fast',
+      query: plan.query,
+      include_domains: plan.include_domains,
+      timeout_ms: timeoutMs,
     }
   }
 }
