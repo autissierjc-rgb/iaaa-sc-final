@@ -3,6 +3,7 @@ import type {
   ExpertisesMetiersContract,
   InterpretationContract,
   ProbabilityAssessment,
+  ResourceServiceContract,
   RiskAdviceGuardContract,
   ScoringContract,
   WritingContract,
@@ -17,6 +18,7 @@ export type WritingEngineInput = {
   expertises_metiers: ExpertisesMetiersContract
   theatre: ConcreteTheatreContract
   scoring: ScoringContract
+  resources?: ResourceServiceContract
   patterns?: HumanCollectivePatternContext
 }
 
@@ -112,6 +114,14 @@ function probabilityFromTheatre(theatre: ConcreteTheatreContract): ProbabilityAs
   }
 }
 
+function resourceWarning(resources?: ResourceServiceContract): string | undefined {
+  if (!resources?.needs_web) return undefined
+  if (resources.policy === 'url_extract_required') {
+    return 'Une URL est presente : l analyse doit rester provisoire tant que son contenu n a pas ete extrait ou verifie.'
+  }
+  return 'Des sources rapides sont requises pour ce domaine : l analyse doit distinguer ce qui est structurellement lisible de ce qui reste a verifier.'
+}
+
 function extractOpenAIText(data: Record<string, unknown>): string {
   const output = Array.isArray(data.output) ? data.output : []
   return output
@@ -195,12 +205,14 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const firstEvidence = namedAction(input.expertises_metiers.evidence_to_seek, 'une preuve publique')
   const tension = tensionLabel(input)
   const probability = probabilityFromTheatre(input.theatre)
+  const resourcesWarning = resourceWarning(input.resources)
   const diamondText = compactSentence(
     `Le risque ne tient pas a ${tension} ; il commence quand ${institutions} donnent une forme procedurale a ${firstProcedure}.`,
   )
 
   const publicWarnings = [
     input.safety.required_disclaimer_fr,
+    resourcesWarning,
     ...input.scoring.scoring_warnings,
   ].filter((item): item is string => Boolean(item))
 
@@ -228,8 +240,9 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     `Le fond de la situation tient a la transformation possible d un recit en procedure.`,
     `Les acteurs visibles sont ${actors}, mais les points d appui sont ${institutions}.`,
     `Ce qu il faut etablir n est pas seulement l intention, mais le lien entre ${firstProcedure}, ${evidence} et ${blindSpot}.`,
+    resourcesWarning ? resourcesWarning : '',
     `La lecture reste donc prudente : ${probability.probability_label_fr.toLowerCase()}, tant que la preuve decisive manque.`,
-  ].join(' ')
+  ].filter(Boolean).join(' ')
 
   return {
     substance_form: {
@@ -378,6 +391,16 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
       interpretation: input.interpretation,
       theatre: input.theatre,
       expertises_metiers: input.expertises_metiers,
+      resources: input.resources
+        ? {
+          status: input.resources.status,
+          policy: input.resources.policy,
+          needs_web: input.resources.needs_web,
+          policy_reason_fr: input.resources.policy_reason_fr,
+          fallback_searches: input.resources.fallback_searches,
+          public_sources_count: input.resources.public_sources.length,
+        }
+        : undefined,
       patterns: patternWritingContext(input.patterns),
       scoring: input.scoring,
       required_output_shape: Object.keys(local.situation_card),

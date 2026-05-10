@@ -171,6 +171,7 @@ type GenerateV2Response = {
       claim_fr?: string
       confidence?: number
     }>
+    public_warnings?: string[]
   }
   pipeline_trace?: {
     total_duration_ms?: number
@@ -531,6 +532,11 @@ export default function GenerateV2Tester() {
                 <p style={{ margin: '10px 0 0', color: '#1A2E5A', fontSize: 13, lineHeight: 1.6 }}>
                   {response.writing?.situation_card?.insight_fr}
                 </p>
+                {response.writing?.public_warnings && response.writing.public_warnings.length > 0 && (
+                  <p style={{ margin: '10px 0 0', color: '#A66B00', fontSize: 12, lineHeight: 1.5 }}>
+                    {response.writing.public_warnings[0]}
+                  </p>
+                )}
                 {response.writing?.diamond_sentences?.[0]?.text_fr && (
                   <p style={{ margin: '12px 0 0', color: '#C8951A', fontSize: 14, lineHeight: 1.45, fontStyle: 'italic' }}>
                     {response.writing.diamond_sentences[0].text_fr}

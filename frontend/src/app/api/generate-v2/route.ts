@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
       expertises_metiers: expertises,
       theatre,
       scoring,
+      resources,
       patterns,
     },
     body.writing_mode ?? 'local_contract',
