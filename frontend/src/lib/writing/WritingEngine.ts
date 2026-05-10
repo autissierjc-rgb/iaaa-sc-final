@@ -116,10 +116,27 @@ function probabilityFromTheatre(theatre: ConcreteTheatreContract): ProbabilityAs
 
 function resourceWarning(resources?: ResourceServiceContract): string | undefined {
   if (!resources?.needs_web) return undefined
+  if (resources.public_sources.length > 0) return undefined
   if (resources.policy === 'url_extract_required') {
     return 'Une URL est presente : l analyse doit rester provisoire tant que son contenu n a pas ete extrait ou verifie.'
   }
   return 'Des sources rapides sont requises pour ce domaine : l analyse doit distinguer ce qui est structurellement lisible de ce qui reste a verifier.'
+}
+
+function resourceEvidenceSection(resources?: ResourceServiceContract): { id: string; title: string; body: string } | null {
+  if (!resources || resources.public_sources.length === 0) return null
+
+  const sourceLine = resources.public_sources.slice(0, 3).map((source) => {
+    const reliability = source.reliability ? `, ${source.reliability}` : ''
+    return `${source.title} (${source.source}${reliability})`
+  }).join(' ; ')
+
+  return {
+    id: 'sources-rapides',
+    title: 'Sources rapides',
+    body:
+      `Sources attachees : ${sourceLine}. Elles cadrent la lecture et reduisent le hors-sol, mais ne remplacent pas Recherche+ : il faut encore verifier la source primaire, la date, la contradiction possible et la preuve decisive.`,
+  }
 }
 
 function extractOpenAIText(data: Record<string, unknown>): string {
@@ -206,6 +223,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const tension = tensionLabel(input)
   const probability = probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
+  const resourcesSection = resourceEvidenceSection(input.resources)
   const diamondText = compactSentence(
     `Le risque ne tient pas a ${tension} ; il commence quand ${institutions} donnent une forme procedurale a ${firstProcedure}.`,
   )
@@ -335,7 +353,8 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
           title: 'Incertitudes / angles morts',
           body: `A verifier : ${blindSpot}. Ces points doivent etre relies a ${evidence}, sans quoi ils restent des hypotheses.`,
         },
-      ],
+        resourcesSection,
+      ].filter((section): section is { id: string; title: string; body: string } => Boolean(section)),
     },
     public_warnings: publicWarnings,
     trace: {
@@ -364,6 +383,8 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
     '- utiliser silencieusement la triade fonctionnelle : qui legitime, qui protege/combattre/bloque, qui produit/reproduit/porte la charge ;',
     '- chercher le desalignement critique : ce qui legitime ne protege plus, ce qui protege empeche de produire, ou ce qui produit n est plus reconnu ;',
     '- ne jamais afficher les noms d auteurs, les labels de patterns ou la grille theorique sauf demande explicite de lecture theorique.',
+    '- si des public_sources existent, les utiliser comme preuves rapides dans Approfondir, en nommant leur portee et leur limite ;',
+    '- ne jamais presenter les sources rapides comme une enquete Recherche+ complete.',
     '',
     'Longueurs indicatives :',
     '- insight_fr : 2 phrases maximum ;',
@@ -399,6 +420,13 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
           policy_reason_fr: input.resources.policy_reason_fr,
           fallback_searches: input.resources.fallback_searches,
           public_sources_count: input.resources.public_sources.length,
+          public_sources: input.resources.public_sources.slice(0, 3).map((source) => ({
+            title: source.title,
+            source: source.source,
+            channel: source.channel,
+            reliability: source.reliability,
+            excerpt: source.excerpt,
+          })),
         }
         : undefined,
       patterns: patternWritingContext(input.patterns),
