@@ -62,6 +62,14 @@ Vous restez responsable des informations que vous choisissez de rendre publiques
 Recherche+ est separee de la carte rapide : elle cherche des pistes, signaux faibles, contradictions et preuves possibles. Ses resultats ne deviennent pas automatiquement des conclusions.`,
     },
     {
+      title: 'Documents et donnees fournis',
+      content: `Vous pouvez etre amene a partager un texte, une URL, un document, une image, un tableur ou un jeu de donnees pour eclairer une situation.
+
+Vous devez uniquement transmettre des contenus que vous avez le droit de partager. Les informations sensibles, confidentielles, medicales, juridiques, financieres, relatives a des mineurs ou a des tiers doivent etre evitees, minimises ou anonymisees.
+
+Situation Card doit extraire le minimum utile, produire des resumes ou indices structurants, et ne pas exposer le contenu brut dans une carte publique. Les documents prives ne doivent pas devenir des ressources publiques. Les sources publiques peuvent etre citees comme sources publiques utiles.`,
+    },
+    {
       title: 'Modeles d intelligence artificielle',
       content: `Les informations soumises peuvent etre traitees par des modeles d'intelligence artificielle afin de produire l'interpretation, la Situation Card, Lecture, Approfondir, les ressources ou les traductions de snapshot.
 
@@ -152,6 +160,14 @@ You remain responsible for the information you choose to make public or share.`,
       content: `When you provide a URL, or when a domain depends on external facts, Situation Card may query public sources or server-side search services. API keys are never exposed to the client.
 
 Recherche+ is separate from the fast card: it looks for leads, weak signals, contradictions and possible evidence. Its results do not automatically become conclusions.`,
+    },
+    {
+      title: 'Documents and data you provide',
+      content: `You may share text, a URL, a document, an image, a spreadsheet or a dataset to clarify a situation.
+
+You should only transmit content you are allowed to share. Sensitive, confidential, medical, legal, financial, minor-related or third-party information should be avoided, minimized or anonymized.
+
+Situation Card should extract the minimum useful content, produce structured summaries or signals, and not expose raw private content in a public card. Private documents must not become public resources. Public sources may be cited as useful public sources.`,
     },
     {
       title: 'Artificial intelligence models',
