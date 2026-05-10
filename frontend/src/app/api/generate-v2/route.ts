@@ -5,6 +5,7 @@ import { interpretSituation } from '@/lib/interpretation'
 import { buildPipelineRunTrace } from '@/lib/pipeline/PipelineTelemetry'
 import { SITUATION_CARD_V2_PIPELINE } from '@/lib/pipeline/V2PipelineBlueprint'
 import { planResources } from '@/lib/resources'
+import { runFastResourceRunner } from '@/lib/resources/FastResourceRunner'
 import { runRiskAdviceGuard } from '@/lib/safety'
 import { computeStateV2 } from '@/lib/scoringV2'
 import { buildConcreteTheatre } from '@/lib/theatre'
@@ -130,7 +131,37 @@ export async function POST(request: NextRequest) {
       expertises.writing_anchors.join(' '),
     ].join(' '),
   })
-  const resources = planResources({ interpretation, patterns })
+  let resources = planResources({ interpretation, patterns })
+  const fastResourceRun = generation_mode.id === 'admin_benchmark'
+    ? {
+        resources: [],
+        duration_ms: 0,
+        status: 'skipped' as const,
+        note_fr: 'Runner sources rapides desactive en mode admin_benchmark.',
+      }
+    : await runFastResourceRunner({
+        interpretation,
+        resource_plan: resources,
+        timeout_ms: generation_mode.id === 'public_fast' ? 1200 : 2500,
+        max_sources: 3,
+      })
+  if (fastResourceRun.resources.length > 0) {
+    resources = planResources({
+      interpretation,
+      patterns,
+      supplied_resources: fastResourceRun.resources,
+    })
+  }
+  resources.trace.duration_ms = (resources.trace.duration_ms ?? 0) + fastResourceRun.duration_ms
+  resources.trace.notes = [
+    ...(resources.trace.notes ?? []),
+    `fast_runner=${fastResourceRun.status}`,
+    `fast_runner_sources=${fastResourceRun.resources.length}`,
+  ]
+  resources.internal_notes = [
+    ...resources.internal_notes,
+    fastResourceRun.note_fr,
+  ]
   const triad_astrolabe = triadAstrolabeInfluence(patterns.dumezil_balance)
   const theatre = buildConcreteTheatre({ interpretation, resources, expertises })
   const inquiry = buildBlindSpotInquiry({ interpretation, theatre })
