@@ -1829,7 +1829,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
             {t.hero_line1}<br />{t.hero_line2}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 20 }}>
-            <Link href={`/pricing?lang=${routeLocale}`} style={{ fontSize: 12.5, color: TXT2, textDecoration: 'none' }}>{t.offres}</Link>
+            <Link href={`/${routeLocale}/pricing`} style={{ fontSize: 12.5, color: TXT2, textDecoration: 'none' }}>{t.offres}</Link>
             <Link href="/login"   style={{ fontSize: 12.5, color: TXT2, textDecoration: 'none' }}>{t.connexion}</Link>
             <div style={{ display: 'flex', gap: 6, paddingLeft: 12, borderLeft: `1px solid ${BDR}` }}>
               {HOME_LANGS.map(l => <Link key={l} href={`/${HOME_LANG_TO_LOCALE[l]}`} onClick={() => setLang(l)} style={{ fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none', background: 'none', color: lang === l ? NAVY : TXT2, textDecoration: 'none' }}>{l}</Link>)}
@@ -2038,7 +2038,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
               <span style={{ fontFamily: "'Cinzel',serif", fontSize: 11, color: TXT3 }}>situationcard.com</span>
             </Link>
             <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
-              {[{ l: lang === 'FR' ? 'À propos' : 'About', h: `/about?lang=${routeLocale}` }, { l: 'Contact', h: `/contact?lang=${routeLocale}` }, { l: lang === 'FR' ? 'Confidentialité' : 'Privacy', h: `/privacy?lang=${routeLocale}` }].map(item => <Link key={item.l} href={item.h} style={{ fontSize: 11, color: TXT3, textDecoration: 'none' }}>{item.l}</Link>)}
+              {[{ l: lang === 'FR' ? 'À propos' : 'About', h: `/${routeLocale}/about` }, { l: 'Contact', h: `/${routeLocale}/contact` }, { l: lang === 'FR' ? 'Confidentialité' : 'Privacy', h: `/${routeLocale}/privacy` }].map(item => <Link key={item.l} href={item.h} style={{ fontSize: 11, color: TXT3, textDecoration: 'none' }}>{item.l}</Link>)}
             </div>
           </div>
         </footer>
