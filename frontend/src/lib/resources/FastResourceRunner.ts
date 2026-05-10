@@ -205,6 +205,17 @@ function toResourceContract(
   }
 }
 
+function uniqueResourceItems(items: ResourceItem[]): ResourceItem[] {
+  const seen = new Set<string>()
+
+  return items.filter((item) => {
+    const key = item.url || item.title
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 export async function runFastResourceRunner(input: FastResourceRunnerInput): Promise<FastResourceRunnerResult> {
   const started = Date.now()
   const timeoutMs = input.timeout_ms ?? 1200
@@ -228,13 +239,12 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
   ].filter(Boolean).join(' ')
 
   try {
-    const firstBudget = Math.max(500, Math.floor(timeoutMs * 0.55))
-    const secondBudget = Math.max(500, timeoutMs - firstBudget)
-    const targeted = await fetchTavilyFastPlan(plan, maxSources, firstBudget)
     const broadPlan = broadFastSearchPlan(input)
-    const fast = targeted.length > 0
-      ? targeted
-      : await fetchTavilyFastPlan(broadPlan, maxSources, secondBudget)
+    const [targeted, broad] = await Promise.all([
+      fetchTavilyFastPlan(plan, maxSources, timeoutMs),
+      fetchTavilyFastPlan(broadPlan, maxSources, timeoutMs),
+    ])
+    const fast = uniqueResourceItems([...targeted, ...broad]).slice(0, maxSources)
     const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
     const result = fast.length > 0 || !usedLegacyFallback
       ? fast
