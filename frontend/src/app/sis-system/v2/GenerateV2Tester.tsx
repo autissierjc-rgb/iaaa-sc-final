@@ -6,6 +6,15 @@ import { inquiryLevelLabel, publicInquiryQuestion } from './inquiryDisplay'
 type GenerateV2Response = {
   ok?: boolean
   mode?: string
+  generation_mode?: {
+    id?: string
+    label_fr?: string
+    interpretation_mode?: string
+    writing_mode?: string
+    allows_recherche_plus?: boolean
+    latency_target_ms?: number
+    rule_fr?: string
+  }
   total_duration_ms?: number
   dialogue?: {
     status?: string
@@ -270,6 +279,7 @@ function layerLabel(stageId: string) {
 
 export default function GenerateV2Tester() {
   const [input, setInput] = useState(EXAMPLES[0])
+  const [generationMode, setGenerationMode] = useState<'public_fast' | 'diamond_llm' | 'research_plus' | 'admin_benchmark'>('admin_benchmark')
   const [interpretationMode, setInterpretationMode] = useState<'local_contract' | 'referent_llm'>('local_contract')
   const [writingMode, setWritingMode] = useState<'local_contract' | 'referent_llm'>('local_contract')
   const [loading, setLoading] = useState(false)
@@ -315,8 +325,9 @@ export default function GenerateV2Tester() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           input,
-          interpretation_mode: interpretationMode,
-          writing_mode: writingMode,
+          mode: generationMode,
+          interpretation_mode: generationMode === 'admin_benchmark' ? interpretationMode : undefined,
+          writing_mode: generationMode === 'admin_benchmark' ? writingMode : undefined,
         }),
         signal: controller.signal,
       })
@@ -416,6 +427,38 @@ export default function GenerateV2Tester() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginTop: 14 }}>
+        <div>
+          <p style={{ margin: '0 0 6px', color: '#8B8174', fontFamily: 'monospace', fontSize: 10 }}>
+            mode produit
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              ['admin_benchmark', 'Admin benchmark'],
+              ['public_fast', 'Public fast'],
+              ['diamond_llm', 'Diamant LLM'],
+              ['research_plus', 'Recherche+'],
+            ].map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setGenerationMode(mode as typeof generationMode)}
+                disabled={loading}
+                style={{
+                  border: `1px solid ${generationMode === mode ? '#C8951A' : '#E1D6C2'}`,
+                  color: generationMode === mode ? '#1A2E5A' : '#8B8174',
+                  background: generationMode === mode ? '#F8EFD8' : '#fff',
+                  borderRadius: 999,
+                  padding: '7px 10px',
+                  fontSize: 11,
+                  cursor: loading ? 'wait' : 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div>
           <p style={{ margin: '0 0 6px', color: '#8B8174', fontFamily: 'monospace', fontSize: 10 }}>
             interpretation
@@ -531,6 +574,11 @@ export default function GenerateV2Tester() {
       {response?.ok && (
         <div style={{ marginTop: 16, ...panelStyle() }}>
           <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>apercu public v2</p>
+          {response.generation_mode && (
+            <p style={{ margin: '8px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+              Mode : {response.generation_mode.label_fr} · interpretation {response.generation_mode.interpretation_mode} · redaction {response.generation_mode.writing_mode}
+            </p>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginTop: 12 }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ ...miniCardStyle(), borderColor: '#D8C79B' }}>

@@ -133,7 +133,36 @@ Il sert uniquement a chercher des preuves externes : web, sources officielles,
 documents, bases metier ou signaux sociaux selon le domaine.
 ```
 
-## 4a. Recherche+
+## 4a. Modes de generation
+
+La V2 ne doit pas exposer au produit public des interrupteurs techniques du
+type `interpretation_mode` ou `writing_mode`.
+
+Elle doit exposer des modes produit :
+
+- `public_fast` : LLM referent rapide pour l'interpretation, sortie JSON
+  stricte, timeout controle, fallback local seulement en cas d'echec technique,
+  ecriture contractuelle rapide, ressources rapides si necessaires, Recherche+
+  separee ;
+- `diamond_llm` : LLM referent pour interpretation et redaction diamant,
+  reserve a IAAA+ ou au cockpit car plus lent ;
+- `research_plus` : enquete externe separee, non bloquante ;
+- `admin_benchmark` : mode cockpit pour tester les couches et benchmarks sans
+  consommer obligatoirement le LLM referent.
+
+Regle :
+
+```txt
+Le produit choisit un mode metier.
+La route traduit ce mode en choix techniques internes.
+```
+
+Les overrides techniques `interpretation_mode` et `writing_mode` sont reserves
+au mode `admin_benchmark`. Ils servent a tester les couches dans le cockpit.
+Ils ne doivent pas modifier les modes produit `public_fast`, `diamond_llm` ou
+`research_plus`.
+
+## 4b. Recherche+
 
 `Recherche+` est l'enquete probatoire externe lancee a la demande.
 

@@ -17,13 +17,15 @@ import { benchmarkWritingQuality } from '@/lib/quality/WritingQualityBenchmark'
 import { selectHumanCollectivePatterns } from '@/lib/patterns/humanCollective'
 import { triadAstrolabeInfluence } from '@/lib/scoringV2'
 import { prepareRecherchePlus } from '@/lib/recherchePlus'
-import type { AstrolabeBranchV2, RadarScoreV2 } from '@/lib/contracts'
+import { resolveGenerationMode } from '@/lib/contracts/generationMode'
+import type { AstrolabeBranchV2, GenerationModeId, RadarScoreV2 } from '@/lib/contracts'
 
 export const dynamic = 'force-dynamic'
 
 type GenerateV2Body = {
   input?: string
   raw_input?: string
+  mode?: GenerationModeId
   interpretation_mode?: 'referent_llm' | 'local_contract'
   writing_mode?: 'referent_llm' | 'local_contract'
 }
@@ -101,9 +103,19 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const requestedMode = body.mode ?? 'admin_benchmark'
+  const generation_mode = resolveGenerationMode(
+    requestedMode,
+    requestedMode === 'admin_benchmark'
+      ? {
+          interpretation_mode: body.interpretation_mode,
+          writing_mode: body.writing_mode,
+        }
+      : undefined,
+  )
   const interpretation = await interpretSituation({
     raw_input: rawInput,
-    mode: body.interpretation_mode ?? 'local_contract',
+    mode: generation_mode.interpretation_mode,
   })
   const dialogue = runDialogueGate({ interpretation })
   const safety = runRiskAdviceGuard({ interpretation })
@@ -144,7 +156,7 @@ export async function POST(request: NextRequest) {
       resources,
       patterns,
     },
-    body.writing_mode ?? 'local_contract',
+    generation_mode.writing_mode,
   )
   const contractQuality = runContractQualityGate({ interpretation, theatre, scoring, inquiry })
   const writingQuality = runQualityGate({ interpretation, theatre, scoring, writing })
@@ -221,6 +233,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     mode: 'v2_contract_dry_run',
+    generation_mode,
     total_duration_ms: Date.now() - started,
     dialogue,
     interpretation,
