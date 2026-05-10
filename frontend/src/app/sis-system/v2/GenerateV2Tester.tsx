@@ -48,6 +48,8 @@ type GenerateV2Response = {
     resources?: unknown[]
     public_sources?: unknown[]
     needs_web?: boolean
+    fallback_searches?: string[]
+    requested_urls?: string[]
   }
   patterns?: {
     selected_patterns?: Array<{
@@ -304,6 +306,46 @@ export default function GenerateV2Tester() {
     () => response?.quality?.issues?.filter((item) => item.field === 'writing.diamond_sentences') ?? [],
     [response],
   )
+  const cockpitVerdict = useMemo(() => {
+    if (!response?.ok) return null
+
+    const sourceWarnings = response.quality?.issues?.filter((item) =>
+      item.code === 'FAST_SOURCES_REQUIRED_BUT_MISSING' ||
+      item.code === 'MISSING_RESOURCE_WARNING' ||
+      item.field === 'resources',
+    ) ?? []
+    const errors = response.quality?.issues?.filter((item) => item.level === 'error') ?? []
+
+    if (errors.length > 0) {
+      return {
+        label: 'A corriger',
+        tone: '#B23A3A',
+        detail: 'Une couche contractuelle bloque la sortie publique.',
+      }
+    }
+
+    if (sourceWarnings.length > 0 || (response.resources?.needs_web && (response.resources.public_sources?.length ?? 0) === 0)) {
+      return {
+        label: 'Partiel · sources rapides manquantes',
+        tone: '#A66B00',
+        detail: response.resources?.policy_reason_fr ?? 'La reponse reste utile, mais elle doit etre lue comme provisoire.',
+      }
+    }
+
+    if (response.quality?.issues && response.quality.issues.length > 0) {
+      return {
+        label: 'A verifier',
+        tone: '#A66B00',
+        detail: 'La sortie est generable, avec warnings non bloquants.',
+      }
+    }
+
+    return {
+      label: 'Solide',
+      tone: '#1D9E75',
+      detail: 'Aucun warning qualite bloquant ou ressource manquante.',
+    }
+  }, [response])
 
   async function runTest() {
     setLoading(true)
@@ -579,6 +621,16 @@ export default function GenerateV2Tester() {
               Mode : {response.generation_mode.label_fr} · interpretation {response.generation_mode.interpretation_mode} · redaction {response.generation_mode.writing_mode}
             </p>
           )}
+          {cockpitVerdict && (
+            <div style={{ marginTop: 10, border: `1px solid ${cockpitVerdict.tone}`, borderRadius: 8, padding: 10, background: '#fff' }}>
+              <p style={{ margin: 0, color: cockpitVerdict.tone, fontSize: 12, fontWeight: 700 }}>
+                Verdict cockpit : {cockpitVerdict.label}
+              </p>
+              <p style={{ margin: '5px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                {cockpitVerdict.detail}
+              </p>
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginTop: 12 }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ ...miniCardStyle(), borderColor: '#D8C79B' }}>
@@ -678,6 +730,16 @@ export default function GenerateV2Tester() {
                     Triade : {response.resources.functional_needs.map((need) => `${need.label_fr} (${need.priority})`).join(' · ')}
                   </p>
                 )}
+                {response.resources?.needs_web && (response.resources.public_sources?.length ?? 0) === 0 && (
+                  <p style={{ margin: '8px 0 0', color: '#A66B00', fontSize: 11, lineHeight: 1.45 }}>
+                    Lecture/Approfondir doivent rester prudents : aucune source rapide n est encore attachee.
+                  </p>
+                )}
+                {response.resources?.fallback_searches && response.resources.fallback_searches.length > 0 && (
+                  <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                    Recherches rapides prevues : {response.resources.fallback_searches.slice(0, 2).join(' · ')}
+                  </p>
+                )}
               </div>
             </aside>
           </div>
@@ -742,6 +804,11 @@ export default function GenerateV2Tester() {
             {response.resources?.policy && (
               <p style={{ margin: '6px 0 0', color: response.resources.needs_web ? '#A66B00' : '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
                 {response.resources.policy}
+              </p>
+            )}
+            {response.resources?.policy_reason_fr && (
+              <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                {response.resources.policy_reason_fr}
               </p>
             )}
           </div>
