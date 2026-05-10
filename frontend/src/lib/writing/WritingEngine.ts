@@ -210,23 +210,77 @@ function patternWritingContext(patterns?: HumanCollectivePatternContext) {
   }
 }
 
+function isBusinessWritingDomain(domain: string) {
+  return ['startup_market', 'business_strategy', 'product_platform', 'professional', 'management'].includes(domain)
+}
+
+function writingGrammar(input: WritingEngineInput) {
+  if (isBusinessWritingDomain(input.expertises_metiers.domain_playbook.domain)) {
+    return {
+      actorsFallback: 'les acteurs economiques concernes',
+      institutionsFallback: 'les clients, partenaires, decideurs ou regulateurs concernes',
+      actionFallback: 'un engagement verifiable',
+      evidenceFallback: 'une preuve d usage, de paiement ou de contrainte contractuelle',
+      tensionNoun: 'la promesse affichee',
+      diamond: (tension: string, institutions: string, action: string) =>
+        `Le risque ne tient pas a ${tension} ; il commence quand ${institutions} transforment ${action} en engagement, dependance ou contrainte mesurable.`,
+      insight: (subject: string, tension: string, action: string, institutions: string) =>
+        `${subject} ne se juge pas a sa promesse seule. Le point decisif est le passage entre ${tension}, ${action} et les leviers detenus par ${institutions}.`,
+      lectureEntry: (subject: string, institutions: string) =>
+        `${subject} se joue comme un test de traction et d alignement : une opportunite devient serieuse seulement si elle rencontre ${institutions}.`,
+      approfondirEntry:
+        'Le fond de la situation tient a la transformation possible d une promesse en usage, revenu, partenariat ou contrainte assumee.',
+      supportSentence: (actors: string, institutions: string) =>
+        `Les acteurs visibles sont ${actors}, mais les points d appui sont ${institutions}.`,
+      vulnerability: (blindSpot: string) =>
+        `La vulnerabilite centrale est ${blindSpot} : sans preuve d usage, de role ou de conditions d engagement, l opportunite reste une promesse ; avec elle, elle devient une decision testable.`,
+      asymmetry: (actors: string, institutions: string) =>
+        `${actors} rendent l opportunite visible, mais ${institutions} decident si elle devient adoption, dependance ou levier reel.`,
+      keySignal: (evidence: string) =>
+        `Signal cle : ${evidence} reliant offre, utilisateur, decision d achat et consequence observable.`,
+    }
+  }
+
+  return {
+    actorsFallback: 'les acteurs habilites',
+    institutionsFallback: 'les institutions concernees',
+    actionFallback: 'une procedure verifiable',
+    evidenceFallback: 'une preuve publique',
+    tensionNoun: undefined,
+    diamond: (tension: string, institutions: string, action: string) =>
+      `Le risque ne tient pas a ${tension} ; il commence quand ${institutions} donnent une forme procedurale a ${action}.`,
+    insight: (subject: string, tension: string, action: string, institutions: string) =>
+      `${subject} ne se tranche pas par une declaration seule. Le point decisif est le passage entre ${tension}, ${action} et les leviers detenus par ${institutions}.`,
+    lectureEntry: (subject: string, institutions: string) =>
+      `${subject} se joue comme un test de passage : une inquietude ou une hypothese devient serieuse seulement si elle rencontre ${institutions}.`,
+    approfondirEntry: 'Le fond de la situation tient a la transformation possible d un recit en procedure.',
+    supportSentence: (actors: string, institutions: string) =>
+      `Les acteurs visibles sont ${actors}, mais les points d appui sont ${institutions}.`,
+    vulnerability: (blindSpot: string) =>
+      `La vulnerabilite centrale est ${blindSpot} : sans ce relais, la situation reste une crainte ; avec lui, elle peut devenir un acte opposable.`,
+    asymmetry: (actors: string, institutions: string) =>
+      `${actors} rendent la tension visible, mais ${institutions} peuvent lui donner, ou lui refuser, une forme effective.`,
+    keySignal: (evidence: string) =>
+      `Signal cle : ${evidence} reliant un acteur habilite, une regle et une consequence observable.`,
+  }
+}
+
 export function composeDiamondWriting(input: WritingEngineInput): WritingContract {
   const started = Date.now()
   const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
   const title = input.interpretation.header_subject
-  const actors = publicAnchors(input.theatre.actors, 'les acteurs habilites')
-  const institutions = publicAnchors(input.theatre.institutions, 'les institutions concernees')
+  const grammar = writingGrammar(input)
+  const actors = publicAnchors(input.theatre.actors, grammar.actorsFallback)
+  const institutions = publicAnchors(input.theatre.institutions, grammar.institutionsFallback)
   const evidence = publicAnchors(input.expertises_metiers.evidence_to_seek, 'une trace verifiable')
   const blindSpot = publicAnchors(input.expertises_metiers.blind_spots_to_test, 'le relais qui transforme l hypothese en acte')
-  const firstProcedure = namedAction(input.theatre.procedures, 'une procedure verifiable')
-  const firstEvidence = namedAction(input.expertises_metiers.evidence_to_seek, 'une preuve publique')
-  const tension = tensionLabel(input)
+  const firstProcedure = namedAction(input.theatre.procedures, grammar.actionFallback)
+  const firstEvidence = namedAction(input.expertises_metiers.evidence_to_seek, grammar.evidenceFallback)
+  const tension = grammar.tensionNoun ?? tensionLabel(input)
   const probability = probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
   const resourcesSection = resourceEvidenceSection(input.resources)
-  const diamondText = compactSentence(
-    `Le risque ne tient pas a ${tension} ; il commence quand ${institutions} donnent une forme procedurale a ${firstProcedure}.`,
-  )
+  const diamondText = compactSentence(grammar.diamond(tension, institutions, firstProcedure))
 
   const publicWarnings = [
     input.safety.required_disclaimer_fr,
@@ -235,28 +289,21 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   ].filter((item): item is string => Boolean(item))
 
   const scInsight = compactSentence(
-    `${subject} ne se tranche pas par une declaration seule. Le point decisif est le passage entre ${tension}, ${firstProcedure} et les leviers detenus par ${institutions}.`,
+    grammar.insight(subject, tension, firstProcedure, institutions),
     360,
   )
-  const vulnerability = compactSentence(
-    `La vulnerabilite centrale est ${blindSpot} : sans ce relais, la situation reste une crainte ; avec lui, elle peut devenir un acte opposable.`,
-    320,
-  )
-  const asymmetry = compactSentence(
-    `${actors} rendent la tension visible, mais ${institutions} peuvent lui donner, ou lui refuser, une forme effective.`,
-  )
-  const keySignal = compactSentence(
-    `Signal cle : ${firstEvidence} reliant un acteur habilite, une regle et une consequence observable.`,
-  )
+  const vulnerability = compactSentence(grammar.vulnerability(blindSpot), 320)
+  const asymmetry = compactSentence(grammar.asymmetry(actors, institutions))
+  const keySignal = compactSentence(grammar.keySignal(firstEvidence))
   const lecture = [
-    `${subject} se joue comme un test de passage : une inquietude ou une hypothese devient serieuse seulement si elle rencontre ${institutions}.`,
+    grammar.lectureEntry(subject, institutions),
     `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
     vulnerability,
     keySignal,
   ].join(' ')
   const approfondirAnalysis = [
-    `Le fond de la situation tient a la transformation possible d un recit en procedure.`,
-    `Les acteurs visibles sont ${actors}, mais les points d appui sont ${institutions}.`,
+    grammar.approfondirEntry,
+    grammar.supportSentence(actors, institutions),
     `Ce qu il faut etablir n est pas seulement l intention, mais le lien entre ${firstProcedure}, ${evidence} et ${blindSpot}.`,
     resourcesWarning ? resourcesWarning : '',
     `La lecture reste donc prudente : ${probability.probability_label_fr.toLowerCase()}, tant que la preuve decisive manque.`,

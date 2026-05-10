@@ -145,6 +145,40 @@ function ensureHeaderSubject(interpreted: InterpretedRequest): string {
   return unique.join(' ') || 'Situation a clarifier'
 }
 
+function extractBusinessSubject(rawInput: string): string | null {
+  const cleaned = rawInput.replace(/https?:\/\/\S+/gi, ' ')
+  const blocked = /^(Que|Quoi|Comment|Pourquoi|Quand|Mon|Ma|Mes|Le|La|Les|Un|Une)$/i
+  const company = (cleaned.match(/\b[A-ZÀ-Ý][\p{L}\p{N}'-]{2,}(?:\s+[A-ZÀ-Ý][\p{L}\p{N}'-]{2,}){0,2}\b/gu) ?? [])
+    .map((item) => item.trim())
+    .find((item) => !blocked.test(item))
+  if (!company) {
+    return null
+  }
+
+  if (/\b(startup|start-up|rejoindre|partenariat|partner|associer|collaborer|investir)\b/i.test(cleaned)) {
+    return `${company} partenariat startup`
+  }
+
+  if (/\b(go[- ]to[- ]market|lancement|pitch|pitchdeck|launchpad|vente|commercial)\b/i.test(cleaned)) {
+    return `${company} go-to-market`
+  }
+
+  if (/\b(que fait|offre|produit|service|compagnie|entreprise|societe|société)\b/i.test(cleaned)) {
+    return `${company} offre marche`
+  }
+
+  return null
+}
+
+function headerSubjectFor(rawInput: string, domain: SituationDomainV2, interpreted: InterpretedRequest): string {
+  if (['startup_market', 'business_strategy', 'product_platform', 'professional'].includes(domain)) {
+    const businessSubject = extractBusinessSubject(rawInput)
+    if (businessSubject) return businessSubject
+  }
+
+  return ensureHeaderSubject(interpreted)
+}
+
 function toEntityExplanations(items: InterpretedRequest['entity_explanations']): EntityExplanation[] {
   return (items ?? []).map((item) => ({
     label: item.label,
@@ -186,7 +220,7 @@ export async function interpretSituation(
     question_type: questionType(interpreted.question_type),
     situation_soumise: interpreted.user_question || rawInput,
     header_domain: headerDomainFor(domain),
-    header_subject: ensureHeaderSubject(interpreted),
+    header_subject: headerSubjectFor(rawInput, domain, interpreted),
     angle: interpreted.implicit_tension || interpreted.expected_answer_shape || '',
     user_need: interpreted.expected_answer_shape || interpreted.intent_type,
     object_of_analysis: interpreted.object_of_analysis || rawInput,

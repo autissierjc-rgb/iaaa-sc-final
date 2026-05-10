@@ -29,6 +29,13 @@ function playbookDomainFor(interpretation: InterpretationContract) {
     return 'institutional_crisis' as const
   }
 
+  if (
+    interpretation.domain === 'professional' &&
+    /\b(startup|start-up|entreprise|compagnie|societe|société|partenariat|rejoindre|go[- ]to[- ]market|marche|marché|client|pricing|revenu|traction|produit|offre)\b/i.test(text)
+  ) {
+    return 'startup_market' as const
+  }
+
   return interpretation.domain
 }
 
@@ -39,7 +46,7 @@ export function routeExpertisesMetiers(
   const domain = input.interpretation.domain
   const playbookDomain = playbookDomainFor(input.interpretation)
   const domainPlaybook = getDomainPlaybook(playbookDomain)
-  const metierLenses = getMetierLensesForDomain(domain)
+  const metierLenses = getMetierLensesForDomain(playbookDomain)
 
   return {
     domain,

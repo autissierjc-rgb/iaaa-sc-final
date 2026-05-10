@@ -16,7 +16,7 @@ export const METIER_LENSES: MetierLens[] = [
     domains: ['law_justice', 'startup_market', 'institutional_crisis', 'professional'],
     questions_they_ask: ['quelle regle s applique', 'quel delai compte', 'quel document fait foi'],
     evidence_they_expect: ['texte', 'contrat', 'decision', 'preuve datee'],
-    blind_spots_they_watch: ['competence juridictionnelle', 'clause oubliee', 'preuve irrecevable'],
+    blind_spots_they_watch: ['cadre applicable', 'clause oubliee', 'responsabilite mal attribuee'],
     source_preferences: ['legal', 'official'],
   },
   {
