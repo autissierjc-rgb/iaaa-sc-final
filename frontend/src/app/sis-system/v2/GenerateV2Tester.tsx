@@ -69,6 +69,16 @@ type GenerateV2Response = {
     note_fr?: string
     resources?: unknown[]
   }
+  expertises?: {
+    domain_playbook?: {
+      id?: string
+      label_fr?: string
+    }
+    metier_lenses?: Array<{
+      id?: string
+      label_fr?: string
+    }>
+  }
   patterns?: {
     selected_patterns?: Array<{
       id: string
@@ -253,10 +263,62 @@ type ResourcePreview = {
   published_at?: string
 }
 
+type BenchmarkCase = {
+  id: string
+  label: string
+  input: string
+  expectedPlaybook: string
+  expectedSources: 'available' | 'not_needed'
+}
+
+type BenchmarkResult = {
+  id: string
+  label: string
+  ok: boolean
+  qualityOk: boolean
+  verdict: string
+  duration: number
+  budget: number
+  runtime: string
+  usedFallback: boolean
+  resources: string
+  sourceCount: number
+  expectedSources: 'available' | 'not_needed'
+  header: string
+  playbook: string
+  expectedPlaybook: string
+  issues: string[]
+  error?: string
+}
+
 const EXAMPLES = [
   'Trump peut-il contester les resultats des elections de mi-mandat ?',
   "Que fait la compagnie FlexUp et qu'en penser pour eventuellement la rejoindre avec ma startup ?",
   "Mon fils de 14 ans est passionne par la peche a la carpe, comment reagir apres son retrait dans la voiture ?",
+]
+
+const BENCHMARK_CASES: BenchmarkCase[] = [
+  {
+    id: 'trump',
+    label: 'Trump / institutionnel',
+    input: EXAMPLES[0],
+    expectedPlaybook: 'institutional_crisis',
+    expectedSources: 'available',
+  },
+  {
+    id: 'flexup',
+    label: 'FlexUp / startup',
+    input: EXAMPLES[1],
+    expectedPlaybook: 'startup_market',
+    expectedSources: 'available',
+  },
+  {
+    id: 'fils-peche',
+    label: 'Fils peche / humain',
+    input: EXAMPLES[2],
+    expectedPlaybook: 'family',
+    expectedSources: 'not_needed',
+  },
 ]
 
 const GENERATE_V2_TIMEOUT_MS = 60000
@@ -385,6 +447,57 @@ function speedBudgetItems(response: GenerateV2Response | null) {
   ]
 }
 
+function responseVerdict(response: GenerateV2Response) {
+  const sourceWarnings = response.quality?.issues?.filter((item) =>
+    item.code === 'FAST_SOURCES_REQUIRED_BUT_MISSING' ||
+    item.code === 'MISSING_RESOURCE_WARNING' ||
+    item.field === 'resources',
+  ) ?? []
+  const errors = response.quality?.issues?.filter((item) => item.level === 'error') ?? []
+
+  if (errors.length > 0) return 'A corriger'
+  if (sourceWarnings.length > 0 || (response.resources?.needs_web && (response.resources.public_sources?.length ?? 0) === 0)) {
+    return 'Partiel'
+  }
+  if (response.quality?.issues && response.quality.issues.length > 0) return 'A verifier'
+  return 'Solide'
+}
+
+function benchmarkResultFromResponse(testCase: BenchmarkCase, response: GenerateV2Response): BenchmarkResult {
+  const runtime = interpretationRuntime(response)
+  const playbook = response.expertises?.domain_playbook?.id ?? 'non renseigne'
+  const resourceStatus = response.resources?.status ?? 'non renseigne'
+  const sourceCount = response.resources?.public_sources?.length ?? response.resources?.resources?.length ?? 0
+  const issues = response.quality?.issues?.map((item) => item.code) ?? []
+
+  return {
+    id: testCase.id,
+    label: testCase.label,
+    ok: Boolean(response.ok),
+    qualityOk: Boolean(response.quality?.ok),
+    verdict: responseVerdict(response),
+    duration: response.pipeline_trace?.total_duration_ms ?? response.total_duration_ms ?? 0,
+    budget: response.generation_mode?.latency_target_ms ?? 0,
+    runtime: runtime?.model ?? 'non renseigne',
+    usedFallback: Boolean(runtime?.usedFallback),
+    resources: resourceStatus,
+    sourceCount,
+    expectedSources: testCase.expectedSources,
+    header: response.writing?.situation_card?.title_fr ?? response.interpretation?.header_subject ?? 'non renseigne',
+    playbook,
+    expectedPlaybook: testCase.expectedPlaybook,
+    issues,
+  }
+}
+
+function benchmarkTone(result: BenchmarkResult) {
+  if (!result.ok || !result.qualityOk || result.verdict === 'A corriger') return '#B23A3A'
+  if (result.playbook !== result.expectedPlaybook) return '#A66B00'
+  if (result.expectedSources === 'available' && result.sourceCount === 0) return '#A66B00'
+  if (result.budget > 0 && result.duration > result.budget) return '#A66B00'
+  return '#1D9E75'
+}
+
 export default function GenerateV2Tester() {
   const [input, setInput] = useState(EXAMPLES[0])
   const [generationMode, setGenerationMode] = useState<'public_fast' | 'diamond_llm' | 'research_plus' | 'admin_benchmark'>('admin_benchmark')
@@ -398,6 +511,9 @@ export default function GenerateV2Tester() {
   const [recherchePlusLoading, setRecherchePlusLoading] = useState(false)
   const [recherchePlusResult, setRecherchePlusResult] = useState<RecherchePlusResult | null>(null)
   const [recherchePlusError, setRecherchePlusError] = useState<string | null>(null)
+  const [benchmarkLoading, setBenchmarkLoading] = useState(false)
+  const [benchmarkResults, setBenchmarkResults] = useState<BenchmarkResult[]>([])
+  const [benchmarkError, setBenchmarkError] = useState<string | null>(null)
 
   const firstBlindSpots = useMemo(
     () => response?.inquiry?.blind_spots?.slice(0, 3) ?? [],
@@ -502,6 +618,76 @@ export default function GenerateV2Tester() {
       window.clearTimeout(timeout)
       setLoading(false)
     }
+  }
+
+  async function runMiniBenchmark() {
+    setBenchmarkLoading(true)
+    setBenchmarkError(null)
+    setBenchmarkResults([])
+
+    const results: BenchmarkResult[] = []
+
+    for (const testCase of BENCHMARK_CASES) {
+      try {
+        const result = await fetch('/api/generate-v2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            input: testCase.input,
+            mode: 'public_fast',
+          }),
+        })
+        const payload: GenerateV2Response = await result.json()
+
+        if (!result.ok || !payload?.ok) {
+          results.push({
+            id: testCase.id,
+            label: testCase.label,
+            ok: false,
+            qualityOk: false,
+            verdict: 'Erreur',
+            duration: 0,
+            budget: 6500,
+            runtime: 'non renseigne',
+            usedFallback: false,
+            resources: 'non renseigne',
+            sourceCount: 0,
+            expectedSources: testCase.expectedSources,
+            header: 'non genere',
+            playbook: 'non renseigne',
+            expectedPlaybook: testCase.expectedPlaybook,
+            issues: [],
+            error: payload?.message ?? payload?.error ?? 'Erreur generate-v2',
+          })
+        } else {
+          results.push(benchmarkResultFromResponse(testCase, payload))
+        }
+      } catch (caught) {
+        results.push({
+          id: testCase.id,
+          label: testCase.label,
+          ok: false,
+          qualityOk: false,
+          verdict: 'Erreur',
+          duration: 0,
+          budget: 6500,
+          runtime: 'non renseigne',
+          usedFallback: false,
+          resources: 'non renseigne',
+          sourceCount: 0,
+          expectedSources: testCase.expectedSources,
+          header: 'non genere',
+          playbook: 'non renseigne',
+          expectedPlaybook: testCase.expectedPlaybook,
+          issues: [],
+          error: caught instanceof Error ? caught.message : 'Erreur inconnue',
+        })
+      }
+
+      setBenchmarkResults([...results])
+    }
+
+    setBenchmarkLoading(false)
   }
 
   async function runRecherchePlusPreview() {
@@ -713,6 +899,69 @@ export default function GenerateV2Tester() {
             exemple
           </button>
         ))}
+      </div>
+
+      <div style={{ marginTop: 14, ...miniCardStyle() }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div>
+            <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>mini benchmark public_fast</p>
+            <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.5 }}>
+              Teste les trois familles de non-regression : institutionnel, startup, humain.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={runMiniBenchmark}
+            disabled={benchmarkLoading || loading}
+            style={{
+              border: '1px solid #C8951A',
+              color: '#1A2E5A',
+              background: benchmarkLoading ? '#F0EBE0' : '#F8EFD8',
+              borderRadius: 8,
+              padding: '8px 12px',
+              fontSize: 12,
+              cursor: benchmarkLoading ? 'wait' : 'pointer',
+            }}
+          >
+            {benchmarkLoading ? 'Benchmark en cours' : 'Lancer benchmark'}
+          </button>
+        </div>
+        {benchmarkError && (
+          <p style={{ margin: '8px 0 0', color: '#B23A3A', fontSize: 12 }}>{benchmarkError}</p>
+        )}
+        {benchmarkResults.length > 0 && (
+          <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+            {benchmarkResults.map((result) => {
+              const tone = benchmarkTone(result)
+              return (
+                <div key={result.id} style={{ border: `1px solid ${tone}`, borderRadius: 8, padding: 10, background: tone === '#1D9E75' ? '#F4FBF8' : tone === '#A66B00' ? '#FFF8E8' : '#FFF4F4' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 1.4fr) repeat(5, minmax(90px, 1fr))', gap: 8, alignItems: 'start' }}>
+                    <div>
+                      <p style={{ margin: 0, color: '#1A2E5A', fontSize: 12, fontWeight: 800 }}>{result.label}</p>
+                      <p style={{ margin: '4px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.35 }}>{result.header}</p>
+                    </div>
+                    <p style={{ margin: 0, color: tone, fontSize: 11, fontWeight: 800 }}>{result.verdict}</p>
+                    <p style={{ margin: 0, color: '#6F6255', fontSize: 11 }}>{result.duration}/{result.budget} ms</p>
+                    <p style={{ margin: 0, color: result.usedFallback ? '#A66B00' : '#1D9E75', fontSize: 11 }}>
+                      {result.usedFallback ? 'fallback' : 'referent'}
+                    </p>
+                    <p style={{ margin: 0, color: result.playbook === result.expectedPlaybook ? '#1D9E75' : '#A66B00', fontSize: 11 }}>
+                      {result.playbook}
+                    </p>
+                    <p style={{ margin: 0, color: result.expectedSources === 'available' && result.sourceCount === 0 ? '#A66B00' : '#6F6255', fontSize: 11 }}>
+                      {result.resources} · {result.sourceCount}
+                    </p>
+                  </div>
+                  {(result.issues.length > 0 || result.error) && (
+                    <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.4 }}>
+                      {result.error ?? `issues: ${result.issues.slice(0, 3).join(', ')}`}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {error && (
