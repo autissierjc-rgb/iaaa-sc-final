@@ -27,6 +27,14 @@ type GenerateV2Response = {
     header_subject?: string
     situation_soumise?: string
     confidence?: number
+    reference_model?: {
+      provider?: string
+      model?: string
+    }
+    trace?: {
+      duration_ms?: number
+      notes?: string[]
+    }
   }
   scoring?: {
     state_index_final?: number
@@ -307,6 +315,25 @@ function resourcePreviewItems(response: GenerateV2Response): ResourcePreview[] {
     .slice(0, 3)
 }
 
+function interpretationRuntime(response: GenerateV2Response | null) {
+  const model = response?.interpretation?.reference_model?.model
+  const notes = response?.interpretation?.trace?.notes ?? []
+  const usedFallback = model === 'local-contract-timeout-fallback' ||
+    notes.some((note) => /timeout|fallback/i.test(note))
+
+  if (!response?.interpretation) return null
+
+  return {
+    model: model ?? 'non renseigne',
+    usedFallback,
+    label: usedFallback ? 'Fallback local actif' : 'Referent utilise',
+    detail: usedFallback
+      ? 'public_fast a protege la latence : le LLM referent n a pas repondu dans le budget, interpretation locale utilisee.'
+      : 'Interpretation fournie par le mode runtime attendu.',
+    tone: usedFallback ? '#A66B00' : '#1D9E75',
+  }
+}
+
 export default function GenerateV2Tester() {
   const [input, setInput] = useState(EXAMPLES[0])
   const [generationMode, setGenerationMode] = useState<'public_fast' | 'diamond_llm' | 'research_plus' | 'admin_benchmark'>('admin_benchmark')
@@ -374,6 +401,7 @@ export default function GenerateV2Tester() {
       detail: 'Aucun warning qualite bloquant ou ressource manquante.',
     }
   }, [response])
+  const runtime = useMemo(() => interpretationRuntime(response), [response])
 
   async function runTest() {
     setLoading(true)
@@ -649,6 +677,16 @@ export default function GenerateV2Tester() {
               Mode : {response.generation_mode.label_fr} · interpretation {response.generation_mode.interpretation_mode} · redaction {response.generation_mode.writing_mode}
             </p>
           )}
+          {runtime && (
+            <div style={{ marginTop: 10, border: `1px solid ${runtime.tone}`, borderRadius: 8, padding: 10, background: runtime.usedFallback ? '#FFF8E8' : '#F4FBF8' }}>
+              <p style={{ margin: 0, color: runtime.tone, fontSize: 12, fontWeight: 700 }}>
+                Runtime interpretation : {runtime.label}
+              </p>
+              <p style={{ margin: '5px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                {runtime.detail} Modele : {runtime.model}.
+              </p>
+            </div>
+          )}
           {cockpitVerdict && (
             <div style={{ marginTop: 10, border: `1px solid ${cockpitVerdict.tone}`, borderRadius: 8, padding: 10, background: '#fff' }}>
               <p style={{ margin: 0, color: cockpitVerdict.tone, fontSize: 12, fontWeight: 700 }}>
@@ -827,6 +865,11 @@ export default function GenerateV2Tester() {
             <h3 style={{ margin: '6px 0 0', fontSize: 13 }}>{response.interpretation?.header_domain}</h3>
             <p style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 12 }}>{response.interpretation?.header_subject}</p>
             <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11 }}>{response.interpretation?.domain}</p>
+            {runtime && (
+              <p style={{ margin: '6px 0 0', color: runtime.tone, fontSize: 11, lineHeight: 1.45 }}>
+                {runtime.label} · {runtime.model}
+              </p>
+            )}
           </div>
 
           <div style={miniCardStyle()}>
