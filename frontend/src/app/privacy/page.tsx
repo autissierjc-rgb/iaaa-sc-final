@@ -1,164 +1,225 @@
 /**
  * IAAA · /privacy
- * Confidentialité, mentions légales et cadre d’usage.
+ * Information & Privacy Policy for Situation Card.
  */
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Privacy — Situation Card',
+  title: 'Information & Privacy Policy — Situation Card',
 }
 
 type Lang = 'FR' | 'EN'
 
-const SECTIONS = {
+type PolicySection = {
+  title: string
+  content: string
+}
+
+const SECTIONS: Record<Lang, PolicySection[]> = {
   FR: [
     {
       title: 'Responsable du traitement',
-      content: `Situation Card est un service développé par IAAA+, société par actions simplifiée (SAS), SIREN : 920 042 439, située 14 rue Jean Perrin, 17000 La Rochelle, France.
+      content: `Situation Card est un service developpe par IAAA+, societe par actions simplifiee (SAS), SIREN : 920 042 439, situee 14 rue Jean Perrin, 17000 La Rochelle, France.
 
 Contact unique : contact@situationcard.com`,
     },
     {
-      title: 'Données collectées',
-      content: `Lorsque vous utilisez Situation Card, nous pouvons collecter les informations nécessaires au fonctionnement du service : adresse email, préférences de langue, situations soumises, cartes générées, statut public ou restreint des cartes, et données techniques minimales liées à l’usage du site.
+      title: 'Principe general',
+      content: `Situation Card traite les informations strictement necessaires pour comprendre une situation, generer une carte, fournir des ressources, permettre le partage choisi par l'utilisateur et proteger le service.
 
-Nous ne vendons pas vos données. Nous ne les utilisons pas pour de la publicité ciblée.`,
+Par defaut, les generations sont mesurees par metadonnees techniques. Le contenu complet d'une carte n'est conserve que lorsqu'un mode de snapshot l'autorise.`,
     },
     {
-      title: 'Utilisation des données',
-      content: `Vos données servent à fournir le service Situation Card, générer et afficher vos cartes, conserver vos préférences, améliorer la qualité du produit et assurer la sécurité de la plateforme.
+      title: 'Informations traitees',
+      content: `Selon l'usage du service, nous pouvons traiter : adresse email, langue, question soumise, documents ou URL fournis, cartes generees, ressources publiques consultees, statut public ou restreint des cartes, traces techniques de generation, latence, erreurs, statut qualite et reactions utilisateur rattachees a des couches produit.
 
-Les situations que vous soumettez peuvent être traitées par des modèles d’intelligence artificielle pour produire les cartes. Elles ne doivent pas contenir d’informations sensibles que vous n’êtes pas autorisé à partager.`,
+Nous ne vendons pas vos donnees. Nous ne les utilisons pas pour de la publicite ciblee.`,
     },
     {
-      title: 'Cartes publiques et restreintes',
-      content: `Une carte publique peut être visible dans l’Atlas. Une carte restreinte n’a pas vocation à être affichée publiquement dans l’Atlas, même si elle peut être partagée selon les fonctionnalités disponibles.
+      title: 'Generations et metadonnees',
+      content: `Chaque generation peut produire un evenement technique : date, langue, domaine, intention, statut ressources, statut qualite, latence, erreurs eventuelles, taille ou hash de l'input.
 
-Vous restez responsable des informations que vous choisissez de rendre publiques.`,
+Ce mode permet de mesurer l'activite et la qualite sans exposer le texte brut par defaut dans le cockpit admin.`,
     },
     {
-      title: 'Vos droits',
-      content: `Conformément au RGPD et à la loi Informatique et Libertés, vous pouvez demander l’accès, la rectification, la suppression, la limitation, l’opposition ou la portabilité de vos données personnelles.
+      title: 'Snapshots de carte',
+      content: `Une carte partagee ou exportee peut etre conservee sous forme de snapshot stable. Un snapshot contient la carte validee, sa langue, sa version, sa provenance, ses sources publiques utiles et son statut de confidentialite.
 
-Pour exercer ces droits : contact@situationcard.com`,
+Une carte partagee existe dans une langue de snapshot. Changer de langue signifie lire ou creer un snapshot dans cette langue. Le PDF exporte la langue du snapshot. Le bouton Partager ne relance pas la generation.`,
+    },
+    {
+      title: 'Cartes publiques, restreintes et privees',
+      content: `Une carte publique peut etre accessible par lien ou dans des espaces publics prevus par le service. Une carte restreinte n'a pas vocation a etre affichee publiquement dans l'Atlas. Une carte privee ou sensible ne doit pas etre transformee en ressource publique.
+
+Vous restez responsable des informations que vous choisissez de rendre publiques ou de partager.`,
+    },
+    {
+      title: 'Ressources, URL et Recherche+',
+      content: `Lorsque vous fournissez une URL ou lorsqu'un domaine depend de faits externes, Situation Card peut interroger des sources publiques ou des services de recherche cote serveur. Les cles API ne sont jamais exposees au client.
+
+Recherche+ est separee de la carte rapide : elle cherche des pistes, signaux faibles, contradictions et preuves possibles. Ses resultats ne deviennent pas automatiquement des conclusions.`,
+    },
+    {
+      title: 'Modeles d intelligence artificielle',
+      content: `Les informations soumises peuvent etre traitees par des modeles d'intelligence artificielle afin de produire l'interpretation, la Situation Card, Lecture, Approfondir, les ressources ou les traductions de snapshot.
+
+Le referent d'interpretation peut etre ChatGPT / GPT aujourd'hui ou un autre LLM demain. Les traductions peuvent etre confiees a un modele specialise. Les fournisseurs ne doivent pas recevoir plus d'information que necessaire au service demande.`,
+    },
+    {
+      title: 'Domaines sensibles',
+      content: `Les sujets medicaux, juridiques, financiers, administratifs, sociaux, relatifs aux mineurs ou a la securite sont traites avec prudence.
+
+Situation Card fournit une analyse structuree. Elle ne remplace pas un avocat, medecin, conseiller financier, autorite publique ou professionnel qualifie. En cas d'urgence ou de danger, il faut contacter les services competents.`,
+    },
+    {
+      title: 'Securite et anti-abus',
+      content: `Les secrets et cles API sont utilises cote serveur. Les consultations de cartes partagees doivent lire des snapshots cacheables et ne doivent pas relancer les modeles IA.
+
+Le service peut limiter, ralentir ou bloquer des usages abusifs : spam, surcharge, attaques, tentatives d'extraction de prompts, volume anormal, cout excessif ou requetes mettant en danger la disponibilite du service.`,
+    },
+    {
+      title: 'Cockpit admin et veille CTO',
+      content: `Le cockpit admin sert a piloter la qualite, la latence, les erreurs, les sources manquantes, les seuils de cout et les alertes techniques. Il doit privilegier les metadonnees et eviter l'exposition du contenu brut.
+
+La veille CTO peut alerter si un seuil critique est atteint : latence p95, taux d'erreur, fallback, provider errors, sources obligatoires absentes, cout horaire estime ou cache hit insuffisant.`,
+    },
+    {
+      title: 'Conservation et suppression',
+      content: `Les metadonnees techniques peuvent etre conservees pour la mesure du service. Les snapshots peuvent etre conserves selon leur statut : public, restreint, prive, apprentissage lancement ou suppression.
+
+Vous pouvez demander l'acces, la rectification, la limitation ou la suppression de vos donnees personnelles : contact@situationcard.com`,
     },
     {
       title: 'Cookies',
-      content: `Le site utilise uniquement les cookies nécessaires au fonctionnement du service, notamment pour la session, la sécurité et les préférences de langue. Aucun cookie publicitaire tiers n’est utilisé.`,
+      content: `Le site utilise les cookies necessaires au fonctionnement du service : session, securite, preferences de langue et mesure technique. Aucun cookie publicitaire tiers n'est utilise.`,
     },
     {
-      title: 'Mentions légales',
-      content: `Éditeur du site : IAAA+, société par actions simplifiée (SAS), SIREN : 920 042 439.
-Siège social : 14 rue Jean Perrin, 17000 La Rochelle, France.
+      title: 'Mentions legales',
+      content: `Editeur du site : IAAA+, societe par actions simplifiee (SAS), SIREN : 920 042 439.
+Siege social : 14 rue Jean Perrin, 17000 La Rochelle, France.
 Directeur de la publication : JCA.
 
-Sites édités : situationcard.com et situationcard.fr.
-
-Hébergement : OVH SAS, 2 rue Kellermann, 59100 Roubaix, France, www.ovh.com.
-
+Sites edites : situationcard.com et situationcard.fr.
+Hebergement : OVH SAS, 2 rue Kellermann, 59100 Roubaix, France, www.ovh.com.
 Contact : contact@situationcard.com`,
     },
     {
-      title: 'Propriété intellectuelle',
-      content: `L’ensemble des contenus présents sur situationcard.com, notamment les textes, graphismes, logiciels, bases de données et marques, est la propriété exclusive de IAAA+ ou de ses partenaires et est protégé par les lois françaises et internationales relatives à la propriété intellectuelle.
-
-Toute reproduction, représentation, modification, publication ou adaptation de tout ou partie des éléments du site est interdite sans l’autorisation préalable écrite de IAAA+, sauf disposition contraire expressément indiquée.
-
-Les Situation Cards publiées dans l’Atlas public sont mises à disposition sous licence Creative Commons Attribution 4.0 International (CC BY 4.0). Elles peuvent être partagées et adaptées à condition d’en mentionner la source.`,
-    },
-    {
-      title: 'Intelligence artificielle',
-      content: `Les Situation Cards sont générées par un système d’intelligence artificielle. Elles constituent une aide à la réflexion structurée et ne sauraient être considérées comme des conseils juridiques, financiers, médicaux ou professionnels.
-
-La décision reste toujours celle de l’utilisateur.`,
-    },
-    {
       title: 'Droit applicable',
-      content: `Le présent site et ses contenus sont soumis au droit français. Tout litige relatif à l’utilisation du site relève de la compétence exclusive des tribunaux français.`,
+      content: `Le present site et ses contenus sont soumis au droit francais. Tout litige relatif a l'utilisation du site releve de la competence des juridictions francaises competentes.`,
     },
   ],
   EN: [
     {
-      title: 'Data Controller',
+      title: 'Data controller',
       content: `Situation Card is a service developed by IAAA+, a French simplified joint-stock company (SAS), SIREN 920 042 439, located at 14 rue Jean Perrin, 17000 La Rochelle, France.
 
 Single contact address: contact@situationcard.com`,
     },
     {
-      title: 'Data Collected',
-      content: `When you use Situation Card, we may collect the information needed to operate the service: email address, language preferences, submitted situations, generated cards, public or restricted card status, and minimal technical usage data.
+      title: 'General principle',
+      content: `Situation Card processes the information strictly needed to understand a situation, generate a card, provide resources, enable user-selected sharing, and protect the service.
+
+By default, generations are measured through technical metadata. Full card content is stored only when a snapshot mode allows it.`,
+    },
+    {
+      title: 'Information processed',
+      content: `Depending on your use of the service, we may process: email address, language, submitted question, provided documents or URLs, generated cards, public sources consulted, public or restricted card status, generation traces, latency, errors, quality status, and user reactions attached to product layers.
 
 We do not sell your data. We do not use it for targeted advertising.`,
     },
     {
-      title: 'Use of Data',
-      content: `Your data is used to provide the Situation Card service, generate and display your cards, store your preferences, improve product quality, and ensure platform security.
+      title: 'Generations and metadata',
+      content: `Each generation may produce a technical event: date, language, domain, intent, resource status, quality status, latency, possible errors, and input size or hash.
 
-Situations you submit may be processed by artificial intelligence models to produce cards. They must not contain sensitive information you are not authorized to share.`,
+This allows activity and quality to be measured without exposing raw text by default in the admin cockpit.`,
     },
     {
-      title: 'Public and Restricted Cards',
-      content: `A public card may be visible in the Atlas. A restricted card is not intended to be displayed publicly in the Atlas, although it may be shared according to available features.
+      title: 'Card snapshots',
+      content: `A shared or exported card may be stored as a stable snapshot. A snapshot contains the validated card, its language, version, provenance, useful public sources, and privacy status.
 
-You remain responsible for the information you choose to make public.`,
+A shared card exists in one snapshot language. Changing language means reading or creating a snapshot in that language. The PDF exports the snapshot language. The Share button never regenerates the card.`,
     },
     {
-      title: 'Your Rights',
-      content: `Under GDPR and French data protection law, you may request access, rectification, deletion, restriction, objection, or portability of your personal data.
+      title: 'Public, restricted and private cards',
+      content: `A public card may be accessible by link or in public areas provided by the service. A restricted card is not intended to be publicly displayed in the Atlas. A private or sensitive card must not be turned into a public resource.
 
-To exercise these rights: contact@situationcard.com`,
+You remain responsible for the information you choose to make public or share.`,
+    },
+    {
+      title: 'Resources, URLs and Recherche+',
+      content: `When you provide a URL, or when a domain depends on external facts, Situation Card may query public sources or server-side search services. API keys are never exposed to the client.
+
+Recherche+ is separate from the fast card: it looks for leads, weak signals, contradictions and possible evidence. Its results do not automatically become conclusions.`,
+    },
+    {
+      title: 'Artificial intelligence models',
+      content: `Submitted information may be processed by artificial intelligence models to produce interpretation, Situation Card, Lecture, Approfondir, resources, or snapshot translations.
+
+The interpretation reference may be ChatGPT / GPT today or another LLM tomorrow. Translations may use a specialized model. Providers should not receive more information than needed for the requested service.`,
+    },
+    {
+      title: 'Sensitive domains',
+      content: `Medical, legal, financial, administrative, social, minor-related or safety-related topics are handled with caution.
+
+Situation Card provides structured analysis. It does not replace a lawyer, doctor, financial adviser, public authority or qualified professional. In an emergency or danger, contact the appropriate services.`,
+    },
+    {
+      title: 'Security and anti-abuse',
+      content: `Secrets and API keys are used server-side. Shared card reads should use cacheable snapshots and must not trigger AI models again.
+
+The service may limit, slow down or block abusive use: spam, overload, attacks, prompt extraction attempts, abnormal volume, excessive cost, or requests threatening service availability.`,
+    },
+    {
+      title: 'Admin cockpit and CTO Watch',
+      content: `The admin cockpit is used to monitor quality, latency, errors, missing sources, cost thresholds, and technical alerts. It should prefer metadata and avoid exposing raw content.
+
+CTO Watch may alert when a critical threshold is reached: p95 latency, error rate, fallback rate, provider errors, missing required sources, estimated hourly cost, or insufficient cache hit rate.`,
+    },
+    {
+      title: 'Retention and deletion',
+      content: `Technical metadata may be retained for service measurement. Snapshots may be retained according to their status: public, restricted, private, launch learning, or deletion.
+
+You may request access, rectification, restriction or deletion of your personal data: contact@situationcard.com`,
     },
     {
       title: 'Cookies',
-      content: `The site uses only cookies necessary for the service to function, including session, security, and language preference cookies. No third-party advertising cookies are used.`,
+      content: `The site uses cookies required for the service to function: session, security, language preferences and technical measurement. No third-party advertising cookies are used.`,
     },
     {
-      title: 'Legal Notice',
+      title: 'Legal notice',
       content: `Site publisher: IAAA+, French SAS, SIREN 920 042 439.
 Registered office: 14 rue Jean Perrin, 17000 La Rochelle, France.
 Publication director: JCA.
 
 Published sites: situationcard.com and situationcard.fr.
-
 Hosting: OVH SAS, 2 rue Kellermann, 59100 Roubaix, France, www.ovh.com.
-
 Contact: contact@situationcard.com`,
     },
     {
-      title: 'Intellectual Property',
-      content: `All content on situationcard.com, including texts, graphics, software, databases, and trademarks, is the exclusive property of IAAA+ or its partners and is protected by French and international intellectual property laws.
-
-Any reproduction, representation, modification, publication, or adaptation of all or part of the site elements is prohibited without prior written authorization from IAAA+, unless expressly stated otherwise.
-
-Situation Cards published in the public Atlas are made available under the Creative Commons Attribution 4.0 International license (CC BY 4.0). They may be shared and adapted provided the source is credited.`,
-    },
-    {
-      title: 'Artificial Intelligence',
-      content: `Situation Cards are generated by an artificial intelligence system. They are an aid to structured reflection and should not be considered legal, financial, medical, or professional advice.
-
-The decision always remains with the user.`,
-    },
-    {
-      title: 'Applicable Law',
-      content: `This site and its contents are governed by French law. Any dispute relating to the use of the site falls under the exclusive jurisdiction of French courts.`,
+      title: 'Applicable law',
+      content: `This site and its contents are governed by French law. Any dispute relating to the use of the site falls under the jurisdiction of the competent French courts.`,
     },
   ],
-} as const
+}
 
 const COPY = {
   FR: {
-    back: '← Retour',
-    eyebrow: 'Confidentialité · Mentions légales',
-    title: 'Confidentialité',
-    updated: 'Dernière mise à jour : 28 mars 2026',
+    back: 'Retour',
+    eyebrow: 'Information · confidentialite · securite',
+    title: 'Politique de traitement des informations',
+    intro:
+      'Cette page explique comment Situation Card traite les questions, cartes, ressources, snapshots, partages, PDF et traces techniques.',
+    updated: 'Derniere mise a jour : 10 mai 2026',
   },
   EN: {
-    back: '← Back',
-    eyebrow: 'Privacy · Legal Notice',
-    title: 'Privacy',
-    updated: 'Last updated: March 28, 2026',
+    back: 'Back',
+    eyebrow: 'Information · privacy · security',
+    title: 'Information Processing Policy',
+    intro:
+      'This page explains how Situation Card processes questions, cards, resources, snapshots, sharing, PDFs and technical traces.',
+    updated: 'Last updated: May 10, 2026',
   },
 } as const
 
@@ -193,23 +254,26 @@ export default function PrivacyPage({
         </div>
       </nav>
 
-      <div style={{ maxWidth: '680px', margin: '0 auto', padding: '60px 28px' }}>
+      <div style={{ maxWidth: '760px', margin: '0 auto', padding: '60px 28px' }}>
         <p style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '10px', color: '#9A8860', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '16px' }}>
           {copy.eyebrow}
         </p>
-        <h1 style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: 'clamp(1.6rem, 3.5vw, 2.2rem)', fontWeight: 400, color: '#1A2E5A', marginBottom: '40px' }}>
+        <h1 style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: 'clamp(1.8rem, 3.5vw, 2.5rem)', fontWeight: 400, color: '#1A2E5A', marginBottom: '14px' }}>
           {copy.title}
         </h1>
+        <p style={{ fontSize: '15px', color: '#5A6A7A', lineHeight: 1.75, marginBottom: '42px' }}>
+          {copy.intro}
+        </p>
 
         {SECTIONS[lang].map((section) => (
-          <div key={section.title} style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '13px', fontWeight: 600, color: '#1A2E5A', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div key={section.title} style={{ marginBottom: '30px' }}>
+            <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#1A2E5A', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               {section.title}
             </h2>
             <div style={{ fontSize: '14px', color: '#5A6A7A', lineHeight: 1.85, whiteSpace: 'pre-line' }}>
               {section.content}
             </div>
-            <div style={{ height: '1px', background: '#E8E0D0', marginTop: '24px' }} />
+            <div style={{ height: '1px', background: '#E8E0D0', marginTop: '22px' }} />
           </div>
         ))}
 
