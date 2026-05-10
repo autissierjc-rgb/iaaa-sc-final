@@ -334,6 +334,57 @@ function interpretationRuntime(response: GenerateV2Response | null) {
   }
 }
 
+function speedTone(duration = 0, budget = 0) {
+  if (budget <= 0) return '#1D9E75'
+  if (duration <= budget) return '#1D9E75'
+  if (duration <= budget * 1.4) return '#A66B00'
+  return '#B23A3A'
+}
+
+function speedLabel(duration = 0, budget = 0) {
+  if (budget <= 0) return 'hors budget'
+  if (duration <= budget) return 'dans le budget'
+  if (duration <= budget * 1.4) return 'limite'
+  return 'trop lent'
+}
+
+function speedBudgetItems(response: GenerateV2Response | null) {
+  const steps = response?.pipeline_trace?.steps ?? []
+  const findStep = (id: string) => steps.find((step) => step.stage_id === id)
+  const interpretation = findStep('interpretation')
+  const resources = findStep('resources')
+  const writing = findStep('writing')
+  const totalDuration = response?.pipeline_trace?.total_duration_ms ?? response?.total_duration_ms ?? 0
+  const totalBudget = response?.generation_mode?.latency_target_ms ?? 0
+
+  return [
+    {
+      id: 'interpretation',
+      label: 'Interpretation',
+      duration: interpretation?.duration_ms ?? response?.interpretation?.trace?.duration_ms ?? 0,
+      budget: interpretation?.budget_ms ?? 2000,
+    },
+    {
+      id: 'resources',
+      label: 'Sources rapides',
+      duration: resources?.duration_ms ?? response?.fast_resource_run?.duration_ms ?? 0,
+      budget: resources?.budget_ms ?? response?.fast_resource_run?.timeout_ms ?? 1200,
+    },
+    {
+      id: 'writing',
+      label: 'Redaction',
+      duration: writing?.duration_ms ?? 0,
+      budget: writing?.budget_ms ?? 2500,
+    },
+    {
+      id: 'total',
+      label: 'Total',
+      duration: totalDuration,
+      budget: totalBudget,
+    },
+  ]
+}
+
 export default function GenerateV2Tester() {
   const [input, setInput] = useState(EXAMPLES[0])
   const [generationMode, setGenerationMode] = useState<'public_fast' | 'diamond_llm' | 'research_plus' | 'admin_benchmark'>('admin_benchmark')
@@ -402,6 +453,7 @@ export default function GenerateV2Tester() {
     }
   }, [response])
   const runtime = useMemo(() => interpretationRuntime(response), [response])
+  const speedItems = useMemo(() => speedBudgetItems(response), [response])
 
   async function runTest() {
     setLoading(true)
@@ -1123,6 +1175,31 @@ export default function GenerateV2Tester() {
           <p style={{ margin: '10px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
             {response.recherche_plus.public_disclaimer_fr}
           </p>
+        </div>
+      )}
+
+      {response?.pipeline_trace?.steps && response.pipeline_trace.steps.length > 0 && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>budget vitesse</p>
+          <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 12, lineHeight: 1.55 }}>
+            Lecture rapide du temps public : vert dans le budget, orange limite, rouge trop lent.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginTop: 10 }}>
+            {speedItems.map((item) => {
+              const tone = speedTone(item.duration, item.budget)
+              return (
+                <div key={item.id} style={{ border: `1px solid ${tone}`, borderRadius: 8, padding: 10, background: tone === '#1D9E75' ? '#F4FBF8' : tone === '#A66B00' ? '#FFF8E8' : '#FFF4F4' }}>
+                  <p style={{ margin: 0, color: '#1A2E5A', fontSize: 12, fontWeight: 700 }}>{item.label}</p>
+                  <p style={{ margin: '6px 0 0', color: tone, fontSize: 14, fontWeight: 800 }}>
+                    {item.duration} / {item.budget} ms
+                  </p>
+                  <p style={{ margin: '4px 0 0', color: '#6F6255', fontSize: 11 }}>
+                    {speedLabel(item.duration, item.budget)}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
