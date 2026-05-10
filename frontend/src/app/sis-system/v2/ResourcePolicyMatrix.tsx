@@ -1,28 +1,4 @@
-import { interpretSituation } from '@/lib/interpretation'
-import { planResources } from '@/lib/resources'
-
-const CASES = [
-  {
-    id: 'personal',
-    label: 'Personnel',
-    input: "Mon fils de 14 ans s'est enferme dans la voiture apres quatre jours de peche sans carpe, comment reagir ?",
-  },
-  {
-    id: 'politics',
-    label: 'Politique actuelle',
-    input: 'Trump peut-il contester les resultats des elections de mi-mandat ?',
-  },
-  {
-    id: 'enterprise',
-    label: 'Entreprise',
-    input: "Que fait la compagnie FlexUp et qu'en penser pour eventuellement la rejoindre avec ma startup ?",
-  },
-  {
-    id: 'url',
-    label: 'URL',
-    input: 'Quelles options de go-to-market pour https://situationcard.com/ ?',
-  },
-]
+import { runResourcePolicyBenchmark } from '@/lib/resources/ResourcePolicyBenchmark'
 
 function policyColor(policy: string) {
   if (policy === 'internal_context_ok') return '#1D9E75'
@@ -31,26 +7,8 @@ function policyColor(policy: string) {
 }
 
 export default async function ResourcePolicyMatrix() {
-  const rows = await Promise.all(
-    CASES.map(async (item) => {
-      const interpretation = await interpretSituation({
-        raw_input: item.input,
-        mode: 'local_contract',
-      })
-      const resources = planResources({ interpretation })
-
-      return {
-        ...item,
-        domain: interpretation.header_domain,
-        subject: interpretation.header_subject,
-        status: resources.status,
-        policy: resources.policy,
-        needs_web: resources.needs_web,
-        reason: resources.policy_reason_fr,
-        fallback_searches: resources.fallback_searches,
-      }
-    }),
-  )
+  const rows = await runResourcePolicyBenchmark()
+  const passed = rows.filter((row) => row.passed).length
 
   return (
     <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
@@ -65,6 +23,7 @@ export default async function ResourcePolicyMatrix() {
         <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
           <div><strong style={{ color: '#1A2E5A' }}>{rows.length}</strong> cas test</div>
           <div><strong style={{ color: '#1A2E5A' }}>{rows.filter((row) => row.needs_web).length}</strong> avec web requis</div>
+          <div><strong style={{ color: passed === rows.length ? '#1D9E75' : '#B23A3A' }}>{passed}/{rows.length}</strong> contrats OK</div>
         </div>
       </div>
 
@@ -79,6 +38,9 @@ export default async function ResourcePolicyMatrix() {
             </h3>
             <p style={{ margin: '8px 0 0', color: policyColor(row.policy), fontFamily: 'monospace', fontSize: 11 }}>
               {row.policy} · {row.status}
+            </p>
+            <p style={{ margin: '6px 0 0', color: row.passed ? '#1D9E75' : '#B23A3A', fontFamily: 'monospace', fontSize: 10 }}>
+              attendu : {row.expected_policy} · {row.passed ? 'PASS' : 'REVIEW'}
             </p>
             <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.5 }}>
               {row.reason}
