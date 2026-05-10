@@ -31,6 +31,8 @@ type GenerateV2Body = {
   writing_mode?: 'referent_llm' | 'local_contract'
 }
 
+const PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS = 3200
+
 const ASTROLABE_TEMPLATE: Array<Omit<AstrolabeBranchV2, 'score' | 'is_primary' | 'rationale_fr'>> = [
   { branch: 'I', name_fr: 'Acteurs', name_en: 'Actors' },
   { branch: 'II', name_fr: 'Interets', name_en: 'Interests' },
@@ -88,6 +90,60 @@ async function readBody(request: NextRequest): Promise<GenerateV2Body> {
   }
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | 'timeout'> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve('timeout'), timeoutMs)
+    promise
+      .then((value) => resolve(value))
+      .catch(() => resolve('timeout'))
+      .finally(() => clearTimeout(timeout))
+  })
+}
+
+async function interpretForMode(rawInput: string, generationModeId: GenerationModeId, mode: 'referent_llm' | 'local_contract') {
+  if (mode !== 'referent_llm' || generationModeId !== 'public_fast') {
+    return interpretSituation({
+      raw_input: rawInput,
+      mode,
+    })
+  }
+
+  const modelInterpretation = await withTimeout(
+    interpretSituation({
+      raw_input: rawInput,
+      mode,
+    }),
+    PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS,
+  )
+
+  if (modelInterpretation !== 'timeout') {
+    return modelInterpretation
+  }
+
+  const fallback = await interpretSituation({
+    raw_input: rawInput,
+    mode: 'local_contract',
+  })
+
+  return {
+    ...fallback,
+    reference_model: {
+      provider: 'local' as const,
+      model: 'local-contract-timeout-fallback',
+    },
+    trace: {
+      ...fallback.trace,
+      status: 'partial' as const,
+      duration_ms: PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS + (fallback.trace.duration_ms ?? 0),
+      notes: [
+        ...(fallback.trace.notes ?? []),
+        `referent_llm_timeout=${PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS}`,
+        'public_fast fell back to local contract interpretation.',
+      ],
+    },
+  }
+}
+
 export async function POST(request: NextRequest) {
   const started = Date.now()
   const body = await readBody(request)
@@ -114,10 +170,7 @@ export async function POST(request: NextRequest) {
         }
       : undefined,
   )
-  const interpretation = await interpretSituation({
-    raw_input: rawInput,
-    mode: generation_mode.interpretation_mode,
-  })
+  const interpretation = await interpretForMode(rawInput, generation_mode.id, generation_mode.interpretation_mode)
   const dialogue = runDialogueGate({ interpretation })
   const safety = runRiskAdviceGuard({ interpretation })
   const expertises = routeExpertisesMetiers({ interpretation })
