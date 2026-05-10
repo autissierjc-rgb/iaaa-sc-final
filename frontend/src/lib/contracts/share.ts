@@ -4,6 +4,7 @@ export type ShareVisibility = 'private' | 'restricted' | 'public' | 'anonymized_
 
 export type ShareChannel =
   | 'copy_link'
+  | 'download_pdf'
   | 'email'
   | 'linkedin'
   | 'x'
@@ -35,6 +36,41 @@ export type SharedSituationCardContract = {
   metadata: ShareMetadataContract
   view_count?: number
   created_at: string
+}
+
+export type ShareSurface = 'situation_card' | 'lecture' | 'approfondir' | 'resources'
+
+export type UnifiedShareButtonContract = {
+  placement: 'every_public_surface'
+  opens: 'share_menu'
+  requires_snapshot: true
+  never_regenerates: true
+  surfaces: ShareSurface[]
+  actions: ShareChannel[]
+  pdf_action: {
+    channel: 'download_pdf'
+    uses: 'PdfExportContract'
+    requires_pdf_plan_ready: boolean
+  }
+  language_rule: 'share_snapshot_language'
+  reason_fr: string
+}
+
+export const DEFAULT_UNIFIED_SHARE_BUTTON: UnifiedShareButtonContract = {
+  placement: 'every_public_surface',
+  opens: 'share_menu',
+  requires_snapshot: true,
+  never_regenerates: true,
+  surfaces: ['situation_card', 'lecture', 'approfondir', 'resources'],
+  actions: ['copy_link', 'download_pdf', 'email', 'linkedin', 'other'],
+  pdf_action: {
+    channel: 'download_pdf',
+    uses: 'PdfExportContract',
+    requires_pdf_plan_ready: true,
+  },
+  language_rule: 'share_snapshot_language',
+  reason_fr:
+    'Un seul bouton Partager gere lien, PDF, langue, visibilite et canaux autorises depuis un snapshot. Il ne relance jamais la generation.',
 }
 
 export type PdfExportContract = {

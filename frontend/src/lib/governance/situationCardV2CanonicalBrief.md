@@ -258,6 +258,35 @@ Situation Card montre ce qu'il faut comprendre.
 Recherche+ cherche ce qu'il faut verifier.
 ```
 
+## 4b alpha. Bouton Partager unifie
+
+Le partage ne doit pas etre disperse entre plusieurs boutons concurrents.
+
+Regle canonique :
+
+```txt
+ShareButton = point unique de diffusion.
+PDF = canal de partage depuis snapshot.
+Chaque page SC / Lecture / Approfondir / Ressources expose ShareButton.
+ShareButton ne relance jamais la generation.
+```
+
+Le menu `Partager` doit pouvoir contenir :
+
+- copier le lien ;
+- telecharger le PDF ;
+- envoyer par canal autorise ;
+- choisir ou respecter la langue du snapshot ;
+- regler la visibilite si l'utilisateur y a droit ;
+- appliquer anonymisation ou restriction si necessaire.
+
+Le bouton `Telecharger PDF` ne doit donc pas devenir un bouton isole sur chaque
+surface. Il est une action du menu `Partager`.
+
+Le partage public, le lien, le PDF et les langues doivent tous pointer vers un
+snapshot valide. Si la langue demandee n'existe pas encore en snapshot, le
+produit doit creer un nouveau snapshot dans cette langue avant partage.
+
 ## 4b bis. Buzz readiness / anti-incendie
 
 La V2 doit etre preparee au meilleur cas : une Situation Card partagee peut
