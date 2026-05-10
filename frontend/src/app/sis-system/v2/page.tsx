@@ -4,6 +4,7 @@ import LanguageV2Tester from './LanguageV2Tester'
 import PdfExportV2Tester from './PdfExportV2Tester'
 import ReactionV2Tester from './ReactionV2Tester'
 import ResourcePolicyMatrix from './ResourcePolicyMatrix'
+import ShareV2Tester from './ShareV2Tester'
 import {
   V2_FOUNDATION_BRICKS,
   statusLabel,
@@ -260,6 +261,8 @@ export default function SisSystemV2Page() {
             ))}
           </div>
         </section>
+
+        <ShareV2Tester />
 
         <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
