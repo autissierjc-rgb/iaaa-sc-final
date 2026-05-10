@@ -171,6 +171,17 @@ eventuellement pointer vers des routes localisees (`/fr`, `/en`, `/es`, etc.),
 mais la regle la plus importante reste celle du snapshot : une carte envoyee
 dans une langue doit etre stable dans cette langue.
 
+La home peut aussi exposer des routes de marche. Exemple :
+
+```txt
+/us = porte d'entree marche Etats-Unis, servie en anglais.
+```
+
+Ces routes de marche ne doivent pas creer une langue nouvelle dans le moteur.
+Elles peuvent adapter l'acquisition, le SEO, les exemples et les offres, mais
+le contrat linguistique reste rattache a une langue de snapshot (`en` pour
+`/us` tant qu'aucune variante regionale n'est creee).
+
 Note importante :
 
 ```txt
