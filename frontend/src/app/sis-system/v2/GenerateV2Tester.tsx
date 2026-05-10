@@ -291,6 +291,16 @@ type BenchmarkResult = {
   error?: string
 }
 
+type CtoWatchStatus = 'OK' | 'WATCH' | 'CRITICAL'
+
+type CtoWatchResult = {
+  status: CtoWatchStatus
+  tone: string
+  cause: string
+  action: string
+  layer: string
+}
+
 const EXAMPLES = [
   'Trump peut-il contester les resultats des elections de mi-mandat ?',
   "Que fait la compagnie FlexUp et qu'en penser pour eventuellement la rejoindre avec ma startup ?",
@@ -498,6 +508,110 @@ function benchmarkTone(result: BenchmarkResult) {
   return '#1D9E75'
 }
 
+function ctoWatchForResult(result: BenchmarkResult): CtoWatchResult {
+  if (!result.ok || result.error) {
+    return {
+      status: 'CRITICAL',
+      tone: '#B23A3A',
+      cause: `${result.label} ne genere pas.`,
+      action: 'Inspecter la route generate-v2 et les logs serveur.',
+      layer: 'api/pipeline',
+    }
+  }
+
+  if (!result.qualityOk || result.verdict === 'A corriger') {
+    return {
+      status: 'CRITICAL',
+      tone: '#B23A3A',
+      cause: `${result.label} echoue au QualityGate.`,
+      action: `Reprendre les issues : ${result.issues.slice(0, 3).join(', ') || 'quality'}.`,
+      layer: 'quality',
+    }
+  }
+
+  if (result.playbook !== result.expectedPlaybook) {
+    return {
+      status: 'CRITICAL',
+      tone: '#B23A3A',
+      cause: `${result.label} route vers ${result.playbook} au lieu de ${result.expectedPlaybook}.`,
+      action: 'Corriger interpretation ou expertisesMetiers avant de continuer.',
+      layer: 'interpretation/expertisesMetiers',
+    }
+  }
+
+  if (result.expectedSources === 'available' && result.sourceCount === 0) {
+    return {
+      status: 'CRITICAL',
+      tone: '#B23A3A',
+      cause: `${result.label} exige des sources rapides mais n en attache aucune.`,
+      action: 'Verifier SourceRouter, FastResourceRunner ou cle Tavily.',
+      layer: 'resources',
+    }
+  }
+
+  if (result.budget > 0 && result.duration > result.budget * 1.4) {
+    return {
+      status: 'CRITICAL',
+      tone: '#B23A3A',
+      cause: `${result.label} depasse fortement le budget public_fast.`,
+      action: 'Identifier la couche lente dans budget vitesse.',
+      layer: 'performance',
+    }
+  }
+
+  if (result.usedFallback) {
+    return {
+      status: 'WATCH',
+      tone: '#A66B00',
+      cause: `${result.label} utilise le fallback local.`,
+      action: 'Surveiller la frequence ; acceptable si qualite, playbook et sources restent bons.',
+      layer: 'interpretation',
+    }
+  }
+
+  if (result.budget > 0 && result.duration > result.budget) {
+    return {
+      status: 'WATCH',
+      tone: '#A66B00',
+      cause: `${result.label} depasse legerement le budget.`,
+      action: 'Surveiller la tendance sur plusieurs runs.',
+      layer: 'performance',
+    }
+  }
+
+  if (result.issues.length > 0 || result.verdict === 'A verifier' || result.verdict === 'Partiel') {
+    return {
+      status: 'WATCH',
+      tone: '#A66B00',
+      cause: `${result.label} genere avec warnings.`,
+      action: `Lire les issues : ${result.issues.slice(0, 3).join(', ') || result.verdict}.`,
+      layer: 'quality',
+    }
+  }
+
+  return {
+    status: 'OK',
+    tone: '#1D9E75',
+    cause: `${result.label} tient le contrat.`,
+    action: 'Aucune action immediate.',
+    layer: 'system',
+  }
+}
+
+function ctoWatchSummary(results: BenchmarkResult[]): CtoWatchResult | null {
+  if (results.length === 0) return null
+  const watches = results.map(ctoWatchForResult)
+  return watches.find((watch) => watch.status === 'CRITICAL')
+    ?? watches.find((watch) => watch.status === 'WATCH')
+    ?? {
+      status: 'OK',
+      tone: '#1D9E75',
+      cause: 'Tous les cas benchmark tiennent le contrat V2.',
+      action: 'Continuer le polish ou elargir le benchmark.',
+      layer: 'system',
+    }
+}
+
 export default function GenerateV2Tester() {
   const [input, setInput] = useState(EXAMPLES[0])
   const [generationMode, setGenerationMode] = useState<'public_fast' | 'diamond_llm' | 'research_plus' | 'admin_benchmark'>('admin_benchmark')
@@ -570,6 +684,7 @@ export default function GenerateV2Tester() {
   }, [response])
   const runtime = useMemo(() => interpretationRuntime(response), [response])
   const speedItems = useMemo(() => speedBudgetItems(response), [response])
+  const ctoWatch = useMemo(() => ctoWatchSummary(benchmarkResults), [benchmarkResults])
 
   async function runTest() {
     setLoading(true)
@@ -929,10 +1044,24 @@ export default function GenerateV2Tester() {
         {benchmarkError && (
           <p style={{ margin: '8px 0 0', color: '#B23A3A', fontSize: 12 }}>{benchmarkError}</p>
         )}
+        {ctoWatch && (
+          <div style={{ marginTop: 12, border: `1px solid ${ctoWatch.tone}`, borderRadius: 8, padding: 10, background: ctoWatch.status === 'OK' ? '#F4FBF8' : ctoWatch.status === 'WATCH' ? '#FFF8E8' : '#FFF4F4' }}>
+            <p style={{ margin: 0, color: ctoWatch.tone, fontSize: 12, fontWeight: 800 }}>
+              Veille CTO : {ctoWatch.status} · couche {ctoWatch.layer}
+            </p>
+            <p style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.45 }}>
+              {ctoWatch.cause}
+            </p>
+            <p style={{ margin: '4px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+              Action : {ctoWatch.action}
+            </p>
+          </div>
+        )}
         {benchmarkResults.length > 0 && (
           <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
             {benchmarkResults.map((result) => {
               const tone = benchmarkTone(result)
+              const watch = ctoWatchForResult(result)
               return (
                 <div key={result.id} style={{ border: `1px solid ${tone}`, borderRadius: 8, padding: 10, background: tone === '#1D9E75' ? '#F4FBF8' : tone === '#A66B00' ? '#FFF8E8' : '#FFF4F4' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 1.4fr) repeat(5, minmax(90px, 1fr))', gap: 8, alignItems: 'start' }}>
@@ -952,6 +1081,9 @@ export default function GenerateV2Tester() {
                       {result.resources} · {result.sourceCount}
                     </p>
                   </div>
+                  <p style={{ margin: '7px 0 0', color: watch.tone, fontSize: 11, fontWeight: 700 }}>
+                    CTO {watch.status} · {watch.layer} · {watch.action}
+                  </p>
                   {(result.issues.length > 0 || result.error) && (
                     <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.4 }}>
                       {result.error ?? `issues: ${result.issues.slice(0, 3).join(', ')}`}
