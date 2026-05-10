@@ -16,6 +16,7 @@ import {
 } from '@/lib/pipeline/PipelineTelemetry'
 import { buildCalibrationEvidence } from '@/lib/quality/CalibrationEvidence'
 import { buildUserReactionEvent } from '@/lib/archive'
+import { DEFAULT_BUZZ_READINESS } from '@/lib/contracts/share'
 
 const NEXT_STEPS = [
   'Brancher une route V2 separee, sans toucher a /sis.',
@@ -74,6 +75,7 @@ export default function SisSystemV2Page() {
     for (const layer of reaction.probable_layers) acc[layer] = (acc[layer] ?? 0) + 1
     return acc
   }, {})
+  const buzzReadiness = DEFAULT_BUZZ_READINESS
 
   return (
     <main style={{ minHeight: '100vh', background: '#F5F0E8', color: '#1A2E5A', padding: '28px' }}>
@@ -182,6 +184,52 @@ export default function SisSystemV2Page() {
         <ReactionV2Tester />
 
         <ResourcePolicyMatrix />
+
+        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: 760 }}>
+              <h2 style={{ margin: 0, fontSize: 15 }}>Buzz readiness / anti-incendie</h2>
+              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
+                {buzzReadiness.reason_fr}
+              </p>
+            </div>
+            <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
+              <div><strong style={{ color: '#C8951A' }}>{buzzReadiness.level}</strong> niveau</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{buzzReadiness.cache_policy.s_maxage_seconds}s</strong> cache CDN</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{buzzReadiness.critical_thresholds.max_hourly_estimated_cost_eur} EUR/h</strong> seuil cout</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10, marginTop: 16 }}>
+            {[
+              ['Lire', buzzReadiness.read_path_rule, 'Les cartes partagees doivent etre servies depuis un snapshot cache.'],
+              ['Generer', buzzReadiness.generate_path_rule, 'Chaque generation doit passer par quota, rate limit et estimation de cout.'],
+              ['Enqueter', buzzReadiness.inquiry_path_rule, 'Recherche+ reste separee, asynchrone, payante ou limitee.'],
+              ['Surveiller', 'cto_watch', 'Alerter sur latence, cout, erreurs provider et sources requises manquantes.'],
+            ].map(([label, rule, note]) => (
+              <div key={label} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>{rule}</p>
+                <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 13 }}>{label}</h3>
+                <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>{note}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10, marginTop: 12 }}>
+            <div style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12 }}>
+              <p style={{ margin: 0, color: '#8B8174', fontSize: 11 }}>p95 public fast max</p>
+              <strong style={{ color: '#1A2E5A', fontSize: 18 }}>{buzzReadiness.critical_thresholds.max_public_fast_p95_ms} ms</strong>
+            </div>
+            <div style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12 }}>
+              <p style={{ margin: 0, color: '#8B8174', fontSize: 11 }}>taux erreurs generation max</p>
+              <strong style={{ color: '#1A2E5A', fontSize: 18 }}>{Math.round(buzzReadiness.critical_thresholds.max_generation_error_rate * 100)}%</strong>
+            </div>
+            <div style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12 }}>
+              <p style={{ margin: 0, color: '#8B8174', fontSize: 11 }}>sources requises manquantes max</p>
+              <strong style={{ color: '#1A2E5A', fontSize: 18 }}>{Math.round(buzzReadiness.critical_thresholds.max_missing_required_sources_rate * 100)}%</strong>
+            </div>
+          </div>
+        </section>
 
         <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>

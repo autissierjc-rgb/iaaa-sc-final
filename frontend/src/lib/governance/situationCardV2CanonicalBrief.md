@@ -258,6 +258,72 @@ Situation Card montre ce qu'il faut comprendre.
 Recherche+ cherche ce qu'il faut verifier.
 ```
 
+## 4b bis. Buzz readiness / anti-incendie
+
+La V2 doit etre preparee au meilleur cas : une Situation Card partagee peut
+faire le buzz.
+
+Regle canonique :
+
+```txt
+Lire = CDN.
+Generer = quota.
+Enqueter = file d'attente ou option separee.
+Partager = snapshot.
+Surveiller = CTO Watch.
+```
+
+Une carte publique consultee ne doit jamais relancer :
+
+- le LLM ;
+- Tavily ;
+- le scoring ;
+- Recherche+ ;
+- une regeneration de Lecture ou Approfondir.
+
+Le partage public doit produire ou pointer vers un snapshot immuable :
+
+```txt
+card_id
+language
+snapshot_payload
+visibility
+created_at
+source_generation_id
+cache_policy
+```
+
+Le chemin de lecture :
+
+```txt
+/{locale}/sc/{card_id}
+```
+
+doit lire le snapshot et etre cacheable par CDN.
+
+Le chemin de generation doit etre protege par :
+
+- rate limit IP ;
+- quota invite ;
+- quota compte ;
+- limite de taille input ;
+- cout estime ;
+- fallback public_fast ;
+- blocage ou ralentissement si abus.
+
+Recherche+ ne doit jamais se lancer sur une simple consultation. Elle peut etre
+asynchrone, payante ou limitee par quota.
+
+CTO Watch doit alerter si un seuil critique est atteint :
+
+- `public_fast_p95_ms` trop haut ;
+- erreurs provider ;
+- cout horaire estime ;
+- fallback trop frequent ;
+- sources obligatoires absentes ;
+- generation error rate ;
+- faible cache hit rate sur cartes partagees.
+
 Regle radar :
 
 ```txt
