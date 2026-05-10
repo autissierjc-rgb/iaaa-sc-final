@@ -36,6 +36,17 @@ function hasAny(value: string, patterns: string[]) {
   return patterns.some((pattern) => value.includes(pattern))
 }
 
+function isBusinessDomain(domain: string) {
+  return [
+    'startup_market',
+    'business_strategy',
+    'product_platform',
+    'professional',
+    'management',
+    'company_governance',
+  ].includes(domain)
+}
+
 function situatedInquiry(
   item: string,
   input: BlindSpotEngineInput,
@@ -229,10 +240,43 @@ function situatedInquiry(
   }
 
   if (
-    domain === 'startup_market' ||
-    hasAny(normalized, ['client', 'revenu', 'traction', 'juridique', 'legal', 'partenariat', 'startup'])
+    isBusinessDomain(domain) ||
+    hasAny(normalized, [
+      'client',
+      'revenu',
+      'traction',
+      'juridique',
+      'legal',
+      'partenariat',
+      'startup',
+      'entreprise',
+      'compagnie',
+      'societe',
+      'offre',
+      'produit',
+      'marche',
+      'business model',
+      'modele economique',
+      'pricing',
+      'prix',
+      'contrat',
+      'integration',
+      'donnees',
+      'responsabilite',
+      'decision d achat',
+    ])
   ) {
-    if (normalized.includes('client')) {
+    if (
+      hasAny(normalized, [
+        'client',
+        'usage',
+        'adoption',
+        'reference',
+        'temoignage',
+        'cas client',
+        'utilisateur',
+      ])
+    ) {
       return {
         why_it_matters:
           'Un client identifiable separe une promesse de marche d une preuve d adoption.',
@@ -246,7 +290,21 @@ function situatedInquiry(
       }
     }
 
-    if (normalized.includes('revenu') || normalized.includes('traction')) {
+    if (
+      hasAny(normalized, [
+        'revenu',
+        'traction',
+        'croissance',
+        'vente',
+        'pricing',
+        'prix',
+        'monetisation',
+        'modele economique',
+        'business model',
+        'financement',
+        'investisseur',
+      ])
+    ) {
       return {
         why_it_matters:
           'La traction montre si l interet declare devient adoption, paiement ou repetition d usage.',
@@ -260,7 +318,22 @@ function situatedInquiry(
       }
     }
 
-    if (normalized.includes('droit') || normalized.includes('legal') || normalized.includes('juridique')) {
+    if (
+      hasAny(normalized, [
+        'droit',
+        'legal',
+        'juridique',
+        'statut',
+        'salarial',
+        'travail',
+        'societes',
+        'fiscal',
+        'reglementaire',
+        'responsabilite',
+        'conformite',
+        'conditions juridiques',
+      ])
+    ) {
       return {
         why_it_matters:
           'Le cadre juridique peut renverser l evaluation si le modele touche au travail, au capital, aux contrats ou a la responsabilite.',
@@ -275,10 +348,19 @@ function situatedInquiry(
     }
 
     if (
-      normalized.includes('role') ||
-      normalized.includes('place') ||
-      normalized.includes('partenariat') ||
-      normalized.includes('conditions d entree')
+      hasAny(normalized, [
+        'role',
+        'place',
+        'partenariat',
+        'rejoindre',
+        'alliance',
+        'integration',
+        'conditions d entree',
+        'conditions de sortie',
+        'pouvoir de decision',
+        'dependance',
+        'exclusivite',
+      ])
     ) {
       return {
         why_it_matters:
@@ -291,6 +373,67 @@ function situatedInquiry(
         counter_hypothesis:
           'Le partenariat peut rester interessant si la place de la startup est limitee, reversible et compatible avec ses propres priorites.',
       }
+    }
+
+    if (
+      hasAny(normalized, [
+        'offre',
+        'produit',
+        'promesse',
+        'proposition',
+        'service',
+        'fonctionnalite',
+        'segment',
+        'cible',
+        'marche',
+      ])
+    ) {
+      return {
+        why_it_matters:
+          'L evaluation change selon que l offre repond a un besoin precis, a un segment identifiable ou seulement a une promesse generale.',
+        where_to_look: ['site officiel', 'documentation produit', 'pricing', 'cas d usage', 'segments clients', 'concurrents directs'],
+        observable_signal:
+          'La promesse devient verifiable quand elle nomme un utilisateur, un probleme, un usage repete et une condition d achat.',
+        decisive_evidence:
+          'Une trace reliant offre, cible, cas d usage et preuve d adoption : page produit, demonstration, client public, contrat ou usage documente.',
+        counter_hypothesis:
+          'Une offre encore peu documentee peut rester prometteuse si le partenariat donne un acces teste, limite et reversible au marche vise.',
+      }
+    }
+
+    if (hasAny(normalized, ['donnee', 'data', 'integration', 'api', 'securite', 'infrastructure', 'technique'])) {
+      return {
+        why_it_matters:
+          'Une cooperation startup peut echouer moins par le marche que par l integration technique, les donnees, la securite ou la dependance operationnelle.',
+        where_to_look: ['documentation technique', 'API', 'politique de donnees', 'conditions de securite', 'SLA', 'retours utilisateurs'],
+        observable_signal:
+          'Une contrainte technique devient visible quand elle impose un delai, une dependance, un risque donnees ou un cout d integration.',
+        decisive_evidence:
+          'Une documentation, un test d integration, une clause de responsabilite ou une contrainte de donnees qui montre ce que la startup devra porter.',
+        counter_hypothesis:
+          'Le risque technique peut etre acceptable si l integration est borne, testable et sans dependance critique pour le coeur de produit.',
+      }
+    }
+
+    return {
+      why_it_matters:
+        'Dans une decision entreprise ou startup, le risque est de confondre l interet apparent, la preuve d usage, le cadre contractuel et la place reelle dans l accord.',
+      where_to_look: [
+        'site officiel',
+        'page produit',
+        'pricing',
+        'cas clients',
+        'LinkedIn',
+        'offres d emploi',
+        'mentions legales',
+        'conditions contractuelles',
+      ],
+      observable_signal:
+        'Un element public ou contractuel montre qui utilise, qui paie, qui decide, qui porte le risque ou qui peut bloquer le partenariat.',
+      decisive_evidence:
+        'Une trace reliant offre, client ou cas d usage, conditions d engagement et role concret de la startup : contrat, pricing, cas client, preuve d usage, clause ou decision d achat.',
+      counter_hypothesis:
+        'L opportunite peut rester pertinente meme avec peu de preuves publiques si l engagement est exploratoire, limite, reversible et compatible avec la strategie de la startup.',
     }
   }
 
