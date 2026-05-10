@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import GenerateV2Tester from './GenerateV2Tester'
 import ReactionV2Tester from './ReactionV2Tester'
+import ResourcePolicyMatrix from './ResourcePolicyMatrix'
 import {
   V2_FOUNDATION_BRICKS,
   statusLabel,
@@ -179,6 +180,8 @@ export default function SisSystemV2Page() {
         </section>
 
         <ReactionV2Tester />
+
+        <ResourcePolicyMatrix />
 
         <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
