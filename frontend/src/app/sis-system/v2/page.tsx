@@ -198,6 +198,7 @@ export default function SisSystemV2Page() {
               <div><strong style={{ color: '#1A2E5A' }}>{pdfExport.layout}</strong> layout</div>
               <div><strong style={{ color: '#C8951A' }}>{pdfExport.authority_status}</strong> statut</div>
               <div><strong style={{ color: '#1A2E5A' }}>{pdfExport.distribution}</strong> distribution defaut</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{pdfExport.notice_placement}</strong> mention</div>
             </div>
           </div>
 
@@ -205,7 +206,7 @@ export default function SisSystemV2Page() {
             {[
               ['Snapshot', pdfExport.generation_rule, 'Le PDF exporte une carte deja validee. Il ne relance aucune generation.'],
               ['Provenance', 'required', 'Snapshot source, date, langue, version et sources publiques restent visibles.'],
-              ['Non-autorite', 'required', 'Le PDF se declare note analytique, jamais rapport officiel ou preuve etablie.'],
+              ['Non-autorite', 'end_matter', 'La mention de statut protege le document en fin de PDF, pas en accueil.'],
               ['High stakes', 'guarded', 'Juridique, medical, financier et domaines sensibles gardent une mention de prudence.'],
             ].map(([label, rule, note]) => (
               <div key={label} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>

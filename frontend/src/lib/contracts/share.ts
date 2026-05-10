@@ -46,6 +46,7 @@ export type PdfExportContract = {
   generation_rule: 'from_snapshot_only'
   authority_status: 'analytical_note_not_official_report'
   distribution: 'private' | 'restricted' | 'public'
+  notice_placement: 'end_matter'
   includes: {
     situation_card: boolean
     lecture: boolean
@@ -74,6 +75,7 @@ export const DEFAULT_PDF_EXPORT_CONTRACT: Omit<
   generation_rule: 'from_snapshot_only',
   authority_status: 'analytical_note_not_official_report',
   distribution: 'restricted',
+  notice_placement: 'end_matter',
   includes: {
     situation_card: true,
     lecture: true,
@@ -98,7 +100,7 @@ export const DEFAULT_PDF_EXPORT_CONTRACT: Omit<
     'verified_evidence',
   ],
   safety_rule_fr:
-    'Le PDF exporte une note analytique issue d un snapshot valide. Il ne regenere jamais la carte, ne relance pas le LLM, conserve la langue choisie et ne doit jamais etre presente comme rapport officiel, avis professionnel ou preuve etablie.',
+    'Le PDF exporte une note analytique IAAA+ issue d un snapshot valide. Il accueille le lecteur par la carte et place les limites de statut en fin de document.',
 }
 
 export type BuzzReadinessLevel = 'not_ready' | 'watch' | 'ready'

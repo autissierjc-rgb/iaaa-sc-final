@@ -339,6 +339,7 @@ PDF ne relance pas Tavily.
 PDF conserve la langue choisie.
 PDF conserve les sources publiques attachees.
 PDF est une note analytique, pas un rapport officiel.
+La mention de non-autorite se place en fin de document, pas en accueil.
 ```
 
 Le PDF doit etre produit depuis un snapshot valide et immuable :
@@ -355,6 +356,7 @@ caveats
 generated_at
 provenance
 non_authority_notice
+notice_placement=end_matter
 evidence_level
 ```
 
@@ -382,6 +384,8 @@ Le PDF doit inclure :
 - niveau de preuve : structurel, sourcé partiellement, sourcé, ou enquête
   externe séparée ;
 - mention visible : "note analytique, non rapport officiel" ;
+- placement de cette mention en fin de document, pour proteger sans durcir
+  l'accueil ;
 - provenance : Situation Card / IAAA+, date, langue, version ;
 - mention de prudence si le domaine est medical, juridique, financier ou autre
   high stakes ;
