@@ -173,6 +173,17 @@ type GenerateV2Response = {
     }>
     public_warnings?: string[]
   }
+  writing_benchmark?: {
+    passed?: number
+    total?: number
+    verdict?: string
+    checks?: Array<{
+      id: string
+      label_fr: string
+      passed: boolean
+      detail_fr: string
+    }>
+  }
   pipeline_trace?: {
     total_duration_ms?: number
     blocking_failure?: boolean
@@ -965,6 +976,26 @@ export default function GenerateV2Tester() {
               {response.writing.diamond_sentences[0].text_fr}
             </p>
           )}
+        </div>
+      )}
+
+      {response?.writing_benchmark?.checks && response.writing_benchmark.checks.length > 0 && (
+        <div style={{ marginTop: 14, ...miniCardStyle() }}>
+          <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 11 }}>benchmark writing</p>
+          <p style={{ margin: '8px 0 0', color: response.writing_benchmark.verdict === 'pass' ? '#1D9E75' : '#A66B00', fontSize: 12, fontWeight: 700 }}>
+            {response.writing_benchmark.passed}/{response.writing_benchmark.total} · {response.writing_benchmark.verdict}
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, marginTop: 10 }}>
+            {response.writing_benchmark.checks.map((check) => (
+              <div key={check.id} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 10, background: '#fff' }}>
+                <p style={{ margin: 0, color: check.passed ? '#1D9E75' : '#B23A3A', fontFamily: 'monospace', fontSize: 10 }}>
+                  {check.passed ? 'PASS' : 'REVIEW'}
+                </p>
+                <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 12 }}>{check.label_fr}</h3>
+                <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>{check.detail_fr}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

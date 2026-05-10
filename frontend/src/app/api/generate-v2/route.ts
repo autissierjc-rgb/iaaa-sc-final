@@ -13,6 +13,7 @@ import { runContractQualityGate } from '@/lib/quality'
 import { buildGenerationEvent } from '@/lib/archive'
 import { composeDiamondWritingWithMode } from '@/lib/writing'
 import { runQualityGate } from '@/lib/quality'
+import { benchmarkWritingQuality } from '@/lib/quality/WritingQualityBenchmark'
 import { selectHumanCollectivePatterns } from '@/lib/patterns/humanCollective'
 import { triadAstrolabeInfluence } from '@/lib/scoringV2'
 import { prepareRecherchePlus } from '@/lib/recherchePlus'
@@ -147,6 +148,7 @@ export async function POST(request: NextRequest) {
   )
   const contractQuality = runContractQualityGate({ interpretation, theatre, scoring, inquiry })
   const writingQuality = runQualityGate({ interpretation, theatre, scoring, writing })
+  const writing_benchmark = benchmarkWritingQuality(writing, resources)
   const quality = {
     ...writingQuality,
     ok: contractQuality.ok && writingQuality.ok,
@@ -232,6 +234,7 @@ export async function POST(request: NextRequest) {
     inquiry,
     recherche_plus,
     writing,
+    writing_benchmark,
     quality,
     generation_archive,
     pipeline_trace,
