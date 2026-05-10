@@ -31,6 +31,7 @@ type FastSearchPlan = {
   query: string
   include_domains?: string[]
   topic?: 'general' | 'news'
+  label: string
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | 'timeout'> {
@@ -116,23 +117,39 @@ function sourceDomainsFor(input: FastResourceRunnerInput): string[] {
 
 function fastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
   const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
-  const fallback = input.resource_plan.fallback_searches[0] ?? ''
-  const query = [subject, fallback].filter(Boolean).join(' ').slice(0, 220)
 
   return {
-    query,
+    query: subject.slice(0, 180),
     include_domains: sourceDomainsFor(input),
     topic: ['geopolitics', 'war_security', 'institutional_crisis'].includes(input.interpretation.domain)
       ? 'news'
       : 'general',
+    label: 'targeted',
   }
 }
 
-async function fetchTavilyFast(input: FastResourceRunnerInput, timeoutMs: number): Promise<ResourceItem[]> {
+function broadFastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
+  const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
+  const query = [
+    subject,
+    input.interpretation.domain === 'geopolitics' || input.interpretation.domain === 'institutional_crisis'
+      ? 'latest reliable sources'
+      : 'official sources evidence',
+  ].join(' ').slice(0, 200)
+
+  return {
+    query,
+    topic: ['geopolitics', 'war_security', 'institutional_crisis'].includes(input.interpretation.domain)
+      ? 'news'
+      : 'general',
+    label: 'broad',
+  }
+}
+
+async function fetchTavilyFastPlan(plan: FastSearchPlan, maxSources: number, timeoutMs: number): Promise<ResourceItem[]> {
   const apiKey = process.env.TAVILY_API_KEY
   if (!apiKey) return []
 
-  const plan = fastSearchPlan(input)
   const response = await fetchWithAbort(
     'https://api.tavily.com/search',
     {
@@ -141,7 +158,7 @@ async function fetchTavilyFast(input: FastResourceRunnerInput, timeoutMs: number
       body: JSON.stringify({
         api_key: apiKey,
         query: plan.query,
-        max_results: input.max_sources ?? 3,
+        max_results: maxSources,
         search_depth: 'basic',
         topic: plan.topic,
         include_domains: plan.include_domains,
@@ -211,8 +228,15 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
   ].filter(Boolean).join(' ')
 
   try {
-    const fast = await fetchTavilyFast(input, timeoutMs)
-    const result = fast.length > 0
+    const firstBudget = Math.max(500, Math.floor(timeoutMs * 0.55))
+    const secondBudget = Math.max(500, timeoutMs - firstBudget)
+    const targeted = await fetchTavilyFastPlan(plan, maxSources, firstBudget)
+    const broadPlan = broadFastSearchPlan(input)
+    const fast = targeted.length > 0
+      ? targeted
+      : await fetchTavilyFastPlan(broadPlan, maxSources, secondBudget)
+    const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
+    const result = fast.length > 0 || !usedLegacyFallback
       ? fast
       : await withTimeout(fetchResources(query), Math.max(800, timeoutMs))
 
@@ -241,9 +265,9 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       note_fr: resources.length > 0
         ? `Sources rapides attachees : ${resources.length}.`
         : 'Aucune source rapide exploitable trouvee dans le budget court.',
-      provider: fast.length > 0 ? 'tavily_fast' : 'legacy_fetch_resources',
-      query: plan.query,
-      include_domains: plan.include_domains,
+      provider: usedLegacyFallback ? 'legacy_fetch_resources' : 'tavily_fast',
+      query: targeted.length > 0 ? plan.query : broadPlan.query,
+      include_domains: targeted.length > 0 ? plan.include_domains : broadPlan.include_domains,
       timeout_ms: timeoutMs,
     }
   } catch {
