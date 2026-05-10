@@ -81,6 +81,14 @@ function diamondText(writing: WritingContract): string {
     .join(' ')
 }
 
+function host(value: string): string {
+  try {
+    return new URL(value).hostname.replace(/^www\./, '')
+  } catch {
+    return ''
+  }
+}
+
 export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const started = Date.now()
   const issues: QualityIssue[] = []
@@ -142,7 +150,42 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     ))
   }
 
-  if (input.resources?.needs_web && input.writing.public_warnings.length === 0) {
+  if (input.resources?.needs_web && input.resources.public_sources.length > 0) {
+    const sourceHosts = Array.from(new Set(input.resources.public_sources.map((source) => host(source.url)).filter(Boolean)))
+    const hasReliableSource = input.resources.public_sources.some((source) =>
+      source.reliability === 'primary' || source.reliability === 'secondary',
+    )
+    const sourcesWithExcerpt = input.resources.public_sources.filter((source) => Boolean(source.excerpt)).length
+
+    if (!hasReliableSource) {
+      issues.push(issue(
+        'warning',
+        'FAST_SOURCES_LOW_RELIABILITY',
+        'Fast sources are attached but none is marked primary or secondary.',
+        'resources.public_sources',
+      ))
+    }
+
+    if (input.resources.public_sources.length >= 2 && sourceHosts.length < 2) {
+      issues.push(issue(
+        'warning',
+        'FAST_SOURCES_LOW_DIVERSITY',
+        'Fast sources come from too few distinct domains.',
+        'resources.public_sources',
+      ))
+    }
+
+    if (sourcesWithExcerpt === 0) {
+      issues.push(issue(
+        'warning',
+        'FAST_SOURCES_WITHOUT_EXCERPTS',
+        'Fast sources have no excerpts, so their probative value remains weak.',
+        'resources.public_sources',
+      ))
+    }
+  }
+
+  if (input.resources?.needs_web && input.resources.public_sources.length === 0 && input.writing.public_warnings.length === 0) {
     issues.push(issue(
       'warning',
       'MISSING_RESOURCE_WARNING',
