@@ -26,10 +26,16 @@ export type UserMaterialProcessingPurpose =
   | 'recherche_plus'
   | 'snapshot_provenance'
 
+export type UserMaterialRetentionChoice =
+  | 'discard_after_processing'
+  | 'keep_private'
+  | 'keep_with_private_card'
+
 export type UserMaterialPolicyContract = {
   kind: UserMaterialKind
   sensitivity: UserMaterialSensitivity
   allowed_purposes: UserMaterialProcessingPurpose[]
+  retention_choice: UserMaterialRetentionChoice
   extraction_rule:
     | 'extract_minimum_relevant_content'
     | 'extract_public_page_only'
@@ -39,6 +45,8 @@ export type UserMaterialPolicyContract = {
   may_be_sent_to_llm: boolean
   may_be_sent_to_search_provider: boolean
   may_be_included_in_public_snapshot: boolean
+  exploitable_by_iaaa: false
+  requires_separate_reuse_consent: boolean
   public_output_rule:
     | 'summaries_only'
     | 'public_sources_only'
@@ -47,17 +55,22 @@ export type UserMaterialPolicyContract = {
   required_user_warning_fr?: string
   required_user_warning_en?: string
   deletion_rule_fr: string
+  non_exploitation_rule_fr: string
+  non_exploitation_rule_en: string
 }
 
 export const DEFAULT_USER_MATERIAL_POLICY: UserMaterialPolicyContract = {
   kind: 'document',
   sensitivity: 'unknown',
   allowed_purposes: ['interpretation', 'theatre_building', 'writing_context'],
+  retention_choice: 'discard_after_processing',
   extraction_rule: 'extract_minimum_relevant_content',
   storage_rule: 'metadata_only',
   may_be_sent_to_llm: true,
   may_be_sent_to_search_provider: false,
   may_be_included_in_public_snapshot: false,
+  exploitable_by_iaaa: false,
+  requires_separate_reuse_consent: true,
   public_output_rule: 'summaries_only',
   required_user_warning_fr:
     'Ne partagez que des documents ou donnees que vous avez le droit de transmettre. Les contenus sensibles doivent etre evites ou anonymises.',
@@ -65,6 +78,10 @@ export const DEFAULT_USER_MATERIAL_POLICY: UserMaterialPolicyContract = {
     'Only share documents or data you are allowed to transmit. Sensitive content should be avoided or anonymized.',
   deletion_rule_fr:
     'Les documents et donnees fournis doivent pouvoir etre exclus du snapshot public et supprimes sur demande lorsqu ils sont rattaches a un compte ou a une session identifiable.',
+  non_exploitation_rule_fr:
+    'Les documents prives conserves par l utilisateur ne sont pas exploitables par IAAA+ pour entrainer, enrichir, benchmarker, vendre, profiler ou ameliorer le service sans consentement separe, explicite et revocable.',
+  non_exploitation_rule_en:
+    'Private documents kept by the user are not exploitable by IAAA+ to train, enrich, benchmark, sell, profile or improve the service without separate, explicit and revocable consent.',
 }
 
 export function buildUserMaterialPolicy(params: {
@@ -72,6 +89,7 @@ export function buildUserMaterialPolicy(params: {
   sensitivity?: UserMaterialSensitivity
   public_source?: boolean
   user_confirmed_rights?: boolean
+  retention_choice?: UserMaterialRetentionChoice
 }): UserMaterialPolicyContract {
   const sensitivity = params.sensitivity ?? 'unknown'
   const isPublicSource = Boolean(params.public_source)
@@ -82,6 +100,7 @@ export function buildUserMaterialPolicy(params: {
       ...DEFAULT_USER_MATERIAL_POLICY,
       kind: params.kind,
       sensitivity,
+      retention_choice: params.retention_choice ?? 'discard_after_processing',
       extraction_rule: 'blocked_until_user_confirms_rights',
       may_be_sent_to_llm: false,
       may_be_sent_to_search_provider: false,
@@ -94,6 +113,7 @@ export function buildUserMaterialPolicy(params: {
       ...DEFAULT_USER_MATERIAL_POLICY,
       kind: params.kind,
       sensitivity,
+      retention_choice: params.retention_choice ?? 'discard_after_processing',
       allowed_purposes: ['resource_extraction', 'theatre_building', 'snapshot_provenance'],
       extraction_rule: 'extract_public_page_only',
       may_be_sent_to_search_provider: true,
@@ -107,6 +127,7 @@ export function buildUserMaterialPolicy(params: {
       ...DEFAULT_USER_MATERIAL_POLICY,
       kind: params.kind,
       sensitivity,
+      retention_choice: params.retention_choice ?? 'discard_after_processing',
       storage_rule: 'do_not_store',
       may_be_sent_to_search_provider: false,
       may_be_included_in_public_snapshot: false,
@@ -118,5 +139,6 @@ export function buildUserMaterialPolicy(params: {
     ...DEFAULT_USER_MATERIAL_POLICY,
     kind: params.kind,
     sensitivity,
+    retention_choice: params.retention_choice ?? 'discard_after_processing',
   }
 }

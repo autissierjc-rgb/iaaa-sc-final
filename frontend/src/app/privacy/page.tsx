@@ -70,6 +70,14 @@ Vous devez uniquement transmettre des contenus que vous avez le droit de partage
 Situation Card doit extraire le minimum utile, produire des resumes ou indices structurants, et ne pas exposer le contenu brut dans une carte publique. Les documents prives ne doivent pas devenir des ressources publiques. Les sources publiques peuvent etre citees comme sources publiques utiles.`,
     },
     {
+      title: 'Conservation optionnelle des documents',
+      content: `Par defaut, les documents bruts fournis ne sont pas conserves apres traitement. L'utilisateur peut choisir explicitement de les garder dans son espace prive ou avec une carte privee.
+
+Un document garde prive reste un document prive. Il n'est pas exploitable par IAAA+ pour entrainer, enrichir, benchmarker, vendre, profiler ou ameliorer le service, sauf consentement separe, explicite et revocable.
+
+Des metadonnees techniques minimales peuvent etre conservees pour faire fonctionner le service : type de fichier, taille, hash, date, statut d'extraction, proprietaire et permissions. Le contenu brut reste exclu de l'exploitation par defaut.`,
+    },
+    {
       title: 'Modeles d intelligence artificielle',
       content: `Les informations soumises peuvent etre traitees par des modeles d'intelligence artificielle afin de produire l'interpretation, la Situation Card, Lecture, Approfondir, les ressources ou les traductions de snapshot.
 
@@ -168,6 +176,14 @@ Recherche+ is separate from the fast card: it looks for leads, weak signals, con
 You should only transmit content you are allowed to share. Sensitive, confidential, medical, legal, financial, minor-related or third-party information should be avoided, minimized or anonymized.
 
 Situation Card should extract the minimum useful content, produce structured summaries or signals, and not expose raw private content in a public card. Private documents must not become public resources. Public sources may be cited as useful public sources.`,
+    },
+    {
+      title: 'Optional document retention',
+      content: `By default, raw documents you provide are not retained after processing. You may explicitly choose to keep them in your private space or with a private card.
+
+A private retained document remains private. It is not exploitable by IAAA+ to train, enrich, benchmark, sell, profile or improve the service, unless you give separate, explicit and revocable consent.
+
+Minimal technical metadata may be retained to operate the service: file type, size, hash, date, extraction status, owner and permissions. Raw content is excluded from exploitation by default.`,
     },
     {
       title: 'Artificial intelligence models',
