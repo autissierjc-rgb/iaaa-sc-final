@@ -37,6 +37,70 @@ export type SharedSituationCardContract = {
   created_at: string
 }
 
+export type PdfExportContract = {
+  export_id: string
+  source_snapshot_id: string
+  language: LanguageCode
+  format: 'pdf'
+  layout: 'situation_card' | 'lecture' | 'approfondir' | 'complete'
+  generation_rule: 'from_snapshot_only'
+  authority_status: 'analytical_note_not_official_report'
+  distribution: 'private' | 'restricted' | 'public'
+  includes: {
+    situation_card: boolean
+    lecture: boolean
+    approfondir: boolean
+    public_sources: boolean
+    caveats: boolean
+    generated_at: boolean
+    provenance: boolean
+    non_authority_notice: boolean
+    evidence_level: boolean
+  }
+  cache_policy: {
+    immutable: boolean
+    public_cache: boolean
+  }
+  prohibited_claims: string[]
+  safety_rule_fr: string
+}
+
+export const DEFAULT_PDF_EXPORT_CONTRACT: Omit<
+  PdfExportContract,
+  'export_id' | 'source_snapshot_id' | 'language'
+> = {
+  format: 'pdf',
+  layout: 'complete',
+  generation_rule: 'from_snapshot_only',
+  authority_status: 'analytical_note_not_official_report',
+  distribution: 'restricted',
+  includes: {
+    situation_card: true,
+    lecture: true,
+    approfondir: true,
+    public_sources: true,
+    caveats: true,
+    generated_at: true,
+    provenance: true,
+    non_authority_notice: true,
+    evidence_level: true,
+  },
+  cache_policy: {
+    immutable: true,
+    public_cache: true,
+  },
+  prohibited_claims: [
+    'official_report',
+    'legal_opinion',
+    'medical_advice',
+    'financial_advice',
+    'administrative_decision',
+    'verified_evidence',
+  ],
+  safety_rule_fr:
+    'Le PDF exporte une note analytique issue d un snapshot valide. Il ne regenere jamais la carte, ne relance pas le LLM, conserve la langue choisie et ne doit jamais etre presente comme rapport officiel, avis professionnel ou preuve etablie.',
+}
+
 export type BuzzReadinessLevel = 'not_ready' | 'watch' | 'ready'
 
 export type BuzzReadinessContract = {

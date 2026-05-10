@@ -324,6 +324,98 @@ CTO Watch doit alerter si un seuil critique est atteint :
 - generation error rate ;
 - faible cache hit rate sur cartes partagees.
 
+## 4b ter. Export PDF
+
+Une Situation Card doit pouvoir exister en PDF.
+
+Le PDF est un mode de partage, pas une nouvelle generation.
+
+Regle canonique :
+
+```txt
+PDF = export du snapshot.
+PDF ne relance pas le LLM.
+PDF ne relance pas Tavily.
+PDF conserve la langue choisie.
+PDF conserve les sources publiques attachees.
+PDF est une note analytique, pas un rapport officiel.
+```
+
+Le PDF doit etre produit depuis un snapshot valide et immuable :
+
+```txt
+source_snapshot_id
+language
+layout
+situation_card
+lecture
+approfondir
+public_sources
+caveats
+generated_at
+provenance
+non_authority_notice
+evidence_level
+```
+
+Layouts possibles :
+
+- `situation_card` : format court partageable ;
+- `lecture` : lecture seule ;
+- `approfondir` : version enrichie ;
+- `complete` : SC + Lecture + Approfondir + ressources publiques.
+
+La version PDF doit respecter la meme langue que la carte partagee. Si
+l'utilisateur veut envoyer la carte dans une autre langue, le produit doit
+creer ou pointer vers un snapshot dans cette langue, puis exporter ce snapshot.
+
+Le PDF doit inclure :
+
+- titre / header ;
+- Situation soumise ;
+- score et etat ;
+- Lecture ;
+- Approfondir si disponible ;
+- sources publiques utiles ;
+- date de generation ;
+- identifiant du snapshot source ;
+- niveau de preuve : structurel, sourcé partiellement, sourcé, ou enquête
+  externe séparée ;
+- mention visible : "note analytique, non rapport officiel" ;
+- provenance : Situation Card / IAAA+, date, langue, version ;
+- mention de prudence si le domaine est medical, juridique, financier ou autre
+  high stakes ;
+- mention claire si les sources rapides etaient partielles ou absentes.
+
+Le PDF ne doit pas contenir :
+
+- donnees admin ;
+- trace brute du LLM ;
+- `raw_tavily_response` ;
+- donnees personnelles non necessaires ;
+- signaux Recherche+ non verifies, sauf dans un PDF Recherche+ separe et
+  clairement marque comme piste.
+
+Le PDF ne doit jamais se presenter comme :
+
+- rapport officiel ;
+- avis juridique ;
+- conseil medical ;
+- conseil financier ;
+- decision administrative ;
+- preuve verifiee ;
+- recommandation d'action obligatoire.
+
+Si le PDF peut circuler aupres d'une autorite, il doit etre encore plus clair :
+
+```txt
+Ce document est une note analytique produite par Situation Card.
+Il structure une lecture, des hypotheses et des signaux a verifier.
+Il ne constitue ni un rapport officiel, ni une preuve, ni un avis professionnel.
+Toute decision doit etre fondee sur les sources primaires, les procedures
+applicables et les autorites competentes.
+```
+
 Regle radar :
 
 ```txt

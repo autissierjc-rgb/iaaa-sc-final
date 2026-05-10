@@ -16,7 +16,7 @@ import {
 } from '@/lib/pipeline/PipelineTelemetry'
 import { buildCalibrationEvidence } from '@/lib/quality/CalibrationEvidence'
 import { buildUserReactionEvent } from '@/lib/archive'
-import { DEFAULT_BUZZ_READINESS } from '@/lib/contracts/share'
+import { DEFAULT_BUZZ_READINESS, DEFAULT_PDF_EXPORT_CONTRACT } from '@/lib/contracts/share'
 
 const NEXT_STEPS = [
   'Brancher une route V2 separee, sans toucher a /sis.',
@@ -76,6 +76,7 @@ export default function SisSystemV2Page() {
     return acc
   }, {})
   const buzzReadiness = DEFAULT_BUZZ_READINESS
+  const pdfExport = DEFAULT_PDF_EXPORT_CONTRACT
 
   return (
     <main style={{ minHeight: '100vh', background: '#F5F0E8', color: '#1A2E5A', padding: '28px' }}>
@@ -184,6 +185,37 @@ export default function SisSystemV2Page() {
         <ReactionV2Tester />
 
         <ResourcePolicyMatrix />
+
+        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: 760 }}>
+              <h2 style={{ margin: 0, fontSize: 15 }}>Export PDF protege</h2>
+              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
+                {pdfExport.safety_rule_fr}
+              </p>
+            </div>
+            <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
+              <div><strong style={{ color: '#1A2E5A' }}>{pdfExport.layout}</strong> layout</div>
+              <div><strong style={{ color: '#C8951A' }}>{pdfExport.authority_status}</strong> statut</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{pdfExport.distribution}</strong> distribution defaut</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10, marginTop: 16 }}>
+            {[
+              ['Snapshot', pdfExport.generation_rule, 'Le PDF exporte une carte deja validee. Il ne relance aucune generation.'],
+              ['Provenance', 'required', 'Snapshot source, date, langue, version et sources publiques restent visibles.'],
+              ['Non-autorite', 'required', 'Le PDF se declare note analytique, jamais rapport officiel ou preuve etablie.'],
+              ['High stakes', 'guarded', 'Juridique, medical, financier et domaines sensibles gardent une mention de prudence.'],
+            ].map(([label, rule, note]) => (
+              <div key={label} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>{rule}</p>
+                <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 13 }}>{label}</h3>
+                <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>{note}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
