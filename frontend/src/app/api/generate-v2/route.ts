@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     generation_mode.writing_mode,
   )
   const contractQuality = runContractQualityGate({ interpretation, theatre, scoring, inquiry })
-  const writingQuality = runQualityGate({ interpretation, theatre, scoring, writing })
+  const writingQuality = runQualityGate({ interpretation, theatre, scoring, writing, resources })
   const writing_benchmark = benchmarkWritingQuality(writing, resources)
   const quality = {
     ...writingQuality,

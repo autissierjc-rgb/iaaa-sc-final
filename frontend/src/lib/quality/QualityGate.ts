@@ -3,6 +3,7 @@ import type {
   InterpretationContract,
   QualityGateContract,
   QualityIssue,
+  ResourceServiceContract,
   ScoringContract,
   WritingContract,
 } from '../contracts'
@@ -13,6 +14,7 @@ export type QualityGateInput = {
   theatre: ConcreteTheatreContract
   scoring: ScoringContract
   writing: WritingContract
+  resources?: ResourceServiceContract
 }
 
 function publicText(writing: WritingContract): string {
@@ -129,6 +131,24 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
 
   if (input.writing.probability_assessments.length === 0) {
     issues.push(issue('warning', 'MISSING_PROBABILITY', 'Writing should state assertion status when evidence is incomplete.', 'writing.probability_assessments'))
+  }
+
+  if (input.resources?.needs_web && input.resources.public_sources.length === 0) {
+    issues.push(issue(
+      'warning',
+      'FAST_SOURCES_REQUIRED_BUT_MISSING',
+      input.resources.policy_reason_fr,
+      'resources',
+    ))
+  }
+
+  if (input.resources?.needs_web && input.writing.public_warnings.length === 0) {
+    issues.push(issue(
+      'warning',
+      'MISSING_RESOURCE_WARNING',
+      'Writing should publicly signal that fast sources are needed before factual conclusions harden.',
+      'writing.public_warnings',
+    ))
   }
 
   if (input.writing.situation_card.main_vulnerability_fr.length < 30) {
