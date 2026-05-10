@@ -49,7 +49,9 @@ export function planShare(params: {
     snapshot: params.snapshot,
     target_language: params.target_language,
   })
-  const pdfPlan = planPdfExport(params.snapshot)
+  const pdfPlan = planPdfExport(params.snapshot, {
+    target_language: params.target_language,
+  })
 
   if (languagePlan.status === 'blocked') blockers.push('language_snapshot_blocked')
   if (pdfPlan.status === 'blocked') warnings.push('pdf_export_blocked')
@@ -74,7 +76,7 @@ export function planShare(params: {
       status: pdfReady ? 'ready' : 'blocked',
       reason_fr: pdfReady
         ? 'Le PDF peut etre exporte depuis le snapshot sans regeneration.'
-        : 'Le PDF attend un snapshot complet et un plan PDF non bloque.',
+        : 'Le PDF attend un snapshot complet dans la langue cible, sans traduction a la volee.',
     },
     {
       channel: 'email',

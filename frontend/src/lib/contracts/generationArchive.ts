@@ -42,6 +42,7 @@ export type GeneratedCardSnapshot = {
   id: string
   generation_event_id: string
   created_at: string
+  language: LanguageCode
   privacy_mode: Exclude<GenerationPrivacyMode, 'metadata_only' | 'do_not_store'>
   admin_learning_only: boolean
   user_deletable: boolean

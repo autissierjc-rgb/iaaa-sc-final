@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { LanguageCode } from '@/lib/contracts/common'
 import type { GeneratedCardSnapshot } from '@/lib/contracts/generationArchive'
 import { planPdfExport } from '@/lib/share'
 
@@ -6,6 +7,7 @@ export const dynamic = 'force-dynamic'
 
 type PdfPlanBody = {
   snapshot?: GeneratedCardSnapshot
+  target_language?: LanguageCode
 }
 
 async function readBody(request: NextRequest): Promise<PdfPlanBody> {
@@ -30,7 +32,9 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const plan = planPdfExport(body.snapshot)
+  const plan = planPdfExport(body.snapshot, {
+    target_language: body.target_language,
+  })
 
   return NextResponse.json({
     ok: true,

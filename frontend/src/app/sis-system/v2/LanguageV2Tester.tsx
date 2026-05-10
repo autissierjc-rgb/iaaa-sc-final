@@ -28,6 +28,7 @@ const SAMPLE_SNAPSHOT: GeneratedCardSnapshot = {
   id: 'sc_demo_language',
   generation_event_id: 'evt_demo_language',
   created_at: new Date('2026-05-10T00:00:00.000Z').toISOString(),
+  language: 'fr',
   privacy_mode: 'snapshot_allowed',
   admin_learning_only: false,
   user_deletable: true,

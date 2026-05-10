@@ -61,7 +61,10 @@ export function planLanguageSnapshot(params: {
 }): LanguageSnapshotPlan {
   const payload = asPayloadProbe(params.snapshot.payload)
   const sourceLanguage =
-    params.source_language ?? payload.language ?? DEFAULT_LANGUAGE_SERVICE_CONTRACT.snapshot_language
+    params.source_language ??
+    params.snapshot.language ??
+    payload.language ??
+    DEFAULT_LANGUAGE_SERVICE_CONTRACT.snapshot_language
   const missing: string[] = []
   const warnings: string[] = []
 

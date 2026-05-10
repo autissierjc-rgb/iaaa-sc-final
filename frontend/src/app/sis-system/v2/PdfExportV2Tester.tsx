@@ -1,12 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import type { LanguageCode } from '@/lib/contracts/common'
 import type { GeneratedCardSnapshot } from '@/lib/contracts/generationArchive'
 
 type PdfPlanResponse = {
   ok?: boolean
   plan?: {
     status?: string
+    source_language?: string
+    target_language?: string
+    snapshot_rule?: string
     missing?: string[]
     warnings?: string[]
     required_notice_placement?: string
@@ -25,6 +29,7 @@ const SAMPLE_COMPLETE_SNAPSHOT: GeneratedCardSnapshot = {
   id: 'sc_demo_ready',
   generation_event_id: 'evt_demo_ready',
   created_at: new Date('2026-05-10T00:00:00.000Z').toISOString(),
+  language: 'fr',
   privacy_mode: 'snapshot_allowed',
   admin_learning_only: false,
   user_deletable: true,
@@ -69,14 +74,14 @@ export default function PdfExportV2Tester() {
   const [result, setResult] = useState<PdfPlanResponse | null>(null)
   const [busy, setBusy] = useState(false)
 
-  async function run(snapshot: GeneratedCardSnapshot) {
+  async function run(snapshot: GeneratedCardSnapshot, targetLanguage: LanguageCode = snapshot.language) {
     setBusy(true)
     setResult(null)
     try {
       const response = await fetch('/api/pdf-v2/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ snapshot }),
+        body: JSON.stringify({ snapshot, target_language: targetLanguage }),
       })
       setResult(await response.json())
     } catch (error) {
@@ -101,15 +106,23 @@ export default function PdfExportV2Tester() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <button
             type="button"
-            onClick={() => run(SAMPLE_COMPLETE_SNAPSHOT)}
+            onClick={() => run(SAMPLE_COMPLETE_SNAPSHOT, 'fr')}
             disabled={busy}
             style={{ border: '1px solid #C8951A', background: '#FFF8E8', color: '#1A2E5A', borderRadius: 8, padding: '9px 12px', cursor: 'pointer' }}
           >
-            Snapshot complet
+            PDF FR
           </button>
           <button
             type="button"
-            onClick={() => run(SAMPLE_INCOMPLETE_SNAPSHOT)}
+            onClick={() => run(SAMPLE_COMPLETE_SNAPSHOT, 'en')}
+            disabled={busy}
+            style={{ border: '1px solid #C8951A', background: '#FFF8E8', color: '#1A2E5A', borderRadius: 8, padding: '9px 12px', cursor: 'pointer' }}
+          >
+            PDF EN
+          </button>
+          <button
+            type="button"
+            onClick={() => run(SAMPLE_INCOMPLETE_SNAPSHOT, 'fr')}
             disabled={busy}
             style={{ border: '1px solid #E1D6C2', background: '#FCFAF6', color: '#1A2E5A', borderRadius: 8, padding: '9px 12px', cursor: 'pointer' }}
           >
@@ -134,6 +147,9 @@ export default function PdfExportV2Tester() {
               </p>
               <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '8px 0 0' }}>
                 Regle : {plan.contract?.generation_rule} · {plan.contract?.layout} · {plan.contract?.authority_status}
+              </p>
+              <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '8px 0 0' }}>
+                Langue : {plan.source_language} → {plan.target_language} · {plan.snapshot_rule}
               </p>
               <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '8px 0 0' }}>
                 Mention : {plan.required_notice_placement}
