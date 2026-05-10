@@ -7,6 +7,13 @@ import {
   type CtoWatchSeverity,
   type CtoWatchThreshold,
 } from '@/lib/contracts/ctoWatch'
+import type { TraceMeta } from '@/lib/contracts/common'
+import type { GenerationEvent } from '@/lib/contracts/generationArchive'
+
+type GenerationEventForWatch = Pick<
+  GenerationEvent,
+  'latency_ms' | 'generation_status' | 'resources_status' | 'resources_count' | 'trace' | 'error_kind'
+>
 
 function severityRank(severity: CtoWatchSeverity): number {
   if (severity === 'critical') return 2
@@ -38,6 +45,58 @@ function buildMessage(value: number, threshold: CtoWatchThreshold, severity: Cto
   if (severity === 'critical') return `${threshold.label_fr} critique (${formatted}). ${threshold.reason_fr}`
   if (severity === 'watch') return `${threshold.label_fr} a surveiller (${formatted}). ${threshold.reason_fr}`
   return `${threshold.label_fr} OK (${formatted}).`
+}
+
+function percentile(values: number[], p: number): number {
+  if (!values.length) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const index = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1)
+  return sorted[index] ?? 0
+}
+
+function traceContains(trace: TraceMeta[] | undefined, pattern: RegExp): boolean {
+  if (!trace?.length) return false
+  return trace.some((item) =>
+    [
+      item.service,
+      item.model,
+      item.status,
+      item.notes?.join(' '),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .match(pattern),
+  )
+}
+
+export function buildCtoWatchMetricsFromEvents(params: {
+  events: GenerationEventForWatch[]
+  estimated_hourly_cost_eur?: number
+  shared_card_cache_hit_rate?: number
+}): CtoWatchMetricInput[] {
+  const events = params.events
+  const total = events.length
+  const denominator = total || 1
+  const errored = events.filter((event) => event.generation_status === 'error').length
+  const missingSources = events.filter(
+    (event) => event.resources_status === 'partial' || event.resources_status === 'error' || event.resources_count === 0,
+  ).length
+  const fallback = events.filter(
+    (event) => event.error_kind?.includes('fallback') || traceContains(event.trace, /fallback/i),
+  ).length
+  const providerErrors = events.filter(
+    (event) => event.error_kind?.includes('provider') || traceContains(event.trace, /provider|openai|anthropic|tavily/i),
+  ).length
+
+  return [
+    { id: 'public_fast_p95_ms', value: percentile(events.map((event) => event.latency_ms), 95) },
+    { id: 'generation_error_rate', value: errored / denominator },
+    { id: 'missing_required_sources_rate', value: missingSources / denominator },
+    { id: 'fallback_rate', value: fallback / denominator },
+    { id: 'provider_error_rate', value: providerErrors / denominator },
+    { id: 'estimated_hourly_cost_eur', value: params.estimated_hourly_cost_eur ?? 0 },
+    { id: 'shared_card_cache_hit_rate', value: params.shared_card_cache_hit_rate ?? 1 },
+  ]
 }
 
 export function buildCtoWatchReport(params: {

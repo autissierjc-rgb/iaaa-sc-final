@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import type { GenerationEvent } from '@/lib/contracts/generationArchive'
 import type { CtoWatchMetricInput, CtoWatchSeverity } from '@/lib/contracts/ctoWatch'
 
 type CtoWatchResponse = {
   ok?: boolean
+  mode?: string
+  metrics?: CtoWatchMetricInput[]
   report?: {
     status?: CtoWatchSeverity
     should_alert?: boolean
@@ -53,6 +56,52 @@ const SCENARIOS: Record<string, CtoWatchMetricInput[]> = {
   ],
 }
 
+const SAMPLE_EVENTS: GenerationEvent[] = [
+  {
+    id: 'gen_watch_1',
+    created_at: new Date('2026-05-10T00:00:00.000Z').toISOString(),
+    language: 'fr',
+    surface: 'situation_card',
+    privacy_mode: 'metadata_only',
+    input_chars: 72,
+    resources_status: 'ok',
+    resources_count: 3,
+    quality_status: 'ok',
+    generation_status: 'ok',
+    latency_ms: 4200,
+    trace: [{ service: 'interpretation', version: 'v2', duration_ms: 900, status: 'ok' }],
+  },
+  {
+    id: 'gen_watch_2',
+    created_at: new Date('2026-05-10T00:01:00.000Z').toISOString(),
+    language: 'fr',
+    surface: 'situation_card',
+    privacy_mode: 'metadata_only',
+    input_chars: 93,
+    resources_status: 'partial',
+    resources_count: 0,
+    quality_status: 'partial',
+    generation_status: 'ok',
+    latency_ms: 7100,
+    trace: [{ service: 'resources', version: 'v2', duration_ms: 1300, status: 'partial', notes: ['required sources missing'] }],
+  },
+  {
+    id: 'gen_watch_3',
+    created_at: new Date('2026-05-10T00:02:00.000Z').toISOString(),
+    language: 'fr',
+    surface: 'situation_card',
+    privacy_mode: 'metadata_only',
+    input_chars: 65,
+    resources_status: 'ok',
+    resources_count: 2,
+    quality_status: 'partial',
+    generation_status: 'partial',
+    latency_ms: 6800,
+    error_kind: 'provider_fallback',
+    trace: [{ service: 'writing', version: 'v2', duration_ms: 3900, status: 'partial', notes: ['fallback local contract'] }],
+  },
+]
+
 function colorFor(status?: CtoWatchSeverity) {
   if (status === 'critical') return '#B23A3A'
   if (status === 'watch') return '#C8951A'
@@ -71,6 +120,27 @@ export default function CtoWatchTester() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ metrics: SCENARIOS[scenario] }),
+      })
+      setResult(await response.json())
+    } catch (error) {
+      setResult({ ok: false, error: error instanceof Error ? error.message : 'unknown_error' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function runFromEvents() {
+    setBusy(true)
+    setResult(null)
+    try {
+      const response = await fetch('/api/cto-watch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          events: SAMPLE_EVENTS,
+          estimated_hourly_cost_eur: 72,
+          shared_card_cache_hit_rate: 0.86,
+        }),
       })
       setResult(await response.json())
     } catch (error) {
@@ -104,6 +174,14 @@ export default function CtoWatchTester() {
               {scenario}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={runFromEvents}
+            disabled={busy}
+            style={{ border: '1px solid #1A2E5A', background: '#F5F8FF', color: '#1A2E5A', borderRadius: 8, padding: '9px 12px', cursor: 'pointer' }}
+          >
+            depuis events
+          </button>
         </div>
       </div>
 
@@ -119,7 +197,10 @@ export default function CtoWatchTester() {
           {report ? (
             <>
               <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '8px 0 0' }}>
-                Canaux : {report.alert_channels?.join(', ')}
+                Mode : {result.mode} · Canaux : {report.alert_channels?.join(', ')}
+              </p>
+              <p style={{ color: '#8B8174', fontSize: 11, lineHeight: 1.55, margin: '8px 0 0' }}>
+                Metriques : {result.metrics?.map((metric) => `${metric.id}=${metric.value}`).join(' · ')}
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, marginTop: 10 }}>
                 {report.evaluations?.map((evaluation) => (
