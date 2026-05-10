@@ -198,8 +198,9 @@ Ressources rapides :
   ou question conceptuelle sans fait externe a verifier ;
 - d'autres doivent activer des ressources rapides pour nourrir Lecture et
   Approfondir : geopolitique actuelle, guerre, crise institutionnelle,
-  entreprise, startup, marche, droit, sante, finance, science, technologie,
-  energie, cybersecurite, URL fournie ou demande explicite de sources ;
+  entreprise, compagnie, startup, marche, clients, revenus, pricing,
+  partenariat, droit, sante, finance, science, technologie, energie,
+  cybersecurite, URL fournie ou demande explicite de sources ;
 - ces ressources rapides ne sont pas Recherche+ : elles servent a eviter une
   lecture hors-sol sur des faits verifiables ;
 - elles ne doivent pas bloquer la SC courte. Si elles manquent, le contrat doit
