@@ -235,6 +235,16 @@ type RecherchePlusResult = NonNullable<GenerateV2Response['recherche_plus']> & {
   }>
 }
 
+type ResourcePreview = {
+  title?: string
+  url?: string
+  source?: string
+  channel?: string
+  reliability?: string
+  excerpt?: string
+  published_at?: string
+}
+
 const EXAMPLES = [
   'Trump peut-il contester les resultats des elections de mi-mandat ?',
   "Que fait la compagnie FlexUp et qu'en penser pour eventuellement la rejoindre avec ma startup ?",
@@ -287,6 +297,14 @@ function layerLabel(stageId: string) {
   }
 
   return labels[stageId] ?? stageId
+}
+
+function resourcePreviewItems(response: GenerateV2Response): ResourcePreview[] {
+  const items = response.resources?.public_sources ?? response.resources?.resources ?? []
+  return items
+    .map((item) => item && typeof item === 'object' ? item as ResourcePreview : null)
+    .filter((item): item is ResourcePreview => Boolean(item))
+    .slice(0, 3)
 }
 
 export default function GenerateV2Tester() {
@@ -749,6 +767,30 @@ export default function GenerateV2Tester() {
                   <p style={{ margin: '8px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
                     Recherches rapides prevues : {response.resources.fallback_searches.slice(0, 2).join(' · ')}
                   </p>
+                )}
+                {resourcePreviewItems(response).length > 0 && (
+                  <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                    {resourcePreviewItems(response).map((source, index) => (
+                      <div key={`${source.url ?? source.title ?? 'source'}-${index}`} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 9, background: '#fff' }}>
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: '#1A2E5A', fontSize: 11, fontWeight: 700, textDecoration: 'none', lineHeight: 1.35 }}
+                        >
+                          {source.title ?? source.url ?? 'Source publique'}
+                        </a>
+                        <p style={{ margin: '5px 0 0', color: '#8B8174', fontSize: 10, lineHeight: 1.35 }}>
+                          {[source.source, source.channel, source.reliability].filter(Boolean).join(' · ')}
+                        </p>
+                        {source.excerpt && (
+                          <p style={{ margin: '6px 0 0', color: '#6F6255', fontSize: 10, lineHeight: 1.45 }}>
+                            {source.excerpt.length > 180 ? `${source.excerpt.slice(0, 177).trim()}...` : source.excerpt}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
                 {response.fast_resource_run && (
                   <div style={{ marginTop: 10, border: '1px solid #F0EBE0', borderRadius: 8, padding: 9, background: '#fff' }}>
