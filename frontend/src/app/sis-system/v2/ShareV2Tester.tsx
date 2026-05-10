@@ -14,6 +14,7 @@ type SharePlanResponse = {
     target_language?: string
     warnings?: string[]
     blockers?: string[]
+    next_steps?: string[]
     actions?: Array<{
       channel?: string
       status?: string
@@ -137,10 +138,13 @@ export default function ShareV2Tester() {
               <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '8px 0 0' }}>
                 PDF : {plan.pdf_plan?.status} · {plan.pdf_plan?.filename}
               </p>
+              <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '8px 0 0' }}>
+                Etapes : {plan.next_steps?.length ? plan.next_steps.join(' → ') : 'aucune'}
+              </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, marginTop: 10 }}>
                 {plan.actions?.map((action) => (
                   <div key={action.channel} style={{ border: '1px solid #E1D6C2', borderRadius: 8, padding: 10, background: '#fff' }}>
-                    <p style={{ margin: 0, color: action.status === 'ready' ? '#1D9E75' : '#B23A3A', fontSize: 12, fontWeight: 700 }}>
+                    <p style={{ margin: 0, color: action.status === 'ready' ? '#1D9E75' : action.status === 'pending' ? '#C8951A' : '#B23A3A', fontSize: 12, fontWeight: 700 }}>
                       {action.channel} · {action.status}
                     </p>
                     <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.4 }}>{action.reason_fr}</p>
