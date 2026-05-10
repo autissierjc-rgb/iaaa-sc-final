@@ -122,6 +122,55 @@ Si un comportement manque, il doit etre rattache a une regle canonique
 existante ou faire l'objet d'une modification explicite du brief canonique
 avant toute modification du code.
 
+## 3a. Langues et snapshots multilingues
+
+La V2 doit etre multilingue par contrat, pas par traduction opportuniste de
+l'interface.
+
+Regle canonique :
+
+```txt
+Une carte partagee existe dans une langue de snapshot.
+Changer de langue signifie lire ou creer un snapshot dans cette langue.
+Le PDF exporte la langue du snapshot.
+Le bouton Partager respecte la langue du snapshot.
+```
+
+Le LLM referent reste l'autorite pour l'interpretation et la comprehension.
+La traduction peut etre confiee a un autre modele specialise ou moins couteux :
+
+- Gemma ;
+- Kimi ;
+- NVIDIA NIM ;
+- modele local ;
+- autre fournisseur.
+
+Le fournisseur ne doit jamais etre code en dur dans la logique produit.
+Il doit passer par un `LanguageService`.
+
+`LanguageService` doit garantir :
+
+- detection de la langue d'entree ;
+- choix de la langue de sortie ;
+- traduction des champs de snapshot ;
+- preservation du sens ;
+- preservation des mentions de prudence ;
+- preservation de la provenance ;
+- absence de melange de langues ;
+- conservation des termes produit : Situation Card, IAAA+, Astrolabe,
+  Recherche+.
+
+Langues cibles initiales :
+
+```txt
+fr, en, es, de, it, pt
+```
+
+Les boutons de langue de la home, de SIS et des cartes partagees doivent
+eventuellement pointer vers des routes localisees (`/fr`, `/en`, `/es`, etc.),
+mais la regle la plus importante reste celle du snapshot : une carte envoyee
+dans une langue doit etre stable dans cette langue.
+
 Note importante :
 
 ```txt

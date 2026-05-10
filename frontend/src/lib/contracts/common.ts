@@ -1,4 +1,4 @@
-export type LanguageCode = 'fr' | 'en'
+export type LanguageCode = 'fr' | 'en' | 'es' | 'de' | 'it' | 'pt'
 
 export type ConfidenceLevel = 'low' | 'medium' | 'high'
 

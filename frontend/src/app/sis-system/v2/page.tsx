@@ -22,6 +22,7 @@ import {
   DEFAULT_PDF_EXPORT_CONTRACT,
   DEFAULT_UNIFIED_SHARE_BUTTON,
 } from '@/lib/contracts/share'
+import { DEFAULT_LANGUAGE_SERVICE_CONTRACT } from '@/lib/contracts/language'
 
 const NEXT_STEPS = [
   'Brancher une route V2 separee, sans toucher a /sis.',
@@ -83,6 +84,7 @@ export default function SisSystemV2Page() {
   const buzzReadiness = DEFAULT_BUZZ_READINESS
   const pdfExport = DEFAULT_PDF_EXPORT_CONTRACT
   const shareButton = DEFAULT_UNIFIED_SHARE_BUTTON
+  const languageService = DEFAULT_LANGUAGE_SERVICE_CONTRACT
 
   return (
     <main style={{ minHeight: '100vh', background: '#F5F0E8', color: '#1A2E5A', padding: '28px' }}>
@@ -193,6 +195,37 @@ export default function SisSystemV2Page() {
         <ReactionV2Tester />
 
         <ResourcePolicyMatrix />
+
+        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: 760 }}>
+              <h2 style={{ margin: 0, fontSize: 15 }}>LanguageService multilingue</h2>
+              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
+                {languageService.reason_fr}
+              </p>
+            </div>
+            <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
+              <div><strong style={{ color: '#1A2E5A' }}>{languageService.output_language}</strong> sortie defaut</div>
+              <div><strong style={{ color: '#C8951A' }}>{languageService.mode}</strong> mode</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{languageService.provider_preference.length}</strong> providers possibles</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10, marginTop: 16 }}>
+            {[
+              ['Providers', languageService.provider_preference.join(', '), 'Gemma, Kimi, NVIDIA NIM ou autre restent remplacables.'],
+              ['Champs', languageService.translated_fields.join(', '), 'Le snapshot entier doit rester coherent dans la langue choisie.'],
+              ['Termes preserves', languageService.must_preserve_terms.join(', '), 'Les termes produit ne sont pas traduits au hasard.'],
+              ['Qualite', 'no_mixed_language', 'Le QualityGate doit refuser les sorties qui melangent les langues.'],
+            ].map(([label, rule, note]) => (
+              <div key={label} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>{rule}</p>
+                <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 13 }}>{label}</h3>
+                <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>{note}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
