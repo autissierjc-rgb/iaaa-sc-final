@@ -16,6 +16,11 @@ export type SourceChannel =
 
 export type ResourceStatus = 'not_needed' | 'available' | 'partial' | 'failed' | 'timeout'
 
+export type FastResourcePolicy =
+  | 'internal_context_ok'
+  | 'fast_sources_required'
+  | 'url_extract_required'
+
 export type FunctionalResourceFamily =
   | 'legitimation'
   | 'protection_conflict'
@@ -46,6 +51,9 @@ export type ResourceContract = {
 
 export type ResourceServiceContract = {
   status: ResourceStatus
+  policy: FastResourcePolicy
+  needs_web: boolean
+  policy_reason_fr: string
   functional_needs: FunctionalResourceNeed[]
   requested_urls: string[]
   extracted_urls: string[]

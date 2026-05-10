@@ -1,9 +1,11 @@
 import type {
+  FastResourcePolicy,
   FunctionalResourceNeed,
   InterpretationContract,
   ResourceContract,
   ResourceServiceContract,
   ResourceStatus,
+  SituationDomainV2,
 } from '../contracts'
 import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { routeSourcesForDomain } from './SourceRouter'
@@ -27,12 +29,108 @@ function normalizeUrl(url: string): string {
   return `https://${url}`
 }
 
-function statusFor(urls: string[], resources: ResourceContract[]): ResourceStatus {
+const FAST_SOURCE_DOMAINS = new Set<SituationDomainV2>([
+  'academic_research',
+  'business_strategy',
+  'climate_energy',
+  'cybersecurity',
+  'finance_macro',
+  'geopolitics',
+  'health_body',
+  'humanitarian',
+  'institutional_crisis',
+  'law_justice',
+  'ngo_field',
+  'product_platform',
+  'public_governance',
+  'science_research',
+  'startup_market',
+  'supply_chain',
+  'technology_ai',
+  'territory_urbanism',
+  'war_security',
+])
+
+const FAST_SOURCE_TERMS = [
+  'actualite',
+  'actuel',
+  'aujourd hui',
+  'derniere',
+  'dernier',
+  'latest',
+  'recent',
+  'source',
+  'ressource',
+  'url',
+  'site',
+  'entreprise',
+  'startup',
+  'marche',
+  'revenu',
+  'clients',
+  'juridique',
+  'droit',
+  'sante',
+  'science',
+  'politique',
+  'election',
+  'guerre',
+]
+
+type FastResourceDecision = {
+  policy: FastResourcePolicy
+  needs_web: boolean
+  reason_fr: string
+}
+
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function decideFastResourcePolicy(interpretation: InterpretationContract, urls: string[]): FastResourceDecision {
+  if (urls.length > 0) {
+    return {
+      policy: 'url_extract_required',
+      needs_web: true,
+      reason_fr: 'Une URL fournie doit etre exploitee par extraction ou recherche de domaine avant de conclure.',
+    }
+  }
+
+  const haystack = normalizeText([
+    interpretation.raw_input,
+    interpretation.situation_soumise,
+    interpretation.object_of_analysis,
+    interpretation.user_need,
+    interpretation.angle,
+  ].join(' '))
+  const termRequiresSources = FAST_SOURCE_TERMS.some((term) => haystack.includes(normalizeText(term)))
+  const domainRequiresSources = FAST_SOURCE_DOMAINS.has(interpretation.domain)
+
+  if (domainRequiresSources || termRequiresSources) {
+    return {
+      policy: 'fast_sources_required',
+      needs_web: true,
+      reason_fr: 'Le domaine ou la demande depend de faits externes verifiables ; des ressources rapides doivent nourrir Lecture et Approfondir sans bloquer SIS.',
+    }
+  }
+
+  return {
+    policy: 'internal_context_ok',
+    needs_web: false,
+    reason_fr: 'La situation peut etre traitee par interpretation, theatre reel et patterns internes sans source externe obligatoire.',
+  }
+}
+
+function statusFor(urls: string[], resources: ResourceContract[], decision: FastResourceDecision): ResourceStatus {
   if (resources.length > 0) {
     return urls.length > 0 && resources.length < urls.length ? 'partial' : 'available'
   }
 
   if (urls.length > 0) return 'partial'
+  if (decision.needs_web) return 'partial'
 
   return 'not_needed'
 }
@@ -125,15 +223,19 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
     input.interpretation.object_of_analysis,
   )
   const suppliedResources = input.supplied_resources ?? []
+  const decision = decideFastResourcePolicy(input.interpretation, urls)
   const extractedUrls = suppliedResources
     .map((resource) => resource.url)
     .filter((url) => urls.includes(url))
-  const fallbackSearches = urls.length > extractedUrls.length
+  const fallbackSearches = urls.length > extractedUrls.length || decision.needs_web
     ? route.suggested_queries.slice(0, 4)
     : []
 
   return {
-    status: statusFor(urls, suppliedResources),
+    status: statusFor(urls, suppliedResources, decision),
+    policy: decision.policy,
+    needs_web: decision.needs_web,
+    policy_reason_fr: decision.reason_fr,
     functional_needs: buildFunctionalNeeds(input),
     requested_urls: urls,
     extracted_urls: extractedUrls,
@@ -144,18 +246,22 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
       ...route.notes,
       urls.length > 0
         ? 'URL present: generation should not be blocked by clarification; server extraction/search must run.'
-        : 'No URL detected: resources are routed by domain and may stay optional for fast SC.',
+        : decision.needs_web
+          ? 'Fast sources required: route lightweight resources for Lecture/Approfondir without blocking SIS.'
+          : 'No URL detected: internal context is acceptable for fast SC.',
+      `resource_policy=${decision.policy}`,
       `source_channels=${route.channels.join(',')}`,
     ],
     trace: {
       service: 'ResourceService',
       version: 'v2-foundation',
       duration_ms: Date.now() - started,
-      status: suppliedResources.length > 0 ? 'ok' : urls.length > 0 ? 'partial' : 'ok',
+      status: suppliedResources.length > 0 ? 'ok' : decision.needs_web ? 'partial' : 'ok',
       notes: [
         `requested_urls=${urls.length}`,
         `resources=${suppliedResources.length}`,
         `fallback_searches=${fallbackSearches.length}`,
+        `needs_web=${decision.needs_web}`,
       ],
     },
   }

@@ -190,7 +190,16 @@ export async function POST(request: NextRequest) {
       { stage_id: 'interpretation', duration_ms: interpretation.trace.duration_ms ?? 0, outcome: 'ok' },
       { stage_id: 'dialogue-gate', duration_ms: 1, outcome: dialogue.can_generate ? 'ok' : 'warning' },
       { stage_id: 'expertises-metiers', duration_ms: expertises.trace.duration_ms ?? 0, outcome: expertises.trace.status === 'ok' ? 'ok' : 'warning' },
-      { stage_id: 'resources', duration_ms: resources.trace.duration_ms ?? 0, outcome: resources.status === 'failed' ? 'failed' : 'ok' },
+      {
+        stage_id: 'resources',
+        duration_ms: resources.trace.duration_ms ?? 0,
+        outcome: resources.status === 'failed'
+          ? 'failed'
+          : resources.status === 'partial' || resources.status === 'timeout'
+            ? 'warning'
+            : 'ok',
+        warnings: resources.status === 'partial' ? [resources.policy_reason_fr] : [],
+      },
       { stage_id: 'patterns', duration_ms: 1, outcome: 'ok' },
       { stage_id: 'theatre', duration_ms: theatre.trace.duration_ms ?? 0, outcome: theatre.trace.status === 'ok' ? 'ok' : 'warning' },
       { stage_id: 'blind-spots', duration_ms: inquiry.trace.duration_ms ?? 0, outcome: inquiry.trace.status === 'ok' ? 'ok' : 'warning' },

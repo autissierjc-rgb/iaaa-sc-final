@@ -25,6 +25,8 @@ type GenerateV2Response = {
   }
   resources?: {
     status?: string
+    policy?: string
+    policy_reason_fr?: string
     functional_needs?: Array<{
       family: string
       label_fr: string
@@ -601,6 +603,11 @@ export default function GenerateV2Tester() {
                 <p style={{ margin: '8px 0 0', color: '#1A2E5A', fontSize: 12, lineHeight: 1.55 }}>
                   Statut : {response.resources?.status ?? 'non renseigne'} · sources publiques : {response.resources?.public_sources?.length ?? response.resources?.resources?.length ?? 0}
                 </p>
+                {response.resources?.policy && (
+                  <p style={{ margin: '6px 0 0', color: response.resources.needs_web ? '#A66B00' : '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                    Politique : {response.resources.policy} · {response.resources.policy_reason_fr}
+                  </p>
+                )}
                 {response.resources?.functional_needs && response.resources.functional_needs.length > 0 && (
                   <p style={{ margin: '8px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
                     Triade : {response.resources.functional_needs.map((need) => `${need.label_fr} (${need.priority})`).join(' · ')}
@@ -667,6 +674,11 @@ export default function GenerateV2Tester() {
             <p style={{ margin: '6px 0 0', color: '#8B8174', fontSize: 11 }}>
               sources: {response.resources?.public_sources?.length ?? response.resources?.resources?.length ?? 0}
             </p>
+            {response.resources?.policy && (
+              <p style={{ margin: '6px 0 0', color: response.resources.needs_web ? '#A66B00' : '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                {response.resources.policy}
+              </p>
+            )}
           </div>
 
           <div style={miniCardStyle()}>

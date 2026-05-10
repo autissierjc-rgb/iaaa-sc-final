@@ -191,6 +191,21 @@ SIS standard doit rester rapide et partageable :
 - ressources simples ;
 - preparation des incertitudes et angles morts dans la reponse.
 
+Ressources rapides :
+
+- certaines situations peuvent etre traitees sans web obligatoire :
+  situations personnelles, couple, famille, relation humaine, management interne
+  ou question conceptuelle sans fait externe a verifier ;
+- d'autres doivent activer des ressources rapides pour nourrir Lecture et
+  Approfondir : geopolitique actuelle, guerre, crise institutionnelle,
+  entreprise, startup, marche, droit, sante, finance, science, technologie,
+  energie, cybersecurite, URL fournie ou demande explicite de sources ;
+- ces ressources rapides ne sont pas Recherche+ : elles servent a eviter une
+  lecture hors-sol sur des faits verifiables ;
+- elles ne doivent pas bloquer la SC courte. Si elles manquent, le contrat doit
+  le signaler clairement par `partial` et `needs_web`, puis produire une
+  lecture prudente.
+
 Recherche+ appartient a IAAA+ / option avancee :
 
 - enquete structuree sur sources ;
