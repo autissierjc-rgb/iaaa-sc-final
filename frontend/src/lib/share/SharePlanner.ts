@@ -5,8 +5,8 @@ import {
   type ShareChannel,
   type ShareVisibility,
 } from '@/lib/contracts/share'
-import { planLanguageSnapshot, type LanguageSnapshotPlan } from './LanguageSnapshotPlanner'
 import { planPdfExport, type PdfExportPlan } from './PdfExportPlanner'
+import { planTranslatedSnapshot, type TranslatedSnapshotPlan } from './TranslatedSnapshotPlanner'
 
 export type SharePlanStatus = 'ready' | 'partial' | 'blocked'
 export type ShareActionStatus = 'ready' | 'pending' | 'blocked'
@@ -21,15 +21,19 @@ export type SharePlan = {
   status: SharePlanStatus
   share_button: typeof DEFAULT_UNIFIED_SHARE_BUTTON
   snapshot_id: string
+  source_snapshot_id: string
+  target_snapshot_id?: string
   visibility: ShareVisibility
   target_language: LanguageCode
   public_url?: string
+  planned_public_url?: string
   actions: Array<{
     channel: ShareChannel
     status: ShareActionStatus
     reason_fr: string
   }>
-  language_plan: LanguageSnapshotPlan
+  translated_snapshot_plan: TranslatedSnapshotPlan
+  language_plan: TranslatedSnapshotPlan['language_plan']
   pdf_plan: PdfExportPlan
   next_steps: ShareNextStep[]
   warnings: string[]
@@ -53,15 +57,16 @@ export function planShare(params: {
   if (!params.snapshot.id) blockers.push('missing_snapshot_id')
   if (!params.snapshot.payload) blockers.push('missing_snapshot_payload')
 
-  const languagePlan = planLanguageSnapshot({
+  const translatedSnapshotPlan = planTranslatedSnapshot({
     snapshot: params.snapshot,
     target_language: params.target_language,
   })
+  const languagePlan = translatedSnapshotPlan.language_plan
   const pdfPlan = planPdfExport(params.snapshot, {
     target_language: params.target_language,
   })
 
-  if (languagePlan.status === 'blocked') blockers.push('language_snapshot_blocked')
+  if (translatedSnapshotPlan.status === 'blocked') blockers.push('translated_snapshot_blocked')
   if (pdfPlan.status === 'blocked' && languagePlan.status !== 'ready') {
     warnings.push('pdf_export_blocked')
   }
@@ -71,9 +76,13 @@ export function planShare(params: {
   }
 
   const copyLinkReady = blockers.length === 0 && languagePlan.status !== 'blocked'
-  const needsTranslatedSnapshot = languagePlan.status === 'ready'
+  const needsTranslatedSnapshot = translatedSnapshotPlan.status === 'ready_to_create'
   const pdfReady = copyLinkReady && pdfPlan.status !== 'blocked'
   const pdfPending = copyLinkReady && needsTranslatedSnapshot && pdfPlan.snapshot_rule === 'requires_translated_snapshot'
+  const sourceSnapshotId = params.snapshot.id
+  const targetSnapshotId = translatedSnapshotPlan.target_snapshot_id
+  const readySnapshotId = needsTranslatedSnapshot ? undefined : targetSnapshotId ?? sourceSnapshotId
+  const plannedSnapshotId = targetSnapshotId ?? sourceSnapshotId
 
   const nextSteps: ShareNextStep[] = []
   if (needsTranslatedSnapshot) nextSteps.push('create_translated_snapshot')
@@ -121,13 +130,15 @@ export function planShare(params: {
   return {
     status,
     share_button: DEFAULT_UNIFIED_SHARE_BUTTON,
-    snapshot_id: params.snapshot.id,
+    snapshot_id: readySnapshotId ?? sourceSnapshotId,
+    source_snapshot_id: sourceSnapshotId,
+    target_snapshot_id: targetSnapshotId,
     visibility,
     target_language: params.target_language,
-    public_url: needsTranslatedSnapshot
-      ? undefined
-      : buildPublicUrl(params.snapshot.id, params.target_language),
+    public_url: readySnapshotId ? buildPublicUrl(readySnapshotId, params.target_language) : undefined,
+    planned_public_url: plannedSnapshotId ? buildPublicUrl(plannedSnapshotId, params.target_language) : undefined,
     actions,
+    translated_snapshot_plan: translatedSnapshotPlan,
     language_plan: languagePlan,
     pdf_plan: pdfPlan,
     next_steps: nextSteps,

@@ -9,7 +9,10 @@ type SharePlanResponse = {
   ok?: boolean
   plan?: {
     status?: string
+    source_snapshot_id?: string
+    target_snapshot_id?: string
     public_url?: string
+    planned_public_url?: string
     visibility?: string
     target_language?: string
     warnings?: string[]
@@ -23,6 +26,11 @@ type SharePlanResponse = {
     language_plan?: {
       status?: string
       snapshot_rule?: string
+      provider_selected?: string
+    }
+    translated_snapshot_plan?: {
+      status?: string
+      translation_rule?: string
       provider_selected?: string
     }
     pdf_plan?: {
@@ -130,7 +138,10 @@ export default function ShareV2Tester() {
           {plan ? (
             <>
               <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '8px 0 0' }}>
-                URL : <span style={{ fontFamily: 'monospace' }}>{plan.public_url}</span> · {plan.visibility} · {plan.target_language}
+                URL : <span style={{ fontFamily: 'monospace' }}>{plan.public_url ?? plan.planned_public_url}</span> · {plan.visibility} · {plan.target_language}
+              </p>
+              <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '8px 0 0' }}>
+                Snapshot : {plan.source_snapshot_id} → {plan.target_snapshot_id ?? plan.source_snapshot_id} · {plan.translated_snapshot_plan?.status} · {plan.translated_snapshot_plan?.translation_rule}
               </p>
               <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '8px 0 0' }}>
                 Langue : {plan.language_plan?.status} · {plan.language_plan?.snapshot_rule} · {plan.language_plan?.provider_selected}
