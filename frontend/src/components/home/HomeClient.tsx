@@ -1537,31 +1537,31 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
 
   const MODULES = [
     {
-      tag: lang === 'FR' ? 'Clarté' : 'Clarity',
+      tag: lang === 'FR' ? 'CLARTÉ' : 'CLARITY',
       sub: { FR: 'Créer une Situation Card', EN: 'Create a Situation Card' },
       body: {
-        FR: 'Transformer une question, une URL ou un document en carte lisible.',
-        EN: 'Turn a question, URL, or document into a readable card.',
+        FR: 'Une question devient une carte. Une carte éclaire une situation complexe.',
+        EN: 'A question becomes a card. A card lights up a complex situation.',
       },
       href: `/clarity?lang=${lang.toLowerCase()}`,
     },
     {
-      tag: 'Atlas',
-      sub: { FR: 'Cartes publiques', EN: 'Public cards' },
-      body: {
-        FR: 'Explorer les cartes publiques, comparer les situations et repérer les patterns.',
-        EN: 'Explore public cards, compare situations, and identify patterns.',
-      },
-      href: `/library?lang=${lang.toLowerCase()}`,
-    },
-    {
       tag: 'IAAA+',
-      sub: { FR: 'Organisations', EN: 'Organizations' },
+      sub: { FR: 'Organisations & systèmes IA', EN: 'Organizations & AI systems' },
       body: {
-        FR: 'Équiper équipes, institutions et systèmes IA avec une couche de décision lisible.',
-        EN: 'Equip teams, institutions, and AI systems with a readable decision layer.',
+        FR: 'La couche de contexte qui rend les décisions lisibles, traçables et responsables.',
+        EN: 'The context layer that makes decisions readable, traceable, and accountable.',
       },
       href: `/enterprise?lang=${lang.toLowerCase()}`,
+    },
+    {
+      tag: 'ATLAS',
+      sub: { FR: 'Mémoire des situations', EN: 'Memory of situations' },
+      body: {
+        FR: 'Explorer les cartes, comparer les crises et reconnaître les patterns.',
+        EN: 'Explore cards, compare crises, and recognize patterns.',
+      },
+      href: `/library?lang=${lang.toLowerCase()}`,
     },
   ]
   const visibilityLabel = (value: VisibilityState) => {
@@ -1873,7 +1873,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
             {MODULES.map(m => (
               <Link key={m.tag} href={m.href} style={{ textDecoration: 'none' }}>
                 <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 10, padding: '14px' }}>
-                  <div style={{ fontFamily: "'Cinzel',serif", fontSize: 13, fontWeight: 500, color: NAVY, marginBottom: 3 }}>{m.tag}</div>
+                  <div style={{ fontFamily: "'Cinzel',serif", fontSize: 16, fontWeight: 600, color: NAVY, letterSpacing: '.04em', marginBottom: 3 }}>{m.tag}</div>
                   <div style={{ fontSize: 11, color: TXT3, marginBottom: 8 }}>{m.sub[lang]}</div>
                   <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.55, minHeight: 48 }}>{m.body[lang]}</div>
                   <div style={{ fontSize: 11, color: TXT3 }}>→</div>
