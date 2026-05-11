@@ -1,14 +1,7 @@
-import type { Metadata } from 'next'
-import { Suspense } from 'react'
-import HomeClient from '@/components/home/HomeClient'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = {
-  title: 'Créer une Situation Card',
-  description: 'Posez une question, collez une URL ou ajoutez un document pour créer une Situation Card.',
-}
-
-function readLang(value: string | string[] | undefined): 'FR' | 'EN' {
-  return value === 'en' ? 'EN' : 'FR'
+function readLang(value: string | string[] | undefined): 'fr' | 'en' {
+  return value === 'en' ? 'en' : 'fr'
 }
 
 export default function CreatePage({
@@ -16,11 +9,6 @@ export default function CreatePage({
 }: {
   searchParams?: { lang?: string | string[] }
 }) {
-  const initialLang = readLang(searchParams?.lang)
-
-  return (
-    <Suspense fallback={null}>
-      <HomeClient initialLang={initialLang} />
-    </Suspense>
-  )
+  const lang = readLang(searchParams?.lang)
+  redirect(`/clarity?lang=${lang}`)
 }

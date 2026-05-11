@@ -15,12 +15,14 @@ type Lang = 'FR' | 'EN'
 
 const COPY = {
   FR: {
-    title: 'Déployer Situation Card dans une équipe, une organisation ou une gouvernance.',
-    intro: 'IAAA+ transforme SC en couche de lecture partagée : cartes, veille, rapports, traces de décision et intelligence collective.',
+    title: 'Déployer Situation Card dans une équipe, une institution ou un système IA.',
+    intro: 'IAAA+ transforme SC en couche de contexte décisionnel : cartes, veille, rapports, données, langages techniques, traces de décision et intelligence collective.',
     pillars: [
       { n: '01', title: 'Lecture partagée', lead: 'Une même situation devient lisible par plusieurs acteurs.', body: 'IAAA+ aide une équipe à voir les forces, tensions, vulnérabilités et angles morts sans réduire la lecture à un consensus artificiel.' },
-      { n: '02', title: 'Veille et rapports', lead: 'Les cartes deviennent une mémoire structurée.', body: 'Les Situation Cards peuvent alimenter des notes, dossiers, rapports, revues de risques, veilles stratégiques et suivis de décision.' },
+      { n: '02', title: 'Veille, rapports et données', lead: 'Les cartes deviennent une mémoire structurée.', body: 'Les Situation Cards peuvent alimenter notes, dossiers, rapports, revues de risques, veilles stratégiques, données métier et suivis de décision.' },
       { n: '03', title: 'Gouvernance', lead: 'Qui voit quoi. Qui interprète. Qui valide. Qui engage.', body: 'Chaque décision devient plus lisible. Chaque responsabilité devient plus explicite. Les systèmes complexes ne tombent pas seulement par manque d’information ; ils tombent par manque de lecture partagée.' },
+      { n: '04', title: 'Decision context layer', lead: 'La Situation Card n’est pas la décision.', body: 'Elle peut servir de contexte structuré pour des humains, des équipes, des agents IA ou des systèmes métier : faits, tensions, vulnérabilités, trajectoires, incertitudes et signaux. SC peut alimenter des systèmes IA d’aide à la décision sans transférer la responsabilité de la décision à l’IA.' },
+      { n: '05', title: 'Systèmes et langages', lead: 'Traiter les informations, documents et langages techniques.', body: 'IAAA+ peut s’adapter à des environnements métiers : données, documents, code, protocoles, robotique, systèmes industriels, conformité, workflows et agents spécialisés.' },
     ],
     dataTitle: 'Souveraineté des données',
     dataLead: 'Vos données restent en Europe. Vos analyses restent les vôtres.',
@@ -33,15 +35,17 @@ const COPY = {
     ren: 'Le Resonance Engine Navigator (REN) est une technologie développée par IAAA+. REN agit comme une couche de navigation cognitive qui vient compléter les grands modèles d’IA (OpenAI, Claude, Mistral…), en se concentrant sur trois choses : cohérence, structure et qualité du raisonnement.',
     forWho: 'Pour qui',
     audiences: ['Grandes entreprises', 'Institutions publiques', 'Organisations multi-acteurs', 'Environnements critiques'],
-    footer: 'Créer. Explorer. Équiper.',
+    footer: 'Structurer le contexte. Rendre la décision lisible.',
   },
   EN: {
-    title: 'Deploy Situation Card inside a team, organization, or governance system.',
-    intro: 'IAAA+ turns SC into a shared reading layer: cards, watch, reports, decision traces, and collective intelligence.',
+    title: 'Deploy Situation Card inside a team, institution, or AI system.',
+    intro: 'IAAA+ turns SC into a decision context layer: cards, watch, reports, data, technical languages, decision traces, and collective intelligence.',
     pillars: [
       { n: '01', title: 'Shared Reading', lead: 'The same situation becomes readable by several actors.', body: 'IAAA+ helps a team see forces, tensions, vulnerabilities, and blind spots without reducing the reading to artificial consensus.' },
-      { n: '02', title: 'Watch and Reports', lead: 'Cards become structured memory.', body: 'Situation Cards can feed notes, dossiers, reports, risk reviews, strategic watch, and decision follow-up.' },
+      { n: '02', title: 'Watch, Reports, and Data', lead: 'Cards become structured memory.', body: 'Situation Cards can feed notes, dossiers, reports, risk reviews, strategic watch, business data, and decision follow-up.' },
       { n: '03', title: 'Governance', lead: 'Who sees what. Who interprets. Who validates. Who commits.', body: 'Every decision becomes more readable. Every responsibility becomes more explicit. Complex systems do not only fail because they lack information; they fail because they lack shared reading.' },
+      { n: '04', title: 'Decision Context Layer', lead: 'The Situation Card is not the decision.', body: 'It can serve as structured context for humans, teams, AI agents, or business systems: facts, tensions, vulnerabilities, trajectories, uncertainties, and signals. SC can feed decision-support AI systems without transferring accountability to the AI.' },
+      { n: '05', title: 'Systems and Languages', lead: 'Process information, documents, and technical languages.', body: 'IAAA+ can adapt to business environments: data, documents, code, protocols, robotics, industrial systems, compliance, workflows, and specialized agents.' },
     ],
     dataTitle: 'Data Sovereignty',
     dataLead: 'Your data stays in Europe. Your analyses remain yours.',
@@ -54,7 +58,7 @@ const COPY = {
     ren: 'The Resonance Engine Navigator (REN) is a technology developed by IAAA+. REN acts as a cognitive navigation layer that complements large AI models (OpenAI, Claude, Mistral...) by focusing on three things: coherence, structure, and reasoning quality.',
     forWho: 'For whom',
     audiences: ['Large companies', 'Public institutions', 'Multi-stakeholder organizations', 'Critical environments'],
-    footer: 'Create. Explore. Equip.',
+    footer: 'Structure the context. Make decision-making readable.',
   },
 } as const
 

@@ -1537,13 +1537,13 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
 
   const MODULES = [
     {
-      tag: lang === 'FR' ? 'Créer' : 'Create',
-      sub: { FR: 'Question, URL ou document', EN: 'Question, URL, or document' },
+      tag: lang === 'FR' ? 'Clarté' : 'Clarity',
+      sub: { FR: 'Créer une Situation Card', EN: 'Create a Situation Card' },
       body: {
-        FR: 'Produire une Situation Card lisible, partageable et traçable.',
-        EN: 'Produce a readable, shareable, and traceable Situation Card.',
+        FR: 'Transformer une question, une URL ou un document en carte lisible.',
+        EN: 'Turn a question, URL, or document into a readable card.',
       },
-      href: `/create?lang=${lang.toLowerCase()}`,
+      href: `/clarity?lang=${lang.toLowerCase()}`,
     },
     {
       tag: 'Atlas',
@@ -1558,8 +1558,8 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
       tag: 'IAAA+',
       sub: { FR: 'Organisations', EN: 'Organizations' },
       body: {
-        FR: 'Équiper une équipe, une organisation ou une gouvernance avec une lecture partagée.',
-        EN: 'Equip a team, organization, or governance system with shared reading.',
+        FR: 'Équiper équipes, institutions et systèmes IA avec une couche de décision lisible.',
+        EN: 'Equip teams, institutions, and AI systems with a readable decision layer.',
       },
       href: `/enterprise?lang=${lang.toLowerCase()}`,
     },
