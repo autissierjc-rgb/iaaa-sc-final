@@ -2046,23 +2046,25 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           </div>
 
           {/* SOUS-BARRE */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '16px 0 14px' }}>
-            <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-              <button onClick={() => setPanelSaved(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer' }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: `1px solid ${BDR}` }}>
-                  <Image src="/pictos/Enregistrer_nobg.jpg" alt="" width={40} height={40} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
-                </div>
-                <span style={{ fontSize: 9, color: TXT3 }}>{t.saved}</span>
-              </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 10, padding: '16px 0 14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
               <button onClick={() => setPanelHistory(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer' }}>
                 <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: `1px solid ${BDR}` }}>
                   <Image src="/pictos/horloge.jpg" alt="" width={40} height={40} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
                 </div>
                 <span style={{ fontSize: 9, color: TXT3 }}>{t.historique}</span>
               </button>
+              <button onClick={() => setPanelSaved(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: `1px solid ${BDR}` }}>
+                  <Image src="/pictos/Enregistrer_nobg.jpg" alt="" width={40} height={40} style={{ objectFit: 'cover', width: '100%', height: '100%' }} unoptimized />
+                </div>
+                <span style={{ fontSize: 9, color: TXT3 }}>{lang === 'FR' ? 'Enregistrer vos Situation Cards' : 'Save your Situation Cards'}</span>
+              </button>
             </div>
-            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontStyle: 'italic', color: GOLD_L }}>{t.signature}</div>
-            <div style={{ fontSize: 12, color: GOLD }}>{t.tagline}</div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontStyle: 'italic', color: GOLD_L }}>{t.signature}</div>
+              <div style={{ fontSize: 12, color: GOLD }}>{t.tagline}</div>
+            </div>
           </div>
         </main>
 
