@@ -8,6 +8,7 @@ import ResourcePolicyMatrix from './ResourcePolicyMatrix'
 import SharedSnapshotResolveTester from './SharedSnapshotResolveTester'
 import ShareV2Tester from './ShareV2Tester'
 import TranslatedSnapshotV2Tester from './TranslatedSnapshotV2Tester'
+import UserMaterialPolicyTester from './UserMaterialPolicyTester'
 import {
   V2_FOUNDATION_BRICKS,
   statusLabel,
@@ -200,6 +201,8 @@ export default function SisSystemV2Page() {
         <ReactionV2Tester />
 
         <ResourcePolicyMatrix />
+
+        <UserMaterialPolicyTester />
 
         <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
