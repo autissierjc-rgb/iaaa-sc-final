@@ -20,7 +20,7 @@ export default function CreatePage({
 
   return (
     <Suspense fallback={null}>
-      <HomeClient initialLang={initialLang} surface="create" />
+      <HomeClient initialLang={initialLang} />
     </Suspense>
   )
 }

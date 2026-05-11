@@ -1293,9 +1293,7 @@ const SAVED_CATEGORIES: SavedCategory[] = [
 ]
 
 // ── COMPOSANT PRINCIPAL ───────────────────────────────────────────────────────
-type HomeSurface = 'home' | 'create'
-
-export default function HomeClient({ initialLang = 'FR', surface = 'home' }: { initialLang?: 'FR' | 'EN'; surface?: HomeSurface }) {
+export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' | 'EN' }) {
   const searchParams = useSearchParams()
   const urlLang = searchParams.get('lang') === 'en' ? 'EN' : searchParams.get('lang') === 'fr' ? 'FR' : null
   const [lang, setLang]               = useState<'FR' | 'EN'>(initialLang)
@@ -1537,7 +1535,6 @@ export default function HomeClient({ initialLang = 'FR', surface = 'home' }: { i
     finally { setScLoading(false); setCompassMode('idle') }
   }
 
-  const isCreateSurface = surface === 'create'
   const MODULES = [
     {
       tag: lang === 'FR' ? 'Créer' : 'Create',
@@ -1679,9 +1676,7 @@ export default function HomeClient({ initialLang = 'FR', surface = 'home' }: { i
             </div>
           </Link>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, color: GOLD, textAlign: 'center', fontStyle: 'italic' }}>
-            {isCreateSurface
-              ? (lang === 'FR' ? <>Créer une Situation Card<br /><span style={{ fontSize: 15, fontWeight: 400 }}>Question, URL ou document.</span></> : <>Create a Situation Card<br /><span style={{ fontSize: 15, fontWeight: 400 }}>Question, URL, or document.</span></>)
-              : (lang === 'FR' ? <>Comprendre les situations complexes<br />par une carte.</> : <>Understanding complex situations<br />through a card.</>)}
+            {lang === 'FR' ? <>Comprendre les situations complexes<br />par une carte.</> : <>Understanding complex situations<br />through a card.</>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 20 }}>
             <Link href={`/pricing?lang=${lang.toLowerCase()}`} style={{ fontSize: 12.5, color: TXT2, textDecoration: 'none' }}>{t.offres}</Link>
