@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  buildUserMaterialPolicy,
+  type UserMaterialPolicyContract,
   type UserMaterialKind,
   type UserMaterialRetentionChoice,
   type UserMaterialSensitivity,
@@ -21,19 +21,53 @@ export default function UserMaterialPolicyTester() {
   const [confirmedRights, setConfirmedRights] = useState(false)
   const [keepPrivate, setKeepPrivate] = useState(false)
   const [publicSource, setPublicSource] = useState(false)
+  const [policy, setPolicy] = useState<UserMaterialPolicyContract | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const retentionChoice: UserMaterialRetentionChoice = keepPrivate ? 'keep_private' : 'discard_after_processing'
-  const policy = useMemo(
-    () =>
-      buildUserMaterialPolicy({
-        kind,
-        sensitivity,
-        public_source: publicSource,
-        user_confirmed_rights: confirmedRights,
-        retention_choice: retentionChoice,
-      }),
-    [confirmedRights, kind, publicSource, retentionChoice, sensitivity],
-  )
+
+  useEffect(() => {
+    let active = true
+
+    async function loadPolicy() {
+      setError(null)
+
+      try {
+        const response = await fetch('/api/material-policy', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            kind,
+            sensitivity,
+            public_source: publicSource,
+            user_confirmed_rights: confirmedRights,
+            retention_choice: retentionChoice,
+          }),
+        })
+        const payload = (await response.json()) as { ok?: boolean; policy?: UserMaterialPolicyContract; error?: string }
+
+        if (!active) return
+
+        if (!response.ok || !payload.ok || !payload.policy) {
+          setPolicy(null)
+          setError(payload.error ?? 'material_policy_unavailable')
+          return
+        }
+
+        setPolicy(payload.policy)
+      } catch {
+        if (!active) return
+        setPolicy(null)
+        setError('material_policy_unavailable')
+      }
+    }
+
+    void loadPolicy()
+
+    return () => {
+      active = false
+    }
+  }, [confirmedRights, kind, publicSource, retentionChoice, sensitivity])
 
   return (
     <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
@@ -98,32 +132,40 @@ export default function UserMaterialPolicyTester() {
       </div>
 
       <div style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 14, background: '#FCFAF6', marginTop: 14 }}>
-        <p style={{ margin: 0, color: policy.extraction_rule === 'blocked_until_user_confirms_rights' ? '#B23A3A' : '#1D9E75', fontWeight: 700 }}>
-          {policy.extraction_rule === 'blocked_until_user_confirms_rights' ? 'Bloque avant confirmation des droits' : 'Traitement autorise sous contrat'}
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, marginTop: 10 }}>
-          {[
-            ['Extraction', policy.extraction_rule],
-            ['Conservation', policy.retention_choice],
-            ['Stockage', policy.storage_rule],
-            ['Sortie publique', policy.public_output_rule],
-            ['LLM', boolLabel(policy.may_be_sent_to_llm)],
-            ['Search provider', boolLabel(policy.may_be_sent_to_search_provider)],
-            ['Snapshot public', boolLabel(policy.may_be_included_in_public_snapshot)],
-            ['Exploitable IAAA+', boolLabel(policy.exploitable_by_iaaa)],
-          ].map(([label, value]) => (
-            <div key={label} style={{ border: '1px solid #E1D6C2', borderRadius: 8, padding: 10, background: '#fff' }}>
-              <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>{value}</p>
-              <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 12 }}>{label}</h3>
+        {!policy ? (
+          <p style={{ margin: 0, color: error ? '#B23A3A' : '#6F6255', fontWeight: 700 }}>
+            {error ? `Contrat indisponible : ${error}` : 'Chargement du contrat serveur...'}
+          </p>
+        ) : (
+          <>
+            <p style={{ margin: 0, color: policy.extraction_rule === 'blocked_until_user_confirms_rights' ? '#B23A3A' : '#1D9E75', fontWeight: 700 }}>
+              {policy.extraction_rule === 'blocked_until_user_confirms_rights' ? 'Bloque avant confirmation des droits' : 'Traitement autorise sous contrat'}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, marginTop: 10 }}>
+              {[
+                ['Extraction', policy.extraction_rule],
+                ['Conservation', policy.retention_choice],
+                ['Stockage', policy.storage_rule],
+                ['Sortie publique', policy.public_output_rule],
+                ['LLM', boolLabel(policy.may_be_sent_to_llm)],
+                ['Search provider', boolLabel(policy.may_be_sent_to_search_provider)],
+                ['Snapshot public', boolLabel(policy.may_be_included_in_public_snapshot)],
+                ['Exploitable IAAA+', boolLabel(policy.exploitable_by_iaaa)],
+              ].map(([label, value]) => (
+                <div key={label} style={{ border: '1px solid #E1D6C2', borderRadius: 8, padding: 10, background: '#fff' }}>
+                  <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>{value}</p>
+                  <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 12 }}>{label}</h3>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '10px 0 0' }}>
-          {policy.required_user_warning_fr}
-        </p>
-        <p style={{ color: '#8B8174', fontSize: 11, lineHeight: 1.55, margin: '8px 0 0' }}>
-          {policy.non_exploitation_rule_fr}
-        </p>
+            <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '10px 0 0' }}>
+              {policy.required_user_warning_fr}
+            </p>
+            <p style={{ color: '#8B8174', fontSize: 11, lineHeight: 1.55, margin: '8px 0 0' }}>
+              {policy.non_exploitation_rule_fr}
+            </p>
+          </>
+        )}
       </div>
     </section>
   )
