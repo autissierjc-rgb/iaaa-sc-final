@@ -139,6 +139,50 @@ function resourceEvidenceSection(resources?: ResourceServiceContract): { id: str
   }
 }
 
+function probabilityFromResources(resources?: ResourceServiceContract): ProbabilityAssessment | null {
+  if (!resources || resources.public_sources.length === 0) return null
+
+  const proof = resourceProofLabel(resources)
+  return {
+    claim_fr: 'Les sources rapides donnent un premier appui factuel, mais leur portee doit rester qualifiee tant qu elles ne sont pas confrontees par Recherche+.',
+    status: 'plausible',
+    probability_label_fr: ASSERTION_LABELS_FR.plausible,
+    confidence: resources.public_sources.length >= 2 ? 0.66 : 0.58,
+    examples: resources.public_sources.slice(0, 3).map((source) => ({
+      text_fr: source.excerpt
+        ? `${source.title} : ${source.excerpt}`
+        : `${source.title} (${source.source})`,
+      status: source.reliability === 'primary' ? 'established' : 'plausible',
+      source_ids: [source.id],
+    })),
+    missing_proof_fr: proof
+      ? `Preuve decisive encore a confronter : ${proof}.`
+      : 'Preuve decisive encore a confronter par Recherche+.',
+  }
+}
+
+function resourceEvidenceSentence(resources?: ResourceServiceContract): string | undefined {
+  if (!resources || resources.public_sources.length === 0) return undefined
+
+  const sources = resources.public_sources.slice(0, 3).map((source) => {
+    const reliability = source.reliability && source.reliability !== 'unknown'
+      ? `, ${source.reliability}`
+      : ''
+    return `${source.title} (${source.source}${reliability})`
+  }).join(' ; ')
+
+  return `Les sources rapides attachées (${sources}) cadrent la lecture : elles donnent un premier appui vérifiable, mais ne remplacent pas Recherche+ ni une vérification de contradiction.`
+}
+
+function resourceProofLabel(resources?: ResourceServiceContract): string | undefined {
+  const source = resources?.public_sources[0]
+  if (!source) return undefined
+
+  return source.excerpt
+    ? `${source.title} : ${source.excerpt}`
+    : `${source.title} (${source.source})`
+}
+
 function extractOpenAIText(data: Record<string, unknown>): string {
   const output = Array.isArray(data.output) ? data.output : []
   return output
@@ -277,9 +321,10 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const firstProcedure = namedAction(input.theatre.procedures, grammar.actionFallback)
   const firstEvidence = namedAction(input.expertises_metiers.evidence_to_seek, grammar.evidenceFallback)
   const tension = grammar.tensionNoun ?? tensionLabel(input)
-  const probability = probabilityFromTheatre(input.theatre)
+  const probability = probabilityFromResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
   const resourcesSection = resourceEvidenceSection(input.resources)
+  const resourcesSentence = resourceEvidenceSentence(input.resources)
   const diamondText = compactSentence(grammar.diamond(tension, institutions, firstProcedure))
 
   const publicWarnings = [
@@ -298,13 +343,15 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const lecture = [
     grammar.lectureEntry(subject, institutions),
     `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
+    resourcesSentence,
     vulnerability,
     keySignal,
-  ].join(' ')
+  ].filter(Boolean).join(' ')
   const approfondirAnalysis = [
     grammar.approfondirEntry,
     grammar.supportSentence(actors, institutions),
     `Ce qu il faut etablir n est pas seulement l intention, mais le lien entre ${firstProcedure}, ${evidence} et ${blindSpot}.`,
+    resourcesSentence,
     resourcesWarning ? resourcesWarning : '',
     `La lecture reste donc prudente : ${probability.probability_label_fr.toLowerCase()}, tant que la preuve decisive manque.`,
   ].filter(Boolean).join(' ')
@@ -565,6 +612,7 @@ async function composeWithOpenAI(input: WritingEngineInput, local: WritingContra
           { id: 'forme', title: 'Forme', body: stringField(parsed.forme_fr, diamondText) },
           { id: 'probabilites', title: 'Probabilites', body: stringField(parsed.probabilites_fr, local.approfondir.sections_fr[2]?.body ?? '') },
           { id: 'angles-morts', title: 'Incertitudes / angles morts', body: stringField(parsed.angles_morts_fr, local.approfondir.sections_fr[3]?.body ?? '') },
+          ...local.approfondir.sections_fr.filter((section) => section.id === 'sources-rapides'),
         ],
       },
       trace: {
