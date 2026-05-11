@@ -12,13 +12,34 @@ const COPY = {
     home: 'Accueil',
     login: 'Se connecter',
     intro: 'Clarté est la porte d’entrée de Situation Card : transformer une question, une URL ou un document en carte lisible, partageable et traçable.',
+    formula: 'Clarté sert à transformer une situation confuse en point d’appui lisible.',
+    useCaseTitle: 'Cas d’usage',
     useCases: [
-      'Question personnelle ou professionnelle',
-      'Compréhension du monde',
-      'URL ou ressource à analyser',
-      'Tension relationnelle ou collective',
-      'Choix stratégique',
-      'Document à rendre lisible',
+      {
+        title: 'Comprendre une situation personnelle',
+        body: 'Mettre à plat une tension, un choix, un conflit ou une décision intime sans remplacer le jugement personnel.',
+        examples: ['Quitter ou non un poste', 'Tension familiale difficile', 'Décision importante qui tourne en rond'],
+      },
+      {
+        title: 'Clarifier une situation professionnelle',
+        body: 'Transformer une situation de travail confuse en carte lisible : acteurs, tensions, contraintes et vulnérabilité centrale.',
+        examples: ['Conflit d’équipe', 'Décision de recrutement', 'Relation client difficile', 'Changement d’organisation'],
+      },
+      {
+        title: 'Lire l’actualité autrement',
+        body: 'Transformer un événement public en Situation Card pour comprendre les forces en présence, les trajectoires et le signal à surveiller.',
+        examples: ['Crise géopolitique', 'Élection', 'Marché énergétique', 'Décision gouvernementale'],
+      },
+      {
+        title: 'Analyser une URL ou un document',
+        body: 'Coller un lien, une note, un article ou un document pour en extraire une lecture structurée.',
+        examples: ['Article de presse', 'Rapport PDF', 'Note interne', 'Page web'],
+      },
+      {
+        title: 'Préparer une discussion',
+        body: 'Produire une carte courte avant un rendez-vous, une réunion ou une conversation sensible.',
+        examples: ['Réunion avec un associé', 'Conversation difficile', 'Échange client', 'Préparation d’un pitch'],
+      },
     ],
     line1: 'Clarté ne remplace pas votre jugement.',
     line2: 'Clarté met la situation en forme pour mieux penser.',
@@ -33,7 +54,7 @@ const COPY = {
     free: 'Commencez gratuitement. Aucune carte bancaire requise.',
     start: 'Lancez votre première Situation Card depuis l’interface de création.',
     cta: 'Créer une Situation Card',
-    footer: 'Une question devient une carte. Une carte devient une lecture.',
+    footer: 'Une question devient une carte. Une carte devient un point d’appui.',
     atlas: 'Explorer Atlas →',
     enterprise: 'IAAA+ →',
   },
@@ -41,13 +62,34 @@ const COPY = {
     home: 'Home',
     login: 'Sign in',
     intro: 'Clarity is the entry point to Situation Card: turn a question, URL, or document into a readable, shareable, and traceable card.',
+    formula: 'Clarity turns a confusing situation into a readable point of support.',
+    useCaseTitle: 'Use cases',
     useCases: [
-      'Personal or professional question',
-      'Understanding the world',
-      'URL or resource to analyze',
-      'Relational or collective tension',
-      'Strategic choice',
-      'Document to make readable',
+      {
+        title: 'Understand a personal situation',
+        body: 'Lay out a tension, choice, conflict, or intimate decision without replacing personal judgment.',
+        examples: ['Leaving a job or not', 'Difficult family tension', 'Important decision going in circles'],
+      },
+      {
+        title: 'Clarify a professional situation',
+        body: 'Turn a confusing work situation into a readable card: actors, tensions, constraints, and central vulnerability.',
+        examples: ['Team conflict', 'Hiring decision', 'Difficult client relationship', 'Organizational change'],
+      },
+      {
+        title: 'Read public events differently',
+        body: 'Turn a public event into a Situation Card to understand forces, trajectories, and the signal to watch.',
+        examples: ['Geopolitical crisis', 'Election', 'Energy market', 'Government decision'],
+      },
+      {
+        title: 'Analyze a URL or document',
+        body: 'Paste a link, note, article, or document and extract a structured reading.',
+        examples: ['Press article', 'PDF report', 'Internal note', 'Web page'],
+      },
+      {
+        title: 'Prepare a discussion',
+        body: 'Produce a short card before a meeting, appointment, or sensitive conversation.',
+        examples: ['Meeting with a partner', 'Difficult conversation', 'Client exchange', 'Pitch preparation'],
+      },
     ],
     line1: 'Clarity does not replace your judgment.',
     line2: 'Clarity gives the situation a form you can think with.',
@@ -62,7 +104,7 @@ const COPY = {
     free: 'Start for free. No credit card required.',
     start: 'Launch your first Situation Card from the creation interface.',
     cta: 'Create a Situation Card',
-    footer: 'A question becomes a card. A card becomes a reading.',
+    footer: 'A question becomes a card. A card becomes a point of support.',
     atlas: 'Explore Atlas →',
     enterprise: 'IAAA+ →',
   },
@@ -101,13 +143,9 @@ export default function ClarityPage({
           {copy.intro}
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px', marginBottom: '42px' }}>
-          {copy.useCases.map((item) => (
-            <div key={item} style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: '8px', padding: '16px 18px', boxShadow: '0 10px 24px rgba(26,46,90,0.05)' }}>
-              <p style={{ fontSize: '13px', color: item === copy.useCases[2] ? '#C8951A' : '#1A2E5A', lineHeight: 1.5 }}>{item}</p>
-            </div>
-          ))}
-        </div>
+        <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: '22px', fontStyle: 'italic', color: '#C8951A', lineHeight: 1.45, maxWidth: 620, margin: '0 auto' }}>
+          {copy.formula}
+        </p>
       </section>
 
       <section style={{ background: '#fff', padding: '44px 36px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '36px' }}>
@@ -120,6 +158,23 @@ export default function ClarityPage({
             <div key={item} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', color: '#5A6A7A', lineHeight: 1.6 }}>
               <span style={{ color: '#C8951A', fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>◆</span>
               <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={{ padding: '42px 36px', maxWidth: 980, margin: '0 auto' }}>
+        <p style={{ fontSize: 10, color: '#9A8860', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 18 }}>{copy.useCaseTitle}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+          {copy.useCases.map((item) => (
+            <div key={item.title} style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 16, boxShadow: '0 10px 24px rgba(26,46,90,0.05)' }}>
+              <p style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: 11, color: '#1A2E5A', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>{item.title}</p>
+              <p style={{ fontSize: 12, color: '#6F6255', lineHeight: 1.65, marginBottom: 10 }}>{item.body}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {item.examples.map((example) => (
+                  <span key={example} style={{ fontSize: 11, color: '#9A8860', lineHeight: 1.4 }}>- {example}</span>
+                ))}
+              </div>
             </div>
           ))}
         </div>
