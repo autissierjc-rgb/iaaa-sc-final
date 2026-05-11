@@ -1709,10 +1709,33 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
   }
 
   const MODULES = [
-    { tag: 'Clarity', sub: { FR: 'Individuel',       EN: 'Individual' },     href: `/clarity?lang=${routeLocale}` },
-    { tag: 'SIS',     sub: { FR: 'Collectif Pro',    EN: 'Pro Collective' }, href: `/sis-system?lang=${routeLocale}` },
-    { tag: 'IAAA+',   sub: { FR: 'Gouvernance',      EN: 'Governance' },     href: `/enterprise?lang=${routeLocale}` },
-    { tag: 'ATLAS',   sub: { FR: 'Cartes publiques', EN: 'Public cards' },   href: `/library?lang=${routeLocale}` },
+    {
+      tag: contentLang === 'FR' ? 'CLARTÉ' : 'CLARITY',
+      sub: { FR: 'Créer une Situation Card', EN: 'Create a Situation Card' },
+      body: {
+        FR: 'Une question devient une carte. Une carte éclaire une situation complexe.',
+        EN: 'A question becomes a card. A card lights up a complex situation.',
+      },
+      href: `/clarity?lang=${routeLocale}`,
+    },
+    {
+      tag: 'IAAA+',
+      sub: { FR: 'Organisations & systèmes IA', EN: 'Organizations & AI systems' },
+      body: {
+        FR: 'La couche de contexte qui rend les décisions lisibles, traçables et responsables.',
+        EN: 'The context layer that makes decisions readable, traceable, and accountable.',
+      },
+      href: `/enterprise?lang=${routeLocale}`,
+    },
+    {
+      tag: 'ATLAS',
+      sub: { FR: 'Mémoire des situations', EN: 'Memory of situations' },
+      body: {
+        FR: 'Explorer les cartes, comparer les crises et reconnaître les patterns.',
+        EN: 'Explore cards, compare crises, and recognize patterns.',
+      },
+      href: `/library?lang=${routeLocale}`,
+    },
   ]
   const visibilityLabel = (value: VisibilityState) => {
     if (value === 'public') return lang === 'FR' ? 'Publique' : 'Public'
@@ -2015,12 +2038,13 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
 
         {/* MODULES */}
         <section style={{ background: '#EFEDE7', padding: '20px 28px', borderTop: `1px solid ${BDR}` }}>
-          <div style={{ maxWidth: 1160, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+          <div style={{ maxWidth: 1160, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
             {MODULES.map(m => (
               <Link key={m.tag} href={m.href} style={{ textDecoration: 'none' }}>
                 <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 10, padding: '14px' }}>
-                  <div style={{ fontFamily: "'Cinzel',serif", fontSize: 13, fontWeight: 500, color: NAVY, marginBottom: 3 }}>{m.tag}</div>
+                  <div style={{ fontFamily: "'Cinzel',serif", fontSize: 16, fontWeight: 600, color: NAVY, letterSpacing: '.04em', marginBottom: 3 }}>{m.tag}</div>
                   <div style={{ fontSize: 11, color: TXT3, marginBottom: 8 }}>{m.sub[contentLang]}</div>
+                  <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.55, minHeight: 48 }}>{m.body[contentLang]}</div>
                   <div style={{ fontSize: 11, color: TXT3 }}>→</div>
                 </div>
               </Link>

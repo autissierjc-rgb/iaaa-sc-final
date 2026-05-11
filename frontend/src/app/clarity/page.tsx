@@ -11,56 +11,60 @@ const COPY = {
   FR: {
     home: 'Accueil',
     login: 'Se connecter',
-    intro: 'Clarity aide à transformer une situation personnelle confuse en carte lisible : ce qui agit, ce qui bloque, ce qui fragilise, et le prochain signal à observer.',
+    intro: 'Clarté est la porte d’entrée de Situation Card : transformer une question, une URL ou un document en carte lisible, partageable et traçable.',
     useCases: [
-      'Décision personnelle difficile',
+      'Question personnelle ou professionnelle',
       'Compréhension du monde',
-      'Partager vos analyses',
-      'Tension relationnelle',
-      'Choix professionnel',
-      'Perte de sens ou de direction',
+      'URL ou ressource à analyser',
+      'Tension relationnelle ou collective',
+      'Choix stratégique',
+      'Document à rendre lisible',
     ],
-    line1: 'Clarity ne vous dit pas quoi faire.',
-    line2: 'Clarity vous montre ce qui est en jeu.',
+    line1: 'Clarté ne remplace pas votre jugement.',
+    line2: 'Clarté met la situation en forme pour mieux penser.',
     benefits: [
-      'Une lecture structurée de votre situation',
+      'Une Situation Card structurée',
+      'Une lecture courte pour voir le système',
       'La vulnérabilité centrale',
       'Trois évolutions possibles',
       'Un signal concret à surveiller',
+      'Des pistes d’approfondissement et de ressources',
     ],
     free: 'Commencez gratuitement. Aucune carte bancaire requise.',
-    start: 'Lancez votre première Situation Card depuis l’accueil.',
-    cta: 'Aller à l’accueil',
-    footer: 'Moins d’opinion. Plus de structure.',
-    sis: 'Voir SIS →',
-    offers: 'Offres →',
+    start: 'Lancez votre première Situation Card depuis l’interface de création.',
+    cta: 'Créer une Situation Card',
+    footer: 'Une question devient une carte. Une carte devient une lecture.',
+    atlas: 'Explorer Atlas →',
+    enterprise: 'IAAA+ →',
   },
   EN: {
     home: 'Home',
     login: 'Sign in',
-    intro: 'Clarity turns a confusing personal situation into a readable card: what is acting, what is blocking, what is fragile, and the next signal to watch.',
+    intro: 'Clarity is the entry point to Situation Card: turn a question, URL, or document into a readable, shareable, and traceable card.',
     useCases: [
-      'Difficult personal decision',
+      'Personal or professional question',
       'Understanding the world',
-      'Share your analyses',
-      'Relational tension',
-      'Professional choice',
-      'Loss of meaning or direction',
+      'URL or resource to analyze',
+      'Relational or collective tension',
+      'Strategic choice',
+      'Document to make readable',
     ],
-    line1: 'Clarity does not tell you what to do.',
-    line2: 'Clarity shows what is at stake.',
+    line1: 'Clarity does not replace your judgment.',
+    line2: 'Clarity gives the situation a form you can think with.',
     benefits: [
-      'A structured reading of your situation',
+      'A structured Situation Card',
+      'A short reading to see the system',
       'The central vulnerability',
       'Three possible trajectories',
       'One concrete signal to watch',
+      'Deepening paths and resources',
     ],
     free: 'Start for free. No credit card required.',
-    start: 'Launch your first Situation Card from the home page.',
-    cta: 'Go home',
-    footer: 'Less opinion. More structure.',
-    sis: 'See SIS →',
-    offers: 'Plans →',
+    start: 'Launch your first Situation Card from the creation interface.',
+    cta: 'Create a Situation Card',
+    footer: 'A question becomes a card. A card becomes a reading.',
+    atlas: 'Explore Atlas →',
+    enterprise: 'IAAA+ →',
   },
 } as const
 
@@ -91,7 +95,7 @@ export default function ClarityPage({
 
       <section style={{ padding: '64px 36px 56px', maxWidth: '980px', margin: '0 auto', textAlign: 'center' }}>
         <h1 style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: 'clamp(2.4rem, 6vw, 4.2rem)', fontWeight: 700, color: '#185FA5', letterSpacing: '0.16em', textTransform: 'uppercase', lineHeight: 1.08, marginBottom: '22px' }}>
-          Clarity
+          {lang === 'FR' ? 'Clarté' : 'Clarity'}
         </h1>
         <p style={{ fontSize: '15px', color: '#6F6255', lineHeight: 1.8, maxWidth: '620px', margin: '0 auto 34px' }}>
           {copy.intro}
@@ -141,8 +145,8 @@ export default function ClarityPage({
       <footer style={{ borderTop: '1px solid #E8E0D0', padding: '16px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F5F0E8' }}>
         <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: '14px', fontStyle: 'italic', color: '#9A8860' }}>{copy.footer}</p>
         <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#9A8860' }}>
-          <Link href={`/sis-system${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>{copy.sis}</Link>
-          <Link href={`/pricing${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>{copy.offers}</Link>
+          <Link href={`/library${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>{copy.atlas}</Link>
+          <Link href={`/enterprise${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>{copy.enterprise}</Link>
         </div>
       </footer>
 
