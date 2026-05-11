@@ -67,8 +67,8 @@ const TX = {
     public_lbl: 'Public',
     historique: 'Historique vos derniers chats',
     saved: 'Enregistrer',
-    tagline: 'Voir la structure pour pouvoir décider',
-    signature: 'Que se passe-t-il vraiment ?',
+    tagline: 'Voir les structures pour mieux décider.',
+    signature: 'Votre think tank app',
     offres: 'Offres',
     connexion: 'Connexion',
     structural_reading: 'Lecture structurelle - pas une mise à jour en temps réel',
@@ -103,8 +103,8 @@ const TX = {
     public_lbl: 'Public',
     historique: 'History',
     saved: 'Saved',
-    tagline: 'See the structure to decide',
-    signature: 'What is really happening?',
+    tagline: 'See the structures to decide better.',
+    signature: 'Your think tank app',
     offres: 'Plans',
     connexion: 'Sign in',
     structural_reading: 'Structural reading - not a real-time update',
@@ -267,6 +267,14 @@ const HOME_LANG_TO_LOCALE: Record<HomeLang, string> = {
   DE: 'de',
   IT: 'it',
   PT: 'pt',
+}
+const HOME_LANG_LABELS: Record<HomeLang, string> = {
+  FR: 'Français',
+  EN: 'English',
+  ES: 'Español',
+  DE: 'Deutsch',
+  IT: 'Italiano',
+  PT: 'Português',
 }
 const CONTENT_LANGS = new Set<HomeLang>(['FR', 'EN'])
 
@@ -1854,9 +1862,31 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 20 }}>
             <Link href={`/${routeLocale}/pricing`} style={{ fontSize: 12.5, color: TXT2, textDecoration: 'none' }}>{t.offres}</Link>
             <Link href="/login"   style={{ fontSize: 12.5, color: TXT2, textDecoration: 'none' }}>{t.connexion}</Link>
-            <div style={{ display: 'flex', gap: 6, paddingLeft: 12, borderLeft: `1px solid ${BDR}` }}>
-              {HOME_LANGS.map(l => <Link key={l} href={`/${HOME_LANG_TO_LOCALE[l]}`} onClick={() => setLang(l)} style={{ fontSize: 12, fontWeight: 500, cursor: 'pointer', border: 'none', background: 'none', color: lang === l ? NAVY : TXT2, textDecoration: 'none' }}>{l}</Link>)}
-            </div>
+            <details style={{ position: 'relative', paddingLeft: 12, borderLeft: `1px solid ${BDR}` }}>
+              <summary style={{ listStyle: 'none', cursor: 'pointer', color: NAVY, fontSize: 12.5, fontWeight: 500 }}>
+                {contentLang === 'FR' ? 'Langue' : 'Language'}
+              </summary>
+              <div style={{ position: 'absolute', right: 0, top: 26, zIndex: 20, width: 150, maxHeight: 180, overflowY: 'auto', background: BG_P, border: `1px solid ${BDR}`, borderRadius: 8, boxShadow: '0 16px 35px rgba(26,42,58,0.12)', padding: 6 }}>
+                {HOME_LANGS.map(l => (
+                  <Link
+                    key={l}
+                    href={`/${HOME_LANG_TO_LOCALE[l]}`}
+                    onClick={() => setLang(l)}
+                    style={{
+                      display: 'block',
+                      padding: '7px 9px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      color: lang === l ? NAVY : TXT2,
+                      background: lang === l ? 'rgba(184,154,106,0.14)' : 'transparent',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {HOME_LANG_LABELS[l]}
+                  </Link>
+                ))}
+              </div>
+            </details>
           </div>
         </header>
 
