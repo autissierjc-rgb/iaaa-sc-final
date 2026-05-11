@@ -15,12 +15,12 @@ type Lang = 'FR' | 'EN'
 
 const COPY = {
   FR: {
-    title: 'Rendre les décisions lisibles, traçables et partageables.',
-    intro: 'IAAA+ est une infrastructure de lecture des systèmes complexes. Elle structure ce qui est vu, compris et engagé.',
+    title: 'Déployer Situation Card dans une équipe, une organisation ou une gouvernance.',
+    intro: 'IAAA+ transforme SC en couche de lecture partagée : cartes, veille, rapports, traces de décision et intelligence collective.',
     pillars: [
-      { n: '01', title: 'Gouvernance', lead: 'Qui voit quoi. Qui interprète. Qui valide. Qui engage.', body: 'Chaque décision devient lisible. Chaque responsabilité devient explicite. Les systèmes complexes ne tombent pas en panne par manque d’information ; ils tombent en panne par manque de lecture partagée.' },
-      { n: '02', title: 'Mode collaboratif', lead: 'Une situation n’est jamais lue par une seule personne.', body: 'Lectures multi-acteurs sur une même Situation Card. Chaque contributeur apporte sa propre lecture. Le résultat n’est pas un consensus forcé : c’est une compréhension partagée, ou des désaccords clairement identifiés.' },
-      { n: '03', title: 'Traçabilité', lead: 'Les décisions cessent d’être implicites.', body: 'Historique complet des cartes. Évolution dans le temps. Qui a contribué quoi. Ce qui a changé entre deux lectures d’une même situation.' },
+      { n: '01', title: 'Lecture partagée', lead: 'Une même situation devient lisible par plusieurs acteurs.', body: 'IAAA+ aide une équipe à voir les forces, tensions, vulnérabilités et angles morts sans réduire la lecture à un consensus artificiel.' },
+      { n: '02', title: 'Veille et rapports', lead: 'Les cartes deviennent une mémoire structurée.', body: 'Les Situation Cards peuvent alimenter des notes, dossiers, rapports, revues de risques, veilles stratégiques et suivis de décision.' },
+      { n: '03', title: 'Gouvernance', lead: 'Qui voit quoi. Qui interprète. Qui valide. Qui engage.', body: 'Chaque décision devient plus lisible. Chaque responsabilité devient plus explicite. Les systèmes complexes ne tombent pas seulement par manque d’information ; ils tombent par manque de lecture partagée.' },
     ],
     dataTitle: 'Souveraineté des données',
     dataLead: 'Vos données restent en Europe. Vos analyses restent les vôtres.',
@@ -33,15 +33,15 @@ const COPY = {
     ren: 'Le Resonance Engine Navigator (REN) est une technologie développée par IAAA+. REN agit comme une couche de navigation cognitive qui vient compléter les grands modèles d’IA (OpenAI, Claude, Mistral…), en se concentrant sur trois choses : cohérence, structure et qualité du raisonnement.',
     forWho: 'Pour qui',
     audiences: ['Grandes entreprises', 'Institutions publiques', 'Organisations multi-acteurs', 'Environnements critiques'],
-    footer: 'Un même système. Trois niveaux de lecture.',
+    footer: 'Créer. Explorer. Équiper.',
   },
   EN: {
-    title: 'Making decisions readable, traceable, and shareable.',
-    intro: 'IAAA+ is a reading infrastructure for complex systems. It structures what is seen, understood, and committed.',
+    title: 'Deploy Situation Card inside a team, organization, or governance system.',
+    intro: 'IAAA+ turns SC into a shared reading layer: cards, watch, reports, decision traces, and collective intelligence.',
     pillars: [
-      { n: '01', title: 'Governance', lead: 'Who sees what. Who interprets. Who validates. Who commits.', body: 'Every decision becomes readable. Every responsibility becomes explicit. Complex systems do not fail only because they lack information; they fail because they lack shared reading.' },
-      { n: '02', title: 'Collaborative Mode', lead: 'A situation is never read by one person alone.', body: 'Multi-actor readings on the same Situation Card. Each contributor brings their own reading. The result is not forced consensus: it is shared understanding, or clearly identified disagreement.' },
-      { n: '03', title: 'Traceability', lead: 'Decisions stop being implicit.', body: 'Complete card history. Evolution over time. Who contributed what. What changed between two readings of the same situation.' },
+      { n: '01', title: 'Shared Reading', lead: 'The same situation becomes readable by several actors.', body: 'IAAA+ helps a team see forces, tensions, vulnerabilities, and blind spots without reducing the reading to artificial consensus.' },
+      { n: '02', title: 'Watch and Reports', lead: 'Cards become structured memory.', body: 'Situation Cards can feed notes, dossiers, reports, risk reviews, strategic watch, and decision follow-up.' },
+      { n: '03', title: 'Governance', lead: 'Who sees what. Who interprets. Who validates. Who commits.', body: 'Every decision becomes more readable. Every responsibility becomes more explicit. Complex systems do not only fail because they lack information; they fail because they lack shared reading.' },
     ],
     dataTitle: 'Data Sovereignty',
     dataLead: 'Your data stays in Europe. Your analyses remain yours.',
@@ -54,7 +54,7 @@ const COPY = {
     ren: 'The Resonance Engine Navigator (REN) is a technology developed by IAAA+. REN acts as a cognitive navigation layer that complements large AI models (OpenAI, Claude, Mistral...) by focusing on three things: coherence, structure, and reasoning quality.',
     forWho: 'For whom',
     audiences: ['Large companies', 'Public institutions', 'Multi-stakeholder organizations', 'Critical environments'],
-    footer: 'One system. Three levels of reading.',
+    footer: 'Create. Explore. Equip.',
   },
 } as const
 
@@ -77,9 +77,9 @@ export default function EnterprisePage({
       <nav style={{ background: '#fff', borderBottom: '1px solid #E8E0D0', padding: '13px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Link href={`/${suffix}`} style={{ fontFamily: 'var(--font-cinzel, serif)', fontSize: '11px', color: '#1A2E5A', textDecoration: 'none', letterSpacing: '0.12em' }}>SITUATION CARD</Link>
         <div style={{ display: 'flex', gap: '20px', fontSize: '12px' }}>
-          <Link href={`/clarity${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>Clarity</Link>
-          <Link href={`/sis-system${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>SIS</Link>
-          <a href="https://iaaa.fr/agence.html" target="_blank" rel="noreferrer" style={{ color: '#1A2E5A', textDecoration: 'none', borderBottom: '1px solid #C8951A', paddingBottom: '1px' }}>IAAA+ WEBSITE</a>
+          <Link href={`/create${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>{lang === 'FR' ? 'Créer' : 'Create'}</Link>
+          <Link href={`/library${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>Atlas</Link>
+          <a href="https://iaaa.fr/agence.html" target="_blank" rel="noreferrer" style={{ color: '#1A2E5A', textDecoration: 'none', borderBottom: '1px solid #C8951A', paddingBottom: '1px' }}>IAAA+</a>
         </div>
       </nav>
 
@@ -150,8 +150,8 @@ export default function EnterprisePage({
       <footer style={{ borderTop: '1px solid #E8E0D0', padding: '16px 36px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F5F0E8' }}>
         <p style={{ fontFamily: 'var(--font-cormorant, serif)', fontSize: 14, fontStyle: 'italic', color: '#9A8860' }}>{copy.footer}</p>
         <div style={{ display: 'flex', gap: 18, fontSize: 12 }}>
-          <Link href={`/clarity${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>← Clarity</Link>
-          <Link href={`/sis-system${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>← SIS</Link>
+          <Link href={`/create${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>← {lang === 'FR' ? 'Créer' : 'Create'}</Link>
+          <Link href={`/library${suffix}`} style={{ color: '#9A8860', textDecoration: 'none' }}>Atlas →</Link>
         </div>
       </footer>
 

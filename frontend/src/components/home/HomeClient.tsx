@@ -1293,7 +1293,9 @@ const SAVED_CATEGORIES: SavedCategory[] = [
 ]
 
 // ── COMPOSANT PRINCIPAL ───────────────────────────────────────────────────────
-export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' | 'EN' }) {
+type HomeSurface = 'home' | 'create'
+
+export default function HomeClient({ initialLang = 'FR', surface = 'home' }: { initialLang?: 'FR' | 'EN'; surface?: HomeSurface }) {
   const searchParams = useSearchParams()
   const urlLang = searchParams.get('lang') === 'en' ? 'EN' : searchParams.get('lang') === 'fr' ? 'FR' : null
   const [lang, setLang]               = useState<'FR' | 'EN'>(initialLang)
@@ -1535,11 +1537,35 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
     finally { setScLoading(false); setCompassMode('idle') }
   }
 
+  const isCreateSurface = surface === 'create'
   const MODULES = [
-    { tag: 'Clarity', sub: { FR: 'Individuel',       EN: 'Individual' },     href: `/clarity?lang=${lang.toLowerCase()}` },
-    { tag: 'SIS',     sub: { FR: 'Collectif Pro',    EN: 'Pro Collective' }, href: `/sis-system?lang=${lang.toLowerCase()}` },
-    { tag: 'IAAA+',   sub: { FR: 'Gouvernance',      EN: 'Governance' },     href: `/enterprise?lang=${lang.toLowerCase()}` },
-    { tag: 'ATLAS',   sub: { FR: 'Cartes publiques', EN: 'Public cards' },   href: `/library?lang=${lang.toLowerCase()}` },
+    {
+      tag: lang === 'FR' ? 'Créer' : 'Create',
+      sub: { FR: 'Question, URL ou document', EN: 'Question, URL, or document' },
+      body: {
+        FR: 'Produire une Situation Card lisible, partageable et traçable.',
+        EN: 'Produce a readable, shareable, and traceable Situation Card.',
+      },
+      href: `/create?lang=${lang.toLowerCase()}`,
+    },
+    {
+      tag: 'Atlas',
+      sub: { FR: 'Cartes publiques', EN: 'Public cards' },
+      body: {
+        FR: 'Explorer les cartes publiques, comparer les situations et repérer les patterns.',
+        EN: 'Explore public cards, compare situations, and identify patterns.',
+      },
+      href: `/library?lang=${lang.toLowerCase()}`,
+    },
+    {
+      tag: 'IAAA+',
+      sub: { FR: 'Organisations', EN: 'Organizations' },
+      body: {
+        FR: 'Équiper une équipe, une organisation ou une gouvernance avec une lecture partagée.',
+        EN: 'Equip a team, organization, or governance system with shared reading.',
+      },
+      href: `/enterprise?lang=${lang.toLowerCase()}`,
+    },
   ]
   const visibilityLabel = (value: VisibilityState) => {
     if (value === 'public') return lang === 'FR' ? 'Publique' : 'Public'
@@ -1653,7 +1679,9 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
             </div>
           </Link>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, color: GOLD, textAlign: 'center', fontStyle: 'italic' }}>
-            {lang === 'FR' ? <>Comprendre les situations complexes<br />par une carte.</> : <>Understanding complex situations<br />through a card.</>}
+            {isCreateSurface
+              ? (lang === 'FR' ? <>Créer une Situation Card<br /><span style={{ fontSize: 15, fontWeight: 400 }}>Question, URL ou document.</span></> : <>Create a Situation Card<br /><span style={{ fontSize: 15, fontWeight: 400 }}>Question, URL, or document.</span></>)
+              : (lang === 'FR' ? <>Comprendre les situations complexes<br />par une carte.</> : <>Understanding complex situations<br />through a card.</>)}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 20 }}>
             <Link href={`/pricing?lang=${lang.toLowerCase()}`} style={{ fontSize: 12.5, color: TXT2, textDecoration: 'none' }}>{t.offres}</Link>
@@ -1846,12 +1874,13 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: 'FR' 
 
         {/* MODULES */}
         <section style={{ background: '#EFEDE7', padding: '20px 28px', borderTop: `1px solid ${BDR}` }}>
-          <div style={{ maxWidth: 1160, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+          <div style={{ maxWidth: 1160, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
             {MODULES.map(m => (
               <Link key={m.tag} href={m.href} style={{ textDecoration: 'none' }}>
                 <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 10, padding: '14px' }}>
                   <div style={{ fontFamily: "'Cinzel',serif", fontSize: 13, fontWeight: 500, color: NAVY, marginBottom: 3 }}>{m.tag}</div>
                   <div style={{ fontSize: 11, color: TXT3, marginBottom: 8 }}>{m.sub[lang]}</div>
+                  <div style={{ fontSize: 11, color: TXT2, lineHeight: 1.55, minHeight: 48 }}>{m.body[lang]}</div>
                   <div style={{ fontSize: 11, color: TXT3 }}>→</div>
                 </div>
               </Link>
