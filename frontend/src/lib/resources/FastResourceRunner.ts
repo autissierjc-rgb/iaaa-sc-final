@@ -34,6 +34,15 @@ type FastSearchPlan = {
   label: string
 }
 
+const COMPANY_DOMAINS = new Set([
+  'startup_market',
+  'business_strategy',
+  'professional',
+  'management',
+  'product_platform',
+  'technology_ai',
+])
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | 'timeout'> {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => resolve('timeout'), timeoutMs)
@@ -97,7 +106,7 @@ function sourceDomainsFor(input: FastResourceRunnerInput): string[] {
     ]
   }
 
-  if (input.interpretation.domain === 'startup_market' || input.interpretation.domain === 'business_strategy') {
+  if (COMPANY_DOMAINS.has(input.interpretation.domain)) {
     return [
       'linkedin.com',
       'crunchbase.com',
@@ -105,6 +114,7 @@ function sourceDomainsFor(input: FastResourceRunnerInput): string[] {
       'dealroom.co',
       'techcrunch.com',
       'businesswire.com',
+      'github.com',
     ]
   }
 
@@ -115,11 +125,49 @@ function sourceDomainsFor(input: FastResourceRunnerInput): string[] {
   return []
 }
 
+function companySubject(input: FastResourceRunnerInput): string {
+  const raw = [
+    input.interpretation.object_of_analysis,
+    input.interpretation.header_subject,
+    input.interpretation.situation_soumise,
+  ].find((value) => value && value.trim()) ?? ''
+
+  const stopwords = new Set([
+    'Que',
+    'Qu',
+    'Quelle',
+    'Quel',
+    'Comment',
+    'Pourquoi',
+    'Faut',
+    'Mon',
+    'Ma',
+    'The',
+    'What',
+    'Should',
+  ])
+  const directCompany = raw
+    .match(/\b[A-Z][A-Za-z0-9.+-]{2,}(?:\s+[A-Z][A-Za-z0-9.+-]{2,}){0,2}\b/g)
+    ?.map((candidate) => candidate.trim())
+    .find((candidate) => !stopwords.has(candidate.split(/\s+/)[0]))
+  if (directCompany) return directCompany
+
+  return raw
+    .replace(/\b(que|fait|compagnie|societe|startup|entreprise|rejoindre|penser|eventuellement|avec|ma|mon|the|company|startup|join|should|what|does)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80)
+}
+
 function fastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
-  const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
+  const subject = COMPANY_DOMAINS.has(input.interpretation.domain)
+    ? companySubject(input)
+    : input.interpretation.object_of_analysis || input.interpretation.situation_soumise
 
   return {
-    query: subject.slice(0, 180),
+    query: COMPANY_DOMAINS.has(input.interpretation.domain)
+      ? `${subject} official site company LinkedIn`.slice(0, 180)
+      : subject.slice(0, 180),
     include_domains: sourceDomainsFor(input),
     topic: ['geopolitics', 'war_security', 'institutional_crisis'].includes(input.interpretation.domain)
       ? 'news'
@@ -129,10 +177,14 @@ function fastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
 }
 
 function broadFastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
-  const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
+  const subject = COMPANY_DOMAINS.has(input.interpretation.domain)
+    ? companySubject(input)
+    : input.interpretation.object_of_analysis || input.interpretation.situation_soumise
   const query = [
     subject,
-    input.interpretation.domain === 'geopolitics' || input.interpretation.domain === 'institutional_crisis'
+    COMPANY_DOMAINS.has(input.interpretation.domain)
+      ? 'official website customers pricing jobs docs'
+      : input.interpretation.domain === 'geopolitics' || input.interpretation.domain === 'institutional_crisis'
       ? 'latest reliable sources'
       : 'official sources evidence',
   ].join(' ').slice(0, 200)
