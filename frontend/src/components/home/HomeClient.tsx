@@ -1578,6 +1578,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
   const [visibility, setVisibility]   = useState<'restricted' | 'public'>('restricted')
   const [showHelp, setShowHelp]       = useState(false)
   const [leftHelpOpen, setLeftHelpOpen] = useState(false)
+  const [leftExpanded, setLeftExpanded] = useState(false)
   const [shareOpen, setShareOpen]     = useState(false)
   const [storageReady, setStorageReady] = useState(false)
   const [renWorkingContext, setRenWorkingContext] = useState<RenWorkingContext | null>(null)
@@ -1607,6 +1608,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
     setDialogueNotes([])
     setScData(null)
     setScExpanded(false)
+    setLeftExpanded(false)
     setCompassMode('idle')
     setShowHelp(false)
     setLeftHelpOpen(false)
@@ -2009,6 +2011,51 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         </div>
       )}
 
+      {leftExpanded && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,42,58,0.46)', zIndex: 290, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ width: 'min(920px, 96vw)', height: 'min(760px, 92vh)', background: BG_P, border: `1px solid ${BDR_G}`, borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 70px rgba(26,42,58,0.24)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderBottom: `1px solid ${BDR}` }}>
+              <button type="button" onClick={handleUploadClick} title={t.upload_title} style={{ padding: '7px 10px', fontSize: 12, color: TXT2, cursor: 'pointer', border: `1px solid ${BDR}`, background: BG_P, borderRadius: 8 }}>{t.upload}</button>
+              <button type="button" onClick={handlePlugClick} title={t.plug_title} style={{ padding: '7px 10px', fontSize: 12, color: TXT2, cursor: 'pointer', border: `1px solid ${BDR}`, background: BG_P, borderRadius: 8 }}>{t.plug}</button>
+              <div style={{ marginLeft: 'auto', fontSize: 11, color: TXT3, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif" }}>
+                {lang === 'FR' ? 'Espace de raisonnement systeme' : 'System reasoning space'}
+              </div>
+              <button type="button" onClick={() => setLeftExpanded(false)} aria-label={lang === 'FR' ? 'Fermer' : 'Close'} style={{ width: 30, height: 30, border: 'none', background: 'none', cursor: 'pointer', color: TXT3, fontSize: 22 }}>×</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {chatMsgs.length === 0 ? (
+                <div style={{ color: TXT3, fontSize: 13, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif" }}>
+                  {lang === 'FR' ? 'Discutez avec REN, puis cliquez la boussole quand la carte doit etre generee.' : 'Discuss with REN, then click the compass when the card should be generated.'}
+                </div>
+              ) : chatMsgs.map((msg, i) => {
+                if (msg.kind === 'user') return <div key={i} style={{ alignSelf: 'flex-end', background: 'rgba(204,163,100,0.22)', color: TXT, border: `1px solid ${BDR_G}`, borderRadius: '10px 10px 2px 10px', padding: '8px 12px', fontSize: 13, maxWidth: '78%', fontStyle: 'italic' }}>{msg.text}</div>
+                if (msg.kind === 'ren') return (
+                  <div key={i} style={{ alignSelf: 'flex-start', background: 'rgba(184,154,106,0.08)', border: `1px solid ${BDR_G}`, borderRadius: '2px 10px 10px 10px', padding: '10px 13px', maxWidth: '82%' }}>
+                    <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 6 }}>REN {msg.mode ? `· ${msg.mode}` : ''}</div>
+                    <div style={{ fontSize: 13, color: TXT2, lineHeight: 1.6, fontFamily: "'Cormorant Garamond',serif" }}>{msg.text}</div>
+                    {msg.next === 'click_compass_generate_card' && <div style={{ fontSize: 10, color: TXT3, fontStyle: 'italic', marginTop: 7 }}>{lang === 'FR' ? 'Cliquez la boussole pour generer la carte.' : 'Click the compass to generate the card.'}</div>}
+                  </div>
+                )
+                if (msg.kind === 'material') return <div key={i} style={{ alignSelf: 'flex-start', background: 'rgba(26,58,107,0.05)', color: TXT2, border: `1px solid ${BDR}`, borderRadius: '2px 10px 10px 10px', padding: '8px 12px', fontSize: 12, maxWidth: '82%', lineHeight: 1.45 }}>{msg.text}</div>
+                if (msg.kind === 'clarify' || msg.kind === 'refine') return <div key={i} style={{ alignSelf: 'flex-start', color: TXT2, fontSize: 13, lineHeight: 1.6, fontStyle: 'italic' }}>{msg.questions.join(' · ')}</div>
+                if (msg.kind === 'block') return <div key={i} style={{ alignSelf: 'flex-start', background: 'rgba(224,107,74,0.06)', border: '1px solid rgba(224,107,74,0.25)', borderRadius: '2px 10px 10px 10px', padding: '8px 12px', maxWidth: '82%', fontSize: 12, color: '#A32D2D' }}>{msg.reason}</div>
+                return null
+              })}
+            </div>
+            <div style={{ borderTop: `1px solid ${BDR}`, padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr auto auto auto', alignItems: 'end', gap: 10 }}>
+              <textarea value={situation} onChange={e => handleSituationChange(e.target.value)} onKeyDown={handleTextKeyDown} placeholder={t.describe} style={{ width: '100%', minHeight: 120, border: `1px solid ${BDR}`, borderRadius: 10, background: '#fff', resize: 'vertical', fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: TXT, outline: 'none', lineHeight: 1.7, padding: 12 }} />
+              <button type="button" onClick={resetConversation} title={lang === 'FR' ? 'Réinitialiser l’échange courant' : 'Reset current exchange'} aria-label={lang === 'FR' ? 'Réinitialiser l’échange courant' : 'Reset current exchange'} style={{ width: 38, height: 38, border: `1px solid ${BDR}`, background: BG_P, cursor: 'pointer', borderRadius: '50%', color: TXT2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v6h-6" /></svg>
+              </button>
+              <button type="button" onClick={() => void sendChatMessage()} title={t.send_title} aria-label={t.send_title} disabled={!situation.trim() || renLoading} style={{ width: 42, height: 42, border: `1px solid ${BDR}`, background: situation.trim() && !renLoading ? '#151B22' : BG_P, cursor: situation.trim() && !renLoading ? 'pointer' : 'not-allowed', borderRadius: '50%', color: situation.trim() && !renLoading ? '#fff' : TXT3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
+              </button>
+              <Boussole mode={effectiveCompassMode} onClick={handleGenerate} disabled={compassDisabled} title={t.compass_title} />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ minHeight: '100vh', background: BG }}>
         {/* HEADER */}
         <header style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', padding: '16px 36px', background: BG, borderBottom: `1px solid ${BDR}`, position: 'sticky', top: 0, zIndex: 100 }}>
@@ -2168,7 +2215,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12, padding: '8px 16px 12px', borderTop: `1px solid ${BDR}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifySelf: 'start' }}>
-                  <button title={t.expand_title} aria-label={t.expand_title} style={{ width: 30, height: 30, border: 'none', background: 'none', cursor: 'pointer', color: TXT2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <button type="button" onClick={() => setLeftExpanded(true)} title={t.expand_title} aria-label={t.expand_title} style={{ width: 30, height: 30, border: 'none', background: 'none', cursor: 'pointer', color: TXT2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
                   </button>
                   <button title={t.mic_title} aria-label={t.mic_title} style={{ width: 30, height: 30, border: `1px solid ${BDR}`, background: BG_P, cursor: 'pointer', borderRadius: '50%', color: TXT2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
