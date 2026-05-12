@@ -1602,12 +1602,10 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
   const effectiveCompassMode = compassMode === 'off' && hasText ? 'idle' : compassMode
   const renActionLabel = renLoading
     ? (lang === 'FR' ? 'REN reflechit...' : 'REN is thinking...')
-    : (lang === 'FR' ? 'Chat REN' : 'REN chat')
+    : 'Chat'
   const compassActionLabel = scLoading
     ? (lang === 'FR' ? 'Generation...' : 'Generating...')
-    : !hasText
-      ? (lang === 'FR' ? 'Ajoutez une situation' : 'Add a situation')
-      : (lang === 'FR' ? 'Generer la carte' : 'Generate card')
+    : (lang === 'FR' ? 'Carte' : 'Card')
 
   function resetConversation() {
     try { localStorage.removeItem(LAST_SC_STORAGE_KEY) } catch {}
