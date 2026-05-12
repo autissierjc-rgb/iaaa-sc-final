@@ -1600,6 +1600,14 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
   const hasClarifyAnswer = answers.some(a => a.trim().length > 0)
   const compassDisabled = scLoading || isBlocked || (waitingForAnswers ? !(hasClarifyAnswer || hasText) : !hasText)
   const effectiveCompassMode = compassMode === 'off' && hasText ? 'idle' : compassMode
+  const renActionLabel = renLoading
+    ? (lang === 'FR' ? 'REN reflechit...' : 'REN is thinking...')
+    : (lang === 'FR' ? 'Chat REN' : 'REN chat')
+  const compassActionLabel = scLoading
+    ? (lang === 'FR' ? 'Generation...' : 'Generating...')
+    : !hasText
+      ? (lang === 'FR' ? 'Ajoutez une situation' : 'Add a situation')
+      : (lang === 'FR' ? 'Generer la carte' : 'Generate card')
 
   function resetConversation() {
     try { localStorage.removeItem(LAST_SC_STORAGE_KEY) } catch {}
@@ -2060,11 +2068,17 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                 </button>
               </div>
               <textarea value={situation} onChange={e => handleSituationChange(e.target.value)} onKeyDown={handleTextKeyDown} placeholder={t.describe} style={{ width: '100%', minHeight: 120, border: `1px solid ${BDR}`, borderRadius: 12, background: '#fff', resize: 'vertical', fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: TXT, outline: 'none', lineHeight: 1.7, padding: 12 }} />
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => void sendChatMessage()} title={t.send_title} aria-label={t.send_title} disabled={!situation.trim() || renLoading} style={{ width: 44, height: 44, border: `1px solid ${BDR}`, background: situation.trim() && !renLoading ? '#151B22' : '#fff', cursor: situation.trim() && !renLoading ? 'pointer' : 'not-allowed', borderRadius: '50%', color: situation.trim() && !renLoading ? '#fff' : TXT3, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 18px rgba(26,42,58,0.06)' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
-                </button>
-                <Boussole mode={effectiveCompassMode} onClick={handleGenerate} disabled={compassDisabled} title={t.compass_title} />
+              <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <button type="button" onClick={() => void sendChatMessage()} title={t.send_title} aria-label={t.send_title} disabled={!situation.trim() || renLoading} style={{ width: 44, height: 44, border: `1px solid ${BDR}`, background: situation.trim() && !renLoading ? '#151B22' : '#fff', cursor: situation.trim() && !renLoading ? 'pointer' : 'not-allowed', borderRadius: '50%', color: situation.trim() && !renLoading ? '#fff' : TXT3, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 18px rgba(26,42,58,0.06)' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
+                  </button>
+                  <span style={{ fontSize: 9, color: renLoading ? GOLD : TXT3, whiteSpace: 'nowrap' }}>{renActionLabel}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <Boussole mode={effectiveCompassMode} onClick={handleGenerate} disabled={compassDisabled} title={t.compass_title} />
+                  <span style={{ fontSize: 9, color: scLoading ? GOLD : TXT3, whiteSpace: 'nowrap' }}>{compassActionLabel}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -2249,21 +2263,25 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                     </svg>
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void sendChatMessage()}
-                  title={t.send_title}
-                  aria-label={t.send_title}
-                  disabled={!situation.trim() || renLoading}
-                  style={{ width: 36, height: 36, border: `1px solid ${BDR}`, background: situation.trim() && !renLoading ? '#151B22' : BG_P, cursor: situation.trim() && !renLoading ? 'pointer' : 'not-allowed', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: situation.trim() && !renLoading ? '#fff' : TXT3 }}
-                >
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M12 19V5" />
-                    <path d="m5 12 7-7 7 7" />
-                  </svg>
-                </button>
-                <div style={{ justifySelf: 'end' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                  <button
+                    type="button"
+                    onClick={() => void sendChatMessage()}
+                    title={t.send_title}
+                    aria-label={t.send_title}
+                    disabled={!situation.trim() || renLoading}
+                    style={{ width: 36, height: 36, border: `1px solid ${BDR}`, background: situation.trim() && !renLoading ? '#151B22' : BG_P, cursor: situation.trim() && !renLoading ? 'pointer' : 'not-allowed', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: situation.trim() && !renLoading ? '#fff' : TXT3 }}
+                  >
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 19V5" />
+                      <path d="m5 12 7-7 7 7" />
+                    </svg>
+                  </button>
+                  <span style={{ fontSize: 8.5, color: renLoading ? GOLD : TXT3, whiteSpace: 'nowrap' }}>{renActionLabel}</span>
+                </div>
+                <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                   <Boussole mode={effectiveCompassMode} onClick={handleGenerate} disabled={compassDisabled} title={t.compass_title} />
+                  <span style={{ fontSize: 8.5, color: scLoading ? GOLD : TXT3, whiteSpace: 'nowrap' }}>{compassActionLabel}</span>
                 </div>
               </div>
             </div>
@@ -2328,6 +2346,9 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
                   <GlobeInteractif size={240} />
                   <div style={{ fontSize: 11, color: TXT3, fontStyle: 'italic', marginTop: 14, fontFamily: "'Cormorant Garamond',serif" }}>{t.waiting}</div>
+                  <div style={{ fontSize: 10, color: TXT3, fontStyle: 'italic', marginTop: 4, fontFamily: "'Cormorant Garamond',serif" }}>
+                    {lang === 'FR' ? 'Elle apparaitra apres le clic sur la boussole.' : 'It will appear after clicking the compass.'}
+                  </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                     {[{ c: '#1D9E75', l: lang === 'FR' ? 'Stabilisation' : 'Stabilization' }, { c: '#E06B4A', l: lang === 'FR' ? 'Escalade' : 'Escalation' }, { c: '#378ADD', l: lang === 'FR' ? 'Rupture' : 'Regime Shift' }].map(tr => (
                       <div key={tr.l} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: TXT3 }}>
