@@ -2174,6 +2174,18 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                   <button title={t.mic_title} aria-label={t.mic_title} style={{ width: 30, height: 30, border: `1px solid ${BDR}`, background: BG_P, cursor: 'pointer', borderRadius: '50%', color: TXT2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="2" width="6" height="11" rx="3" /><path d="M19 10a7 7 0 01-14 0" /><line x1="12" y1="19" x2="12" y2="22" /></svg>
                   </button>
+                  <button
+                    type="button"
+                    onClick={resetConversation}
+                    title={lang === 'FR' ? 'Réinitialiser l’échange courant' : 'Reset current exchange'}
+                    aria-label={lang === 'FR' ? 'Réinitialiser l’échange courant' : 'Reset current exchange'}
+                    style={{ width: 30, height: 30, border: `1px solid ${BDR}`, background: BG_P, cursor: 'pointer', borderRadius: '50%', color: TXT2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                      <path d="M21 3v6h-6" />
+                    </svg>
+                  </button>
                 </div>
                 <button
                   type="button"
