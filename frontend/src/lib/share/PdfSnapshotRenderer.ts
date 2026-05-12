@@ -98,18 +98,19 @@ function wrapText(value: string, max = 92): string[] {
     .flatMap((line) => line.trim() ? wrapLine(line.trim(), max) : [''])
 }
 
-function pdfHex(value: string): string {
-  const bytes = [0xfe, 0xff]
-  for (const char of value) {
-    const code = char.charCodeAt(0)
-    bytes.push((code >> 8) & 0xff, code & 0xff)
-  }
-  return bytes.map((byte) => byte.toString(16).padStart(2, '0')).join('').toUpperCase()
+function pdfText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E]/g, ' ')
+    .replace(/\\/g, '\\\\')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)')
 }
 
 function streamForLines(lines: Array<{ text: string; size: number; x: number; y: number }>): string {
   return lines
-    .map((line) => `BT /F1 ${line.size} Tf ${line.x} ${line.y} Td <${pdfHex(line.text)}> Tj ET`)
+    .map((line) => `BT /F1 ${line.size} Tf ${line.x} ${line.y} Td (${pdfText(line.text)}) Tj ET`)
     .join('\n')
 }
 
@@ -119,7 +120,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string): Buffer {
   const marginX = 50
   const startY = 790
   const bottomY = 58
-  const objects: string[] = []
+  const objects: string[] = ['', '', '']
   const pages: string[] = []
   let currentLines: Array<{ text: string; size: number; x: number; y: number }> = []
   let y = startY
@@ -155,11 +156,9 @@ function makePdf(title: string, sections: PdfSection[], meta: string): Buffer {
 
   if (currentLines.length > 0) flushPage()
 
-  objects.unshift(
-    `<< /Type /Catalog /Pages 2 0 R >>`,
-    `<< /Type /Pages /Kids [${pages.join(' ')}] /Count ${pages.length} >>`,
-    `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,
-  )
+  objects[0] = `<< /Type /Catalog /Pages 2 0 R >>`
+  objects[1] = `<< /Type /Pages /Kids [${pages.join(' ')}] /Count ${pages.length} >>`
+  objects[2] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`
 
   const chunks: string[] = ['%PDF-1.4\n']
   const offsets: number[] = [0]
