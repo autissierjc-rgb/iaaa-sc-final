@@ -165,6 +165,15 @@ export const V2_FOUNDATION_BRICKS: V2FoundationBrick[] = [
     note: 'Separe le chat REN de la generation SC : la fleche explore, la boussole cristallise la carte.',
   },
   {
+    id: 'home-ren-chat',
+    label: 'Home REN chat bridge',
+    layer: 'dialogue / UI/mobile',
+    status: 'wired',
+    commit: '13ae4ba',
+    files: ['src/components/home/HomeClient.tsx'],
+    note: 'Branche la fleche du bloc gauche sur REN tout en gardant la boussole comme seul geste de generation SC.',
+  },
+  {
     id: 'generate-v2-dry-run',
     label: 'Route generate-v2 dry run',
     layer: 'api / pipeline',
