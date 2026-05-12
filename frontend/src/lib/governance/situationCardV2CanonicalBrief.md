@@ -220,6 +220,31 @@ REN peut preparer la carte.
 Seule la boussole la cristallise.
 ```
 
+Separation des routes :
+
+```txt
+/api/ren-chat       = discuter, explorer, challenger REN.
+/api/generate-v2    = generer la Situation Card.
+/api/recherche-plus = enquete externe.
+/api/share-v2       = partager, snapshot, PDF.
+```
+
+Le LLM formule, REN oriente, la boussole cristallise. Le fournisseur LLM peut
+changer, mais la reponse chat doit passer par un contrat REN.
+
+Contrat cible :
+
+```ts
+{
+  answer: string
+  ren_mode: 'explore' | 'clarify' | 'challenge' | 'ready_for_card' | 'guarded'
+  useful_context: string[]
+  missing_context: string[]
+  suggested_next_action: 'continue_chat' | 'ask_one_precision' | 'click_compass_generate_card' | 'attach_material' | 'launch_recherche_plus'
+  working_context: object
+}
+```
+
 ## 3c. Matiere utilisateur, telechargement et plug
 
 Texte, URL, document, image, tableur ou plug ne sont pas des produits

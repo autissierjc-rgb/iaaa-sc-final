@@ -156,6 +156,15 @@ export const V2_FOUNDATION_BRICKS: V2FoundationBrick[] = [
     note: 'Ajoute un testeur visuel pour analyser les reactions utilisateur depuis le cockpit V2.',
   },
   {
+    id: 'ren-chat-orchestrator',
+    label: 'REN Chat Orchestrator',
+    layer: 'dialogue / interpretation',
+    status: 'wired',
+    commit: 'pending',
+    files: ['src/lib/contracts/renChat.ts', 'src/lib/ren', 'src/app/api/ren-chat/route.ts', 'src/app/sis-system/v2/RenChatTester.tsx'],
+    note: 'Separe le chat REN de la generation SC : la fleche explore, la boussole cristallise la carte.',
+  },
+  {
     id: 'generate-v2-dry-run',
     label: 'Route generate-v2 dry run',
     layer: 'api / pipeline',

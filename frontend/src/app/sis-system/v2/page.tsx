@@ -4,6 +4,7 @@ import GenerateV2Tester from './GenerateV2Tester'
 import LanguageV2Tester from './LanguageV2Tester'
 import PdfExportV2Tester from './PdfExportV2Tester'
 import ReactionV2Tester from './ReactionV2Tester'
+import RenChatTester from './RenChatTester'
 import ResourcePolicyMatrix from './ResourcePolicyMatrix'
 import SharedSnapshotResolveTester from './SharedSnapshotResolveTester'
 import ShareV2Tester from './ShareV2Tester'
@@ -199,6 +200,8 @@ export default function SisSystemV2Page() {
         </section>
 
         <ReactionV2Tester />
+
+        <RenChatTester />
 
         <ResourcePolicyMatrix />
 
