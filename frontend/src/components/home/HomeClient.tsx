@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import GlobeInteractif from '@/components/ui/globe-interactif'
+import type { RenWorkingContext, UserMaterialSourceType } from '@/lib/contracts'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const NAVY   = '#1B3A6B'
@@ -1460,6 +1461,7 @@ function SidePanel({ open, title, onClose, children }: {
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ChatMsg =
   | { kind: 'user'; text: string }
+  | { kind: 'ren'; text: string; mode?: string; next?: string }
   | { kind: 'material'; text: string }
   | { kind: 'flash'; etat: string; lecture: string }
   | { kind: 'clarify'; questions: string[] }
@@ -1578,6 +1580,9 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
   const [leftHelpOpen, setLeftHelpOpen] = useState(false)
   const [shareOpen, setShareOpen]     = useState(false)
   const [storageReady, setStorageReady] = useState(false)
+  const [renWorkingContext, setRenWorkingContext] = useState<RenWorkingContext | null>(null)
+  const [renLoading, setRenLoading] = useState(false)
+  const [materialSources, setMaterialSources] = useState<UserMaterialSourceType[]>([])
   const chatEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -1605,6 +1610,9 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
     setCompassMode('idle')
     setShowHelp(false)
     setLeftHelpOpen(false)
+    setRenWorkingContext(null)
+    setRenLoading(false)
+    setMaterialSources([])
   }
 
   useEffect(() => {
@@ -1776,19 +1784,68 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
     } catch (e) { console.error(e); setCompassMode('idle'); setScLoading(false) }
   }, [situation, activeSituation, scData, lang, compassDisabled, waitingForAnswers, refiningOptional, lastMsg, answers, dialogueNotes])
 
-  function sendChatMessage() {
+  async function sendChatMessage() {
     const text = sanitizeSituationDraft(situation).trim()
     if (!text) return false
     setChatMsgs(prev => [...prev, { kind: 'user', text }])
-    setActiveSituation(text)
+    const hasActiveSituation = activeSituation.trim().length > 0
+    if (hasActiveSituation) {
+      setDialogueNotes(prev => [...prev, text])
+    } else {
+      setActiveSituation(text)
+    }
     setSituation('')
+    setRenLoading(true)
+    try {
+      const response = await fetch('/api/ren-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          language: contentLang.toLowerCase(),
+          working_context: renWorkingContext ?? undefined,
+          material_sources: materialSources,
+        }),
+      })
+      const payload = await response.json()
+      if (!response.ok || !payload?.ok || !payload?.ren) {
+        throw new Error(payload?.message ?? payload?.error ?? 'ren_chat_unavailable')
+      }
+      setRenWorkingContext(payload.ren.working_context)
+      setChatMsgs(prev => [
+        ...prev,
+        {
+          kind: 'ren',
+          text: String(payload.ren.answer ?? ''),
+          mode: payload.ren.ren_mode,
+          next: payload.ren.suggested_next_action,
+        },
+      ])
+      if (payload.ren.suggested_next_action === 'click_compass_generate_card') {
+        setCompassMode('idle')
+      }
+    } catch (caught) {
+      setChatMsgs(prev => [
+        ...prev,
+        {
+          kind: 'ren',
+          text: lang === 'FR'
+            ? 'REN est momentanement indisponible. La boussole peut toujours generer la carte a partir de votre message.'
+            : 'REN is temporarily unavailable. The compass can still generate the card from your message.',
+          mode: 'fallback',
+          next: 'click_compass_generate_card',
+        },
+      ])
+    } finally {
+      setRenLoading(false)
+    }
     return true
   }
 
   function handleTextKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key !== 'Enter' || e.shiftKey) return
     e.preventDefault()
-    sendChatMessage()
+    void sendChatMessage()
   }
 
   function handleUploadClick() {
@@ -1805,11 +1862,13 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         text: `${t.material_added} : ${file.name} (${Math.ceil(file.size / 1024)} Ko)`,
       },
     ])
+    setMaterialSources(prev => Array.from(new Set([...prev, 'file_upload'])))
     event.target.value = ''
   }
 
   function handlePlugClick() {
     setChatMsgs(prev => [...prev, { kind: 'material', text: t.plug_soon }])
+    setMaterialSources(prev => Array.from(new Set([...prev, 'private_plug'])))
   }
 
   async function handleFlashExpand(text: string) {
@@ -2045,6 +2104,19 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                 <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 220, overflowY: 'auto' }}>
                   {chatMsgs.map((msg, i) => {
                     if (msg.kind === 'user') return <div key={i} style={{ alignSelf: 'flex-end', background: 'rgba(204,163,100,0.22)', color: TXT, border: `1px solid ${BDR_G}`, borderRadius: '10px 10px 2px 10px', padding: '7px 12px', fontSize: 12, maxWidth: '80%', fontStyle: 'italic' }}>{msg.text}</div>
+                    if (msg.kind === 'ren') return (
+                      <div key={i} style={{ alignSelf: 'flex-start', background: 'rgba(184,154,106,0.08)', border: `1px solid ${BDR_G}`, borderRadius: '2px 10px 10px 10px', padding: '9px 12px', maxWidth: '90%' }}>
+                        <div style={{ fontSize: 8, color: GOLD, letterSpacing: '.1em', fontFamily: "'Cinzel',serif", marginBottom: 6 }}>
+                          REN {msg.mode ? `· ${msg.mode}` : ''}
+                        </div>
+                        <div style={{ fontSize: 12, color: TXT2, lineHeight: 1.55, fontFamily: "'Cormorant Garamond',serif" }}>{msg.text}</div>
+                        {msg.next === 'click_compass_generate_card' && (
+                          <div style={{ fontSize: 10, color: TXT3, fontStyle: 'italic', marginTop: 7 }}>
+                            {lang === 'FR' ? 'Cliquez la boussole pour générer la carte.' : 'Click the compass to generate the card.'}
+                          </div>
+                        )}
+                      </div>
+                    )
                     if (msg.kind === 'material') return <div key={i} style={{ alignSelf: 'flex-start', background: 'rgba(26,58,107,0.05)', color: TXT2, border: `1px solid ${BDR}`, borderRadius: '2px 10px 10px 10px', padding: '8px 12px', fontSize: 11, maxWidth: '90%', lineHeight: 1.45 }}>{msg.text}</div>
                     if (msg.kind === 'flash') return (
                       <div key={i} style={{ alignSelf: 'flex-start', background: 'rgba(184,154,106,0.08)', border: `1px solid ${BDR_G}`, borderRadius: '2px 10px 10px 10px', padding: '10px 12px', maxWidth: '90%' }}>
@@ -2105,11 +2177,11 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                 </div>
                 <button
                   type="button"
-                  onClick={sendChatMessage}
+                  onClick={() => void sendChatMessage()}
                   title={t.send_title}
                   aria-label={t.send_title}
-                  disabled={!situation.trim()}
-                  style={{ width: 36, height: 36, border: `1px solid ${BDR}`, background: situation.trim() ? '#151B22' : BG_P, cursor: situation.trim() ? 'pointer' : 'not-allowed', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: situation.trim() ? '#fff' : TXT3 }}
+                  disabled={!situation.trim() || renLoading}
+                  style={{ width: 36, height: 36, border: `1px solid ${BDR}`, background: situation.trim() && !renLoading ? '#151B22' : BG_P, cursor: situation.trim() && !renLoading ? 'pointer' : 'not-allowed', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: situation.trim() && !renLoading ? '#fff' : TXT3 }}
                 >
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 19V5" />
