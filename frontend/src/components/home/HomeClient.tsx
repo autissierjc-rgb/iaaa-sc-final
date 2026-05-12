@@ -2027,10 +2027,11 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderBottom: `1px solid ${BDR}` }}>
               <button type="button" onClick={handleUploadClick} title={t.upload_title} style={{ padding: '8px 12px', fontSize: 12, color: NAVY, cursor: 'pointer', border: `1px solid ${BDR}`, background: '#fff', borderRadius: 999, boxShadow: '0 6px 14px rgba(26,42,58,0.04)' }}>{t.upload}</button>
               <button type="button" onClick={handlePlugClick} title={t.plug_title} style={{ padding: '8px 12px', fontSize: 12, color: NAVY, cursor: 'pointer', border: `1px solid ${BDR}`, background: '#fff', borderRadius: 999, boxShadow: '0 6px 14px rgba(26,42,58,0.04)' }}>{t.plug}</button>
-              <div style={{ marginLeft: 'auto', fontSize: 13, color: NAVY, fontFamily: "'Cinzel',serif", letterSpacing: '.03em' }}>
-                {lang === 'FR' ? 'Chat REN agrandi' : 'Expanded REN chat'}
-              </div>
               <button type="button" onClick={() => setLeftHelpOpen(v => !v)} title={t.block_help} aria-label={t.block_help} aria-expanded={leftHelpOpen} style={{ width: 30, height: 30, borderRadius: '50%', border: `1px solid ${leftHelpOpen ? GOLD : BDR}`, background: leftHelpOpen ? 'rgba(204,163,100,0.12)' : '#fff', cursor: 'pointer', fontSize: 12, color: leftHelpOpen ? GOLD : TXT3 }}>?</button>
+              <div style={{ marginLeft: 'auto' }} />
+              <button type="button" onClick={() => setLeftExpanded(false)} title={lang === 'FR' ? 'Réduire le bloc' : 'Collapse block'} aria-label={lang === 'FR' ? 'Réduire le bloc' : 'Collapse block'} style={{ width: 30, height: 30, border: 'none', background: 'none', cursor: 'pointer', color: TXT2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 3 3 3 3 9" /><polyline points="15 21 21 21 21 15" /><line x1="3" y1="3" x2="10" y2="10" /><line x1="21" y1="21" x2="14" y2="14" /></svg>
+              </button>
               <button type="button" onClick={() => setLeftExpanded(false)} aria-label={lang === 'FR' ? 'Fermer' : 'Close'} style={{ width: 30, height: 30, border: 'none', background: 'none', cursor: 'pointer', color: TXT3, fontSize: 22 }}>×</button>
             </div>
             {leftHelpOpen && (
@@ -2040,8 +2041,11 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
             )}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               {chatMsgs.length === 0 ? (
-                <div style={{ color: TXT3, fontSize: 13, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif" }}>
-                  {lang === 'FR' ? 'Discutez avec REN, puis cliquez la boussole quand la carte doit etre generee.' : 'Discuss with REN, then click the compass when the card should be generated.'}
+                <div style={{ flex: 1, minHeight: 360, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ color: TXT3, fontSize: 13, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif" }}>
+                    {lang === 'FR' ? 'Discutez avec REN, puis cliquez la boussole quand la carte doit etre generee.' : 'Discuss with REN, then click the compass when the card should be generated.'}
+                  </div>
+                  <textarea value={situation} onChange={e => handleSituationChange(e.target.value)} onKeyDown={handleTextKeyDown} placeholder={t.describe} style={{ flex: 1, width: '100%', minHeight: 320, border: `1px solid ${BDR}`, borderRadius: 12, background: '#fff', resize: 'none', fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: TXT, outline: 'none', lineHeight: 1.7, padding: 14 }} />
                 </div>
               ) : chatMsgs.map((msg, i) => {
                 if (msg.kind === 'user') return <div key={i} style={{ alignSelf: 'flex-end', background: 'rgba(204,163,100,0.22)', color: TXT, border: `1px solid ${BDR_G}`, borderRadius: '10px 10px 2px 10px', padding: '8px 12px', fontSize: 13, maxWidth: '78%', fontStyle: 'italic' }}>{msg.text}</div>
@@ -2067,7 +2071,9 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="2" width="6" height="11" rx="3" /><path d="M19 10a7 7 0 01-14 0" /><line x1="12" y1="19" x2="12" y2="22" /></svg>
                 </button>
               </div>
-              <textarea value={situation} onChange={e => handleSituationChange(e.target.value)} onKeyDown={handleTextKeyDown} placeholder={t.describe} style={{ width: '100%', minHeight: 120, border: `1px solid ${BDR}`, borderRadius: 12, background: '#fff', resize: 'vertical', fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: TXT, outline: 'none', lineHeight: 1.7, padding: 12 }} />
+              {chatMsgs.length > 0 ? (
+                <textarea value={situation} onChange={e => handleSituationChange(e.target.value)} onKeyDown={handleTextKeyDown} placeholder={t.describe} style={{ width: '100%', minHeight: 120, border: `1px solid ${BDR}`, borderRadius: 12, background: '#fff', resize: 'vertical', fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: TXT, outline: 'none', lineHeight: 1.7, padding: 12 }} />
+              ) : <div />}
               <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', justifyContent: 'flex-end' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                   <button type="button" onClick={() => void sendChatMessage()} title={t.send_title} aria-label={t.send_title} disabled={!situation.trim() || renLoading} style={{ width: 44, height: 44, border: `1px solid ${BDR}`, background: situation.trim() && !renLoading ? '#151B22' : '#fff', cursor: situation.trim() && !renLoading ? 'pointer' : 'not-allowed', borderRadius: '50%', color: situation.trim() && !renLoading ? '#fff' : TXT3, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 18px rgba(26,42,58,0.06)' }}>
@@ -2085,7 +2091,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         </div>
       )}
 
-      <div style={{ minHeight: '100vh', background: BG }}>
+      <div aria-hidden={leftExpanded || undefined} style={{ minHeight: '100vh', background: BG }}>
         {/* HEADER */}
         <header style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', padding: '16px 36px', background: BG, borderBottom: `1px solid ${BDR}`, position: 'sticky', top: 0, zIndex: 100 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
