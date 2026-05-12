@@ -630,18 +630,114 @@ function ForceLines({ scores, lang }: {
   )
 }
 
-function ShareOptions({ lang }: { lang: HomeLang }) {
+function snapshotIdFrom(value: string): string {
+  let hash = 0
+  for (let i = 0; i < value.length; i += 1) {
+    hash = Math.imul(31, hash) + value.charCodeAt(i) | 0
+  }
+  return `sc-${Math.abs(hash).toString(16)}`
+}
+
+function basicPdfSnapshotFromSc(sc: Record<string, any>, lang: HomeLang): Record<string, any> {
+  const contentLang = contentLangFor(lang)
+  const locale = HOME_LANG_TO_LOCALE[contentLang]
+  const title = String(
+    contentLang === 'FR'
+      ? (sc.title_fr ?? sc.title ?? sc.header_subject ?? '')
+      : (sc.title_en ?? sc.title ?? sc.header_subject ?? sc.title_fr ?? '')
+  ).trim()
+  const submitted = String(
+    contentLang === 'FR'
+      ? (sc.submitted_situation_fr ?? sc.situation_soumise ?? title)
+      : (sc.submitted_situation_en ?? sc.situation_soumise ?? sc.submitted_situation_fr ?? title)
+  ).trim()
+  const lecture = String(
+    contentLang === 'FR'
+      ? (sc.lecture_systeme_fr ?? '')
+      : (sc.lecture_systeme_en ?? sc.lecture_systeme_fr ?? '')
+  ).trim()
+  const resources = Array.isArray(sc.resources) ? sc.resources : []
+  const snapshotId = String(sc.snapshot_id ?? sc.id ?? snapshotIdFrom(`${submitted}|${title}|${lecture}`))
+
+  return {
+    id: snapshotId,
+    generation_event_id: String(sc.generation_event_id ?? 'local-home-export'),
+    created_at: String(sc.created_at ?? new Date().toISOString()),
+    language: locale,
+    privacy_mode: 'snapshot_private',
+    admin_learning_only: false,
+    user_deletable: true,
+    card_version: String(sc.card_version ?? 'home-v1'),
+    canonical_question: submitted || title,
+    header_domain: String(sc.header_domain ?? 'Situation'),
+    header_subject: title || submitted || 'Situation Card',
+    situation_soumise: submitted || title,
+    source_count: resources.length,
+    payload: {
+      language: locale,
+      writing: {
+        situation_card: sc,
+        lecture,
+        approfondir: String(contentLang === 'FR' ? (sc.approfondir_fr ?? '') : (sc.approfondir_en ?? sc.approfondir_fr ?? '')).trim(),
+      },
+      resources: {
+        public_sources: resources,
+      },
+      quality: {
+        status: String(sc.generation_status ?? 'ok'),
+      },
+    },
+  }
+}
+
+function ShareOptions({ lang, snapshot }: { lang: HomeLang; snapshot?: Record<string, any> }) {
   const [url, setUrl] = useState('')
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [pdfError, setPdfError] = useState('')
 
   useEffect(() => {
     if (typeof window !== 'undefined') setUrl(window.location.href)
   }, [])
 
+  async function downloadPdf() {
+    if (!snapshot || pdfLoading) return
+    setPdfLoading(true)
+    setPdfError('')
+    try {
+      const response = await fetch('/api/pdf-v2/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snapshot }),
+      })
+      if (!response.ok) throw new Error('pdf_export_failed')
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') ?? ''
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? 'situation-card.pdf'
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch (error) {
+      console.error(error)
+      setPdfError(lang === 'FR' ? 'PDF indisponible.' : 'PDF unavailable.')
+    } finally {
+      setPdfLoading(false)
+    }
+  }
+
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
       <button type="button" onClick={() => navigator.clipboard?.writeText(url).catch(() => {})} style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '6px 9px', fontSize: 12, cursor: 'pointer' }}>
         {lang === 'FR' ? 'Copier le lien' : 'Copy link'}
       </button>
+      <button type="button" onClick={() => void downloadPdf()} disabled={!snapshot || pdfLoading} style={{ border: `1px solid ${snapshot ? BDR_G : BDR}`, background: snapshot ? NAVY : '#fff', color: snapshot ? '#fff' : TXT3, borderRadius: 7, padding: '6px 9px', fontSize: 12, cursor: snapshot && !pdfLoading ? 'pointer' : 'not-allowed' }}>
+        {pdfLoading ? (lang === 'FR' ? 'PDF...' : 'PDF...') : 'PDF'}
+      </button>
+      {pdfError && <span style={{ fontSize: 11, color: '#A32D2D' }}>{pdfError}</span>}
     </div>
   )
 }
@@ -706,6 +802,15 @@ function SituationCardPanel({ sc, lang, onExpand }: {
   const watch      = lang === 'FR' ? (capObj.watch_fr ?? capObj.watch ?? '') : (capObj.watch_en ?? capObj.watch ?? '')
 
   const trajectories: any[] = sc.trajectories ?? []
+  const trajectoryText = trajectories.map((tr: any) => {
+    const trType = String(tr.type ?? '')
+    const defaultTypeFr = trType === 'stabilization' ? 'Stabilisation' : trType === 'escalation' ? 'Escalade' : trType === 'regime_shift' ? 'Changement de régime' : trType
+    const label = lang === 'FR' ? (tr.type_fr ?? defaultTypeFr) : (tr.type_en ?? tr.type ?? '')
+    const title = lang === 'FR' ? (tr.title_fr ?? tr.title ?? '') : (tr.title_en ?? tr.title ?? '')
+    const desc = lang === 'FR' ? (tr.description_fr ?? tr.description ?? '') : (tr.description_en ?? tr.description ?? '')
+    const sig = lang === 'FR' ? (tr.signal_fr ?? tr.signal_precurseur ?? '') : (tr.signal_en ?? tr.signal_precurseur_en ?? tr.signal_precurseur ?? '')
+    return [label, title, desc, sig ? `Signal: ${sig}` : ''].filter(Boolean).join(' - ')
+  }).filter(Boolean).join('\n')
 
   const radarScores: any[] = sc.radar_scores ?? (sc.radar ? [
     { dimension: 'Impact',        dimension_en: 'Impact',        score: Math.round(sc.radar.impact / 33) },
@@ -732,6 +837,10 @@ function SituationCardPanel({ sc, lang, onExpand }: {
   const publicGenerationMessage = lang === 'FR'
     ? String(sc.generation_error_public ?? sc.avertissement_fr ?? '').trim()
     : String(sc.generation_error_public ?? sc.avertissement_en ?? sc.generation_error_public ?? '').trim()
+  const pdfDeepReading = lang === 'FR'
+    ? String(deepReading?.approfondir_fr ?? sc.approfondir_fr ?? '').trim()
+    : String(deepReading?.approfondir_en ?? deepReading?.approfondir_fr ?? sc.approfondir_en ?? sc.approfondir_fr ?? '').trim()
+  const pdfSources = sourceItems ?? sources
 
   const TABS = [
     { key: 'situation' as const, label: t.tab_situation, icon: '/pictos/boussole.png' },
@@ -767,6 +876,47 @@ function SituationCardPanel({ sc, lang, onExpand }: {
     : ['', headerSubject]
   const headerDisplayDomain = headerDomain || 'Situation'
   const headerDisplayTopic = headerTopic || headerSubject
+  const pdfSnapshot = {
+    id: String(sc.snapshot_id ?? sc.id ?? snapshotIdFrom(`${submitted}|${title}|${lectureText}`)),
+    generation_event_id: String(sc.generation_event_id ?? 'local-home-export'),
+    created_at: String(sc.created_at ?? new Date().toISOString()),
+    language: HOME_LANG_TO_LOCALE[contentLangFor(lang)],
+    privacy_mode: 'snapshot_private',
+    admin_learning_only: false,
+    user_deletable: true,
+    card_version: String(sc.card_version ?? 'home-v1'),
+    canonical_question: submitted || title,
+    header_domain: headerDisplayDomain,
+    header_subject: headerDisplayTopic,
+    situation_soumise: submitted || title,
+    source_count: pdfSources.length,
+    payload: {
+      language: HOME_LANG_TO_LOCALE[contentLangFor(lang)],
+      writing: {
+        situation_card: {
+          ...sc,
+          title_fr: title,
+          title_en: title,
+          main_vulnerability_fr: vulnerability,
+          main_vulnerability_en: vulnerability,
+          asymmetry_fr: asymmetry,
+          asymmetry_en: asymmetry,
+          key_signal_fr: signal,
+          key_signal_en: signal,
+          trajectories_text_fr: trajectoryText,
+          trajectories_text_en: trajectoryText,
+        },
+        lecture: lectureText,
+        approfondir: pdfDeepReading,
+      },
+      resources: {
+        public_sources: pdfSources,
+      },
+      quality: {
+        status: generationStatus === 'ok' ? 'ok' : generationStatus,
+      },
+    },
+  }
 
   const cleanLectureText = (value: string) =>
     value
@@ -1435,7 +1585,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
       </div>
       {shareOpen && (
         <div style={{ borderTop: `1px solid ${BDR}`, padding: '8px 14px', background: 'rgba(255,255,255,0.72)' }}>
-          <ShareOptions lang={lang} />
+          <ShareOptions lang={lang} snapshot={pdfSnapshot} />
         </div>
       )}
     </div>
@@ -2327,7 +2477,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
               </div>
               {shareOpen && (
                 <div style={{ borderBottom: `1px solid ${BDR_G}`, background: 'rgba(255,255,255,0.72)', padding: '8px 14px' }}>
-                  <ShareOptions lang={lang} />
+                  <ShareOptions lang={lang} snapshot={scData ? basicPdfSnapshotFromSc(scData, lang) : undefined} />
                 </div>
               )}
               {showHelp && (
