@@ -2213,7 +2213,17 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                     </button>
                   )
                 })}
-                <button type="button" onClick={() => setShowHelp(v => !v)} aria-expanded={showHelp} style={{ width: 24, height: 24, borderRadius: '50%', border: `1px solid ${showHelp ? GOLD : BDR}`, background: showHelp ? 'rgba(204,163,100,0.12)' : 'none', cursor: 'pointer', fontSize: 11, color: showHelp ? GOLD : TXT3, marginRight: 'auto' }}>?</button>
+                <button type="button" onClick={() => setShowHelp(v => !v)} aria-expanded={showHelp} style={{ width: 24, height: 24, borderRadius: '50%', border: `1px solid ${showHelp ? GOLD : BDR}`, background: showHelp ? 'rgba(204,163,100,0.12)' : 'none', cursor: 'pointer', fontSize: 11, color: showHelp ? GOLD : TXT3 }}>?</button>
+                <button
+                  type="button"
+                  onClick={() => scData && setScExpanded(true)}
+                  disabled={!scData}
+                  title={lang === 'FR' ? 'Agrandir la carte' : 'Expand card'}
+                  aria-label={lang === 'FR' ? 'Agrandir la carte' : 'Expand card'}
+                  style={{ width: 24, height: 24, border: 'none', background: 'none', cursor: scData ? 'pointer' : 'not-allowed', color: scData ? TXT2 : TXT3, display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 'auto', opacity: scData ? 1 : 0.45 }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
+                </button>
                 <button type="button" onClick={() => setShareOpen(v => !v)} aria-expanded={shareOpen} title={lang === 'FR' ? 'Partager la carte' : 'Share card'} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7, background: NAVY, color: 'white', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>
                   {t.partager}
@@ -2227,8 +2237,8 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
               {showHelp && (
                 <div style={{ borderBottom: `1px solid ${BDR_G}`, background: 'rgba(204,163,100,0.08)', padding: '8px 14px', fontSize: 11, color: TXT2, lineHeight: 1.45, fontFamily: "'Cormorant Garamond',serif" }}>
                   {lang === 'FR'
-                    ? `Mode ${visibility === 'restricted' ? 'Restreint' : 'Public'} actif. Restreint ne va pas dans l’Atlas mais reste partageable ; Public est visible dans l’Atlas et reste partageable.`
-                    : `${visibility === 'restricted' ? 'Private' : 'Public'} mode is active. Private does not go into the Atlas but remains shareable; Public is visible in the Atlas and remains shareable.`}
+                    ? `Restreint garde la carte privee par defaut. Public rend la carte visible selon les regles choisies. ? explique le bloc droit. Agrandir ouvre la Situation Card en lecture confortable. Partager ouvre l envoi, le lien, la langue et l export PDF. La langue de partage ou d export se choisit dans Partager, sans regeneration sauvage. Le bloc gauche prepare et genere ; le bloc droit lit, agrandit, partage et conserve. Mode actif : ${visibility === 'restricted' ? 'Restreint' : 'Public'}.`
+                    : `Private keeps the card private by default. Public makes the card visible according to the selected rules. ? explains the right block. Expand opens the Situation Card in a comfortable reading view. Share opens sending, link, language and PDF export options. Sharing or export language is chosen inside Share, without uncontrolled regeneration. The left block prepares and generates; the right block reads, expands, shares and keeps. Active mode: ${visibility === 'restricted' ? 'Private' : 'Public'}.`}
                 </div>
               )}
               {scLoading && !scData ? (
