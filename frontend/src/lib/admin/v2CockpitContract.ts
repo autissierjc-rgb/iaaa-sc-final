@@ -160,7 +160,7 @@ export const V2_FOUNDATION_BRICKS: V2FoundationBrick[] = [
     label: 'REN Chat Orchestrator',
     layer: 'dialogue / interpretation',
     status: 'wired',
-    commit: 'pending',
+    commit: '4694d51',
     files: ['src/lib/contracts/renChat.ts', 'src/lib/ren', 'src/app/api/ren-chat/route.ts', 'src/app/sis-system/v2/RenChatTester.tsx'],
     note: 'Separe le chat REN de la generation SC : la fleche explore, la boussole cristallise la carte.',
   },
