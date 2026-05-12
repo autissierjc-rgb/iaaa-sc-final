@@ -93,6 +93,15 @@ export const V2_FOUNDATION_BRICKS: V2FoundationBrick[] = [
     note: 'Protege le moteur contre abus, injections, scraping, fichiers hostiles, couts forces et pics de trafic.',
   },
   {
+    id: 'user-material-plug',
+    label: 'UserMaterial + Plug prive',
+    layer: 'security / archive',
+    status: 'passive',
+    commit: 'pending',
+    files: ['src/lib/contracts/userMaterial.ts', 'src/components/home/HomeClient.tsx'],
+    note: 'Unifie texte, fichiers et plug prive comme matiere de situation sans upload obligatoire.',
+  },
+  {
     id: 'expertises-metiers',
     label: 'ExpertisesMetiers',
     layer: 'expertisesMetiers',

@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import {
+  DEFAULT_PRIVATE_PLUG_CONTRACT,
   type UserMaterialPolicyContract,
   type UserMaterialKind,
   type UserMaterialRetentionChoice,
   type UserMaterialSensitivity,
 } from '@/lib/contracts/userMaterial'
 
-const MATERIAL_KINDS: UserMaterialKind[] = ['document', 'image', 'spreadsheet', 'dataset', 'url']
+const MATERIAL_KINDS: UserMaterialKind[] = ['document', 'image', 'spreadsheet', 'dataset', 'url', 'private_plug']
 const SENSITIVITIES: UserMaterialSensitivity[] = ['unknown', 'public', 'professional', 'personal', 'sensitive', 'regulated']
 
 function boolLabel(value: boolean) {
@@ -73,10 +74,10 @@ export default function UserMaterialPolicyTester() {
     <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
         <div style={{ maxWidth: 760 }}>
-          <h2 style={{ margin: 0, fontSize: 15 }}>Documents / Images / Data</h2>
+          <h2 style={{ margin: 0, fontSize: 15 }}>Matiere utilisateur / Plug prive</h2>
           <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
-            Simule la politique avant upload : droits confirmes, conservation optionnelle privee, extraction minimale,
-            et non-exploitation par IAAA+ sans consentement separe.
+            Simule la politique avant upload ou connexion privee : droits confirmes, conservation optionnelle,
+            extraction minimale, documents non exploitables par IAAA+ sans consentement separe.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
@@ -144,6 +145,7 @@ export default function UserMaterialPolicyTester() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, marginTop: 10 }}>
               {[
                 ['Extraction', policy.extraction_rule],
+                ['Source', policy.source_type],
                 ['Conservation', policy.retention_choice],
                 ['Stockage', policy.storage_rule],
                 ['Sortie publique', policy.public_output_rule],
@@ -164,6 +166,17 @@ export default function UserMaterialPolicyTester() {
             <p style={{ color: '#8B8174', fontSize: 11, lineHeight: 1.55, margin: '8px 0 0' }}>
               {policy.non_exploitation_rule_fr}
             </p>
+            {policy.kind === 'private_plug' && (
+              <div style={{ border: '1px solid #D8CBB5', borderRadius: 8, padding: 12, background: '#fff', marginTop: 12 }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>
+                  {DEFAULT_PRIVATE_PLUG_CONTRACT.connector_type} · {DEFAULT_PRIVATE_PLUG_CONTRACT.access_mode}
+                </p>
+                <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 12 }}>Plug prive</h3>
+                <p style={{ color: '#6F6255', fontSize: 12, lineHeight: 1.55, margin: '8px 0 0' }}>
+                  {DEFAULT_PRIVATE_PLUG_CONTRACT.user_promise_fr}
+                </p>
+              </div>
+            )}
           </>
         )}
       </div>

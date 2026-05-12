@@ -185,6 +185,108 @@ Elles peuvent adapter l'acquisition, le SEO, les exemples et les offres, mais
 le contrat linguistique reste rattache a une langue de snapshot (`en` pour
 `/us` tant qu'aucune variante regionale n'est creee).
 
+## 3b. Chat REN et bloc gauche
+
+Le bloc gauche n'est pas un formulaire de generation automatique. C'est un
+atelier REN.
+
+Regle UI canonique :
+
+```txt
+Le chat explore.
+La fleche envoie le message.
+Enter envoie le message.
+La boussole genere la carte.
+Le bouton ? explique tous les boutons du bloc.
+```
+
+Le chat peut aider l'utilisateur a clarifier, challenger REN, coller une URL,
+ajouter un extrait ou preparer une Situation Card. Il ne doit pas generer une
+SC complete a chaque message.
+
+La generation SC ne commence qu'apres action explicite sur la boussole :
+
+```txt
+Boussole = Generer la carte.
+```
+
+Le chat peut inviter a cliquer sur la boussole lorsque la situation devient
+suffisamment structuree, mais il ne clique jamais a la place de l'utilisateur.
+
+Regle produit :
+
+```txt
+REN peut preparer la carte.
+Seule la boussole la cristallise.
+```
+
+## 3c. Matiere utilisateur, telechargement et plug
+
+Texte, URL, document, image, tableur ou plug ne sont pas des produits
+differents. Ce sont des portes d'entree vers une meme matiere de situation.
+
+Contrat cible :
+
+```txt
+UserMaterial
+```
+
+Le champ de chat reste toujours actif pour :
+
+- ecrire une question ;
+- coller une URL ;
+- coller un extrait ;
+- ajouter du contexte.
+
+Le header du bloc gauche expose seulement les actions complementaires :
+
+```txt
+Telecharger
+Plug
+?
+```
+
+`Telecharger` ouvre le selecteur de fichiers de l'utilisateur et ajoute une
+matiere a traiter sous contrat : PDF, DOCX, image, texte ou tableur.
+
+`Plug` n'est pas un upload. C'est une connexion a une source autorisee sans
+deplacer inutilement les documents.
+
+Regle :
+
+```txt
+Telecharger = le fichier entre dans SC sous controle.
+Plug = SC consulte une source autorisee sans forcement posseder le fichier.
+```
+
+Un plug prive peut pointer vers :
+
+- lien prive / URL autorisee ;
+- dossier entreprise ;
+- Drive, SharePoint, Notion ou autre connecteur ;
+- API metier ;
+- agent local ;
+- serveur prive.
+
+Contrat plug cible :
+
+```ts
+{
+  connector_type: 'private_url' | 'drive' | 'sharepoint' | 'notion' | 'api' | 'local_agent' | 'enterprise_server'
+  access_mode: 'read_metadata' | 'read_excerpt' | 'read_full' | 'query_only'
+  extraction_location: 'sc_server' | 'user_server' | 'local_device' | 'enterprise_connector'
+  retention_choice: 'discard_after_processing' | 'keep_private' | 'keep_with_private_card'
+  raw_document_leaves_user_environment: boolean
+}
+```
+
+Promesse produit :
+
+```txt
+Les documents peuvent rester dans votre environnement.
+Situation Card ne recoit que les extraits, metadonnees ou resultats autorises.
+```
+
 Note importante :
 
 ```txt
