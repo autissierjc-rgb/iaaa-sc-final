@@ -16,6 +16,35 @@ type GenerateV2Response = {
     rule_fr?: string
   }
   total_duration_ms?: number
+  runtime_summary?: {
+    target_ms?: number
+    total_ms?: number
+    over_target?: boolean
+    status?: string
+    rule_fr?: string
+    interpretation?: {
+      mode?: string
+      provider?: string
+      model?: string
+      fallback_used?: boolean
+      duration_ms?: number
+    }
+    writing?: {
+      mode?: string
+      model?: string
+      fallback_used?: boolean
+      duration_ms?: number
+      llm_called?: boolean
+    }
+    resources?: {
+      needed?: boolean
+      status?: string
+      sources?: number
+      runner_status?: string
+      runner_provider?: string
+      duration_ms?: number
+    }
+  }
   dialogue?: {
     status?: string
     can_generate?: boolean
@@ -762,7 +791,7 @@ export default function GenerateV2Tester() {
             qualityOk: false,
             verdict: 'Erreur',
             duration: 0,
-            budget: 6500,
+            budget: 5000,
             runtime: 'non renseigne',
             usedFallback: false,
             resources: 'non renseigne',
@@ -785,7 +814,7 @@ export default function GenerateV2Tester() {
           qualityOk: false,
           verdict: 'Erreur',
           duration: 0,
-          budget: 6500,
+          budget: 5000,
           runtime: 'non renseigne',
           usedFallback: false,
           resources: 'non renseigne',
@@ -1109,6 +1138,24 @@ export default function GenerateV2Tester() {
             <p style={{ margin: '8px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
               Mode : {response.generation_mode.label_fr} · interpretation {response.generation_mode.interpretation_mode} · redaction {response.generation_mode.writing_mode}
             </p>
+          )}
+          {response.runtime_summary && (
+            <div style={{ marginTop: 10, border: `1px solid ${response.runtime_summary.over_target ? '#A66B00' : '#1D9E75'}`, borderRadius: 8, padding: 10, background: response.runtime_summary.over_target ? '#FFF8E8' : '#F4FBF8' }}>
+              <p style={{ margin: 0, color: response.runtime_summary.over_target ? '#A66B00' : '#1D9E75', fontSize: 12, fontWeight: 700 }}>
+                Runtime public fast : {response.runtime_summary.total_ms ?? 0}/{response.runtime_summary.target_ms ?? 0} ms · {response.runtime_summary.over_target ? 'hors cible' : 'dans la cible'}
+              </p>
+              <p style={{ margin: '5px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                Interpretation {response.runtime_summary.interpretation?.mode}
+                {response.runtime_summary.interpretation?.fallback_used ? ' · fallback local' : ''}
+                {' · '}redaction {response.runtime_summary.writing?.mode}
+                {response.runtime_summary.writing?.llm_called ? ' · LLM diamant appele' : ' · pas de LLM diamant'}
+                {' · '}sources {response.runtime_summary.resources?.sources ?? 0}
+                {response.runtime_summary.resources?.needed ? ' requises' : ' non obligatoires'}.
+              </p>
+              <p style={{ margin: '5px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                {response.runtime_summary.rule_fr}
+              </p>
+            </div>
           )}
           {runtime && (
             <div style={{ marginTop: 10, border: `1px solid ${runtime.tone}`, borderRadius: 8, padding: 10, background: runtime.usedFallback ? '#FFF8E8' : '#F4FBF8' }}>

@@ -100,6 +100,61 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | 'ti
   })
 }
 
+function buildRuntimeSummary({
+  generationMode,
+  interpretation,
+  writing,
+  resources,
+  fastResourceRun,
+  totalDurationMs,
+}: {
+  generationMode: ReturnType<typeof resolveGenerationMode>
+  interpretation: Awaited<ReturnType<typeof interpretForMode>>
+  writing: Awaited<ReturnType<typeof composeDiamondWritingWithMode>>
+  resources: ReturnType<typeof planResources>
+  fastResourceRun: Awaited<ReturnType<typeof runFastResourceRunner>>
+  totalDurationMs: number
+}) {
+  const interpretationNotes = interpretation.trace.notes ?? []
+  const writingNotes = writing.trace.notes ?? []
+  const interpretationFallback = interpretationNotes.some((note) => note.includes('timeout-fallback') || note.includes('fell back'))
+  const writingFallback = writingNotes.some((note) => note.includes('fallback') || note.includes('unavailable'))
+  const overTarget = generationMode.latency_target_ms > 0 && totalDurationMs > generationMode.latency_target_ms
+
+  return {
+    target_ms: generationMode.latency_target_ms,
+    total_ms: totalDurationMs,
+    over_target: overTarget,
+    status: overTarget ? 'over_budget' : 'within_budget',
+    interpretation: {
+      mode: generationMode.interpretation_mode,
+      provider: interpretation.reference_model.provider,
+      model: interpretation.reference_model.model,
+      fallback_used: interpretationFallback,
+      duration_ms: interpretation.trace.duration_ms ?? 0,
+    },
+    writing: {
+      mode: generationMode.writing_mode,
+      model: writing.trace.model,
+      fallback_used: writingFallback,
+      duration_ms: writing.trace.duration_ms ?? 0,
+      llm_called: generationMode.writing_mode === 'referent_llm' && Boolean(writing.trace.model) && !writingFallback,
+    },
+    resources: {
+      needed: resources.needs_web,
+      status: resources.status,
+      sources: resources.public_sources.length,
+      runner_status: fastResourceRun.status,
+      runner_provider: fastResourceRun.provider,
+      duration_ms: fastResourceRun.duration_ms,
+    },
+    rule_fr:
+      generationMode.id === 'public_fast'
+        ? 'SIS public rapide vise 5 secondes : interpretation reference rapide ou fallback local, redaction locale, sources rapides si necessaires, Recherche+ separee.'
+        : generationMode.rule_fr,
+  }
+}
+
 async function interpretForMode(rawInput: string, generationModeId: GenerationModeId, mode: 'referent_llm' | 'local_contract') {
   if (mode !== 'referent_llm' || generationModeId !== 'public_fast') {
     return interpretSituation({
@@ -315,12 +370,22 @@ export async function POST(request: NextRequest) {
       { stage_id: 'recherche-plus', duration_ms: recherche_plus.trace.duration_ms ?? 0, outcome: 'ok' },
     ],
   })
+  const totalDurationMs = Date.now() - started
+  const runtime_summary = buildRuntimeSummary({
+    generationMode: generation_mode,
+    interpretation,
+    writing,
+    resources,
+    fastResourceRun,
+    totalDurationMs,
+  })
 
   return NextResponse.json({
     ok: true,
     mode: 'v2_contract_dry_run',
     generation_mode,
-    total_duration_ms: Date.now() - started,
+    runtime_summary,
+    total_duration_ms: totalDurationMs,
     dialogue,
     interpretation,
     safety,

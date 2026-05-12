@@ -27,7 +27,7 @@ export const GENERATION_MODES: Record<GenerationModeId, GenerationModeContract> 
     writing_mode: 'local_contract',
     allows_recherche_plus: false,
     public_default: true,
-    latency_target_ms: 6500,
+    latency_target_ms: 5000,
     rule_fr:
       'LLM referent rapide pour interpretation, fallback local seulement si echec technique, ecriture contractuelle rapide, ressources rapides si necessaires, Recherche+ separee.',
   },
