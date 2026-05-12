@@ -416,7 +416,8 @@ function Boussole({ mode, onClick, disabled, title = 'Générer la carte' }: {
   }, [mode])
 
   const active = mode !== 'off' && mode !== 'idle'
-  const pulse  = mode === 'idle' && !disabled
+  const pulse  = mode === 'idle'
+  const isGenerating = mode === 'full'
 
   return (
     <button
@@ -428,7 +429,8 @@ function Boussole({ mode, onClick, disabled, title = 'Générer la carte' }: {
         width: 52, height: 52, borderRadius: '50%',
         border: 'none', background: 'none', padding: 0,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        filter: pulse ? 'drop-shadow(0 0 8px rgba(184,154,106,0.7))' : 'none',
+        filter: isGenerating ? 'drop-shadow(0 0 14px rgba(184,154,106,0.95))' : pulse ? 'drop-shadow(0 0 8px rgba(184,154,106,0.55))' : 'none',
+        opacity: disabled && !isGenerating ? 0.78 : 1,
         transition: 'filter 0.3s',
       }}
     >
@@ -465,8 +467,8 @@ function Boussole({ mode, onClick, disabled, title = 'Générer la carte' }: {
         <circle cx="26" cy="26" r="1.5" fill="#fff" />
         {pulse && (
           <circle cx="26" cy="26" r="22" fill="none" stroke={GOLD} strokeWidth="1" opacity="0.4">
-            <animate attributeName="r"       values="22;26;22" dur="2s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.4;0;0.4" dur="2s" repeatCount="indefinite" />
+            <animate attributeName="r"       values="22;26;22" dur={isGenerating ? '1s' : '2s'} repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.4;0;0.4" dur={isGenerating ? '1s' : '2s'} repeatCount="indefinite" />
           </circle>
         )}
       </svg>
@@ -2015,13 +2017,19 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,42,58,0.46)', zIndex: 290, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ width: 'min(920px, 96vw)', height: 'min(760px, 92vh)', background: BG_P, border: `1px solid ${BDR_G}`, borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 70px rgba(26,42,58,0.24)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderBottom: `1px solid ${BDR}` }}>
-              <button type="button" onClick={handleUploadClick} title={t.upload_title} style={{ padding: '7px 10px', fontSize: 12, color: TXT2, cursor: 'pointer', border: `1px solid ${BDR}`, background: BG_P, borderRadius: 8 }}>{t.upload}</button>
-              <button type="button" onClick={handlePlugClick} title={t.plug_title} style={{ padding: '7px 10px', fontSize: 12, color: TXT2, cursor: 'pointer', border: `1px solid ${BDR}`, background: BG_P, borderRadius: 8 }}>{t.plug}</button>
-              <div style={{ marginLeft: 'auto', fontSize: 11, color: TXT3, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif" }}>
-                {lang === 'FR' ? 'Espace de raisonnement systeme' : 'System reasoning space'}
+              <button type="button" onClick={handleUploadClick} title={t.upload_title} style={{ padding: '8px 12px', fontSize: 12, color: NAVY, cursor: 'pointer', border: `1px solid ${BDR}`, background: '#fff', borderRadius: 999, boxShadow: '0 6px 14px rgba(26,42,58,0.04)' }}>{t.upload}</button>
+              <button type="button" onClick={handlePlugClick} title={t.plug_title} style={{ padding: '8px 12px', fontSize: 12, color: NAVY, cursor: 'pointer', border: `1px solid ${BDR}`, background: '#fff', borderRadius: 999, boxShadow: '0 6px 14px rgba(26,42,58,0.04)' }}>{t.plug}</button>
+              <div style={{ marginLeft: 'auto', fontSize: 13, color: NAVY, fontFamily: "'Cinzel',serif", letterSpacing: '.03em' }}>
+                {lang === 'FR' ? 'Chat REN agrandi' : 'Expanded REN chat'}
               </div>
+              <button type="button" onClick={() => setLeftHelpOpen(v => !v)} title={t.block_help} aria-label={t.block_help} aria-expanded={leftHelpOpen} style={{ width: 30, height: 30, borderRadius: '50%', border: `1px solid ${leftHelpOpen ? GOLD : BDR}`, background: leftHelpOpen ? 'rgba(204,163,100,0.12)' : '#fff', cursor: 'pointer', fontSize: 12, color: leftHelpOpen ? GOLD : TXT3 }}>?</button>
               <button type="button" onClick={() => setLeftExpanded(false)} aria-label={lang === 'FR' ? 'Fermer' : 'Close'} style={{ width: 30, height: 30, border: 'none', background: 'none', cursor: 'pointer', color: TXT3, fontSize: 22 }}>×</button>
             </div>
+            {leftHelpOpen && (
+              <div style={{ borderBottom: `1px solid ${BDR}`, background: 'rgba(204,163,100,0.08)', padding: '9px 16px', fontSize: 11, color: TXT2, lineHeight: 1.45, fontFamily: "'Cormorant Garamond',serif" }}>
+                {t.left_help}
+              </div>
+            )}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               {chatMsgs.length === 0 ? (
                 <div style={{ color: TXT3, fontSize: 13, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif" }}>
@@ -2042,15 +2050,22 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                 return null
               })}
             </div>
-            <div style={{ borderTop: `1px solid ${BDR}`, padding: '12px 14px', display: 'grid', gridTemplateColumns: '1fr auto auto auto', alignItems: 'end', gap: 10 }}>
-              <textarea value={situation} onChange={e => handleSituationChange(e.target.value)} onKeyDown={handleTextKeyDown} placeholder={t.describe} style={{ width: '100%', minHeight: 120, border: `1px solid ${BDR}`, borderRadius: 10, background: '#fff', resize: 'vertical', fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: TXT, outline: 'none', lineHeight: 1.7, padding: 12 }} />
-              <button type="button" onClick={resetConversation} title={lang === 'FR' ? 'Réinitialiser l’échange courant' : 'Reset current exchange'} aria-label={lang === 'FR' ? 'Réinitialiser l’échange courant' : 'Reset current exchange'} style={{ width: 38, height: 38, border: `1px solid ${BDR}`, background: BG_P, cursor: 'pointer', borderRadius: '50%', color: TXT2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v6h-6" /></svg>
-              </button>
-              <button type="button" onClick={() => void sendChatMessage()} title={t.send_title} aria-label={t.send_title} disabled={!situation.trim() || renLoading} style={{ width: 42, height: 42, border: `1px solid ${BDR}`, background: situation.trim() && !renLoading ? '#151B22' : BG_P, cursor: situation.trim() && !renLoading ? 'pointer' : 'not-allowed', borderRadius: '50%', color: situation.trim() && !renLoading ? '#fff' : TXT3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
-              </button>
-              <Boussole mode={effectiveCompassMode} onClick={handleGenerate} disabled={compassDisabled} title={t.compass_title} />
+            <div style={{ borderTop: `1px solid ${BDR}`, padding: '12px 14px', display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'end', gap: 14 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button type="button" onClick={resetConversation} title={lang === 'FR' ? 'Réinitialiser l’échange courant' : 'Reset current exchange'} aria-label={lang === 'FR' ? 'Réinitialiser l’échange courant' : 'Reset current exchange'} style={{ width: 40, height: 40, border: `1px solid ${BDR}`, background: '#fff', cursor: 'pointer', borderRadius: '50%', color: TXT2, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 18px rgba(26,42,58,0.05)' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><path d="M21 3v6h-6" /></svg>
+                </button>
+                <button type="button" title={t.mic_title} aria-label={t.mic_title} style={{ width: 40, height: 40, border: `1px solid ${BDR}`, background: '#fff', cursor: 'pointer', borderRadius: '50%', color: TXT2, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 18px rgba(26,42,58,0.05)' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="2" width="6" height="11" rx="3" /><path d="M19 10a7 7 0 01-14 0" /><line x1="12" y1="19" x2="12" y2="22" /></svg>
+                </button>
+              </div>
+              <textarea value={situation} onChange={e => handleSituationChange(e.target.value)} onKeyDown={handleTextKeyDown} placeholder={t.describe} style={{ width: '100%', minHeight: 120, border: `1px solid ${BDR}`, borderRadius: 12, background: '#fff', resize: 'vertical', fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: TXT, outline: 'none', lineHeight: 1.7, padding: 12 }} />
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => void sendChatMessage()} title={t.send_title} aria-label={t.send_title} disabled={!situation.trim() || renLoading} style={{ width: 44, height: 44, border: `1px solid ${BDR}`, background: situation.trim() && !renLoading ? '#151B22' : '#fff', cursor: situation.trim() && !renLoading ? 'pointer' : 'not-allowed', borderRadius: '50%', color: situation.trim() && !renLoading ? '#fff' : TXT3, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 18px rgba(26,42,58,0.06)' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
+                </button>
+                <Boussole mode={effectiveCompassMode} onClick={handleGenerate} disabled={compassDisabled} title={t.compass_title} />
+              </div>
             </div>
           </div>
         </div>
