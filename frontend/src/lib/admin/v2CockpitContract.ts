@@ -97,7 +97,7 @@ export const V2_FOUNDATION_BRICKS: V2FoundationBrick[] = [
     label: 'UserMaterial + Plug prive',
     layer: 'security / archive',
     status: 'passive',
-    commit: 'pending',
+    commit: '04ece30',
     files: ['src/lib/contracts/userMaterial.ts', 'src/components/home/HomeClient.tsx'],
     note: 'Unifie texte, fichiers et plug prive comme matiere de situation sans upload obligatoire.',
   },
