@@ -643,7 +643,7 @@ function ctoWatchSummary(results: BenchmarkResult[]): CtoWatchResult | null {
 
 export default function GenerateV2Tester() {
   const [input, setInput] = useState(EXAMPLES[0])
-  const [generationMode, setGenerationMode] = useState<'public_fast' | 'diamond_llm' | 'research_plus' | 'admin_benchmark'>('admin_benchmark')
+  const [generationMode, setGenerationMode] = useState<'public_fast' | 'diamond_llm' | 'research_plus' | 'admin_benchmark'>('public_fast')
   const [interpretationMode, setInterpretationMode] = useState<'local_contract' | 'referent_llm'>('local_contract')
   const [writingMode, setWritingMode] = useState<'local_contract' | 'referent_llm'>('local_contract')
   const [loading, setLoading] = useState(false)
@@ -714,6 +714,19 @@ export default function GenerateV2Tester() {
   const runtime = useMemo(() => interpretationRuntime(response), [response])
   const speedItems = useMemo(() => speedBudgetItems(response), [response])
   const ctoWatch = useMemo(() => ctoWatchSummary(benchmarkResults), [benchmarkResults])
+  const publicFastLight = useMemo(() => {
+    if (!response?.runtime_summary) return null
+    const summary = response.runtime_summary
+    const qualityOk = Boolean(response.quality?.ok)
+    const sourcesMissing = Boolean(response.resources?.needs_web && (response.resources.public_sources?.length ?? 0) === 0)
+    const critical = !qualityOk || sourcesMissing || (summary.target_ms ? (summary.total_ms ?? 0) > summary.target_ms * 1.4 : false)
+    const warning = !critical && Boolean(summary.over_target || (response.quality?.issues?.length ?? 0) > 0)
+    return {
+      label: critical ? 'Rouge' : warning ? 'Orange' : 'Vert',
+      tone: critical ? '#B23A3A' : warning ? '#A66B00' : '#1D9E75',
+      detail: `${summary.total_ms ?? 0}/${summary.target_ms ?? 0} ms · sources ${summary.resources?.sources ?? 0} · ${summary.writing?.llm_called ? 'LLM diamant appele' : 'LLM diamant non appele'}`,
+    }
+  }, [response])
 
   async function runTest() {
     setLoading(true)
@@ -883,7 +896,7 @@ export default function GenerateV2Tester() {
         <div style={{ maxWidth: 760 }}>
           <h2 style={{ margin: 0, fontSize: 15 }}>Banc d essai generate-v2</h2>
           <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
-            Teste la route V2 separee. Elle retourne les contrats, pas encore une Situation Card finale.
+            Test public fast par defaut : mesure la V2 comme futur flux public, avec ressources rapides si necessaires et Recherche+ separee.
           </p>
         </div>
         <button
@@ -902,9 +915,20 @@ export default function GenerateV2Tester() {
             cursor: loading ? 'wait' : 'pointer',
           }}
         >
-          {loading ? 'Test en cours' : 'Tester generate-v2'}
+          {loading ? 'Test en cours' : 'Tester public fast'}
         </button>
       </div>
+
+      {publicFastLight && (
+        <div style={{ marginTop: 14, border: `1px solid ${publicFastLight.tone}`, borderRadius: 10, padding: 12, background: publicFastLight.tone === '#1D9E75' ? '#F4FBF8' : publicFastLight.tone === '#A66B00' ? '#FFF8E8' : '#FFF4F4' }}>
+          <p style={{ margin: 0, color: publicFastLight.tone, fontSize: 13, fontWeight: 800 }}>
+            Feu {publicFastLight.label} · {publicFastLight.detail}
+          </p>
+          <p style={{ margin: '5px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+            Vert = solide et dans les 5s. Orange = partiel ou limite. Rouge = quality fail, sources obligatoires absentes ou trop lent.
+          </p>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginTop: 14 }}>
         <div>
