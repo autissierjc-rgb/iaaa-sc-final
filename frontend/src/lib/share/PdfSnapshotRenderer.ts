@@ -3,7 +3,14 @@ import type { GeneratedCardSnapshot } from '@/lib/contracts/generationArchive'
 type PdfSection = {
   title: string
   body: string
+  tone?: 'standard' | 'risk' | 'signal' | 'muted'
 }
+
+type PdfOp =
+  | { kind: 'text'; text: string; size: number; x: number; y: number; font?: 'regular' | 'bold'; color?: string }
+  | { kind: 'rect'; x: number; y: number; w: number; h: number; stroke?: string; fill?: string; width?: number }
+  | { kind: 'circle'; x: number; y: number; r: number; stroke?: string; fill?: string; width?: number }
+  | { kind: 'line'; x1: number; y1: number; x2: number; y2: number; stroke?: string; width?: number }
 
 type SnapshotPayloadProbe = {
   writing?: {
@@ -53,6 +60,17 @@ function sourceText(source: unknown): string {
   const url = text(item.url)
   const type = text(item.type)
   return [title, type, url].filter(Boolean).join(' - ')
+}
+
+function extractScore(card: Record<string, unknown> | string | undefined): string {
+  if (!card || typeof card === 'string') return ''
+  const value = card.state_index_final ?? card.state_index ?? card.score
+  return typeof value === 'number' || typeof value === 'string' ? String(value) : ''
+}
+
+function extractStateLabel(card: Record<string, unknown> | string | undefined, isFr: boolean): string {
+  if (!card || typeof card === 'string') return ''
+  return text(isFr ? (card.state_label ?? card.state_label_fr) : (card.state_label_en ?? card.state_label))
 }
 
 function safeFilename(value: string): string {
@@ -108,57 +126,154 @@ function pdfText(value: string): string {
     .replace(/\)/g, '\\)')
 }
 
-function streamForLines(lines: Array<{ text: string; size: number; x: number; y: number }>): string {
-  return lines
-    .map((line) => `BT /F1 ${line.size} Tf ${line.x} ${line.y} Td (${pdfText(line.text)}) Tj ET`)
-    .join('\n')
+function color(value = '#1A2A3A'): string {
+  const normalized = value.replace('#', '')
+  const r = parseInt(normalized.slice(0, 2), 16) / 255
+  const g = parseInt(normalized.slice(2, 4), 16) / 255
+  const b = parseInt(normalized.slice(4, 6), 16) / 255
+  return `${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)}`
 }
 
-function makePdf(title: string, sections: PdfSection[], meta: string): Buffer {
+function streamForOps(ops: PdfOp[]): string {
+  return ops.map((op) => {
+    if (op.kind === 'text') {
+      const font = op.font === 'bold' ? 'F2' : 'F1'
+      return `BT ${color(op.color)} rg /${font} ${op.size} Tf ${op.x} ${op.y} Td (${pdfText(op.text)}) Tj ET`
+    }
+    if (op.kind === 'rect') {
+      const commands = [
+        `${op.width ?? 1} w`,
+        op.fill ? `${color(op.fill)} rg` : '',
+        op.stroke ? `${color(op.stroke)} RG` : '',
+        `${op.x} ${op.y} ${op.w} ${op.h} re`,
+        op.fill && op.stroke ? 'B' : op.fill ? 'f' : 'S',
+      ]
+      return commands.filter(Boolean).join('\n')
+    }
+    if (op.kind === 'circle') {
+      const c = op.r * 0.5522847498
+      const commands = [
+        `${op.width ?? 1} w`,
+        op.fill ? `${color(op.fill)} rg` : '',
+        op.stroke ? `${color(op.stroke)} RG` : '',
+        `${op.x + op.r} ${op.y} m`,
+        `${op.x + op.r} ${op.y + c} ${op.x + c} ${op.y + op.r} ${op.x} ${op.y + op.r} c`,
+        `${op.x - c} ${op.y + op.r} ${op.x - op.r} ${op.y + c} ${op.x - op.r} ${op.y} c`,
+        `${op.x - op.r} ${op.y - c} ${op.x - c} ${op.y - op.r} ${op.x} ${op.y - op.r} c`,
+        `${op.x + c} ${op.y - op.r} ${op.x + op.r} ${op.y - c} ${op.x + op.r} ${op.y} c`,
+        'h',
+        op.fill && op.stroke ? 'B' : op.fill ? 'f' : 'S',
+      ]
+      return commands.filter(Boolean).join('\n')
+    }
+    return `${op.width ?? 1} w\n${color(op.stroke)} RG\n${op.x1} ${op.y1} m ${op.x2} ${op.y2} l S`
+  }).join('\n')
+}
+
+function makePdf(title: string, sections: PdfSection[], meta: string, options: {
+  domain: string
+  subject: string
+  submitted: string
+  score: string
+  stateLabel: string
+  createdAt: string
+  isFr: boolean
+}): Buffer {
   const pageWidth = 595
   const pageHeight = 842
-  const marginX = 50
-  const startY = 790
-  const bottomY = 58
-  const objects: string[] = ['', '', '']
+  const marginX = 48
+  const contentWidth = pageWidth - marginX * 2
+  const startY = 760
+  const bottomY = 64
+  const objects: string[] = ['', '', '', '']
   const pages: string[] = []
-  let currentLines: Array<{ text: string; size: number; x: number; y: number }> = []
+  let currentOps: PdfOp[] = []
   let y = startY
+  let pageNumber = 0
 
   function flushPage() {
-    const stream = streamForLines(currentLines)
+    if (currentOps.length === 0) return
+    pageNumber += 1
+    currentOps.push({ kind: 'text', text: String(pageNumber), size: 8, x: 526, y: 28, color: '#9AABB8' })
+    const stream = streamForOps(currentOps)
     const contentObjectNumber = objects.length + 1
     objects.push(`<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream`)
     const pageObjectNumber = objects.length + 1
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`)
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`)
     pages.push(`${pageObjectNumber} 0 R`)
-    currentLines = []
+    currentOps = []
     y = startY
   }
 
-  function addLine(value: string, size = 10, gap = 14) {
+  function addText(value: string, size = 10, gap = 14, x = marginX, font: 'regular' | 'bold' = 'regular', colorValue = '#1A2A3A') {
     if (y < bottomY) flushPage()
-    currentLines.push({ text: value, size, x: marginX, y })
+    currentOps.push({ kind: 'text', text: value, size, x, y, font, color: colorValue })
     y -= gap
   }
 
-  addLine(title, 18, 24)
-  addLine(meta, 9, 20)
-
-  for (const section of sections) {
-    if (!section.body) continue
-    y -= 6
-    addLine(section.title.toUpperCase(), 12, 18)
-    for (const line of wrapText(section.body)) {
-      addLine(line, 10, line ? 13 : 9)
+  function addWrapped(value: string, size = 10, max = 92, colorValue = '#1A2A3A', indent = 0) {
+    for (const line of wrapText(value, max)) {
+      addText(line, size, line ? size + 4 : 9, marginX + indent, 'regular', colorValue)
     }
   }
 
-  if (currentLines.length > 0) flushPage()
+  function addBox(section: PdfSection) {
+    if (!section.body) return
+    const titleColor = section.tone === 'risk' ? '#E06B4A' : section.tone === 'signal' ? '#C8951A' : '#1B3A6B'
+    const fill = section.tone === 'risk' ? '#FFF4EF' : section.tone === 'signal' ? '#FFF8E5' : section.tone === 'muted' ? '#F7F5F0' : '#FFFFFF'
+    const bodyLines = wrapText(section.body, 86)
+    const boxHeight = Math.max(70, 34 + bodyLines.length * 13)
+    if (y - boxHeight < bottomY) flushPage()
+    currentOps.push({ kind: 'rect', x: marginX - 8, y: y - boxHeight + 12, w: contentWidth + 16, h: boxHeight, stroke: '#E2D8C6', fill, width: 0.8 })
+    addText(section.title.toUpperCase(), 11, 18, marginX, 'bold', titleColor)
+    for (const line of bodyLines) {
+      addText(line, 9.5, line ? 12.5 : 8, marginX, 'regular', '#1A2A3A')
+    }
+    y -= 12
+  }
+
+  currentOps.push({ kind: 'rect', x: 0, y: 0, w: pageWidth, h: pageHeight, fill: '#F5F3EE' })
+  currentOps.push({ kind: 'rect', x: 0, y: 732, w: pageWidth, h: 110, fill: '#1B3A6B' })
+  currentOps.push({ kind: 'circle', x: 89, y: 747, r: 42, stroke: '#C8951A', fill: '#0B1730', width: 1.2 })
+  currentOps.push({ kind: 'circle', x: 89, y: 747, r: 27, stroke: '#C8951A', width: 0.6 })
+  currentOps.push({ kind: 'circle', x: 89, y: 747, r: 5, stroke: '#C8951A', fill: '#F5F3EE', width: 0.8 })
+  currentOps.push({ kind: 'line', x1: 61, y1: 747, x2: 117, y2: 747, stroke: '#C8951A', width: 1 })
+  currentOps.push({ kind: 'line', x1: 89, y1: 719, x2: 89, y2: 775, stroke: '#C8951A', width: 1 })
+  currentOps.push({ kind: 'line', x1: 68, y1: 726, x2: 110, y2: 768, stroke: '#C8951A', width: 0.8 })
+  currentOps.push({ kind: 'line', x1: 110, y1: 726, x2: 68, y2: 768, stroke: '#C8951A', width: 0.8 })
+  currentOps.push({ kind: 'text', text: 'IAAA+', size: 12, x: 62, y: 692, font: 'bold', color: '#1B3A6B' })
+  currentOps.push({ kind: 'text', text: 'SITUATION CARD', size: 28, x: 158, y: 775, font: 'bold', color: '#FFFFFF' })
+  currentOps.push({ kind: 'text', text: meta, size: 10, x: 160, y: 752, color: '#E8D7B5' })
+  currentOps.push({ kind: 'text', text: options.domain || 'Situation', size: 11, x: 160, y: 725, font: 'bold', color: '#C8951A' })
+  wrapLine(options.subject || title, 46).slice(0, 3).forEach((line, index) => {
+    currentOps.push({ kind: 'text', text: line, size: 13, x: 160, y: 702 - index * 16, font: 'bold', color: '#1B3A6B' })
+  })
+  currentOps.push({ kind: 'line', x1: 48, y1: 650, x2: 547, y2: 650, stroke: '#C8951A', width: 1.2 })
+  currentOps.push({ kind: 'text', text: options.isFr ? 'Situation soumise' : 'Submitted situation', size: 11, x: 48, y: 620, font: 'bold', color: '#C8951A' })
+  y = 598
+  addWrapped(options.submitted, 12, 76, '#1A2A3A')
+  y -= 12
+  currentOps.push({ kind: 'rect', x: 48, y: y - 62, w: 150, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
+  currentOps.push({ kind: 'text', text: options.isFr ? 'Etat' : 'State', size: 9, x: 62, y: y - 28, font: 'bold', color: '#C8951A' })
+  currentOps.push({ kind: 'text', text: options.stateLabel || 'N/A', size: 14, x: 62, y: y - 48, font: 'bold', color: '#1B3A6B' })
+  currentOps.push({ kind: 'rect', x: 222, y: y - 62, w: 150, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
+  currentOps.push({ kind: 'text', text: 'Score', size: 9, x: 236, y: y - 28, font: 'bold', color: '#C8951A' })
+  currentOps.push({ kind: 'text', text: options.score ? `${options.score} / 100` : 'N/A', size: 14, x: 236, y: y - 48, font: 'bold', color: '#1B3A6B' })
+  currentOps.push({ kind: 'rect', x: 396, y: y - 62, w: 151, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
+  currentOps.push({ kind: 'text', text: options.isFr ? 'Genere le' : 'Generated', size: 9, x: 410, y: y - 28, font: 'bold', color: '#C8951A' })
+  currentOps.push({ kind: 'text', text: options.createdAt.slice(0, 10), size: 14, x: 410, y: y - 48, font: 'bold', color: '#1B3A6B' })
+  flushPage()
+
+  for (const section of sections) {
+    addBox(section)
+  }
+
+  if (currentOps.length > 0) flushPage()
 
   objects[0] = `<< /Type /Catalog /Pages 2 0 R >>`
   objects[1] = `<< /Type /Pages /Kids [${pages.join(' ')}] /Count ${pages.length} >>`
   objects[2] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`
+  objects[3] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`
 
   const chunks: string[] = ['%PDF-1.4\n']
   const offsets: number[] = [0]
@@ -194,20 +309,27 @@ export function renderSnapshotPdf(snapshot: GeneratedCardSnapshot): { buffer: Bu
   const sources = payload.resources?.public_sources ?? payload.resources?.resources ?? []
 
   const sections: PdfSection[] = [
-    { title: isFr ? 'Situation soumise' : 'Submitted situation', body: snapshot.situation_soumise },
-    { title: isFr ? 'Lecture' : 'Reading', body: lecture || fromCard(card, ['lecture_systeme_fr', 'lecture_systeme_en', 'lecture']) },
-    { title: isFr ? 'Vulnerabilite principale' : 'Main vulnerability', body: fromCard(card, ['main_vulnerability_fr', 'main_vulnerability_en', 'main_vulnerability']) },
+    { title: isFr ? 'Lecture diamant' : 'Diamond reading', body: lecture || fromCard(card, ['lecture_systeme_fr', 'lecture_systeme_en', 'lecture']) },
+    { title: isFr ? 'Vulnerabilite principale' : 'Main vulnerability', body: fromCard(card, ['main_vulnerability_fr', 'main_vulnerability_en', 'main_vulnerability']), tone: 'risk' },
     { title: isFr ? 'Asymetrie' : 'Asymmetry', body: fromCard(card, ['asymmetry_fr', 'asymmetry_en', 'asymmetry']) },
     { title: isFr ? 'Trajectoires' : 'Trajectories', body: fromCard(card, ['trajectories_text_fr', 'trajectories_text_en', 'trajectories_text']) },
-    { title: isFr ? 'Signal cle' : 'Key signal', body: fromCard(card, ['key_signal_fr', 'key_signal_en', 'key_signal']) },
+    { title: isFr ? 'Signal cle' : 'Key signal', body: fromCard(card, ['key_signal_fr', 'key_signal_en', 'key_signal']), tone: 'signal' },
     { title: isFr ? 'Approfondir' : 'Deep reading', body: approfondir },
-    { title: isFr ? 'Ressources publiques' : 'Public sources', body: sources.map(sourceText).filter(Boolean).join('\n') },
-    { title: isFr ? 'Provenance' : 'Provenance', body: `${snapshot.card_version} - ${snapshot.created_at} - snapshot ${snapshot.id}` },
-    { title: isFr ? 'Statut du document' : 'Document status', body: isFr ? NOTICE_FR : NOTICE_EN },
+    { title: isFr ? 'Ressources publiques' : 'Public sources', body: sources.map(sourceText).filter(Boolean).join('\n'), tone: 'muted' },
+    { title: isFr ? 'Provenance' : 'Provenance', body: `${snapshot.card_version} - ${snapshot.created_at} - snapshot ${snapshot.id}`, tone: 'muted' },
+    { title: isFr ? 'Statut du document' : 'Document status', body: isFr ? NOTICE_FR : NOTICE_EN, tone: 'muted' },
   ]
 
   return {
-    buffer: makePdf(title, sections, 'Situation Card - IAAA+'),
+    buffer: makePdf(title, sections, 'Note analytique partageable - export depuis snapshot', {
+      domain: snapshot.header_domain,
+      subject: title,
+      submitted: snapshot.situation_soumise,
+      score: extractScore(card),
+      stateLabel: extractStateLabel(card, isFr),
+      createdAt: snapshot.created_at,
+      isFr,
+    }),
     filename: `${safeFilename(title)}-${snapshot.id}.pdf`,
   }
 }
