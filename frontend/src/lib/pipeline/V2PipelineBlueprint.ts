@@ -33,8 +33,21 @@ export const SITUATION_CARD_V2_PIPELINE: V2PipelineBlueprint = {
       failure_policy: 'Par defaut, generer utilement avec prudence plutot que transformer le chat en interrogatoire.',
     },
     {
-      id: 'expertises-metiers',
+      id: 'security',
       order: 3,
+      label: 'SecurityAbuseGuard',
+      owner_layer: 'security',
+      status: 'passive',
+      input_contracts: ['CanonicalInterpretation', 'request metadata', 'file metadata'],
+      output_contracts: ['SecurityAbuseGuardContract'],
+      latency_budget_ms: 60,
+      blocks_generation: false,
+      purpose: 'Proteger le moteur contre abus, injections, scraping, fichiers hostiles, couts forces et pics de trafic.',
+      failure_policy: 'Throttle ou bloquer les actions couteuses ou dangereuses, journaliser metadata-only et alerter CTO Watch si seuil critique.',
+    },
+    {
+      id: 'expertises-metiers',
+      order: 4,
       label: 'ExpertisesMetiers',
       owner_layer: 'expertisesMetiers',
       status: 'passive',
@@ -47,7 +60,7 @@ export const SITUATION_CARD_V2_PIPELINE: V2PipelineBlueprint = {
     },
     {
       id: 'resources',
-      order: 4,
+      order: 5,
       label: 'ResourceService',
       owner_layer: 'resources',
       status: 'passive',
@@ -60,7 +73,7 @@ export const SITUATION_CARD_V2_PIPELINE: V2PipelineBlueprint = {
     },
     {
       id: 'patterns',
-      order: 5,
+      order: 6,
       label: 'HumanCollectivePatterns',
       owner_layer: 'patterns',
       status: 'passive',
@@ -73,7 +86,7 @@ export const SITUATION_CARD_V2_PIPELINE: V2PipelineBlueprint = {
     },
     {
       id: 'theatre',
-      order: 6,
+      order: 7,
       label: 'Theatre reel',
       owner_layer: 'theatre',
       status: 'passive',
@@ -86,7 +99,7 @@ export const SITUATION_CARD_V2_PIPELINE: V2PipelineBlueprint = {
     },
     {
       id: 'blind-spots',
-      order: 7,
+      order: 8,
       label: 'Angles morts integres',
       owner_layer: 'inquiry',
       status: 'passive',
@@ -99,7 +112,7 @@ export const SITUATION_CARD_V2_PIPELINE: V2PipelineBlueprint = {
     },
     {
       id: 'scoring',
-      order: 8,
+      order: 9,
       label: 'ScoringEngine',
       owner_layer: 'scoring',
       status: 'passive',
@@ -112,7 +125,7 @@ export const SITUATION_CARD_V2_PIPELINE: V2PipelineBlueprint = {
     },
     {
       id: 'writing',
-      order: 9,
+      order: 10,
       label: 'WritingEngine',
       owner_layer: 'writing',
       status: 'passive',
@@ -125,7 +138,7 @@ export const SITUATION_CARD_V2_PIPELINE: V2PipelineBlueprint = {
     },
     {
       id: 'quality',
-      order: 10,
+      order: 11,
       label: 'QualityGate',
       owner_layer: 'quality',
       status: 'passive',
@@ -138,7 +151,7 @@ export const SITUATION_CARD_V2_PIPELINE: V2PipelineBlueprint = {
     },
     {
       id: 'recherche-plus',
-      order: 11,
+      order: 12,
       label: 'Recherche+',
       owner_layer: 'resources',
       status: 'passive',

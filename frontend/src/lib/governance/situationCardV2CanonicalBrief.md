@@ -47,15 +47,16 @@ Elle doit etre generee depuis :
 
 1. une interpretation canonique de l'intention ;
 2. un dialogue gate clair ;
-3. une famille de tension / domaine / metier ;
-4. des ressources rapides adaptees ;
-5. un theatre reel concret ;
-6. un scoring coherent ;
-7. une preparation des incertitudes et angles morts integree a la reponse ;
-8. une redaction diamant ;
-9. un Quality Gate silencieux ;
-10. un benchmark de calibration ;
-11. une enquete probatoire externe uniquement si l'utilisateur la lance.
+3. une protection security / anti-abus avant les operations couteuses ;
+4. une famille de tension / domaine / metier ;
+5. des ressources rapides adaptees ;
+6. un theatre reel concret ;
+7. un scoring coherent ;
+8. une preparation des incertitudes et angles morts integree a la reponse ;
+9. une redaction diamant ;
+10. un Quality Gate silencieux ;
+11. un benchmark de calibration ;
+12. une enquete probatoire externe uniquement si l'utilisateur la lance.
 
 ## 3. Regle majeure d'interpretation
 
@@ -90,6 +91,8 @@ InterpretationService
 DialogueGate
   ->
 RiskAdviceGuard
+  ->
+SecurityAbuseGuard
   ->
 ExpertisesMetiers / Domain Router
   ->
@@ -412,6 +415,79 @@ CTO Watch doit alerter si un seuil critique est atteint :
 - sources obligatoires absentes ;
 - generation error rate ;
 - faible cache hit rate sur cartes partagees.
+
+## 4b quater. Security & Abuse Guard
+
+La securite V2 ne protege pas seulement les donnees. Elle protege aussi le
+moteur contre les attaques, l'abus, le scraping, les injections, les couts
+forces, les exports dangereux et les pics de trafic.
+
+`safety` et `security` ne doivent pas etre confondus :
+
+- `safety` protege les utilisateurs contre des sorties dangereuses dans les
+  domaines sensibles ;
+- `privacy` protege la conservation, la visibilite et l'exploitation des
+  donnees ;
+- `security` protege l'application, les routes, les fichiers, les snapshots,
+  les couts et les fournisseurs contre l'abus ou l'attaque.
+
+Module cible :
+
+```txt
+src/lib/security/SecurityAbuseGuard.ts
+```
+
+Contrat cible :
+
+```ts
+{
+  risk_level: 'normal' | 'watch' | 'throttle' | 'block'
+  signals: string[]
+  allowed_actions: string[]
+  blocked_actions: string[]
+  required_controls: string[]
+  cto_watch_required: boolean
+}
+```
+
+Risques a couvrir :
+
+- spam de generation sur `/api/generate`, `/api/generate-v2`, `/api/sources`,
+  Recherche+ et PDF ;
+- DDoS ou trafic massif ;
+- prompt injection dans texte, URL, PDF, document ou source ;
+- XSS dans questions, titres, sources, cartes partagees et PDF ;
+- fichiers trop lourds, mauvais MIME, contenus binaires ou documents hostiles ;
+- scraping d'Atlas, cartes publiques et snapshots ;
+- couts forces par generation, Recherche+ ou providers IA ;
+- confusion public/private/admin ;
+- partage massif de contenus trompeurs, abusifs ou diffamatoires.
+
+Controles requis :
+
+- rate limit par IP, utilisateur et endpoint ;
+- quotas invite, compte gratuit et compte payant ;
+- limites de taille input, URL, fichiers, images et PDF ;
+- validation MIME cote serveur ;
+- sanitation HTML avant rendu public, partage ou PDF ;
+- separation stricte des snapshots publics, prives et admin ;
+- logs metadata-only par defaut ;
+- detection prompt injection et payloads suspects ;
+- degradation controlee si provider coute trop ou echoue ;
+- CAPTCHA, challenge ou ralentissement en cas d'abus ;
+- Vercel Firewall / WAF / Attack Challenge Mode ;
+- alertes CTO Watch sur seuils critiques.
+
+Regle :
+
+```txt
+Lire = cacheable.
+Generer = quota.
+Importer = valider.
+Partager = sanitizer.
+Enqueter = limiter.
+Surveiller = alerter.
+```
 
 ## 4b ter. Export PDF
 
@@ -881,6 +957,7 @@ src/lib/contracts/
 src/lib/archive/
 src/lib/interpretation/
 src/lib/dialogue/
+src/lib/security/
 src/lib/expertisesMetiers/
 src/lib/domain/
 src/lib/tensions/
@@ -1624,14 +1701,16 @@ Tout changement doit nommer le niveau corrige :
 
 1. interpretation ;
 2. dialogue gate ;
-3. ressources ;
-4. theatre reel ;
-5. domaine / tension / metier ;
-6. scoring ;
-7. redaction ;
-8. enquete angles morts ;
-9. quality gate ;
-10. UI / rendu.
+3. safety ;
+4. security ;
+5. ressources ;
+6. theatre reel ;
+7. domaine / tension / metier ;
+8. scoring ;
+9. redaction ;
+10. enquete angles morts ;
+11. quality gate ;
+12. UI / rendu.
 
 Si le probleme ressemble a un cas particulier, ne pas corriger le cas. Corriger
 la couche canonique qui a produit le symptome et ajouter le cas au benchmark ou

@@ -84,6 +84,15 @@ export const V2_FOUNDATION_BRICKS: V2FoundationBrick[] = [
     note: 'Protege les domaines medicaux, juridiques, financiers, mineurs et high stakes.',
   },
   {
+    id: 'security-abuse',
+    label: 'SecurityAbuseGuard',
+    layer: 'security',
+    status: 'passive',
+    commit: 'f8a9b52',
+    files: ['src/lib/contracts/security.ts', 'src/lib/security'],
+    note: 'Protege le moteur contre abus, injections, scraping, fichiers hostiles, couts forces et pics de trafic.',
+  },
+  {
     id: 'expertises-metiers',
     label: 'ExpertisesMetiers',
     layer: 'expertisesMetiers',

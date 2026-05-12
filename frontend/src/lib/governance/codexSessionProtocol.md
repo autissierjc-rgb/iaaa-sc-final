@@ -15,6 +15,7 @@ Situation Card.
    - interpretation ;
    - dialogue ;
    - safety ;
+   - security ;
    - resources ;
    - expertisesMetiers ;
    - theatre ;
