@@ -88,7 +88,7 @@ export const V2_FOUNDATION_BRICKS: V2FoundationBrick[] = [
     label: 'SecurityAbuseGuard',
     layer: 'security',
     status: 'passive',
-    commit: 'f8a9b52',
+    commit: '1341911',
     files: ['src/lib/contracts/security.ts', 'src/lib/security'],
     note: 'Protege le moteur contre abus, injections, scraping, fichiers hostiles, couts forces et pics de trafic.',
   },
