@@ -460,6 +460,16 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     })
   }
 
+  function addControlIndex() {
+    const value = options.score ? `${options.score} / 100 · ${options.stateLabel || ''}` : options.stateLabel
+    if (!value) return
+    if (y < bottomY + 44) flushPage()
+    currentOps.push({ kind: 'rect', x: marginX, y: y - 28, w: contentWidth, h: 34, stroke: '#E2D8C6', fill: '#FCFAF6', width: 0.8 })
+    currentOps.push({ kind: 'text', text: 'Indice de contrôle', size: 9.5, x: marginX + 12, y: y - 6, font: 'bold', color: '#C8951A' })
+    currentOps.push({ kind: 'text', text: value, size: 13, x: marginX + 134, y: y - 7, font: 'bold', color: '#1B3A6B' })
+    y -= 48
+  }
+
   function addLogo() {
     const cx = 70
     const cy = 747
@@ -570,7 +580,6 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   wrapLine(options.subject || title, 74).slice(0, 3).forEach((line, index) => {
     currentOps.push({ kind: 'text', text: line, size: 14, x: 48, y: 698 - index * 17, font: 'bold', color: '#10244A' })
   })
-  currentOps.push({ kind: 'text', text: options.score ? `${options.score} / 100 · ${options.stateLabel || ''}` : options.stateLabel, size: 12, x: 48, y: 620, font: 'bold', color: '#1B3A6B' })
   const intro = options.isFr
     ? 'Une lecture structurée pour voir le système, le point fragile et les signaux à surveiller.'
     : 'A structured reading to see the system, the fragile point and the signals to watch.'
@@ -582,6 +591,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   y -= 20
   addCardAstrolabe(options.astrolabeScores)
   addForceLines(options.astrolabeScores)
+  addControlIndex()
 
   for (const section of sections) {
     addSection(section)
