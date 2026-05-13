@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { LanguageCode } from '@/lib/contracts/common'
 import type { GeneratedCardSnapshot } from '@/lib/contracts/generationArchive'
-import { createTranslatedSnapshot } from '@/lib/share'
+import { createTranslatedSnapshot } from '@/lib/share/TranslatedSnapshotPlanner'
 
 export const dynamic = 'force-dynamic'
 
