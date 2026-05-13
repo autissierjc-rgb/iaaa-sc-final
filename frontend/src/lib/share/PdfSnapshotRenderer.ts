@@ -22,6 +22,28 @@ type AstrolabePdfScore = {
   display_score: number
 }
 
+const BRANCH_DESC_FR: Record<string, string> = {
+  I: 'Ceux qui agissent, influencent ou bloquent.',
+  II: 'Ce que les parties cherchent, défendent ou refusent.',
+  III: 'Ce qui pousse, soutient ou accélère la situation.',
+  IV: 'Ce qui oppose, fragilise ou met sous pression.',
+  V: "Ce qui limite l'action et réduit les marges.",
+  VI: "Ce que l’analyse risque de ne pas voir alors que cela peut renverser la lecture.",
+  VII: "Les rythmes, délais et fenêtres d'action.",
+  VIII: 'Les récits, croyances, réputations et lectures qui orientent les comportements.',
+}
+
+const DEFAULT_BRANCH_NAMES_FR: Record<string, string> = {
+  I: 'Acteurs',
+  II: 'Intérêts',
+  III: 'Forces',
+  IV: 'Tensions',
+  V: 'Contraintes',
+  VI: 'Incertitudes',
+  VII: 'Temps',
+  VIII: 'Perception',
+}
+
 const PDF_WINANSI_ESCAPES: Record<string, string> = {
   À: '\\300',
   Â: '\\302',
@@ -137,6 +159,10 @@ function sourceText(source: unknown): string {
   return [title, type, url].filter(Boolean).join(' - ')
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : null
+}
+
 function readLogoJpeg(): { data: Buffer; width: number; height: number } | null {
   const candidates = [
     path.join(process.cwd(), 'public', 'pictos', 'LOOGO-IAAA.jpg'),
@@ -175,13 +201,41 @@ function extractAstrolabeScores(card: Record<string, unknown> | string | undefin
       if (!entry || typeof entry !== 'object') return null
       const item = entry as Record<string, unknown>
       const branch = text(item.branch ?? item.b)
-      const name = text(item.name ?? item.name_fr ?? item.label)
+      const name = text(item.name ?? item.name_fr ?? item.label) || DEFAULT_BRANCH_NAMES_FR[branch] || branch
       const rawScore = Number(item.display_score ?? item.score ?? item.s ?? 0)
       const display_score = Math.max(0, Math.min(3, Number.isFinite(rawScore) ? Math.round(rawScore) : 0))
       return branch ? { branch, name, display_score } : null
     })
     .filter((entry): entry is AstrolabePdfScore => Boolean(entry))
     .slice(0, 8)
+}
+
+function extractRadarDetails(card: Record<string, unknown> | string | undefined, isFr: boolean): PdfSection[] {
+  if (!card || typeof card === 'string' || !Array.isArray(card.radar_details)) return []
+  const sections: PdfSection[] = []
+  card.radar_details.forEach((entry) => {
+    const item = asRecord(entry)
+    if (!item) return
+    const title = text(isFr ? (item.dimension_fr ?? item.dimension) : (item.dimension_en ?? item.dimension_fr ?? item.dimension))
+    const score = text(item.score)
+    const body = text(isFr ? (item.explanation_fr ?? item.note_fr ?? item.explanation) : (item.explanation_en ?? item.explanation_fr ?? item.note_fr ?? item.explanation))
+    if (!title && !body) return
+    sections.push({
+      title: score ? `${title} · ${score}/3` : title,
+      body,
+      tone: 'muted' as const,
+    })
+  })
+  return sections
+}
+
+function extractMovements(card: Record<string, unknown> | string | undefined, isFr: boolean): string {
+  if (!card || typeof card === 'string') return ''
+  const value = isFr ? card.movements_fr : (card.movements_en ?? card.movements_fr)
+  if (Array.isArray(value)) {
+    return value.map((item, index) => `${index + 1}. ${text(item)}`).filter(Boolean).join('\n')
+  }
+  return text(value)
 }
 
 function extractScore(card: Record<string, unknown> | string | undefined): string {
@@ -388,6 +442,24 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     y -= 6
   }
 
+  function addForceLines(scores: AstrolabePdfScore[]) {
+    if (scores.length === 0) return
+    if (y < 260) flushPage()
+    addText('FORCE LINES', 10, 18, marginX, 'bold', '#B8862D')
+    const colors = ['#E0DCD4', '#B8D4F0', '#F0CA70', '#E87C7C']
+    scores.forEach((score) => {
+      if (y < bottomY + 40) flushPage()
+      const barWidth = Math.max(0, Math.min(1, score.display_score / 3)) * 260
+      currentOps.push({ kind: 'text', text: score.branch, size: 8.5, x: 60, y, font: 'bold', color: '#6F6255' })
+      currentOps.push({ kind: 'text', text: score.name || DEFAULT_BRANCH_NAMES_FR[score.branch] || score.branch, size: 10.5, x: 82, y, font: 'bold', color: '#1B3A6B' })
+      currentOps.push({ kind: 'rect', x: 190, y: y - 4, w: 300, h: 5, fill: '#EDEAE4' })
+      currentOps.push({ kind: 'rect', x: 190, y: y - 4, w: barWidth, h: 5, fill: colors[score.display_score] ?? colors[0] })
+      y -= 14
+      addWrapped(BRANCH_DESC_FR[score.branch] || '', 9, 82, '#6F6255', 34)
+      y -= 2
+    })
+  }
+
   function addLogo() {
     const cx = 70
     const cy = 747
@@ -491,33 +563,25 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   else addLogo()
   currentOps.push({ kind: 'text', text: 'IAAA+', size: 14, x: 112, y: 760, font: 'bold', color: '#C8951A' })
   currentOps.push({ kind: 'text', text: 'SITUATION CARD', size: 13, x: 112, y: 744, font: 'bold', color: '#1B3A6B' })
-  currentOps.push({ kind: 'text', text: `Atlas · ${options.domain || 'Situation'}`, size: 12, x: 112, y: 718, font: 'bold', color: '#B8862D' })
+  currentOps.push({ kind: 'text', text: options.domain || 'Situation', size: 14, x: 112, y: 720, font: 'bold', color: '#B8862D' })
   currentOps.push({ kind: 'text', text: `Snapshot : ${options.createdAt.slice(0, 10)}`, size: 9, x: 390, y: 760, color: '#6F6255' })
   currentOps.push({ kind: 'text', text: `Langue : ${options.isFr ? 'FR' : 'EN'}`, size: 9, x: 390, y: 744, color: '#6F6255' })
   currentOps.push({ kind: 'text', text: meta, size: 9, x: 390, y: 728, color: '#6F6255' })
   wrapLine(options.subject || title, 74).slice(0, 3).forEach((line, index) => {
     currentOps.push({ kind: 'text', text: line, size: 14, x: 48, y: 698 - index * 17, font: 'bold', color: '#10244A' })
   })
+  currentOps.push({ kind: 'text', text: options.score ? `${options.score} / 100 · ${options.stateLabel || ''}` : options.stateLabel, size: 12, x: 48, y: 620, font: 'bold', color: '#1B3A6B' })
   const intro = options.isFr
     ? 'Une lecture structurée pour voir le système, le point fragile et les signaux à surveiller.'
     : 'A structured reading to see the system, the fragile point and the signals to watch.'
-  currentOps.push({ kind: 'text', text: intro, size: 10.5, x: 48, y: 638, color: '#6F6255' })
+  currentOps.push({ kind: 'text', text: intro, size: 10.5, x: 48, y: 598, color: '#6F6255' })
   currentOps.push({ kind: 'line', x1: 48, y1: 590, x2: 547, y2: 590, stroke: '#DAC7A4', width: 1 })
   currentOps.push({ kind: 'text', text: options.isFr ? 'Situation soumise' : 'Submitted situation', size: 11, x: 48, y: 562, font: 'bold', color: '#C8951A' })
   y = 540
   addWrapped(options.submitted, 12, 76, '#1A2A3A')
-  y -= 12
-  currentOps.push({ kind: 'rect', x: 48, y: y - 62, w: 150, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
-  currentOps.push({ kind: 'text', text: options.isFr ? 'État' : 'State', size: 9, x: 62, y: y - 28, font: 'bold', color: '#C8951A' })
-  currentOps.push({ kind: 'text', text: options.stateLabel || 'N/A', size: 14, x: 62, y: y - 48, font: 'bold', color: '#1B3A6B' })
-  currentOps.push({ kind: 'rect', x: 222, y: y - 62, w: 150, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
-  currentOps.push({ kind: 'text', text: options.isFr ? 'Indice de contrôle' : 'Control index', size: 9, x: 236, y: y - 28, font: 'bold', color: '#C8951A' })
-  currentOps.push({ kind: 'text', text: options.score ? `${options.score} / 100` : 'N/A', size: 14, x: 236, y: y - 48, font: 'bold', color: '#1B3A6B' })
-  currentOps.push({ kind: 'rect', x: 396, y: y - 62, w: 151, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
-  currentOps.push({ kind: 'text', text: options.isFr ? 'Genere le' : 'Generated', size: 9, x: 410, y: y - 28, font: 'bold', color: '#C8951A' })
-  currentOps.push({ kind: 'text', text: options.createdAt.slice(0, 10), size: 14, x: 410, y: y - 48, font: 'bold', color: '#1B3A6B' })
-  y -= 90
+  y -= 20
   addCardAstrolabe(options.astrolabeScores)
+  addForceLines(options.astrolabeScores)
 
   for (const section of sections) {
     addSection(section)
@@ -563,24 +627,28 @@ export function renderSnapshotPdf(snapshot: GeneratedCardSnapshot): { buffer: Bu
   const approfondir = approfondirText(payload.writing?.approfondir, isFr)
   const sources = payload.resources?.public_sources ?? payload.resources?.resources ?? []
   const astrolabeScores = extractAstrolabeScores(card)
-  const capContent = [
-    fromCard(card, ['insight_fr', 'insight_en', 'insight']),
-    fromCard(card, ['main_vulnerability_fr', 'main_vulnerability_en', 'main_vulnerability']),
-    fromCard(card, ['key_signal_fr', 'key_signal_en', 'key_signal']),
-  ].filter(Boolean).join('\n\n')
-  const analyseIntro = [
-    lecture || fromCard(card, ['lecture_systeme_fr', 'lecture_systeme_en', 'lecture']),
-    approfondir,
-  ].filter(Boolean).join('\n\n')
+  const radarSections = extractRadarDetails(card, isFr)
+  const movements = extractMovements(card, isFr)
+  const capRecord = typeof card === 'object' && card && typeof card.cap === 'object' ? card.cap as Record<string, unknown> : {}
+  const ancrage = text(isFr ? (capRecord.hook_fr ?? capRecord.hook) : (capRecord.hook_en ?? capRecord.hook_fr ?? capRecord.hook))
+  const surveiller = text(isFr ? (capRecord.watch_fr ?? capRecord.watch) : (capRecord.watch_en ?? capRecord.watch_fr ?? capRecord.watch))
+  const summary = fromCard(card, ['summary_fr', 'resume_fr', 'résumé_fr', 'summary_en', 'resume'])
+  const score = extractScore(card)
+  const stateLabel = extractStateLabel(card, isFr)
 
   const sections: PdfSection[] = [
-    { title: 'Cap', body: capContent, tone: 'signal' },
-    { title: 'Analyse', body: analyseIntro },
     { title: isFr ? 'Lecture' : 'Reading', body: lecture || fromCard(card, ['lecture_systeme_fr', 'lecture_systeme_en', 'lecture']) },
     { title: isFr ? 'Vulnérabilité principale' : 'Main vulnerability', body: fromCard(card, ['main_vulnerability_fr', 'main_vulnerability_en', 'main_vulnerability']), tone: 'risk' },
     { title: isFr ? 'Asymétrie' : 'Asymmetry', body: fromCard(card, ['asymmetry_fr', 'asymmetry_en', 'asymmetry']) },
+    { title: 'Ancrage', body: ancrage },
+    { title: 'Surveiller', body: surveiller, tone: 'signal' },
     { title: isFr ? 'Trajectoires' : 'Trajectories', body: fromCard(card, ['trajectories_text_fr', 'trajectories_text_en', 'trajectories_text']) },
     { title: isFr ? 'Signal clé' : 'Key signal', body: fromCard(card, ['key_signal_fr', 'key_signal_en', 'key_signal']), tone: 'signal' },
+    { title: isFr ? 'Radar de pression' : 'Pressure radar', body: score ? `${score} / 100 · ${stateLabel}` : stateLabel, tone: 'muted' },
+    ...radarSections,
+    { title: 'Mouvements', body: movements },
+    { title: 'Traçabilité', body: `${isFr ? 'Généré par IAAA+ SIS' : 'Generated by IAAA+ SIS'} · ${snapshot.created_at.slice(0, 10)}\nVersion ${snapshot.card_version} · Lecture structurelle`, tone: 'muted' },
+    { title: isFr ? 'Résumé' : 'Summary', body: summary || lecture },
     { title: isFr ? 'Approfondir' : 'Deep reading', body: approfondir },
     { title: isFr ? 'Ressources publiques' : 'Public sources', body: sources.map(sourceText).filter(Boolean).join('\n'), tone: 'muted' },
     { title: isFr ? 'Provenance' : 'Provenance', body: `${snapshot.card_version} - ${snapshot.created_at} - snapshot ${snapshot.id}`, tone: 'muted' },
@@ -593,7 +661,7 @@ export function renderSnapshotPdf(snapshot: GeneratedCardSnapshot): { buffer: Bu
       subject: title,
       submitted: snapshot.situation_soumise,
       score: extractScore(card),
-      stateLabel: extractStateLabel(card, isFr),
+      stateLabel,
       createdAt: snapshot.created_at,
       isFr,
       astrolabeScores,
