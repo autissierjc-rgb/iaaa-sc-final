@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
+import { deflateSync, inflateSync } from 'node:zlib'
 import type { GeneratedCardSnapshot } from '@/lib/contracts/generationArchive'
 
 type PdfSection = {
@@ -18,6 +21,12 @@ type AstrolabePdfScore = {
   branch: string
   name: string
   display_score: number
+}
+
+type PdfImage = {
+  data: Buffer<ArrayBufferLike>
+  width: number
+  height: number
 }
 
 const GOLD = '#B8862D'
@@ -114,10 +123,24 @@ function objectText(value: unknown, keys: string[]): string {
   if (!value || typeof value !== 'object') return text(value)
   const item = value as Record<string, unknown>
   for (const key of keys) {
-    const found = text(item[key])
+    const found = structuredText(item[key])
     if (found) return found
   }
   return ''
+}
+
+function structuredText(value: unknown): string {
+  const direct = text(value)
+  if (direct) return direct
+  if (Array.isArray(value)) return value.map(structuredText).filter(Boolean).join('\n\n')
+  if (!value || typeof value !== 'object') return ''
+  return Object.entries(value as Record<string, unknown>)
+    .map(([key, entry]) => {
+      const body = structuredText(entry)
+      return body ? `${key}\n${body}` : ''
+    })
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 function lectureText(value: unknown, isFr: boolean): string {
@@ -162,6 +185,103 @@ function sourceText(source: unknown): string {
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' ? value as Record<string, unknown> : null
+}
+
+function unfilterPngRow(filter: number, row: Buffer<ArrayBufferLike>, previous: Buffer<ArrayBufferLike>, bytesPerPixel: number): Buffer<ArrayBufferLike> {
+  const output = Buffer.alloc(row.length)
+  for (let i = 0; i < row.length; i += 1) {
+    const left = i >= bytesPerPixel ? output[i - bytesPerPixel] : 0
+    const up = previous[i] ?? 0
+    const upLeft = i >= bytesPerPixel ? previous[i - bytesPerPixel] ?? 0 : 0
+    let value = row[i]
+    if (filter === 1) value = (value + left) & 0xff
+    else if (filter === 2) value = (value + up) & 0xff
+    else if (filter === 3) value = (value + Math.floor((left + up) / 2)) & 0xff
+    else if (filter === 4) {
+      const p = left + up - upLeft
+      const pa = Math.abs(p - left)
+      const pb = Math.abs(p - up)
+      const pc = Math.abs(p - upLeft)
+      value = (value + (pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft)) & 0xff
+    }
+    output[i] = value
+  }
+  return output
+}
+
+function resizeRgb(data: Buffer, width: number, height: number, maxSide = 256): PdfImage {
+  if (Math.max(width, height) <= maxSide) return { data: deflateSync(data), width, height }
+  const scale = maxSide / Math.max(width, height)
+  const targetWidth = Math.max(1, Math.round(width * scale))
+  const targetHeight = Math.max(1, Math.round(height * scale))
+  const resized = Buffer.alloc(targetWidth * targetHeight * 3)
+  for (let y = 0; y < targetHeight; y += 1) {
+    const sourceY = Math.min(height - 1, Math.floor(y / scale))
+    for (let x = 0; x < targetWidth; x += 1) {
+      const sourceX = Math.min(width - 1, Math.floor(x / scale))
+      const source = (sourceY * width + sourceX) * 3
+      const target = (y * targetWidth + x) * 3
+      resized[target] = data[source]
+      resized[target + 1] = data[source + 1]
+      resized[target + 2] = data[source + 2]
+    }
+  }
+  return { data: deflateSync(resized), width: targetWidth, height: targetHeight }
+}
+
+function readLogoPng(): PdfImage | null {
+  const logoPath = path.join(process.cwd(), 'public', 'pictos', 'logo-iaaa.png')
+  if (!existsSync(logoPath)) return null
+  const file = readFileSync(logoPath)
+  if (file.toString('hex', 0, 8) !== '89504e470d0a1a0a') return null
+
+  let offset = 8
+  let width = 0
+  let height = 0
+  let bitDepth = 0
+  let colorType = 0
+  let interlace = 0
+  const chunks: Buffer[] = []
+  while (offset < file.length) {
+    const length = file.readUInt32BE(offset)
+    const type = file.toString('ascii', offset + 4, offset + 8)
+    const data = file.subarray(offset + 8, offset + 8 + length)
+    if (type === 'IHDR') {
+      width = data.readUInt32BE(0)
+      height = data.readUInt32BE(4)
+      bitDepth = data[8]
+      colorType = data[9]
+      interlace = data[12]
+    } else if (type === 'IDAT') {
+      chunks.push(data)
+    } else if (type === 'IEND') {
+      break
+    }
+    offset += 12 + length
+  }
+  if (!width || !height || bitDepth !== 8 || interlace !== 0 || ![2, 6].includes(colorType)) return null
+
+  const channels = colorType === 6 ? 4 : 3
+  const rowLength = width * channels
+  const inflated = inflateSync(Buffer.concat(chunks))
+  const rgb = Buffer.alloc(width * height * 3)
+  let inputOffset = 0
+  let previous: Buffer<ArrayBufferLike> = Buffer.alloc(rowLength)
+  for (let y = 0; y < height; y += 1) {
+    const filter = inflated[inputOffset]
+    const row = unfilterPngRow(filter, inflated.subarray(inputOffset + 1, inputOffset + 1 + rowLength), previous, channels)
+    for (let x = 0; x < width; x += 1) {
+      const source = x * channels
+      const alpha = channels === 4 ? row[source + 3] / 255 : 1
+      const target = (y * width + x) * 3
+      rgb[target] = Math.round(row[source] * alpha + 255 * (1 - alpha))
+      rgb[target + 1] = Math.round(row[source + 1] * alpha + 253 * (1 - alpha))
+      rgb[target + 2] = Math.round(row[source + 2] * alpha + 248 * (1 - alpha))
+    }
+    previous = row
+    inputOffset += 1 + rowLength
+  }
+  return resizeRgb(rgb, width, height)
 }
 
 function extractAstrolabeScores(card: Record<string, unknown> | string | undefined): AstrolabePdfScore[] {
@@ -347,7 +467,10 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   const contentWidth = pageWidth - marginX * 2
   const startY = 760
   const bottomY = 64
-  const objects: string[] = ['', '', '', '']
+  const logo = readLogoPng()
+  const objects: string[] = logo
+    ? ['', '', '', '', `<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length ${logo.data.length} >>\nstream\n${logo.data.toString('binary')}\nendstream`]
+    : ['', '', '', '']
   const pages: string[] = []
   let currentOps: PdfOp[] = []
   let y = startY
@@ -366,7 +489,8 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     const contentObjectNumber = objects.length + 1
     objects.push(`<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream`)
     const pageObjectNumber = objects.length + 1
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`)
+    const xObjectResource = logo ? ' /XObject << /Logo 5 0 R >>' : ''
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xObjectResource} >> /Contents ${contentObjectNumber} 0 R >>`)
     pages.push(`${pageObjectNumber} 0 R`)
     currentOps = []
     y = startY
@@ -412,18 +536,17 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   function addForceLines(scores: AstrolabePdfScore[]) {
     if (scores.length === 0) return
     if (y < bottomY + 70) flushPage()
-    addText('FORCE LINES', 10, 18, marginX, 'bold', '#B8862D')
+    addText('FORCE LINES', 9.5, 14, marginX, 'bold', GOLD)
     const colors = ['#E0DCD4', '#B8D4F0', '#F0CA70', '#E87C7C']
     scores.forEach((score) => {
-      if (y < bottomY + 40) flushPage()
-      const barWidth = Math.max(0, Math.min(1, score.display_score / 3)) * 260
+      if (y < bottomY + 18) flushPage()
+      const barWidth = Math.max(0, Math.min(1, score.display_score / 3)) * 220
       currentOps.push({ kind: 'text', text: score.branch, size: 8.5, x: 60, y, font: 'bold', color: '#6F6255' })
       currentOps.push({ kind: 'text', text: score.name || DEFAULT_BRANCH_NAMES_FR[score.branch] || score.branch, size: 10.5, x: 82, y, font: 'bold', color: '#1B3A6B' })
-      currentOps.push({ kind: 'rect', x: 190, y: y - 4, w: 300, h: 5, fill: '#EDEAE4' })
-      currentOps.push({ kind: 'rect', x: 190, y: y - 4, w: barWidth, h: 5, fill: colors[score.display_score] ?? colors[0] })
-      y -= 14
-      addWrapped(BRANCH_DESC_FR[score.branch] || '', 9, 82, '#6F6255', 34)
-      y -= 2
+      currentOps.push({ kind: 'rect', x: 192, y: y - 4, w: 246, h: 5, fill: '#EDEAE4' })
+      currentOps.push({ kind: 'rect', x: 192, y: y - 4, w: barWidth, h: 5, fill: colors[score.display_score] ?? colors[0] })
+      currentOps.push({ kind: 'text', text: wrapLine(BRANCH_DESC_FR[score.branch] || '', 46)[0] || '', size: 8, x: 60, y: y - 11, color: '#6F6255' })
+      y -= 22
     })
   }
 
@@ -462,25 +585,25 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     if (scores.length === 0) return
     if (y < 260) flushPage()
     const cx = 298
-    const cy = y - 112
-    const rings = [26, 50, 74]
-    const labelR = 96
+    const cy = y - 76
+    const rings = [18, 34, 50]
+    const labelR = 68
     const fills = ['#B8D4F0', '#F0CA70', '#E87C7C']
     const strokes = ['#7AAEDC', '#D4A830', '#C84040']
     const empty = '#E0DCD4'
     const emptyStroke = '#C8C4BC'
 
     addText('Astrolabe', 13, 18, marginX, 'bold', GOLD)
-    currentOps.push({ kind: 'circle', x: cx, y: cy, r: 88, stroke: '#C8B880', width: 1.2 })
+    currentOps.push({ kind: 'circle', x: cx, y: cy, r: 60, stroke: '#C8B880', width: 1.2 })
     Array.from({ length: 32 }).forEach((_, t) => {
       const angle = (t * 360 / 32 - 90) * Math.PI / 180
       const major = t % 4 === 0
       currentOps.push({
         kind: 'line',
-        x1: cx + 82 * Math.cos(angle),
-        y1: cy + 82 * Math.sin(angle),
-        x2: cx + (major ? 76 : 79) * Math.cos(angle),
-        y2: cy + (major ? 76 : 79) * Math.sin(angle),
+        x1: cx + 56 * Math.cos(angle),
+        y1: cy + 56 * Math.sin(angle),
+        x2: cx + (major ? 51 : 53) * Math.cos(angle),
+        y2: cy + (major ? 51 : 53) * Math.sin(angle),
         stroke: '#C8B880',
         width: major ? 1 : 0.5,
       })
@@ -493,8 +616,8 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
         kind: 'line',
         x1: cx,
         y1: cy,
-        x2: cx + 78 * Math.cos(angle),
-        y2: cy + 78 * Math.sin(angle),
+        x2: cx + 54 * Math.cos(angle),
+        y2: cy + 54 * Math.sin(angle),
         stroke: '#E0DCD4',
         width: 0.8,
       })
@@ -520,23 +643,24 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
       const lx = cx + labelR * Math.cos(angle)
       const ly = cy + labelR * Math.sin(angle)
       const dotColor = score.display_score === 3 ? '#801050' : score.display_score === 2 ? '#888000' : '#004858'
-      currentOps.push({ kind: 'circle', x: lx, y: ly, r: 10, fill: '#F8F3E8', stroke: '#C8B880', width: 0.9 })
-      currentOps.push({ kind: 'circle', x: lx, y: ly + 4, r: 2, fill: dotColor })
-      currentOps.push({ kind: 'text', text: score.branch, size: 8, x: lx - 4, y: ly - 4, font: 'bold', color: '#6A5A38' })
+      currentOps.push({ kind: 'circle', x: lx, y: ly, r: 8, fill: '#F8F3E8', stroke: '#C8B880', width: 0.9 })
+      currentOps.push({ kind: 'circle', x: lx, y: ly + 3, r: 1.6, fill: dotColor })
+      currentOps.push({ kind: 'text', text: score.branch, size: 7, x: lx - 3.5, y: ly - 4, font: 'bold', color: '#6A5A38' })
     })
     currentOps.push({ kind: 'circle', x: cx, y: cy, r: 7, fill: '#D4BC78', stroke: '#A89050', width: 1 })
     currentOps.push({ kind: 'circle', x: cx, y: cy, r: 3, fill: '#8A6830' })
-    currentOps.push({ kind: 'polygon', points: [[200, cy - 118], [196, cy - 110], [200, cy - 102], [204, cy - 110]], fill: '#B8D4F0' })
-    currentOps.push({ kind: 'text', text: 'Calme', size: 8, x: 210, y: cy - 113, color: '#6F6255' })
-    currentOps.push({ kind: 'polygon', points: [[278, cy - 118], [274, cy - 110], [278, cy - 102], [282, cy - 110]], fill: '#F0CA70' })
-    currentOps.push({ kind: 'text', text: 'Modéré', size: 8, x: 288, y: cy - 113, color: '#6F6255' })
-    currentOps.push({ kind: 'polygon', points: [[366, cy - 118], [362, cy - 110], [366, cy - 102], [370, cy - 110]], fill: '#E87C7C' })
-    currentOps.push({ kind: 'text', text: 'Dominant', size: 8, x: 376, y: cy - 113, color: '#6F6255' })
-    y = cy - 122
+    currentOps.push({ kind: 'polygon', points: [[220, cy - 84], [216, cy - 76], [220, cy - 68], [224, cy - 76]], fill: '#B8D4F0' })
+    currentOps.push({ kind: 'text', text: 'Calme', size: 8, x: 230, y: cy - 79, color: '#6F6255' })
+    currentOps.push({ kind: 'polygon', points: [[288, cy - 84], [284, cy - 76], [288, cy - 68], [292, cy - 76]], fill: '#F0CA70' })
+    currentOps.push({ kind: 'text', text: 'Modéré', size: 8, x: 298, y: cy - 79, color: '#6F6255' })
+    currentOps.push({ kind: 'polygon', points: [[370, cy - 84], [366, cy - 76], [370, cy - 68], [374, cy - 76]], fill: '#E87C7C' })
+    currentOps.push({ kind: 'text', text: 'Dominant', size: 8, x: 380, y: cy - 79, color: '#6F6255' })
+    y = cy - 92
   }
 
   addPageChrome()
-  addLogo()
+  if (logo) currentOps.push({ kind: 'image', x: 48, y: 722, w: 52, h: 52 })
+  else addLogo()
   currentOps.push({ kind: 'text', text: 'IAAA+', size: 14, x: 112, y: 760, font: 'bold', color: GOLD })
   currentOps.push({ kind: 'text', text: 'SITUATION CARD', size: 13, x: 112, y: 744, font: 'bold', color: '#1B3A6B' })
   currentOps.push({ kind: 'text', text: (options.domain || 'Situation').replace('·', ':'), size: 14, x: 112, y: 720, font: 'bold', color: GOLD_DARK })
@@ -555,7 +679,6 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   y = 540
   addWrapped(options.submitted, 12, 76, '#1A2A3A')
   y -= 20
-  if (options.astrolabeScores.length > 0 && y < 600) flushPage()
   addCardAstrolabe(options.astrolabeScores)
   addForceLines(options.astrolabeScores)
   addControlIndex()
