@@ -191,6 +191,11 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   let y = startY
   let pageNumber = 0
 
+  function addPageChrome() {
+    currentOps.push({ kind: 'rect', x: 0, y: 0, w: pageWidth, h: pageHeight, fill: '#F5F0E8' })
+    currentOps.push({ kind: 'rect', x: 40, y: 48, w: 515, h: 746, stroke: '#DAC7A4', fill: '#FFFDF8', width: 1 })
+  }
+
   function flushPage() {
     if (currentOps.length === 0) return
     pageNumber += 1
@@ -203,6 +208,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     pages.push(`${pageObjectNumber} 0 R`)
     currentOps = []
     y = startY
+    addPageChrome()
   }
 
   function addText(value: string, size = 10, gap = 14, x = marginX, font: 'regular' | 'bold' = 'regular', colorValue = '#1A2A3A') {
@@ -225,32 +231,36 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     const boxHeight = Math.max(70, 34 + bodyLines.length * 13)
     if (y - boxHeight < bottomY) flushPage()
     currentOps.push({ kind: 'rect', x: marginX - 8, y: y - boxHeight + 12, w: contentWidth + 16, h: boxHeight, stroke: '#E2D8C6', fill, width: 0.8 })
-    addText(section.title.toUpperCase(), 11, 18, marginX, 'bold', titleColor)
+    addText(section.title, 11, 18, marginX, 'bold', titleColor)
     for (const line of bodyLines) {
       addText(line, 9.5, line ? 12.5 : 8, marginX, 'regular', '#1A2A3A')
     }
     y -= 12
   }
 
-  currentOps.push({ kind: 'rect', x: 0, y: 0, w: pageWidth, h: pageHeight, fill: '#F5F3EE' })
-  currentOps.push({ kind: 'rect', x: 0, y: 732, w: pageWidth, h: 110, fill: '#1B3A6B' })
-  currentOps.push({ kind: 'circle', x: 89, y: 747, r: 42, stroke: '#C8951A', fill: '#0B1730', width: 1.2 })
-  currentOps.push({ kind: 'circle', x: 89, y: 747, r: 27, stroke: '#C8951A', width: 0.6 })
-  currentOps.push({ kind: 'circle', x: 89, y: 747, r: 5, stroke: '#C8951A', fill: '#F5F3EE', width: 0.8 })
-  currentOps.push({ kind: 'line', x1: 61, y1: 747, x2: 117, y2: 747, stroke: '#C8951A', width: 1 })
-  currentOps.push({ kind: 'line', x1: 89, y1: 719, x2: 89, y2: 775, stroke: '#C8951A', width: 1 })
-  currentOps.push({ kind: 'line', x1: 68, y1: 726, x2: 110, y2: 768, stroke: '#C8951A', width: 0.8 })
-  currentOps.push({ kind: 'line', x1: 110, y1: 726, x2: 68, y2: 768, stroke: '#C8951A', width: 0.8 })
-  currentOps.push({ kind: 'text', text: 'IAAA+', size: 12, x: 62, y: 692, font: 'bold', color: '#1B3A6B' })
-  currentOps.push({ kind: 'text', text: 'SITUATION CARD', size: 28, x: 158, y: 775, font: 'bold', color: '#FFFFFF' })
-  currentOps.push({ kind: 'text', text: meta, size: 10, x: 160, y: 752, color: '#E8D7B5' })
-  currentOps.push({ kind: 'text', text: options.domain || 'Situation', size: 11, x: 160, y: 725, font: 'bold', color: '#C8951A' })
-  wrapLine(options.subject || title, 46).slice(0, 3).forEach((line, index) => {
-    currentOps.push({ kind: 'text', text: line, size: 13, x: 160, y: 702 - index * 16, font: 'bold', color: '#1B3A6B' })
+  addPageChrome()
+  currentOps.push({ kind: 'circle', x: 72, y: 748, r: 21, stroke: '#C8951A', fill: '#0B1730', width: 1 })
+  currentOps.push({ kind: 'circle', x: 72, y: 748, r: 13, stroke: '#C8951A', width: 0.5 })
+  currentOps.push({ kind: 'circle', x: 72, y: 748, r: 2.6, stroke: '#C8951A', fill: '#F5F3EE', width: 0.6 })
+  currentOps.push({ kind: 'line', x1: 58, y1: 748, x2: 86, y2: 748, stroke: '#C8951A', width: 0.7 })
+  currentOps.push({ kind: 'line', x1: 72, y1: 734, x2: 72, y2: 762, stroke: '#C8951A', width: 0.7 })
+  currentOps.push({ kind: 'line', x1: 62, y1: 738, x2: 82, y2: 758, stroke: '#C8951A', width: 0.5 })
+  currentOps.push({ kind: 'line', x1: 82, y1: 738, x2: 62, y2: 758, stroke: '#C8951A', width: 0.5 })
+  currentOps.push({ kind: 'text', text: 'IAAA+', size: 14, x: 108, y: 760, font: 'bold', color: '#C8951A' })
+  currentOps.push({ kind: 'text', text: 'SITUATION CARD', size: 13, x: 108, y: 744, font: 'bold', color: '#1B3A6B' })
+  currentOps.push({ kind: 'text', text: `Snapshot : ${options.createdAt.slice(0, 10)}`, size: 9, x: 390, y: 760, color: '#6F6255' })
+  currentOps.push({ kind: 'text', text: `Langue : ${options.isFr ? 'FR' : 'EN'}`, size: 9, x: 390, y: 744, color: '#6F6255' })
+  currentOps.push({ kind: 'text', text: meta, size: 9, x: 390, y: 728, color: '#6F6255' })
+  wrapLine(options.subject || title, 34).slice(0, 3).forEach((line, index) => {
+    currentOps.push({ kind: 'text', text: line, size: 22, x: 48, y: 704 - index * 24, font: 'bold', color: '#10244A' })
   })
-  currentOps.push({ kind: 'line', x1: 48, y1: 650, x2: 547, y2: 650, stroke: '#C8951A', width: 1.2 })
-  currentOps.push({ kind: 'text', text: options.isFr ? 'Situation soumise' : 'Submitted situation', size: 11, x: 48, y: 620, font: 'bold', color: '#C8951A' })
-  y = 598
+  const intro = options.isFr
+    ? 'Une lecture structuree pour voir le systeme, le point fragile et les signaux a surveiller.'
+    : 'A structured reading to see the system, the fragile point and the signals to watch.'
+  currentOps.push({ kind: 'text', text: intro, size: 11, x: 48, y: 628, color: '#6F6255' })
+  currentOps.push({ kind: 'line', x1: 48, y1: 600, x2: 547, y2: 600, stroke: '#DAC7A4', width: 1 })
+  currentOps.push({ kind: 'text', text: options.isFr ? 'Situation soumise' : 'Submitted situation', size: 11, x: 48, y: 570, font: 'bold', color: '#C8951A' })
+  y = 548
   addWrapped(options.submitted, 12, 76, '#1A2A3A')
   y -= 12
   currentOps.push({ kind: 'rect', x: 48, y: y - 62, w: 150, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
@@ -262,7 +272,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   currentOps.push({ kind: 'rect', x: 396, y: y - 62, w: 151, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
   currentOps.push({ kind: 'text', text: options.isFr ? 'Genere le' : 'Generated', size: 9, x: 410, y: y - 28, font: 'bold', color: '#C8951A' })
   currentOps.push({ kind: 'text', text: options.createdAt.slice(0, 10), size: 14, x: 410, y: y - 48, font: 'bold', color: '#1B3A6B' })
-  flushPage()
+  y -= 90
 
   for (const section of sections) {
     addBox(section)
@@ -309,7 +319,7 @@ export function renderSnapshotPdf(snapshot: GeneratedCardSnapshot): { buffer: Bu
   const sources = payload.resources?.public_sources ?? payload.resources?.resources ?? []
 
   const sections: PdfSection[] = [
-    { title: isFr ? 'Lecture diamant' : 'Diamond reading', body: lecture || fromCard(card, ['lecture_systeme_fr', 'lecture_systeme_en', 'lecture']) },
+    { title: isFr ? 'Lecture' : 'Reading', body: lecture || fromCard(card, ['lecture_systeme_fr', 'lecture_systeme_en', 'lecture']) },
     { title: isFr ? 'Vulnerabilite principale' : 'Main vulnerability', body: fromCard(card, ['main_vulnerability_fr', 'main_vulnerability_en', 'main_vulnerability']), tone: 'risk' },
     { title: isFr ? 'Asymetrie' : 'Asymmetry', body: fromCard(card, ['asymmetry_fr', 'asymmetry_en', 'asymmetry']) },
     { title: isFr ? 'Trajectoires' : 'Trajectories', body: fromCard(card, ['trajectories_text_fr', 'trajectories_text_en', 'trajectories_text']) },
@@ -321,7 +331,7 @@ export function renderSnapshotPdf(snapshot: GeneratedCardSnapshot): { buffer: Bu
   ]
 
   return {
-    buffer: makePdf(title, sections, 'Note analytique partageable - export depuis snapshot', {
+    buffer: makePdf(title, sections, 'Export PDF depuis snapshot', {
       domain: snapshot.header_domain,
       subject: title,
       submitted: snapshot.situation_soumise,

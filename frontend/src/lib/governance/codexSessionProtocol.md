@@ -46,6 +46,7 @@ codex/admin-cockpit
 1. Lire les fichiers canoniques :
    - `src/lib/governance/situationCardV2CanonicalBrief.md`
    - `src/lib/governance/scCalibrationBenchmark.md`
+   - `src/lib/governance/pdfExportProtocol.md` pour tout travail lie au PDF
 2. Avant de modifier, dire quelle couche est concernee.
 3. Faire des changements petits et coherents.
 4. Lancer `npm run build` apres chaque brique.
@@ -86,3 +87,15 @@ Question de controle :
 ```txt
 Quelle regle canonique existante cette modification applique-t-elle ?
 ```
+
+## Regle PDF
+
+Le PDF est un export fidele du modele valide, pas un nouveau design.
+
+Avant toute modification PDF :
+
+1. relire `src/lib/governance/pdfExportProtocol.md` ;
+2. identifier la correction precise ;
+3. modifier le renderer ou le template source, jamais un PDF statique ;
+4. ne pas exposer les concepts internes dans le PDF public ;
+5. verifier que le document reste complet et correctement pagine.
