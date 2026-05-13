@@ -3413,28 +3413,6 @@ export async function POST(req: NextRequest) {
         : webNeeded
           ? 'unavailable'
           : 'not_needed'
-    const hasDirectSiteEvidence = resources.some((resource) =>
-      resource.type === 'site-brief' ||
-      resource.type === 'requested-site' ||
-      resource.type === 'site-crawl-summary' ||
-      resource.reliability?.startsWith('direct-site')
-    )
-
-    if (webNeeded && resources.length === 0) {
-      return NextResponse.json({
-        gate: 'BLOCK',
-        reason: 'Cette question dépend de sources externes vérifiables. Les ressources rapides ne sont pas disponibles, donc SC ne doit pas produire une carte générique.',
-        resources_status: resourcesStatus,
-      })
-    }
-
-    if (hasUrlInFlow && !hasDirectSiteEvidence) {
-      return NextResponse.json({
-        gate: 'BLOCK',
-        reason: 'Le site indiqué n’a pas pu être consulté directement. SC ne doit pas remplacer la visite du site par une lecture logico générique.',
-        resources_status: resourcesStatus,
-      })
-    }
 
     if (readinessGate.status === 'ask_user' && readinessGate.question && !explicitPrudentGeneration && !hasUrlInFlow) {
       return NextResponse.json({
