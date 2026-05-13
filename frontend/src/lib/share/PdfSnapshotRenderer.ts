@@ -262,7 +262,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     currentOps.push({ kind: 'rect', x: 40, y: 48, w: 515, h: 746, stroke: '#DAC7A4', fill: '#FFFDF8', width: 1 })
   }
 
-  function flushPage() {
+  function flushPage(prepareNextPage = true) {
     if (currentOps.length === 0) return
     pageNumber += 1
     currentOps.push({ kind: 'text', text: String(pageNumber), size: 8, x: 526, y: 28, color: '#9AABB8' })
@@ -275,7 +275,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     pages.push(`${pageObjectNumber} 0 R`)
     currentOps = []
     y = startY
-    addPageChrome()
+    if (prepareNextPage) addPageChrome()
   }
 
   function addText(value: string, size = 10, gap = 14, x = marginX, font: 'regular' | 'bold' = 'regular', colorValue = '#1A2A3A') {
@@ -345,17 +345,18 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
 
   addPageChrome()
   if (logo) {
-    currentOps.push({ kind: 'image', x: 48, y: 723, w: 52, h: 52 })
+    currentOps.push({ kind: 'image', x: 44, y: 716, w: 54, h: 54 })
   } else {
     addLogo()
   }
   currentOps.push({ kind: 'text', text: 'IAAA+', size: 14, x: 112, y: 760, font: 'bold', color: '#C8951A' })
   currentOps.push({ kind: 'text', text: 'SITUATION CARD', size: 13, x: 112, y: 744, font: 'bold', color: '#1B3A6B' })
+  currentOps.push({ kind: 'text', text: `Atlas · ${options.domain || 'Situation'}`, size: 9.5, x: 112, y: 718, color: '#6F6255' })
   currentOps.push({ kind: 'text', text: `Snapshot : ${options.createdAt.slice(0, 10)}`, size: 9, x: 390, y: 760, color: '#6F6255' })
   currentOps.push({ kind: 'text', text: `Langue : ${options.isFr ? 'FR' : 'EN'}`, size: 9, x: 390, y: 744, color: '#6F6255' })
   currentOps.push({ kind: 'text', text: meta, size: 9, x: 390, y: 728, color: '#6F6255' })
-  wrapLine(options.subject || title, 52).slice(0, 3).forEach((line, index) => {
-    currentOps.push({ kind: 'text', text: line, size: 17, x: 48, y: 704 - index * 20, font: 'bold', color: '#10244A' })
+  wrapLine(options.subject || title, 74).slice(0, 3).forEach((line, index) => {
+    currentOps.push({ kind: 'text', text: line, size: 14, x: 48, y: 698 - index * 17, font: 'bold', color: '#10244A' })
   })
   const intro = options.isFr
     ? 'Une lecture structurée pour voir le système, le point fragile et les signaux à surveiller.'
@@ -382,12 +383,12 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     addSection(section)
   }
 
-  if (currentOps.length > 0) flushPage()
+  if (currentOps.length > 0) flushPage(false)
 
   objects[0] = `<< /Type /Catalog /Pages 2 0 R >>`
   objects[1] = `<< /Type /Pages /Kids [${pages.join(' ')}] /Count ${pages.length} >>`
-  objects[2] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`
-  objects[3] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>`
+  objects[2] = `<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>`
+  objects[3] = `<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>`
 
   const chunks: string[] = ['%PDF-1.4\n']
   const offsets: number[] = [0]
