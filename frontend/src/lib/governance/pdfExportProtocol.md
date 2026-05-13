@@ -19,12 +19,12 @@ Cette reference donne l'esprit du rendu :
 - page claire ;
 - bordure institutionnelle fine ;
 - marque IAAA+ / Situation Card ;
-- Astrolabe ou logo visible, avec l'asset public `public/logo-iaaa.jpg` si disponible ;
+- Astrolabe vectoriel visible et stable dans le PDF ;
 - domaine visible sous la marque, au format `Atlas · {domaine}` ;
 - metadonnees en haut ;
 - titre sobre ;
 - Situation soumise ;
-- onglets publics `Cap` et `Analyse` ;
+- contenu public `Cap` et `Analyse` imprime comme sections lisibles, pas comme onglets decoratifs ;
 - indice de controle / etat ;
 - sections lisibles ;
 - notice de statut en fin de document.
@@ -50,12 +50,12 @@ Cette reference donne l'esprit du rendu :
 
 Un export PDF Situation Card doit contenir :
 
-1. marque / Astrolabe, avec l'asset public `public/logo-iaaa.jpg` si disponible ;
+1. marque / Astrolabe vectoriel stable ;
 2. domaine Atlas ;
 3. titre ;
 4. metadonnees ;
 5. situation soumise ;
-6. onglets publics `Cap` et `Analyse` ;
+6. sections publiques `Cap` et `Analyse` avec leur contenu ;
 7. indice de controle / etat ;
 8. Lecture ;
 9. Vulnerabilite principale ;

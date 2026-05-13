@@ -1,5 +1,3 @@
-import { existsSync, readFileSync } from 'node:fs'
-import path from 'node:path'
 import type { GeneratedCardSnapshot } from '@/lib/contracts/generationArchive'
 
 type PdfSection = {
@@ -13,7 +11,6 @@ type PdfOp =
   | { kind: 'rect'; x: number; y: number; w: number; h: number; stroke?: string; fill?: string; width?: number }
   | { kind: 'circle'; x: number; y: number; r: number; stroke?: string; fill?: string; width?: number }
   | { kind: 'line'; x1: number; y1: number; x2: number; y2: number; stroke?: string; width?: number }
-  | { kind: 'image'; x: number; y: number; w: number; h: number }
 
 const PDF_WINANSI_ESCAPES: Record<string, string> = {
   À: '\\300',
@@ -80,6 +77,37 @@ function text(value: unknown): string {
   return ''
 }
 
+function objectText(value: unknown, keys: string[]): string {
+  if (!value || typeof value !== 'object') return text(value)
+  const item = value as Record<string, unknown>
+  for (const key of keys) {
+    const found = text(item[key])
+    if (found) return found
+  }
+  return ''
+}
+
+function lectureText(value: unknown, isFr: boolean): string {
+  return objectText(value, isFr ? ['text_fr', 'lecture_fr', 'text'] : ['text_en', 'lecture_en', 'text_fr', 'text'])
+}
+
+function approfondirText(value: unknown, isFr: boolean): string {
+  if (typeof value === 'string') return clean(value)
+  if (!value || typeof value !== 'object') return ''
+  const item = value as Record<string, unknown>
+  const analysis = objectText(item, isFr ? ['analysis_fr', 'approfondir_fr', 'text_fr'] : ['analysis_en', 'approfondir_en', 'analysis_fr', 'text_fr'])
+  const sections = Array.isArray(item.sections_fr)
+    ? item.sections_fr
+        .map((section) => {
+          if (!section || typeof section !== 'object') return ''
+          const typed = section as Record<string, unknown>
+          return [text(typed.title), text(typed.body)].filter(Boolean).join('\n')
+        })
+        .filter(Boolean)
+    : []
+  return [analysis, ...sections].filter(Boolean).join('\n\n')
+}
+
 function fromCard(card: Record<string, unknown> | string | undefined, keys: string[]): string {
   if (typeof card === 'string') return card.trim()
   if (!card || typeof card !== 'object') return ''
@@ -97,31 +125,6 @@ function sourceText(source: unknown): string {
   const url = text(item.url)
   const type = text(item.type)
   return [title, type, url].filter(Boolean).join(' - ')
-}
-
-function readLogoJpeg(): { data: Buffer; width: number; height: number } | null {
-  const logoPath = path.join(process.cwd(), 'public', 'logo-iaaa.jpg')
-  if (!existsSync(logoPath)) return null
-  const data = readFileSync(logoPath)
-
-  for (let i = 2; i < data.length - 9;) {
-    if (data[i] !== 0xff) {
-      i += 1
-      continue
-    }
-    const marker = data[i + 1]
-    const length = data.readUInt16BE(i + 2)
-    if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7) || (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
-      return {
-        data,
-        height: data.readUInt16BE(i + 5),
-        width: data.readUInt16BE(i + 7),
-      }
-    }
-    i += 2 + length
-  }
-
-  return { data, width: 1024, height: 1024 }
 }
 
 function extractScore(card: Record<string, unknown> | string | undefined): string {
@@ -226,9 +229,6 @@ function streamForOps(ops: PdfOp[]): string {
       ]
       return commands.filter(Boolean).join('\n')
     }
-    if (op.kind === 'image') {
-      return `q\n${op.w} 0 0 ${op.h} ${op.x} ${op.y} cm\n/Logo Do\nQ`
-    }
     return `${op.width ?? 1} w\n${color(op.stroke)} RG\n${op.x1} ${op.y1} m ${op.x2} ${op.y2} l S`
   }).join('\n')
 }
@@ -248,10 +248,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   const contentWidth = pageWidth - marginX * 2
   const startY = 760
   const bottomY = 64
-  const logo = readLogoJpeg()
-  const objects: string[] = logo
-    ? ['', '', '', '', `<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logo.data.length} >>\nstream\n${logo.data.toString('binary')}\nendstream`]
-    : ['', '', '', '']
+  const objects: string[] = ['', '', '', '']
   const pages: string[] = []
   let currentOps: PdfOp[] = []
   let y = startY
@@ -270,8 +267,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     const contentObjectNumber = objects.length + 1
     objects.push(`<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream`)
     const pageObjectNumber = objects.length + 1
-    const xObjectResource = logo ? ' /XObject << /Logo 5 0 R >>' : ''
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xObjectResource} >> /Contents ${contentObjectNumber} 0 R >>`)
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`)
     pages.push(`${pageObjectNumber} 0 R`)
     currentOps = []
     y = startY
@@ -314,14 +310,6 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     y -= 6
   }
 
-  function addTabs() {
-    const tabY = 604
-    currentOps.push({ kind: 'rect', x: 48, y: tabY, w: 50, h: 22, stroke: '#C8951A', fill: '#FFF8E5', width: 0.8 })
-    currentOps.push({ kind: 'text', text: 'Cap', size: 9, x: 64, y: tabY + 7, font: 'bold', color: '#1B3A6B' })
-    currentOps.push({ kind: 'rect', x: 104, y: tabY, w: 70, h: 22, stroke: '#E2D8C6', fill: '#FFFFFF', width: 0.8 })
-    currentOps.push({ kind: 'text', text: 'Analyse', size: 9, x: 122, y: tabY + 7, font: 'bold', color: '#1B3A6B' })
-  }
-
   function addLogo() {
     const cx = 70
     const cy = 747
@@ -344,11 +332,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   }
 
   addPageChrome()
-  if (logo) {
-    currentOps.push({ kind: 'image', x: 44, y: 716, w: 54, h: 54 })
-  } else {
-    addLogo()
-  }
+  addLogo()
   currentOps.push({ kind: 'text', text: 'IAAA+', size: 14, x: 112, y: 760, font: 'bold', color: '#C8951A' })
   currentOps.push({ kind: 'text', text: 'SITUATION CARD', size: 13, x: 112, y: 744, font: 'bold', color: '#1B3A6B' })
   currentOps.push({ kind: 'text', text: `Atlas · ${options.domain || 'Situation'}`, size: 9.5, x: 112, y: 718, color: '#6F6255' })
@@ -362,7 +346,6 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     ? 'Une lecture structurée pour voir le système, le point fragile et les signaux à surveiller.'
     : 'A structured reading to see the system, the fragile point and the signals to watch.'
   currentOps.push({ kind: 'text', text: intro, size: 10.5, x: 48, y: 638, color: '#6F6255' })
-  addTabs()
   currentOps.push({ kind: 'line', x1: 48, y1: 590, x2: 547, y2: 590, stroke: '#DAC7A4', width: 1 })
   currentOps.push({ kind: 'text', text: options.isFr ? 'Situation soumise' : 'Submitted situation', size: 11, x: 48, y: 562, font: 'bold', color: '#C8951A' })
   y = 540
@@ -419,11 +402,22 @@ export function renderSnapshotPdf(snapshot: GeneratedCardSnapshot): { buffer: Bu
   const card = payload.writing?.situation_card
   const isFr = snapshot.language === 'fr'
   const title = snapshot.header_subject || snapshot.canonical_question || 'Situation Card'
-  const lecture = text(payload.writing?.lecture)
-  const approfondir = text(payload.writing?.approfondir)
+  const lecture = lectureText(payload.writing?.lecture, isFr)
+  const approfondir = approfondirText(payload.writing?.approfondir, isFr)
   const sources = payload.resources?.public_sources ?? payload.resources?.resources ?? []
+  const capContent = [
+    fromCard(card, ['insight_fr', 'insight_en', 'insight']),
+    fromCard(card, ['main_vulnerability_fr', 'main_vulnerability_en', 'main_vulnerability']),
+    fromCard(card, ['key_signal_fr', 'key_signal_en', 'key_signal']),
+  ].filter(Boolean).join('\n\n')
+  const analyseIntro = [
+    lecture || fromCard(card, ['lecture_systeme_fr', 'lecture_systeme_en', 'lecture']),
+    approfondir,
+  ].filter(Boolean).join('\n\n')
 
   const sections: PdfSection[] = [
+    { title: 'Cap', body: capContent, tone: 'signal' },
+    { title: 'Analyse', body: analyseIntro },
     { title: isFr ? 'Lecture' : 'Reading', body: lecture || fromCard(card, ['lecture_systeme_fr', 'lecture_systeme_en', 'lecture']) },
     { title: isFr ? 'Vulnérabilité principale' : 'Main vulnerability', body: fromCard(card, ['main_vulnerability_fr', 'main_vulnerability_en', 'main_vulnerability']), tone: 'risk' },
     { title: isFr ? 'Asymétrie' : 'Asymmetry', body: fromCard(card, ['asymmetry_fr', 'asymmetry_en', 'asymmetry']) },
