@@ -22,6 +22,7 @@ import { detectPatterns, patternGuidance } from '@/lib/patterns/detectPatterns'
 import { detectMetierProfile } from '@/lib/profiles/detectMetierProfile'
 import { fetchResources } from '@/lib/resources/fetchResources'
 import { DIAMOND_EDITORIAL_CONTRACT, SC_INTERPRETATION_AUTHORITY } from '@/lib/governance/scDoctrine'
+import { validateDiamondContract } from '@/lib/governance/diamondValidation'
 import { sanitizeResources } from '@/lib/resources/sanitizeResources'
 import { shouldUseWeb } from '@/lib/resources/shouldUseWeb'
 import { enrichResourcesWithSiteUnderstanding } from '@/lib/resources/siteUnderstanding'
@@ -3662,6 +3663,32 @@ export async function POST(req: NextRequest) {
       )),
       submitted_situation_fr: canonicalSubmittedText,
       submitted_situation_en: canonicalSubmittedText,
+    }
+
+    const diamondValidation = validateDiamondContract(sc, effectiveCoverageForGeneration.domain)
+    if (!diamondValidation.ok) {
+      recordGenerationTrace({
+        status: 'partial',
+        gate: 'CLARIFY',
+        route: '/api/generate',
+        durationMs: Date.now() - requestStartedAt,
+        inputChars: analysisText.length,
+        domain: effectiveCoverageForGeneration.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+        resourcesStatus,
+        resourcesCount: resources.length,
+        modelPath: prebuiltSiteCard ? 'local' : 'openai',
+      })
+      return NextResponse.json({
+        gate: 'CLARIFY',
+        questions: [
+          'La carte commence à répondre trop généralement. Quel élément concret faut-il intégrer pour situer la lecture : usage réel, public visé, preuve observée, contrainte, décision à prendre ou option stratégique prioritaire ?',
+        ],
+        quality_issues: diamondValidation.issues,
+        coverage_check: effectiveCoverageForGeneration,
+        resources_status: resourcesStatus,
+      })
     }
 
     recordGenerationTrace({

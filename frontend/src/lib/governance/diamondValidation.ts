@@ -86,6 +86,13 @@ const GENERIC_PHRASES = [
   /le c[œo]ur concret de la situation se concentre autour de/i,
   /lecture syst[eè]me indisponible pour cette carte/i,
   /structural reading from available signals/i,
+  /la situation ne se joue pas seulement dans l[’']?[eé]v[eé]nement visible/i,
+  /distribution des leviers r[eé]els/i,
+  /qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer/i,
+  /la fa[cç]ade peut encore fonctionner/i,
+  /quelle force r[eé]elle la soutient/i,
+  /ce qui para[iî]t stable d[eé]pend d[’']un levier discret/i,
+  /ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible/i,
 ]
 
 const CONCRETE_SIGNAL = /\b[A-ZÉÈÀÂÎÏÔÛÇ][A-Za-zÀ-ÿ'’-]{2,}\b|\b\d{4}\b|\b\d{1,2}\s+(janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)\b|https?:\/\//i
@@ -131,7 +138,7 @@ export function validateAntiHorsSol(sc: SituationCard): DiamondValidationResult 
 
   for (const pattern of GENERIC_PHRASES) {
     if (pattern.test(text)) {
-      issues.push(issue('warning', 'generic_phrase', `Generic or fallback phrase detected: ${pattern.source}`))
+      issues.push(issue('error', 'generic_phrase', `Generic or fallback phrase detected: ${pattern.source}`))
     }
   }
 
