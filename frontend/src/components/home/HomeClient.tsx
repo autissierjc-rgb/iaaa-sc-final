@@ -676,6 +676,33 @@ function snapshotForPdfLanguage(snapshot: Record<string, any>, lang: PdfShareLan
   return cloned
 }
 
+async function plannedSnapshotForPdfLanguage(snapshot: Record<string, any>, lang: PdfShareLang) {
+  const prepared = snapshotForPdfLanguage(snapshot, lang)
+  const sourceLanguage = String(snapshot.language ?? snapshot.payload?.language ?? '').toLowerCase()
+  const targetLanguage = pdfLocaleFor(lang)
+  if (sourceLanguage && sourceLanguage === targetLanguage) return prepared
+
+  const response = await fetch('/api/language-v2/snapshot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      snapshot,
+      target_language: targetLanguage,
+    }),
+  })
+  if (!response.ok) throw new Error('language_snapshot_plan_failed')
+  const data = await response.json()
+  const plan = data?.plan
+  if (plan?.status === 'blocked') throw new Error('language_snapshot_blocked')
+  prepared.id = String(plan?.target_snapshot_id ?? prepared.id ?? snapshot.id)
+  prepared.source_snapshot_id = String(plan?.source_snapshot_id ?? snapshot.id ?? '')
+  prepared.translation_status = String(plan?.status ?? 'ready_to_create')
+  prepared.translation_rule = String(plan?.translation_rule ?? 'create_snapshot_before_share')
+  prepared.translation_provider = String(plan?.provider_selected ?? '')
+  prepared.translation_warnings = Array.isArray(plan?.warnings) ? plan.warnings : []
+  return prepared
+}
+
 function basicPdfSnapshotFromSc(sc: Record<string, any>, lang: HomeLang): Record<string, any> {
   const contentLang = contentLangFor(lang)
   const locale = HOME_LANG_TO_LOCALE[contentLang]
@@ -748,10 +775,11 @@ function ShareOptions({ lang, snapshot }: { lang: HomeLang; snapshot?: Record<st
     setPdfLoading(true)
     setPdfError('')
     try {
+      const exportSnapshot = await plannedSnapshotForPdfLanguage(snapshot, pdfLang)
       const response = await fetch('/api/pdf-v2/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ snapshot: snapshotForPdfLanguage(snapshot, pdfLang) }),
+        body: JSON.stringify({ snapshot: exportSnapshot }),
       })
       if (!response.ok) throw new Error('pdf_export_failed')
       const blob = await response.blob()
