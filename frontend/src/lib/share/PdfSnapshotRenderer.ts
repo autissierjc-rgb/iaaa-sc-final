@@ -444,7 +444,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
 
   function addForceLines(scores: AstrolabePdfScore[]) {
     if (scores.length === 0) return
-    if (y < 260) flushPage()
+    if (y < bottomY + 70) flushPage()
     addText('FORCE LINES', 10, 18, marginX, 'bold', '#B8862D')
     const colors = ['#E0DCD4', '#B8D4F0', '#F0CA70', '#E87C7C']
     scores.forEach((score) => {
@@ -555,7 +555,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     currentOps.push({ kind: 'text', text: 'Modéré', size: 8, x: 288, y: cy - 113, color: '#6F6255' })
     currentOps.push({ kind: 'polygon', points: [[366, cy - 118], [362, cy - 110], [366, cy - 102], [370, cy - 110]], fill: '#E87C7C' })
     currentOps.push({ kind: 'text', text: 'Dominant', size: 8, x: 376, y: cy - 113, color: '#6F6255' })
-    y = cy - 142
+    y = cy - 122
   }
 
   addPageChrome()
