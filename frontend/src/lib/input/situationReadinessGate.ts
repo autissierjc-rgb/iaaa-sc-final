@@ -69,6 +69,26 @@ function siteNameFromIntent(intentContext: IntentContext, situation: string): st
   return match?.[1] ?? 'ce site'
 }
 
+function asksToCompareUnspecifiedOptions(situation: string, intentContext: IntentContext): boolean {
+  const interpreted = intentContext.interpreted_request as Record<string, unknown> | undefined
+  const text = normalize([
+    situation,
+    interpreted?.user_need,
+    interpreted?.object_of_analysis,
+  ].filter(Boolean).join(' '))
+  const asksOptions =
+    /\b(option|options|scenario|scenarios|strategie|strategies|choix|arbitrage|plan)\b/.test(text) &&
+    /\b(plusieurs|differentes|comparer|tenir compte|arbitrer|entre)\b/.test(text)
+  if (!asksOptions) return false
+
+  const namedOptions =
+    /\b(option|scenario|strategie)\s*(?:1|2|3|a|b|c)\b/i.test(situation) ||
+    /\b(soit|ou bien|premiere option|deuxieme option|troisieme option)\b/i.test(situation) ||
+    /(?:\n|;|•|-)\s*(?:option|scenario|strategie)?\s*[A-C1-3][).:-]/i.test(situation)
+
+  return !namedOptions
+}
+
 export function situationReadinessGate({
   situation,
   intentContext,
@@ -82,6 +102,21 @@ export function situationReadinessGate({
 }): SituationReadinessGate {
   const frame = intentContext.dominant_frame
   const decision = intentContext.decision_type
+  if (!forceGenerate && asksToCompareUnspecifiedOptions(situation, intentContext)) {
+    const question =
+      'Vous évoquez plusieurs options, mais elles ne sont pas encore nommées. Quelles sont les 2 ou 3 options à comparer, ou dois-je d’abord proposer une carte exploratoire pour les faire émerger ?'
+
+    return {
+      status: 'ask_user',
+      reason: 'strategic_options_missing',
+      question,
+      message_fr: question,
+      warning_fr: 'Options stratégiques non précisées : SC doit collaborer avant de conclure.',
+      needs: ['options à comparer', 'critère de décision', 'contrainte prioritaire'],
+      doctrine: `${SC_NON_COMPLETION_PRINCIPLE}\n\n${SC_COLLABORATION_RULE}`,
+    }
+  }
+
   const isSite =
     intentContext.interpreted_request?.question_type === 'site_analysis' &&
     (frame === 'site_analysis' || decision === 'analyze_site')

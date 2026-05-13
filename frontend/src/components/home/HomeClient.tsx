@@ -1968,38 +1968,23 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
     }
     setSituation('')
     try {
-      const gateRes = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: fullText, original_situation: text, lang: contentLang.toLowerCase(), refine_acknowledged: refiningOptional || waitingForAnswers, conversation_contract: scData?.conversation_contract, dialogue_events: dialogueEvents }) })
-      const gateData = await gateRes.json()
-      if (gateData.gate === 'FLASH') {
-        setCompassMode('idle')
-        const fl = gateData.flash
-        setChatMsgs(prev => [...prev, { kind: 'flash', etat: lang === 'FR' ? fl.etat_actuel : (fl.etat_actuel_en ?? fl.etat_actuel), lecture: lang === 'FR' ? fl.lecture : (fl.lecture_en ?? fl.lecture) }])
-        try { localStorage.removeItem(LAST_SC_STORAGE_KEY) } catch {}
-        setScData(null); setScLoading(false); return
-      }
-      if (gateData.gate === 'CLARIFY') {
-        setCompassMode('idle')
-        setChatMsgs(prev => [...prev, { kind: 'clarify', questions: gateData.questions ?? [] }])
-        setAnswers(new Array(gateData.questions?.length ?? 0).fill(''))
-        setActiveSituation(canonicalSituationFromResponse(gateData, text))
-        try { localStorage.removeItem(LAST_SC_STORAGE_KEY) } catch {}
-        setScData(null); setScLoading(false); return
-      }
-      if (gateData.gate === 'REFINE_OPTIONAL') {
-        setCompassMode('idle')
-        setChatMsgs(prev => [...prev, { kind: 'refine', questions: gateData.questions ?? [] }])
-        setActiveSituation(canonicalSituationFromResponse(gateData, text))
-        try { localStorage.removeItem(LAST_SC_STORAGE_KEY) } catch {}
-        setScData(null); setScLoading(false); return
-      }
-      if (gateData.gate === 'BLOCK') {
-        setCompassMode('off')
-        setChatMsgs(prev => [...prev, { kind: 'block', reason: gateData.reason ?? '' }])
-        try { localStorage.removeItem(LAST_SC_STORAGE_KEY) } catch {}
-        setScData(null); setScLoading(false); return
-      }
-
-      const scRes = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: fullText, original_situation: text, lang: contentLang.toLowerCase(), mode: 'generate_full', conversation_contract: scData?.conversation_contract, dialogue_events: dialogueEvents }) })
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 30000)
+      const scRes = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          situation: fullText,
+          original_situation: text,
+          lang: contentLang.toLowerCase(),
+          mode: 'generate_full',
+          refine_acknowledged: refiningOptional || waitingForAnswers,
+          conversation_contract: scData?.conversation_contract,
+          dialogue_events: dialogueEvents,
+        }),
+      })
+      window.clearTimeout(timeout)
       const scData2 = await scRes.json()
       if (scData2.gate === 'CLARIFY') {
         setCompassMode('idle')
@@ -2028,7 +2013,17 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       setAnswers([])
       setDialogueNotes([])
       setCompassMode('idle'); setScLoading(false)
-    } catch (e) { console.error(e); setCompassMode('idle'); setScLoading(false) }
+    } catch (e) {
+      console.error(e)
+      setCompassMode('idle')
+      setChatMsgs(prev => [...prev, {
+        kind: 'block',
+        reason: lang === 'FR'
+          ? 'La generation a pris trop de temps ou le serveur n a pas repondu. La boussole est liberee : vous pouvez relancer ou ajouter une precision.'
+          : 'Generation took too long or the server did not answer. The compass is available again: retry or add one clarification.',
+      }])
+      setScLoading(false)
+    }
   }, [situation, activeSituation, scData, lang, compassDisabled, waitingForAnswers, refiningOptional, lastMsg, answers, dialogueNotes])
 
   async function sendChatMessage() {

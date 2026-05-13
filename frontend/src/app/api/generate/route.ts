@@ -2634,7 +2634,7 @@ function completeSituationCard(
 
 async function fetchResourcesFast(situation: string): Promise<ResourceItem[]> {
   const timeout = new Promise<ResourceItem[]>((resolve) => {
-    setTimeout(() => resolve([]), hasExplicitUrl(situation) ? 15000 : 8000)
+    setTimeout(() => resolve([]), hasExplicitUrl(situation) ? 4500 : 3000)
   })
 
   try {
@@ -2678,7 +2678,7 @@ async function generateFastCardWithOpenAI(
   if (!apiKey) throw new Error('OPENAI_API_KEY missing')
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 30000)
+  const timeout = setTimeout(() => controller.abort(), 12000)
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -2689,7 +2689,7 @@ async function generateFastCardWithOpenAI(
       signal: controller.signal,
       body: JSON.stringify({
         model: 'gpt-4.1-mini',
-        max_tokens: 2200,
+        max_tokens: 1400,
         temperature: 0.2,
         response_format: { type: 'json_object' },
         messages: [
@@ -3334,7 +3334,7 @@ export async function POST(req: NextRequest) {
       earlyReadinessGate.reason !== 'site_content_insufficient' &&
       earlyReadinessGate.question &&
       !explicitPrudentGeneration &&
-      !hasUrlInFlow
+      (!hasUrlInFlow || earlyReadinessGate.reason === 'strategic_options_missing')
 
     if (shouldStopForEarlyReadiness) {
       return NextResponse.json({
@@ -3453,10 +3453,25 @@ export async function POST(req: NextRequest) {
       branches,
       intentContext,
     })
+    const useModelCard = process.env.SC_USE_MODEL_CARD === '1'
+    const useLocalFastCard = !prebuiltSiteCard && !useModelCard
     let baseSc: SituationCard
     if (prebuiltSiteCard) {
       baseSc = {
         ...prebuiltSiteCard,
+        generation_status: readinessGate.status === 'generate_prudently' ? 'partial' : 'ok',
+      }
+    } else if (useLocalFastCard) {
+      baseSc = {
+        ...(intentContext.interpreted_request?.question_type === 'causal_attribution'
+          ? causalAttributionCard({
+              situation: displayText,
+              arbre,
+              branches,
+              intentContext,
+              resources,
+            })
+          : buildFallbackCard(displayText, arbre, resources, branches, intentContext)),
         generation_status: readinessGate.status === 'generate_prudently' ? 'partial' : 'ok',
       }
     } else {
@@ -3492,6 +3507,32 @@ export async function POST(req: NextRequest) {
           }),
           displayText
         ))
+        const fallbackValidation = validateDiamondContract(fallbackSc, effectiveCoverageForGeneration.domain)
+        if (!fallbackValidation.ok) {
+          recordGenerationTrace({
+            status: 'partial',
+            gate: 'CLARIFY',
+            route: '/api/generate',
+            durationMs: Date.now() - requestStartedAt,
+            inputChars: analysisText.length,
+            domain: effectiveCoverageForGeneration.domain,
+            intentType: intentContext.interpreted_request?.intent_type,
+            questionType: intentContext.interpreted_request?.question_type,
+            resourcesStatus,
+            resourcesCount: resources.length,
+            modelPath: 'fallback',
+            errorKind: error instanceof Error ? error.name : 'UnknownError',
+          })
+          return NextResponse.json({
+            gate: 'CLARIFY',
+            questions: [
+              'La carte manque d ancrage concret pour etre fiable. Quel element faut-il ajouter : acteur precis, preuve disponible, public vise, contrainte, option strategique ou decision a prendre ?',
+            ],
+            quality_issues: fallbackValidation.issues,
+            coverage_check: effectiveCoverageForGeneration,
+            resources_status: resourcesStatus,
+          })
+        }
         recordGenerationTrace({
           status: 'partial',
           gate: 'GENERATE',
@@ -3585,6 +3626,7 @@ export async function POST(req: NextRequest) {
     }
 
     const shouldRegenerateLecture =
+      !useLocalFastCard &&
       !siteGuard &&
       (intentContext.interpreted_request?.intent_type === 'understand' ||
       effectiveCoverageWithReadiness.domain === 'startup_vc' ||
