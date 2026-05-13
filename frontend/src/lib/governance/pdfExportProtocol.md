@@ -19,7 +19,8 @@ Cette reference donne l'esprit du rendu :
 - page claire ;
 - bordure institutionnelle fine ;
 - marque IAAA+ / Situation Card ;
-- Astrolabe vectoriel visible et stable dans le PDF ;
+- logo de marque stable dans le header ;
+- AstrolabeRadial de la Situation Card visible comme visualisation des forces quand `astrolabe_scores` existe ;
 - domaine visible sous la marque, au format `Atlas · {domaine}` ;
 - metadonnees en haut ;
 - titre sobre ;
@@ -50,22 +51,23 @@ Cette reference donne l'esprit du rendu :
 
 Un export PDF Situation Card doit contenir :
 
-1. marque / Astrolabe vectoriel stable ;
+1. marque / logo stable ;
 2. domaine Atlas ;
 3. titre ;
 4. metadonnees ;
 5. situation soumise ;
-6. sections publiques `Cap` et `Analyse` avec leur contenu ;
-7. indice de controle / etat ;
-8. Lecture ;
-9. Vulnerabilite principale ;
-10. Asymetrie ;
-11. Trajectoires ;
-12. Signal cle ;
-13. Approfondir ;
-14. Ressources publiques ;
-15. Provenance ;
-16. notice de statut.
+6. indice de controle / etat ;
+7. AstrolabeRadial si les scores sont disponibles ;
+8. sections publiques `Cap` et `Analyse` avec leur contenu ;
+9. Lecture ;
+10. Vulnerabilite principale ;
+11. Asymetrie ;
+12. Trajectoires ;
+13. Signal cle ;
+14. Approfondir ;
+15. Ressources publiques ;
+16. Provenance ;
+17. notice de statut.
 
 ## Methode Codex
 
