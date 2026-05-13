@@ -655,10 +655,10 @@ function buildSiteDeepFallback({
   const useCases = establishedField(lineAfterPrefix(excerpt, 'Cas d’usage visibles'))
   const differentiation = establishedField(lineAfterPrefix(excerpt, 'Différenciation visible'))
   const criticalBlindSpots =
-    'cadre légal ou réglementaire, statut social et salarial, fiscalité, responsabilité, financement public, normes sociales, infrastructures et dépendance éventuelle à l’État'
+    'cible réelle, problème concret, cas d’usage prioritaires, preuve d’usage, différenciation, modèle économique et conditions concrètes de décision'
   const market = /march[eé]\s+europ|europe|europ[eé]en/i.test(situation)
-    ? 'le marché européen'
-    : 'le marché visé'
+    ? 'l’écosystème européen visé'
+    : 'l’écosystème visé'
   const proofDetails = [
     proof,
     useCases ? `Cas d’usage visibles : ${useCases}` : '',
@@ -672,13 +672,13 @@ function buildSiteDeepFallback({
       `${DIAMOND_DEEP_HEADINGS_FR[1]}\n\n` +
       `Ce qui tient encore, c’est la lisibilité de la promesse. Si un visiteur comprend rapidement le problème traité, la cible et l’usage attendu, ${company} dispose d’un début de surface commerciale. Mais cette lisibilité ne suffit pas : elle doit être reliée à une preuve externe, sinon elle reste une bonne formulation plutôt qu’un signal de marché.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[2]}\n\n` +
-      `Ce qui l’affaiblit, c’est l’écart entre le récit du site, les preuves observables et les angles morts critiques. Pour ${market}, il ne suffit pas que la promesse soit claire ; il faut savoir si un segment précis rencontre ce problème, accepte la solution, l’utilise vraiment et peut payer. Il faut aussi vérifier ce que le site ne force pas toujours à voir : ${criticalBlindSpots}. Sans cela, l’analyse doit rester prudente.\n\n` +
+      `Ce qui l’affaiblit, c’est l’écart entre le récit du site, les preuves observables et les angles morts critiques. Pour ${market}, il ne suffit pas que la promesse soit claire ; il faut savoir qui s’en sert, dans quelle situation, avec quel bénéfice concret et quelle preuve visible. Il faut aussi vérifier ce que le site ne force pas toujours à voir : ${criticalBlindSpots}. Sans cela, l’analyse doit rester prudente.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[3]}\n\n` +
       `L’escalade n’est pas un conflit spectaculaire ; c’est une perte de crédibilité progressive. Elle commence si la question “que fait exactement ${company} ?” reste floue après lecture du site, ou si la promesse paraît plus large que les preuves disponibles. Dans ce cas, le risque n’est pas seulement commercial : c’est un risque de compréhension.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[4]}\n\n` +
-      `La bascule positive viendrait d’une preuve simple et vérifiable : un client identifiable, un usage répété, une métrique, un partenariat européen, un revenu, ou une démonstration qui montre pourquoi la solution est meilleure qu’une alternative. ${sentence(proofDetails.join(' '))} À ce moment-là, l’analyse peut passer de la prudence à l’évaluation du potentiel.\n\n` +
+      `La bascule positive viendrait d’une preuve simple et vérifiable : un usage répété, un cas documenté, une communauté active, un partenariat, une métrique ou une démonstration qui montre pourquoi la solution éclaire mieux une situation qu’une alternative. ${sentence(proofDetails.join(' '))} À ce moment-là, l’analyse peut passer de la prudence à l’évaluation du potentiel.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[5]}\n\n` +
-      `Il faut maintenant surveiller la cible réelle, le problème concret, la preuve d’usage, la différenciation et les angles morts décisifs : ${criticalBlindSpots}. La bonne question n’est pas seulement “est-ce une bonne startup ?”, mais “quelle preuve ou quelle contrainte ferait changer d’avis un client, un partenaire, un régulateur ou un investisseur ?”.`
+      `Il faut maintenant surveiller la cible réelle, le problème concret, la preuve d’usage, la différenciation et les angles morts décisifs : ${criticalBlindSpots}. La bonne question n’est pas seulement “la promesse est-elle claire ?”, mais “quelle preuve ferait changer la lecture d’un utilisateur, d’un partenaire ou d’une équipe qui doit décider ?”.`
     ),
     approfondir_en: polishDiamondText(
       `${DIAMOND_DEEP_HEADINGS_EN[0]}\n\n` +
@@ -686,13 +686,13 @@ function buildSiteDeepFallback({
       `${DIAMOND_DEEP_HEADINGS_EN[1]}\n\n` +
       `What still holds is the legibility of the promise. If a visitor quickly understands the problem, target user, and expected use case, ${company} has an initial commercial surface. But clarity is not enough; it must connect to external proof.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_EN[2]}\n\n` +
-      `What weakens it is the gap between website narrative and observable proof. For ${market}, the promise must be tested against a precise segment, real usage, willingness to pay, and alternatives.\n\n` +
+      `What weakens it is the gap between website narrative and observable proof. For ${market}, the promise must be tested against a precise audience, concrete use cases, visible usage proof, differentiation, and alternatives.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_EN[3]}\n\n` +
       `Escalation is not a spectacular conflict; it is a progressive credibility loss. It begins if the question "what does ${company} exactly do?" remains unclear after reading the site, or if the promise is broader than the available proof.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_EN[4]}\n\n` +
-      `The positive shift would come from simple verifiable proof: an identifiable customer, repeated use, a metric, a European partnership, revenue, or a demonstration showing why the solution is better than an alternative. ${sentence(proofDetails.join(' '))}\n\n` +
+      `The positive shift would come from simple verifiable proof: repeated use, a documented case, an active community, a partnership, a metric, or a demonstration showing why the solution reads a situation better than an alternative. ${sentence(proofDetails.join(' '))}\n\n` +
       `${DIAMOND_DEEP_HEADINGS_EN[5]}\n\n` +
-      `Watch four points now: real target, concrete problem, usage proof, and differentiation. The right question is not only whether it is a good startup, but what proof would change the mind of a European customer, partner, or investor.`
+      `Watch four points now: real audience, concrete problem, usage proof, and differentiation. The right question is not whether it is a good startup, but what proof would change the reading for a user, partner, or team that has to decide.`
     ),
     sources: [],
   }
