@@ -694,6 +694,9 @@ async function plannedSnapshotForPdfLanguage(snapshot: Record<string, any>, lang
   const data = await response.json()
   const plan = data?.plan
   if (plan?.status === 'blocked') throw new Error('language_snapshot_blocked')
+  if (data?.snapshot && typeof data.snapshot === 'object') {
+    return snapshotForPdfLanguage(data.snapshot, lang)
+  }
   prepared.id = String(plan?.target_snapshot_id ?? prepared.id ?? snapshot.id)
   prepared.source_snapshot_id = String(plan?.source_snapshot_id ?? snapshot.id ?? '')
   prepared.translation_status = String(plan?.status ?? 'ready_to_create')

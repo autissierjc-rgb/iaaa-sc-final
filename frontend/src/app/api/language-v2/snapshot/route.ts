@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { LanguageCode } from '@/lib/contracts/common'
 import type { GeneratedCardSnapshot } from '@/lib/contracts/generationArchive'
-import { planTranslatedSnapshot } from '@/lib/share'
+import { createTranslatedSnapshot } from '@/lib/share'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,14 +43,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const plan = planTranslatedSnapshot({
+  const result = createTranslatedSnapshot({
     snapshot: body.snapshot,
     target_language: body.target_language,
   })
 
   return NextResponse.json({
     ok: true,
-    mode: 'translated_snapshot_plan',
-    plan,
+    mode: 'translated_snapshot',
+    plan: result.plan,
+    snapshot: result.snapshot,
   })
 }
