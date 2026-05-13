@@ -44,9 +44,34 @@ type SnapshotPayloadProbe = {
 const REQUIRED_NOTICE_FR =
   'Ce document est une note analytique produite par Situation Card. Il structure une lecture, des hypotheses et des signaux a verifier. Il ne constitue ni un rapport officiel, ni une preuve, ni un avis professionnel.'
 
+const GENERIC_FALLBACK_MARKERS = [
+  'La situation ne se joue pas seulement dans l’événement visible',
+  'distribution des leviers réels',
+  'Ce qui paraît stable dépend d’un levier discret',
+  'La vulnérabilité centrale se situe dans ce que le système ne protège plus',
+]
+
 function asPayloadProbe(payload: unknown): SnapshotPayloadProbe {
   if (!payload || typeof payload !== 'object') return {}
   return payload as SnapshotPayloadProbe
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : {}
+}
+
+function text(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function hasText(value: unknown): boolean {
+  if (typeof value === 'string') return value.trim().length > 0
+  if (!value || typeof value !== 'object') return false
+  return Object.values(value as Record<string, unknown>).some((item) => typeof item === 'string' && item.trim().length > 0)
+}
+
+function cardText(card: Record<string, unknown>, keys: string[]): string {
+  return keys.map((key) => text(card[key])).find(Boolean) ?? ''
 }
 
 function safeSlug(value: string): string {
@@ -64,20 +89,37 @@ export function planPdfExport(
   options: { target_language?: LanguageCode } = {},
 ): PdfExportPlan {
   const payload = asPayloadProbe(snapshot.payload)
+  const card = asRecord(payload.writing?.situation_card)
   const missing: string[] = []
   const warnings: string[] = []
   const sourceLanguage = snapshot.language ?? payload.language ?? 'fr'
   const targetLanguage = options.target_language ?? sourceLanguage
   const needsTranslatedSnapshot = sourceLanguage !== targetLanguage
+  const canonicalQuestion = text(snapshot.canonical_question) || text((snapshot as any).submittedQuestion)
+  const headerSubject = text(snapshot.header_subject) || text((snapshot as any).title)
+  const submittedSituation = text(snapshot.situation_soumise) || text((snapshot as any).submittedQuestion) || canonicalQuestion
+  const lecture =
+    hasText(payload.writing?.lecture)
+      ? JSON.stringify(payload.writing?.lecture)
+      : cardText(card, ['lecture_systeme_fr', 'lecture_systeme_en', 'lecture'])
+  const approfondir =
+    hasText(payload.writing?.approfondir)
+      ? JSON.stringify(payload.writing?.approfondir)
+      : cardText(card, ['approfondir_fr', 'approfondir_en', 'approfondir'])
+  const astrolabeScores = Array.isArray(card.astrolabe_scores) ? card.astrolabe_scores : []
 
   if (!snapshot.id) missing.push('source_snapshot_id')
   if (!snapshot.language && !payload.language) missing.push('snapshot_language')
-  if (!snapshot.canonical_question) missing.push('canonical_question')
-  if (!snapshot.header_subject) missing.push('header_subject')
-  if (!snapshot.situation_soumise) missing.push('situation_soumise')
+  if (!canonicalQuestion) missing.push('canonical_question')
+  if (!headerSubject) missing.push('header_subject')
+  if (!submittedSituation) missing.push('situation_soumise')
   if (!payload.writing?.situation_card) missing.push('situation_card')
-  if (!payload.writing?.lecture) missing.push('lecture')
-  if (!payload.writing?.approfondir) missing.push('approfondir')
+  if (!lecture) missing.push('lecture')
+  if (!approfondir) missing.push('approfondir')
+  if (astrolabeScores.length < 8) missing.push('astrolabe_scores')
+  if (GENERIC_FALLBACK_MARKERS.some((marker) => lecture.includes(marker))) {
+    missing.push('situated_writing')
+  }
   if (needsTranslatedSnapshot) missing.push('translated_snapshot_for_target_language')
 
   const publicSources =
@@ -107,6 +149,6 @@ export function planPdfExport(
     warnings,
     required_notice_fr: REQUIRED_NOTICE_FR,
     required_notice_placement: 'end_matter',
-    filename: `${safeSlug(snapshot.header_subject)}-${snapshot.id}.pdf`,
+    filename: `${safeSlug(headerSubject)}-${snapshot.id}.pdf`,
   }
 }
