@@ -638,6 +638,38 @@ function snapshotIdFrom(value: string): string {
   return `sc-${Math.abs(hash).toString(16)}`
 }
 
+type PdfShareLang = 'FR' | 'EN'
+
+function pdfLocaleFor(lang: PdfShareLang) {
+  return lang === 'FR' ? 'fr' : 'en'
+}
+
+function pickLocalizedText(source: Record<string, any>, lang: PdfShareLang, frKey: string, enKey: string, fallbackKey?: string) {
+  return String(
+    lang === 'FR'
+      ? (source[frKey] ?? source[fallbackKey ?? frKey] ?? source[enKey] ?? '')
+      : (source[enKey] ?? source[frKey] ?? source[fallbackKey ?? enKey] ?? '')
+  ).trim()
+}
+
+function snapshotForPdfLanguage(snapshot: Record<string, any>, lang: PdfShareLang) {
+  const cloned = JSON.parse(JSON.stringify(snapshot ?? {}))
+  const card = cloned?.payload?.writing?.situation_card
+  const locale = pdfLocaleFor(lang)
+  cloned.language = locale
+  if (cloned.payload) cloned.payload.language = locale
+  if (card && typeof card === 'object') {
+    cloned.header_subject = pickLocalizedText(card, lang, 'title_fr', 'title_en', 'title') || cloned.header_subject
+    cloned.situation_soumise = pickLocalizedText(card, lang, 'submitted_situation_fr', 'submitted_situation_en', 'submitted_situation') || cloned.situation_soumise
+    cloned.canonical_question = cloned.situation_soumise || cloned.canonical_question
+    cloned.payload.writing.lecture = pickLocalizedText(card, lang, 'lecture_systeme_fr', 'lecture_systeme_en', 'lecture_systeme') || cloned.payload.writing.lecture
+    cloned.payload.writing.approfondir = lang === 'FR'
+      ? (card.approfondir_fr ?? cloned.payload.writing.approfondir)
+      : (card.approfondir_en ?? card.approfondir_fr ?? cloned.payload.writing.approfondir)
+  }
+  return cloned
+}
+
 function basicPdfSnapshotFromSc(sc: Record<string, any>, lang: HomeLang): Record<string, any> {
   const contentLang = contentLangFor(lang)
   const locale = HOME_LANG_TO_LOCALE[contentLang]
@@ -657,6 +689,11 @@ function basicPdfSnapshotFromSc(sc: Record<string, any>, lang: HomeLang): Record
       : (sc.lecture_systeme_en ?? sc.lecture_systeme_fr ?? '')
   ).trim()
   const resources = Array.isArray(sc.resources) ? sc.resources : []
+  const approfondir = sc.approfondir ?? (
+    contentLang === 'FR'
+      ? (sc.approfondir_fr ?? '')
+      : (sc.approfondir_en ?? sc.approfondir_fr ?? '')
+  )
   const snapshotId = String(sc.snapshot_id ?? sc.id ?? snapshotIdFrom(`${submitted}|${title}|${lecture}`))
 
   return {
@@ -678,7 +715,7 @@ function basicPdfSnapshotFromSc(sc: Record<string, any>, lang: HomeLang): Record
       writing: {
         situation_card: sc,
         lecture,
-        approfondir: String(contentLang === 'FR' ? (sc.approfondir_fr ?? '') : (sc.approfondir_en ?? sc.approfondir_fr ?? '')).trim(),
+        approfondir,
       },
       resources: {
         public_sources: resources,
@@ -694,6 +731,7 @@ function ShareOptions({ lang, snapshot }: { lang: HomeLang; snapshot?: Record<st
   const [url, setUrl] = useState('')
   const [pdfLoading, setPdfLoading] = useState(false)
   const [pdfError, setPdfError] = useState('')
+  const [pdfLang, setPdfLang] = useState<PdfShareLang>(contentLangFor(lang))
 
   useEffect(() => {
     if (typeof window !== 'undefined') setUrl(window.location.href)
@@ -707,7 +745,7 @@ function ShareOptions({ lang, snapshot }: { lang: HomeLang; snapshot?: Record<st
       const response = await fetch('/api/pdf-v2/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ snapshot }),
+        body: JSON.stringify({ snapshot: snapshotForPdfLanguage(snapshot, pdfLang) }),
       })
       if (!response.ok) throw new Error('pdf_export_failed')
       const blob = await response.blob()
@@ -734,6 +772,17 @@ function ShareOptions({ lang, snapshot }: { lang: HomeLang; snapshot?: Record<st
       <button type="button" onClick={() => navigator.clipboard?.writeText(url).catch(() => {})} style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '6px 9px', fontSize: 12, cursor: 'pointer' }}>
         {lang === 'FR' ? 'Copier le lien' : 'Copy link'}
       </button>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: TXT3 }}>
+        {lang === 'FR' ? 'PDF' : 'PDF'}
+        <select
+          value={pdfLang}
+          onChange={(event) => setPdfLang(event.target.value as PdfShareLang)}
+          style={{ border: `1px solid ${BDR}`, background: '#fff', color: TXT2, borderRadius: 7, padding: '5px 8px', fontSize: 12 }}
+        >
+          <option value="FR">FR</option>
+          <option value="EN">EN</option>
+        </select>
+      </label>
       <button type="button" onClick={() => void downloadPdf()} disabled={!snapshot || pdfLoading} style={{ border: `1px solid ${snapshot ? BDR_G : BDR}`, background: snapshot ? NAVY : '#fff', color: snapshot ? '#fff' : TXT3, borderRadius: 7, padding: '6px 9px', fontSize: 12, cursor: snapshot && !pdfLoading ? 'pointer' : 'not-allowed' }}>
         {pdfLoading ? (lang === 'FR' ? 'PDF...' : 'PDF...') : 'PDF'}
       </button>
