@@ -19,11 +19,12 @@ Cette reference donne l'esprit du rendu :
 - page claire ;
 - bordure institutionnelle fine ;
 - marque IAAA+ / Situation Card ;
-- Astrolabe ou logo visible ;
+- Astrolabe ou logo visible, avec l'asset public `public/logo-iaaa.jpg` si disponible ;
 - metadonnees en haut ;
 - titre sobre ;
 - Situation soumise ;
-- score / etat ;
+- onglets publics `Cap` et `Analyse` ;
+- indice de controle / etat ;
 - sections lisibles ;
 - notice de statut en fin de document.
 
@@ -48,20 +49,21 @@ Cette reference donne l'esprit du rendu :
 
 Un export PDF Situation Card doit contenir :
 
-1. marque / Astrolabe ;
+1. marque / Astrolabe, avec l'asset public `public/logo-iaaa.jpg` si disponible ;
 2. titre ;
 3. metadonnees ;
 4. situation soumise ;
-5. score / etat ;
-6. Lecture ;
-7. Vulnerabilite principale ;
-8. Asymetrie ;
-9. Trajectoires ;
-10. Signal cle ;
-11. Approfondir ;
-12. Ressources publiques ;
-13. Provenance ;
-14. notice de statut.
+5. onglets publics `Cap` et `Analyse` ;
+6. indice de controle / etat ;
+7. Lecture ;
+8. Vulnerabilite principale ;
+9. Asymetrie ;
+10. Trajectoires ;
+11. Signal cle ;
+12. Approfondir ;
+13. Ressources publiques ;
+14. Provenance ;
+15. notice de statut.
 
 ## Methode Codex
 

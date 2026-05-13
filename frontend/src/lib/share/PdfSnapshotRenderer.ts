@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
 import type { GeneratedCardSnapshot } from '@/lib/contracts/generationArchive'
 
 type PdfSection = {
@@ -11,6 +13,41 @@ type PdfOp =
   | { kind: 'rect'; x: number; y: number; w: number; h: number; stroke?: string; fill?: string; width?: number }
   | { kind: 'circle'; x: number; y: number; r: number; stroke?: string; fill?: string; width?: number }
   | { kind: 'line'; x1: number; y1: number; x2: number; y2: number; stroke?: string; width?: number }
+  | { kind: 'image'; x: number; y: number; w: number; h: number }
+
+const PDF_WINANSI_ESCAPES: Record<string, string> = {
+  À: '\\300',
+  Â: '\\302',
+  Ç: '\\307',
+  È: '\\310',
+  É: '\\311',
+  Ê: '\\312',
+  Î: '\\316',
+  Ô: '\\324',
+  Ù: '\\331',
+  à: '\\340',
+  â: '\\342',
+  ç: '\\347',
+  è: '\\350',
+  é: '\\351',
+  ê: '\\352',
+  ë: '\\353',
+  î: '\\356',
+  ï: '\\357',
+  ô: '\\364',
+  ù: '\\371',
+  û: '\\373',
+  ü: '\\374',
+  œ: 'oe',
+  Œ: 'OE',
+  '’': "'",
+  '‘': "'",
+  '“': '"',
+  '”': '"',
+  '–': '-',
+  '—': '-',
+  '…': '...',
+}
 
 type SnapshotPayloadProbe = {
   writing?: {
@@ -25,7 +62,7 @@ type SnapshotPayloadProbe = {
 }
 
 const NOTICE_FR =
-  'Ce document est une note analytique produite par Situation Card. Il structure une lecture, des hypotheses et des signaux a verifier. Il ne constitue ni un rapport officiel, ni une preuve, ni un avis professionnel.'
+  'Ce document est une note analytique produite par Situation Card. Il structure une lecture, des hypothèses et des signaux à vérifier. Il ne constitue ni un rapport officiel, ni une preuve, ni un avis professionnel.'
 
 const NOTICE_EN =
   'This document is an analytical note produced by Situation Card. It structures a reading, hypotheses and signals to verify. It is not an official report, verified evidence or professional advice.'
@@ -60,6 +97,31 @@ function sourceText(source: unknown): string {
   const url = text(item.url)
   const type = text(item.type)
   return [title, type, url].filter(Boolean).join(' - ')
+}
+
+function readLogoJpeg(): { data: Buffer; width: number; height: number } | null {
+  const logoPath = path.join(process.cwd(), 'public', 'logo-iaaa.jpg')
+  if (!existsSync(logoPath)) return null
+  const data = readFileSync(logoPath)
+
+  for (let i = 2; i < data.length - 9;) {
+    if (data[i] !== 0xff) {
+      i += 1
+      continue
+    }
+    const marker = data[i + 1]
+    const length = data.readUInt16BE(i + 2)
+    if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7) || (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
+      return {
+        data,
+        height: data.readUInt16BE(i + 5),
+        width: data.readUInt16BE(i + 7),
+      }
+    }
+    i += 2 + length
+  }
+
+  return { data, width: 1024, height: 1024 }
 }
 
 function extractScore(card: Record<string, unknown> | string | undefined): string {
@@ -118,12 +180,10 @@ function wrapText(value: string, max = 92): string[] {
 
 function pdfText(value: string): string {
   return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\x20-\x7E]/g, ' ')
     .replace(/\\/g, '\\\\')
     .replace(/\(/g, '\\(')
     .replace(/\)/g, '\\)')
+    .replace(/[^\x20-\x7E]/g, (char) => PDF_WINANSI_ESCAPES[char] ?? ' ')
 }
 
 function color(value = '#1A2A3A'): string {
@@ -166,6 +226,9 @@ function streamForOps(ops: PdfOp[]): string {
       ]
       return commands.filter(Boolean).join('\n')
     }
+    if (op.kind === 'image') {
+      return `q\n${op.w} 0 0 ${op.h} ${op.x} ${op.y} cm\n/Logo Do\nQ`
+    }
     return `${op.width ?? 1} w\n${color(op.stroke)} RG\n${op.x1} ${op.y1} m ${op.x2} ${op.y2} l S`
   }).join('\n')
 }
@@ -185,7 +248,10 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   const contentWidth = pageWidth - marginX * 2
   const startY = 760
   const bottomY = 64
-  const objects: string[] = ['', '', '', '']
+  const logo = readLogoJpeg()
+  const objects: string[] = logo
+    ? ['', '', '', '', `<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logo.data.length} >>\nstream\n${logo.data.toString('binary')}\nendstream`]
+    : ['', '', '', '']
   const pages: string[] = []
   let currentOps: PdfOp[] = []
   let y = startY
@@ -204,7 +270,8 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     const contentObjectNumber = objects.length + 1
     objects.push(`<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream`)
     const pageObjectNumber = objects.length + 1
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`)
+    const xObjectResource = logo ? ' /XObject << /Logo 5 0 R >>' : ''
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xObjectResource} >> /Contents ${contentObjectNumber} 0 R >>`)
     pages.push(`${pageObjectNumber} 0 R`)
     currentOps = []
     y = startY
@@ -238,36 +305,73 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     y -= 12
   }
 
+  function addSection(section: PdfSection) {
+    if (!section.body) return
+    const titleColor = section.tone === 'risk' ? '#E06B4A' : section.tone === 'signal' ? '#C8951A' : '#B8862D'
+    if (y < bottomY + 58) flushPage()
+    addText(section.title, 13, 18, marginX, 'bold', titleColor)
+    addWrapped(section.body, 10.5, 88, '#1A2A3A')
+    y -= 6
+  }
+
+  function addTabs() {
+    const tabY = 604
+    currentOps.push({ kind: 'rect', x: 48, y: tabY, w: 50, h: 22, stroke: '#C8951A', fill: '#FFF8E5', width: 0.8 })
+    currentOps.push({ kind: 'text', text: 'Cap', size: 9, x: 64, y: tabY + 7, font: 'bold', color: '#1B3A6B' })
+    currentOps.push({ kind: 'rect', x: 104, y: tabY, w: 70, h: 22, stroke: '#E2D8C6', fill: '#FFFFFF', width: 0.8 })
+    currentOps.push({ kind: 'text', text: 'Analyse', size: 9, x: 122, y: tabY + 7, font: 'bold', color: '#1B3A6B' })
+  }
+
+  function addLogo() {
+    const cx = 70
+    const cy = 747
+    currentOps.push({ kind: 'circle', x: cx, y: cy, r: 24, stroke: '#C8951A', fill: '#0B1730', width: 1 })
+    currentOps.push({ kind: 'circle', x: cx, y: cy, r: 3.6, stroke: '#C8951A', fill: '#F5F3EE', width: 0.6 })
+    const rays = [
+      [0, 15, 0, 39],
+      [0, -15, 0, -39],
+      [15, 0, 39, 0],
+      [-15, 0, -39, 0],
+      [11, 11, 28, 28],
+      [-11, 11, -28, 28],
+      [11, -11, 28, -28],
+      [-11, -11, -28, -28],
+    ]
+    rays.forEach(([x1, y1, x2, y2]) => {
+      currentOps.push({ kind: 'line', x1: cx + x1, y1: cy + y1, x2: cx + x2, y2: cy + y2, stroke: '#F2C94C', width: 3.2 })
+      currentOps.push({ kind: 'line', x1: cx + x1, y1: cy + y1, x2: cx + x2, y2: cy + y2, stroke: '#C8951A', width: 1.2 })
+    })
+  }
+
   addPageChrome()
-  currentOps.push({ kind: 'circle', x: 72, y: 748, r: 21, stroke: '#C8951A', fill: '#0B1730', width: 1 })
-  currentOps.push({ kind: 'circle', x: 72, y: 748, r: 13, stroke: '#C8951A', width: 0.5 })
-  currentOps.push({ kind: 'circle', x: 72, y: 748, r: 2.6, stroke: '#C8951A', fill: '#F5F3EE', width: 0.6 })
-  currentOps.push({ kind: 'line', x1: 58, y1: 748, x2: 86, y2: 748, stroke: '#C8951A', width: 0.7 })
-  currentOps.push({ kind: 'line', x1: 72, y1: 734, x2: 72, y2: 762, stroke: '#C8951A', width: 0.7 })
-  currentOps.push({ kind: 'line', x1: 62, y1: 738, x2: 82, y2: 758, stroke: '#C8951A', width: 0.5 })
-  currentOps.push({ kind: 'line', x1: 82, y1: 738, x2: 62, y2: 758, stroke: '#C8951A', width: 0.5 })
-  currentOps.push({ kind: 'text', text: 'IAAA+', size: 14, x: 108, y: 760, font: 'bold', color: '#C8951A' })
-  currentOps.push({ kind: 'text', text: 'SITUATION CARD', size: 13, x: 108, y: 744, font: 'bold', color: '#1B3A6B' })
+  if (logo) {
+    currentOps.push({ kind: 'image', x: 48, y: 723, w: 52, h: 52 })
+  } else {
+    addLogo()
+  }
+  currentOps.push({ kind: 'text', text: 'IAAA+', size: 14, x: 112, y: 760, font: 'bold', color: '#C8951A' })
+  currentOps.push({ kind: 'text', text: 'SITUATION CARD', size: 13, x: 112, y: 744, font: 'bold', color: '#1B3A6B' })
   currentOps.push({ kind: 'text', text: `Snapshot : ${options.createdAt.slice(0, 10)}`, size: 9, x: 390, y: 760, color: '#6F6255' })
   currentOps.push({ kind: 'text', text: `Langue : ${options.isFr ? 'FR' : 'EN'}`, size: 9, x: 390, y: 744, color: '#6F6255' })
   currentOps.push({ kind: 'text', text: meta, size: 9, x: 390, y: 728, color: '#6F6255' })
-  wrapLine(options.subject || title, 34).slice(0, 3).forEach((line, index) => {
-    currentOps.push({ kind: 'text', text: line, size: 22, x: 48, y: 704 - index * 24, font: 'bold', color: '#10244A' })
+  wrapLine(options.subject || title, 52).slice(0, 3).forEach((line, index) => {
+    currentOps.push({ kind: 'text', text: line, size: 17, x: 48, y: 704 - index * 20, font: 'bold', color: '#10244A' })
   })
   const intro = options.isFr
-    ? 'Une lecture structuree pour voir le systeme, le point fragile et les signaux a surveiller.'
+    ? 'Une lecture structurée pour voir le système, le point fragile et les signaux à surveiller.'
     : 'A structured reading to see the system, the fragile point and the signals to watch.'
-  currentOps.push({ kind: 'text', text: intro, size: 11, x: 48, y: 628, color: '#6F6255' })
-  currentOps.push({ kind: 'line', x1: 48, y1: 600, x2: 547, y2: 600, stroke: '#DAC7A4', width: 1 })
-  currentOps.push({ kind: 'text', text: options.isFr ? 'Situation soumise' : 'Submitted situation', size: 11, x: 48, y: 570, font: 'bold', color: '#C8951A' })
-  y = 548
+  currentOps.push({ kind: 'text', text: intro, size: 10.5, x: 48, y: 638, color: '#6F6255' })
+  addTabs()
+  currentOps.push({ kind: 'line', x1: 48, y1: 590, x2: 547, y2: 590, stroke: '#DAC7A4', width: 1 })
+  currentOps.push({ kind: 'text', text: options.isFr ? 'Situation soumise' : 'Submitted situation', size: 11, x: 48, y: 562, font: 'bold', color: '#C8951A' })
+  y = 540
   addWrapped(options.submitted, 12, 76, '#1A2A3A')
   y -= 12
   currentOps.push({ kind: 'rect', x: 48, y: y - 62, w: 150, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
-  currentOps.push({ kind: 'text', text: options.isFr ? 'Etat' : 'State', size: 9, x: 62, y: y - 28, font: 'bold', color: '#C8951A' })
+  currentOps.push({ kind: 'text', text: options.isFr ? 'État' : 'State', size: 9, x: 62, y: y - 28, font: 'bold', color: '#C8951A' })
   currentOps.push({ kind: 'text', text: options.stateLabel || 'N/A', size: 14, x: 62, y: y - 48, font: 'bold', color: '#1B3A6B' })
   currentOps.push({ kind: 'rect', x: 222, y: y - 62, w: 150, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
-  currentOps.push({ kind: 'text', text: 'Score', size: 9, x: 236, y: y - 28, font: 'bold', color: '#C8951A' })
+  currentOps.push({ kind: 'text', text: options.isFr ? 'Indice de contrôle' : 'Control index', size: 9, x: 236, y: y - 28, font: 'bold', color: '#C8951A' })
   currentOps.push({ kind: 'text', text: options.score ? `${options.score} / 100` : 'N/A', size: 14, x: 236, y: y - 48, font: 'bold', color: '#1B3A6B' })
   currentOps.push({ kind: 'rect', x: 396, y: y - 62, w: 151, h: 52, stroke: '#E2D8C6', fill: '#FFFFFF' })
   currentOps.push({ kind: 'text', text: options.isFr ? 'Genere le' : 'Generated', size: 9, x: 410, y: y - 28, font: 'bold', color: '#C8951A' })
@@ -275,7 +379,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   y -= 90
 
   for (const section of sections) {
-    addBox(section)
+    addSection(section)
   }
 
   if (currentOps.length > 0) flushPage()
@@ -287,12 +391,12 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
 
   const chunks: string[] = ['%PDF-1.4\n']
   const offsets: number[] = [0]
-  let length = Buffer.byteLength(chunks[0], 'utf8')
+  let length = Buffer.byteLength(chunks[0], 'binary')
   objects.forEach((object, index) => {
     offsets.push(length)
     const chunk = `${index + 1} 0 obj\n${object}\nendobj\n`
     chunks.push(chunk)
-    length += Buffer.byteLength(chunk, 'utf8')
+    length += Buffer.byteLength(chunk, 'binary')
   })
   const xrefOffset = length
   const xref = [
@@ -306,7 +410,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     `%%EOF`,
   ].join('\n')
   chunks.push(xref)
-  return Buffer.from(chunks.join(''), 'utf8')
+  return Buffer.from(chunks.join(''), 'binary')
 }
 
 export function renderSnapshotPdf(snapshot: GeneratedCardSnapshot): { buffer: Buffer; filename: string } {
@@ -320,10 +424,10 @@ export function renderSnapshotPdf(snapshot: GeneratedCardSnapshot): { buffer: Bu
 
   const sections: PdfSection[] = [
     { title: isFr ? 'Lecture' : 'Reading', body: lecture || fromCard(card, ['lecture_systeme_fr', 'lecture_systeme_en', 'lecture']) },
-    { title: isFr ? 'Vulnerabilite principale' : 'Main vulnerability', body: fromCard(card, ['main_vulnerability_fr', 'main_vulnerability_en', 'main_vulnerability']), tone: 'risk' },
-    { title: isFr ? 'Asymetrie' : 'Asymmetry', body: fromCard(card, ['asymmetry_fr', 'asymmetry_en', 'asymmetry']) },
+    { title: isFr ? 'Vulnérabilité principale' : 'Main vulnerability', body: fromCard(card, ['main_vulnerability_fr', 'main_vulnerability_en', 'main_vulnerability']), tone: 'risk' },
+    { title: isFr ? 'Asymétrie' : 'Asymmetry', body: fromCard(card, ['asymmetry_fr', 'asymmetry_en', 'asymmetry']) },
     { title: isFr ? 'Trajectoires' : 'Trajectories', body: fromCard(card, ['trajectories_text_fr', 'trajectories_text_en', 'trajectories_text']) },
-    { title: isFr ? 'Signal cle' : 'Key signal', body: fromCard(card, ['key_signal_fr', 'key_signal_en', 'key_signal']), tone: 'signal' },
+    { title: isFr ? 'Signal clé' : 'Key signal', body: fromCard(card, ['key_signal_fr', 'key_signal_en', 'key_signal']), tone: 'signal' },
     { title: isFr ? 'Approfondir' : 'Deep reading', body: approfondir },
     { title: isFr ? 'Ressources publiques' : 'Public sources', body: sources.map(sourceText).filter(Boolean).join('\n'), tone: 'muted' },
     { title: isFr ? 'Provenance' : 'Provenance', body: `${snapshot.card_version} - ${snapshot.created_at} - snapshot ${snapshot.id}`, tone: 'muted' },
