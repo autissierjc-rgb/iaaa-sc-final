@@ -1,5 +1,3 @@
-import { existsSync, readFileSync } from 'node:fs'
-import path from 'node:path'
 import type { GeneratedCardSnapshot } from '@/lib/contracts/generationArchive'
 
 type PdfSection = {
@@ -21,6 +19,9 @@ type AstrolabePdfScore = {
   name: string
   display_score: number
 }
+
+const GOLD = '#B8862D'
+const GOLD_DARK = '#A97818'
 
 const BRANCH_DESC_FR: Record<string, string> = {
   I: 'Ceux qui agissent, influencent ou bloquent.',
@@ -161,36 +162,6 @@ function sourceText(source: unknown): string {
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' ? value as Record<string, unknown> : null
-}
-
-function readLogoJpeg(): { data: Buffer; width: number; height: number } | null {
-  const candidates = [
-    path.join(process.cwd(), 'public', 'pictos', 'LOOGO-IAAA.jpg'),
-    path.join(process.cwd(), 'public', 'pictos', 'logo-iaaa.jpg'),
-    path.join(process.cwd(), 'public', 'logo-iaaa.jpg'),
-  ]
-  const logoPath = candidates.find((candidate) => existsSync(candidate))
-  if (!logoPath) return null
-  const data = readFileSync(logoPath)
-
-  for (let i = 2; i < data.length - 9;) {
-    if (data[i] !== 0xff) {
-      i += 1
-      continue
-    }
-    const marker = data[i + 1]
-    const length = data.readUInt16BE(i + 2)
-    if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7) || (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
-      return {
-        data,
-        height: data.readUInt16BE(i + 5),
-        width: data.readUInt16BE(i + 7),
-      }
-    }
-    i += 2 + length
-  }
-
-  return { data, width: 1024, height: 1024 }
 }
 
 function extractAstrolabeScores(card: Record<string, unknown> | string | undefined): AstrolabePdfScore[] {
@@ -376,10 +347,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   const contentWidth = pageWidth - marginX * 2
   const startY = 760
   const bottomY = 64
-  const logo = readLogoJpeg()
-  const objects: string[] = logo
-    ? ['', '', '', '', `<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logo.data.length} >>\nstream\n${logo.data.toString('binary')}\nendstream`]
-    : ['', '', '', '']
+  const objects: string[] = ['', '', '', '']
   const pages: string[] = []
   let currentOps: PdfOp[] = []
   let y = startY
@@ -398,8 +366,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     const contentObjectNumber = objects.length + 1
     objects.push(`<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream`)
     const pageObjectNumber = objects.length + 1
-    const xObjectResource = logo ? ' /XObject << /Logo 5 0 R >>' : ''
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xObjectResource} >> /Contents ${contentObjectNumber} 0 R >>`)
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjectNumber} 0 R >>`)
     pages.push(`${pageObjectNumber} 0 R`)
     currentOps = []
     y = startY
@@ -420,7 +387,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
 
   function addBox(section: PdfSection) {
     if (!section.body) return
-    const titleColor = section.tone === 'risk' ? '#E06B4A' : section.tone === 'signal' ? '#C8951A' : '#1B3A6B'
+    const titleColor = section.tone === 'risk' ? '#E06B4A' : section.tone === 'signal' ? GOLD : '#1B3A6B'
     const fill = section.tone === 'risk' ? '#FFF4EF' : section.tone === 'signal' ? '#FFF8E5' : section.tone === 'muted' ? '#F7F5F0' : '#FFFFFF'
     const bodyLines = wrapText(section.body, 86)
     const boxHeight = Math.max(70, 34 + bodyLines.length * 13)
@@ -435,7 +402,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
 
   function addSection(section: PdfSection) {
     if (!section.body) return
-    const titleColor = section.tone === 'risk' ? '#E06B4A' : section.tone === 'signal' ? '#C8951A' : '#B8862D'
+    const titleColor = section.tone === 'risk' ? '#E06B4A' : section.tone === 'signal' ? GOLD : GOLD
     if (y < bottomY + 58) flushPage()
     addText(section.title, 13, 18, marginX, 'bold', titleColor)
     addWrapped(section.body, 10.5, 88, '#1A2A3A')
@@ -465,7 +432,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     if (!value) return
     if (y < bottomY + 44) flushPage()
     currentOps.push({ kind: 'rect', x: marginX, y: y - 28, w: contentWidth, h: 34, stroke: '#E2D8C6', fill: '#FCFAF6', width: 0.8 })
-    currentOps.push({ kind: 'text', text: 'Indice de contrôle', size: 9.5, x: marginX + 12, y: y - 6, font: 'bold', color: '#C8951A' })
+    currentOps.push({ kind: 'text', text: 'Indice de contrôle', size: 9.5, x: marginX + 12, y: y - 6, font: 'bold', color: GOLD })
     currentOps.push({ kind: 'text', text: value, size: 13, x: marginX + 134, y: y - 7, font: 'bold', color: '#1B3A6B' })
     y -= 48
   }
@@ -473,8 +440,8 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   function addLogo() {
     const cx = 70
     const cy = 747
-    currentOps.push({ kind: 'circle', x: cx, y: cy, r: 24, stroke: '#C8951A', fill: '#0B1730', width: 1 })
-    currentOps.push({ kind: 'circle', x: cx, y: cy, r: 3.6, stroke: '#C8951A', fill: '#F5F3EE', width: 0.6 })
+    currentOps.push({ kind: 'circle', x: cx, y: cy, r: 24, stroke: GOLD, fill: '#0B1730', width: 1 })
+    currentOps.push({ kind: 'circle', x: cx, y: cy, r: 3.6, stroke: GOLD, fill: '#F5F3EE', width: 0.6 })
     const rays = [
       [0, 15, 0, 39],
       [0, -15, 0, -39],
@@ -486,8 +453,8 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
       [-11, -11, -28, -28],
     ]
     rays.forEach(([x1, y1, x2, y2]) => {
-      currentOps.push({ kind: 'line', x1: cx + x1, y1: cy + y1, x2: cx + x2, y2: cy + y2, stroke: '#F2C94C', width: 3.2 })
-      currentOps.push({ kind: 'line', x1: cx + x1, y1: cy + y1, x2: cx + x2, y2: cy + y2, stroke: '#C8951A', width: 1.2 })
+      currentOps.push({ kind: 'line', x1: cx + x1, y1: cy + y1, x2: cx + x2, y2: cy + y2, stroke: '#D6A93A', width: 3.2 })
+      currentOps.push({ kind: 'line', x1: cx + x1, y1: cy + y1, x2: cx + x2, y2: cy + y2, stroke: GOLD, width: 1.2 })
     })
   }
 
@@ -503,7 +470,7 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     const empty = '#E0DCD4'
     const emptyStroke = '#C8C4BC'
 
-    addText('Astrolabe', 13, 18, marginX, 'bold', '#B8862D')
+    addText('Astrolabe', 13, 18, marginX, 'bold', GOLD)
     currentOps.push({ kind: 'circle', x: cx, y: cy, r: 88, stroke: '#C8B880', width: 1.2 })
     Array.from({ length: 32 }).forEach((_, t) => {
       const angle = (t * 360 / 32 - 90) * Math.PI / 180
@@ -569,11 +536,10 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
   }
 
   addPageChrome()
-  if (logo) currentOps.push({ kind: 'image', x: 48, y: 722, w: 52, h: 52 })
-  else addLogo()
-  currentOps.push({ kind: 'text', text: 'IAAA+', size: 14, x: 112, y: 760, font: 'bold', color: '#C8951A' })
+  addLogo()
+  currentOps.push({ kind: 'text', text: 'IAAA+', size: 14, x: 112, y: 760, font: 'bold', color: GOLD })
   currentOps.push({ kind: 'text', text: 'SITUATION CARD', size: 13, x: 112, y: 744, font: 'bold', color: '#1B3A6B' })
-  currentOps.push({ kind: 'text', text: options.domain || 'Situation', size: 14, x: 112, y: 720, font: 'bold', color: '#B8862D' })
+  currentOps.push({ kind: 'text', text: (options.domain || 'Situation').replace('·', ':'), size: 14, x: 112, y: 720, font: 'bold', color: GOLD_DARK })
   currentOps.push({ kind: 'text', text: `Snapshot : ${options.createdAt.slice(0, 10)}`, size: 9, x: 390, y: 760, color: '#6F6255' })
   currentOps.push({ kind: 'text', text: `Langue : ${options.isFr ? 'FR' : 'EN'}`, size: 9, x: 390, y: 744, color: '#6F6255' })
   currentOps.push({ kind: 'text', text: meta, size: 9, x: 390, y: 728, color: '#6F6255' })
@@ -585,10 +551,11 @@ function makePdf(title: string, sections: PdfSection[], meta: string, options: {
     : 'A structured reading to see the system, the fragile point and the signals to watch.'
   currentOps.push({ kind: 'text', text: intro, size: 10.5, x: 48, y: 598, color: '#6F6255' })
   currentOps.push({ kind: 'line', x1: 48, y1: 590, x2: 547, y2: 590, stroke: '#DAC7A4', width: 1 })
-  currentOps.push({ kind: 'text', text: options.isFr ? 'Situation soumise' : 'Submitted situation', size: 11, x: 48, y: 562, font: 'bold', color: '#C8951A' })
+  currentOps.push({ kind: 'text', text: options.isFr ? 'Situation soumise' : 'Submitted situation', size: 11, x: 48, y: 562, font: 'bold', color: GOLD })
   y = 540
   addWrapped(options.submitted, 12, 76, '#1A2A3A')
   y -= 20
+  if (options.astrolabeScores.length > 0 && y < 600) flushPage()
   addCardAstrolabe(options.astrolabeScores)
   addForceLines(options.astrolabeScores)
   addControlIndex()
