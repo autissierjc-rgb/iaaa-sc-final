@@ -1969,7 +1969,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
     setSituation('')
     try {
       const controller = new AbortController()
-      const timeout = window.setTimeout(() => controller.abort(), 30000)
+      const timeout = window.setTimeout(() => controller.abort(), 12000)
       const scRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1978,7 +1978,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           situation: fullText,
           original_situation: text,
           lang: contentLang.toLowerCase(),
-          mode: 'generate_full',
+          mode: 'public_fast',
           refine_acknowledged: refiningOptional || waitingForAnswers,
           conversation_contract: scData?.conversation_contract,
           dialogue_events: dialogueEvents,
@@ -2009,6 +2009,34 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
             ? { ...msg, text: canonicalText }
             : msg
         ))
+        const fullController = new AbortController()
+        const fullTimeout = window.setTimeout(() => fullController.abort(), 30000)
+        fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: fullController.signal,
+          body: JSON.stringify({
+            situation: fullText,
+            original_situation: text,
+            lang: contentLang.toLowerCase(),
+            mode: 'generate_full',
+            refine_acknowledged: true,
+            conversation_contract: scData2.sc.conversation_contract ?? scData?.conversation_contract,
+            dialogue_events: dialogueEvents,
+          }),
+        })
+          .then(async response => {
+            window.clearTimeout(fullTimeout)
+            const payload = await response.json()
+            if (payload?.gate === 'GENERATE' && payload.sc) {
+              setScData(payload.sc)
+              setActiveSituation(canonicalSituationFromResponse(payload.sc, canonicalText))
+            }
+          })
+          .catch(error => {
+            window.clearTimeout(fullTimeout)
+            console.warn('complete generation background failed:', error)
+          })
       }
       setAnswers([])
       setDialogueNotes([])
@@ -2287,7 +2315,22 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                   </div>
                 )
                 if (msg.kind === 'material') return <div key={i} style={{ alignSelf: 'flex-start', background: 'rgba(26,58,107,0.05)', color: TXT2, border: `1px solid ${BDR}`, borderRadius: '2px 10px 10px 10px', padding: '8px 12px', fontSize: 12, maxWidth: '82%', lineHeight: 1.45 }}>{msg.text}</div>
-                if (msg.kind === 'clarify' || msg.kind === 'refine') return <div key={i} style={{ alignSelf: 'flex-start', color: TXT2, fontSize: 13, lineHeight: 1.6, fontStyle: 'italic' }}>{msg.questions.join(' · ')}</div>
+                if (msg.kind === 'clarify' || msg.kind === 'refine') return (
+                  <div key={i} style={{ alignSelf: 'flex-start', color: TXT2, fontSize: 13, lineHeight: 1.6, fontStyle: 'italic', maxWidth: '86%' }}>
+                    <div>{msg.questions.join(' · ')}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                      <button
+                        type="button"
+                        onClick={handleGenerate}
+                        disabled={scLoading || !activeSituation.trim()}
+                        style={{ border: `1px solid ${BDR_G}`, background: 'rgba(204,163,100,0.14)', color: TXT, borderRadius: 999, padding: '7px 11px', fontSize: 11, fontStyle: 'normal', cursor: scLoading || !activeSituation.trim() ? 'not-allowed' : 'pointer' }}
+                      >
+                        {lang === 'FR' ? 'Générer une carte exploratoire' : 'Generate an exploratory card'}
+                      </button>
+                      <span style={{ color: TXT3, fontSize: 11 }}>{lang === 'FR' ? 'Ou répondez dans le champ.' : 'Or reply in the field.'}</span>
+                    </div>
+                  </div>
+                )
                 if (msg.kind === 'block') return <div key={i} style={{ alignSelf: 'flex-start', background: 'rgba(224,107,74,0.06)', border: '1px solid rgba(224,107,74,0.25)', borderRadius: '2px 10px 10px 10px', padding: '8px 12px', maxWidth: '82%', fontSize: 12, color: '#A32D2D' }}>{msg.reason}</div>
                 return null
               })}
@@ -2458,9 +2501,19 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                         </div>
                         <div style={{ fontSize: 10, color: TXT3, fontStyle: 'italic', marginTop: 7 }}>
                           {msg.kind === 'clarify'
-                            ? (lang === 'FR' ? 'Répondez librement dans le champ ci-dessous.' : 'Reply freely in the field below.')
+                            ? (lang === 'FR' ? 'Répondez librement, ou générez une carte exploratoire.' : 'Reply freely, or generate an exploratory card.')
                             : (lang === 'FR' ? 'Répondez si vous voulez préciser, ou cliquez la boussole pour générer.' : 'Reply if you want to refine it, or click the compass to generate.')}
                         </div>
+                        {msg.kind === 'clarify' && (
+                          <button
+                            type="button"
+                            onClick={handleGenerate}
+                            disabled={scLoading || !activeSituation.trim()}
+                            style={{ marginTop: 10, border: `1px solid ${BDR_G}`, background: 'rgba(204,163,100,0.14)', color: TXT, borderRadius: 999, padding: '7px 12px', fontSize: 11, fontStyle: 'normal', cursor: scLoading || !activeSituation.trim() ? 'not-allowed' : 'pointer' }}
+                          >
+                            {lang === 'FR' ? 'Générer une carte exploratoire' : 'Generate an exploratory card'}
+                          </button>
+                        )}
                       </div>
                     )
                     if (msg.kind === 'block') return <div key={i} style={{ alignSelf: 'flex-start', background: 'rgba(224,107,74,0.06)', border: '1px solid rgba(224,107,74,0.25)', borderRadius: '2px 10px 10px 10px', padding: '8px 12px', maxWidth: '90%', fontSize: 11, color: '#A32D2D' }}>{msg.reason}</div>

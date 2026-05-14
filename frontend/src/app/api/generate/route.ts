@@ -16,6 +16,7 @@ import { situationReadinessGate } from '@/lib/input/situationReadinessGate'
 import { clarifyBeforeGenerate } from '@/lib/intent/clarifyBeforeGenerate'
 import { applyConversationContractToIntent, buildConversationContract, shouldCarryConversationContract } from '@/lib/intent/conversationContract'
 import { buildCanonicalSituationFromDialogue } from '@/lib/intent/dialogueCanonicalizer'
+import { interpretRequest } from '@/lib/intent/interpretRequest'
 import { interpretRequestWithModel } from '@/lib/intent/modelIntentInterpreter'
 import { situationIntentRouter } from '@/lib/intent/situationIntentRouter'
 import { detectPatterns, patternGuidance } from '@/lib/patterns/detectPatterns'
@@ -684,6 +685,26 @@ function compactHeaderTitle(sc: SituationCard, situation: string): string {
   const first = labels[0] ?? ''
   const second = labels.find((label) => label !== first) ?? ''
   const domain = atlasDomainLabel(sc)
+  const frame = sc.intent_context?.dominant_frame ?? sc.coverage_check?.intent_context?.dominant_frame
+  const decisionType = sc.intent_context?.decision_type ?? sc.coverage_check?.intent_context?.decision_type
+  const rawExistingTitle = stripEntityExplanations(cleanPublicText(firstText([sc.title_fr, sc.title], '')))
+    .replace(/^[^·]+·\s*/, '')
+    .trim()
+  const enterpriseOrSiteQuestion =
+    frame === 'site_analysis' ||
+    frame === 'startup_investment' ||
+    decisionType === 'analyze_site' ||
+    /\b(rejoindre|startup|compagnie|entreprise|soci[eé]t[eé]|plateforme|partenariat|go[-\s]?to[-\s]?market|business|march[eé])\b/i.test(question)
+  if (
+    enterpriseOrSiteQuestion &&
+    rawExistingTitle &&
+    rawExistingTitle.length <= 80 &&
+    !/^(lecture structurelle|structural reading|professionnel)$/i.test(rawExistingTitle) &&
+    !rejectsDiamondGuardText(rawExistingTitle) &&
+    !looksLikeUnprocessedInput(rawExistingTitle, situation)
+  ) {
+    return `${domain} · ${ensureMinimumSubjectWords(rawExistingTitle, rawExistingTitle)}`
+  }
   const dialogueHeaderSubject = typeof (sc.coverage_check as Record<string, unknown> | undefined)?.canonical_header_subject === 'string'
     ? String((sc.coverage_check as Record<string, unknown>).canonical_header_subject).trim()
     : ''
@@ -795,7 +816,7 @@ function safePublicText(value: unknown, situation: string, fallback: string): st
 function firstSafeText(values: unknown[], situation: string, fallback: string): string {
   for (const value of values) {
     const text = safePublicText(value, situation, '')
-    if (text) return text
+    if (text && !rejectsDiamondGuardText(text)) return text
   }
   return fallback
 }
@@ -947,8 +968,12 @@ function listFromAxis(value: unknown, fallback: string[], situation = ''): strin
     : []
   return uniqueCleanList([...list, ...fallback])
     .map(cleanPublicText)
-    .filter((item) => Boolean(item) && (!situation || !looksLikeUnprocessedInput(item, situation)))
+    .filter((item) => Boolean(item) && !rejectsDiamondGuardText(item) && (!situation || !looksLikeUnprocessedInput(item, situation)))
     .slice(0, 4)
+}
+
+function rejectsDiamondGuardText(text: string): boolean {
+  return /la situation ne se joue pas seulement|distribution des leviers r[eé]els|qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer|la fa[cç]ade peut encore fonctionner|ce qui para[iî]t stable d[eé]pend d[’']un levier discret|ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible|fa[cç]ade de contr[oô]le|structural reading from available signals/i.test(text)
 }
 
 function defaultTrajectories(arbre: ArbreACamesAnalysis, situation: string) {
@@ -1137,6 +1162,14 @@ function siteNameFromBrief(brief: ResourceItem | undefined, fallback: string): s
   }
 }
 
+function companyNameFromQuestion(text: string): string {
+  const cleaned = cleanPublicText(text)
+  const match =
+    /\b(?:compagnie|entreprise|startup|soci[eé]t[eé]|plateforme|outil|app|service)\s+([A-Z][A-Za-z0-9+._-]{2,})\b/.exec(cleaned) ||
+    /\b([A-Z][A-Za-z0-9+._-]{2,})\b/.exec(cleaned)
+  return match?.[1] ?? ''
+}
+
 function frenchSiteProduct(company: string, product: string): string {
   if (/platform that helps you start,\s*grow,\s*and manage your business/i.test(product)) {
     return `${company} se présente comme une plateforme qui aide à créer, développer et gérer une entreprise, avec une promesse de simplicité, d’équité et de transparence.`
@@ -1181,11 +1214,13 @@ function siteAnalysisFallbackCard({
     /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(situation) ||
     /\b(site|page|plateforme|application|app|service|outil)\b/i.test(situation) ||
     resources.some((resource) => resource.type === 'site-brief')
+  const hasCompanyEvaluationSignal =
+    /\b(compagnie|entreprise|startup|soci[eé]t[eé]|rejoindre|partenariat|investir|client|march[eé]|business|go[- ]?to[- ]?market)\b/i.test(situation)
   const hasExplicitUrlSignal = hasExplicitUrl(situation)
-  if (frame === 'general_analysis' && !hasExplicitSiteSignal) return null
-  if (!brief && frame !== 'site_analysis' && frame !== 'startup_investment') return null
+  if (frame === 'general_analysis' && !hasExplicitSiteSignal && !hasCompanyEvaluationSignal) return null
+  if (!brief && frame !== 'site_analysis' && frame !== 'startup_investment' && !hasCompanyEvaluationSignal) return null
   const excerpt = brief?.excerpt ?? ''
-  const company = siteNameFromBrief(brief, objectName || 'ce site')
+  const company = siteNameFromBrief(brief, companyNameFromQuestion(situation) || objectName || 'ce site')
   const product = lineAfterPrefix(excerpt, 'Ce que fait l’entreprise') ||
     lineAfterPrefix(excerpt, 'Ce que le site permet d’établir') ||
     `${company} doit d’abord être identifié à partir du contenu utile disponible : produit, cible, usage, preuves visibles et angles morts.`
@@ -2741,10 +2776,17 @@ function buildFallbackCard(
   const wideGlobal = scope.scope === 'global'
   const isPersonalRelationship = isPersonalRelationshipCard(undefined, intentContext)
   const humanDevelopment = /\b(fils|fille|enfant|ado|adolescent|adolescente|parent|sport|p[eê]che|carpe|loisir|passion|motivation)\b/i.test(situation)
+  const firstDiamondSafeText = (values: unknown[], fallback: string): string => {
+    for (const value of values) {
+      const text = safePublicText(value, situation, '')
+      if (text && !rejectsDiamondGuardText(text)) return text
+    }
+    return fallback
+  }
   const powerLens = firstSafeText(
     [arbre.rapports_de_force?.[0], arbre.forces?.[0]],
     situation,
-    `les leviers réels en présence : ${powersLabel(arbre, 'qui peut agir, bloquer, légitimer, user ou faire basculer')}`
+    `les acteurs, contraintes et passages obligés : ${powersLabel(arbre, 'acteurs, contraintes et preuves disponibles')}`
   ).replace(/^puissances en présence\s*:\s*/i, '').replace(/[.;]+$/g, '')
   const vulnerability = wideGlobal
     ? 'Le point fragile est le passage d’un choc local vers plusieurs canaux de puissance à la fois.'
@@ -2752,9 +2794,8 @@ function buildFallbackCard(
       ? 'Le point fragile est le moment où une passion partagée devient pression, comparaison ou perte d’autonomie.'
     : isPersonalRelationship
       ? 'Le point fragile est le risque de transformer un signe affectif en certitude avant que les actes aient clarifié l’intention.'
-    : firstSafeText(
+    : firstDiamondSafeText(
         [arbre.main_vulnerability_candidate],
-        situation,
         'Le point fragile est le levier réel qui n’est pas encore protégé ou clarifié.'
       )
   const contradiction = wideGlobal
@@ -2763,10 +2804,9 @@ function buildFallbackCard(
       ? 'Le parent veut comprendre et réparer le lien, tandis que l’adolescent peut protéger son autonomie, son image ou sa manière de vivre la déception.'
     : isPersonalRelationship
       ? 'Un message peut réchauffer un lien ancien, mais seule la suite des échanges montre s’il ouvre une rencontre, une clarification ou seulement une chaleur prudente.'
-    : firstSafeText(
+    : firstDiamondSafeText(
         [arbre.load_bearing_contradiction],
-        situation,
-        'Ce qui paraît stable dépend d’un levier discret qui peut bloquer, user ou faire basculer.'
+        'La lecture dépend du lien entre un acteur nommé, une contrainte précise et une preuve observable.'
       )
   const radar = {
     impact: 55,
@@ -2802,6 +2842,41 @@ function buildFallbackCard(
     `${objectSentence} ne se résume pas à une inquiétude générale. La situation se joue dans l’écart entre une crainte formulée et la capacité concrète des acteurs à la traduire en acte : décision, blocage, procédure, pression publique ou déplacement du calendrier.\n\n` +
     `La contradiction centrale tient à ceci : ${tensionLabel}. Une perception peut devenir politiquement puissante avant d’être prouvée, mais elle ne devient structurante que si elle rencontre des relais capables de la porter, de la légaliser, de la financer, de la médiatiser ou de la bloquer.\n\n` +
     `Le point de bascule sera observable. Il apparaîtra lorsqu’un acteur, une institution ou un canal changera de registre : recours, refus, consigne publique, arbitrage, calendrier modifié ou preuve qui rend impossible de traiter la situation comme une simple inquiétude.`
+  const concreteActors = firstDiamondSafeText(
+    [
+      arbre.powers_in_presence?.primary?.map((power) => power.name).filter(Boolean).join(', '),
+      arbre.acteurs?.slice(0, 4).join(', '),
+      arbre.forces?.[0],
+    ],
+    powerLens || 'les acteurs directement concernés'
+  ).replace(/[.;]+$/g, '')
+  const concreteInstitutions = firstDiamondSafeText(
+    [
+      arbre.powers_in_presence?.primary
+        ?.filter((power) => power.family === 'institutional' || power.family === 'blocking')
+        .map((power) => power.name)
+        .filter(Boolean)
+        .slice(0, 4)
+        .join(', '),
+      arbre.contraintes?.[0],
+      arbre.rapports_de_force?.[0],
+    ],
+    'les règles, procédures ou contraintes qui peuvent transformer la situation'
+  ).replace(/[.;]+$/g, '')
+  const concreteProof = firstDiamondSafeText(
+    [arbre.temps?.[0], arbre.temporalites?.[0], arbre.incertitudes?.[0], resources[0]?.title],
+    'un fait, une décision, un document ou un changement de calendrier vérifiable'
+  ).replace(/[.;]+$/g, '')
+  const genericInsight =
+    `${objectSentence} doit être lu à partir de ${concreteActors}. La question utile est de savoir comment ${concreteInstitutions} peut transformer la situation en acte, blocage, coût ou preuve observable.`
+  const genericLecture =
+    `${objectSentence} ne se tranche pas par une formule générale. La lecture doit partir des acteurs et passages obligés déjà visibles : ${concreteActors}. Ce qui compte maintenant est le lien entre ces acteurs, ${concreteInstitutions}, et ${concreteProof}.\n\n` +
+    `Le point fragile est ${vulnerability.replace(/^Le point fragile est\s*/i, '').replace(/[.;]+$/g, '')}. Tant que ce point n’est pas relié à une trace vérifiable, la carte doit rester prudente : elle indique une hypothèse de travail, pas une conclusion fermée.\n\n` +
+    `Le signal à surveiller est concret : ${concreteProof}. C’est ce type de trace qui permet de passer d’une impression générale à une lecture partageable, contestable et révisable.`
+  const genericCapHook =
+    `${capitalizeFirst(concreteProof)} peut changer le statut de la situation.`
+  const genericWarning =
+    'Ne pas transformer une hypothèse lisible en conclusion sans trace vérifiable.'
   const siteFallback = siteAnalysisFallbackCard({
     situation,
     arbre,
@@ -2827,7 +2902,7 @@ function buildFallbackCard(
             ? 'La situation se lit par les forces discrètes du lien : autonomie adolescente, regard parental, ancienne passion, frustration vécue et besoin de ne pas perdre la face.'
           : isPersonalRelationship
             ? 'La situation se lit par la reprise concrète du lien : signe affectif, histoire passée, distance, rythme des messages et possibilité réelle d’une rencontre.'
-            : `La situation se lit d’abord par les leviers en présence : ${powerLens}. Le point central est la tension entre ce qui préserve la façade et ce qui peut réellement faire basculer.`,
+            : genericInsight,
       insight_en:
         'The situation is first read through the powers in presence: who can act, block, legitimize, wear down, or tip the balance. The central point is the tension between what can still hold and what can now shift the system.',
       main_vulnerability_fr: understands
@@ -2934,7 +3009,7 @@ function buildFallbackCard(
           ? personalRelationshipCap().hook_fr
           : humanDevelopment
           ? 'Le refus ou le retrait peut protéger quelque chose que le parent ne voit pas encore.'
-          : 'L’aspect de façade n’est pas forcément ce qui protège réellement la situation.',
+          : genericCapHook,
         hook_en: isPersonalRelationship
           ? personalRelationshipCap().hook_en
           : 'What still holds is not necessarily what truly protects the system.',
@@ -2991,10 +3066,10 @@ function buildFallbackCard(
       ],
       avertissement_fr: isPersonalRelationship
         ? 'Ne pas confondre signe affectif, intention claire et projection personnelle.'
-        : 'Ne pas confondre façade de contrôle et capacité réelle d’absorption.',
+        : genericWarning,
       avertissement_en: isPersonalRelationship
         ? 'Do not confuse an affectionate sign, clear intention, and personal projection.'
-        : 'Structural reading from available signals.',
+        : 'Do not turn a readable hypothesis into a conclusion without verifiable evidence.',
       lecture_systeme_fr: understands
         ? understandingLecture
         : isPersonalRelationship
@@ -3005,9 +3080,7 @@ function buildFallbackCard(
         ? `La situation ne parle pas seulement d’un adolescent qui réagit mal à une déception. Elle fait apparaître plusieurs forces discrètes : désir d’autonomie, regard parental, passion investie, honte de l’échec, fatigue possible et besoin de ne pas perdre la face.\n\n` +
           `La contradiction centrale est délicate : ce qui devait être un moment partagé peut devenir, à quatorze ans, une scène où l’échec paraît exposer l’adolescent. Le retrait ou le reproche ne sont donc pas forcément une accusation stable ; ils peuvent être une manière de reprendre la main, d’éviter la honte, ou de vérifier que le lien tient encore.\n\n` +
           `Le point de bascule sera le moment où la question cessera d’être “qui est responsable ?” pour devenir “comment reconnaître la déception sans enfermer chacun dans son rôle ?”. Le signal utile est sa capacité à revenir au lien, même indirectement, sans devoir justifier toute son émotion.`
-        : `La situation ne se joue pas seulement dans l’événement visible. Elle se joue dans la distribution des leviers réels : qui peut agir, bloquer, légitimer, financer, user ou faire basculer.\n\n` +
-          `La contradiction centrale tient à ceci : ${contradiction}. La façade peut encore fonctionner, mais il faut regarder quelle force réelle la soutient, la ralentit ou la rend fragile.\n\n` +
-          `Le point de bascule sera le moment où ${vulnerability.toLowerCase()} deviendra visible dans une décision, un coût, un refus, un récit public ou un changement de rythme.`,
+        : genericLecture,
       lecture_systeme_en:
         `The situation is no longer only in the visible event. It is entering a phase where the system can still display control while its material, social, or political margins narrow.\n\n` +
         `The central contradiction lies between what appears controlled and what is becoming harder to absorb: ${firstSafeText([arbre.load_bearing_contradiction], situation, 'a quiet lever can block, wear down, or tip the situation')}.\n\n` +
@@ -3199,6 +3272,7 @@ export async function POST(req: NextRequest) {
       conversation_contract,
       dialogue_events,
     } = await req.json()
+    const isPublicFast = mode === 'public_fast'
 
     if (!situation?.trim()) {
       return NextResponse.json({ error: 'No situation' }, { status: 400 })
@@ -3213,11 +3287,13 @@ export async function POST(req: NextRequest) {
       typeof original_situation === 'string' &&
       original_situation.trim() &&
       normalizeSubmittedSituation(text) !== rawDisplayText
-    const canonicalDialogue = await buildCanonicalSituationFromDialogue({
-      rawSituation: text,
-      originalSituation: typeof original_situation === 'string' ? original_situation : undefined,
-      dialogueEvents: dialogue_events,
-    })
+    const canonicalDialogue = isPublicFast
+      ? null
+      : await buildCanonicalSituationFromDialogue({
+          rawSituation: text,
+          originalSituation: typeof original_situation === 'string' ? original_situation : undefined,
+          dialogueEvents: dialogue_events,
+        })
     const analysisText = canonicalDialogue?.canonical_situation ||
       applyDialogueClarifications(hasUserAdditions ? text : rawDisplayText || text)
     const urlSourceText = [
@@ -3235,7 +3311,9 @@ export async function POST(req: NextRequest) {
     const previousContract = conversation_contract && typeof conversation_contract === 'object'
       ? conversation_contract as ConversationContract
       : undefined
-    const modelInterpreted = await interpretRequestWithModel(analysisText)
+    const modelInterpreted = isPublicFast
+      ? interpretRequest(analysisText)
+      : await interpretRequestWithModel(analysisText)
     const carriedPreviousContract = shouldCarryConversationContract(modelInterpreted, previousContract, analysisText)
       ? previousContract
       : undefined
@@ -3355,7 +3433,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    if (mode !== 'generate' && mode !== 'generate_full') {
+    if (mode !== 'generate' && mode !== 'generate_full' && !isPublicFast) {
       if (inputQuality.questions.length > 0 && !hasUrlInFlow) {
         return NextResponse.json({
           gate: 'CLARIFY',
@@ -3392,21 +3470,25 @@ export async function POST(req: NextRequest) {
     const providedResources = sanitizeResources(rawResources)
     const webNeeded = hasUrlInFlow || shouldUseWeb(urlAugmentedAnalysisText)
     const rawFetchedResources =
-      providedResources.length > 0
+      isPublicFast
+        ? providedResources
+        : providedResources.length > 0
         ? providedResources
         : webNeeded
           ? await fetchResourcesFast(urlAugmentedAnalysisText)
           : []
-    const resources = await enrichResourcesWithSiteUnderstanding({
-      situation: urlAugmentedAnalysisText,
-      resources: rawFetchedResources,
-      intentContext,
-    })
+    const resources = isPublicFast
+      ? rawFetchedResources
+      : await enrichResourcesWithSiteUnderstanding({
+          situation: urlAugmentedAnalysisText,
+          resources: rawFetchedResources,
+          intentContext,
+        })
     const readinessGate = situationReadinessGate({
       situation: urlAugmentedAnalysisText,
       intentContext,
       resources,
-      forceGenerate: explicitPrudentGeneration || hasUrlInFlow,
+      forceGenerate: explicitPrudentGeneration || hasUrlInFlow || isPublicFast,
     })
     const resourcesStatus =
       rawFetchedResources.length > 0
@@ -3453,7 +3535,7 @@ export async function POST(req: NextRequest) {
       branches,
       intentContext,
     })
-    const useModelCard = process.env.SC_USE_MODEL_CARD === '1'
+    const useModelCard = process.env.SC_USE_MODEL_CARD === '1' && !isPublicFast
     const useLocalFastCard = !prebuiltSiteCard && !useModelCard
     let baseSc: SituationCard
     if (prebuiltSiteCard) {
@@ -3579,6 +3661,8 @@ export async function POST(req: NextRequest) {
     if (siteGuard) {
       baseSc = {
         ...baseSc,
+        title_fr: siteGuard.title_fr,
+        title_en: siteGuard.title_en,
         insight_fr: siteGuard.insight_fr,
         insight_en: siteGuard.insight_en,
         main_vulnerability_fr: siteGuard.main_vulnerability_fr,
@@ -3641,7 +3725,12 @@ export async function POST(req: NextRequest) {
       typeof baseSc.lecture_systeme_en === 'string' &&
       baseSc.lecture_systeme_en.trim().length > 80
 
-    const lecture = hasLecture
+    const lecture = isPublicFast
+      ? {
+          lecture_systeme_fr: baseSc.lecture_systeme_fr,
+          lecture_systeme_en: baseSc.lecture_systeme_en,
+        }
+      : hasLecture
       ? {
           lecture_systeme_fr: baseSc.lecture_systeme_fr,
           lecture_systeme_en: baseSc.lecture_systeme_en,
