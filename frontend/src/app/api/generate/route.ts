@@ -2776,6 +2776,9 @@ function buildFallbackCard(
   const wideGlobal = scope.scope === 'global'
   const isPersonalRelationship = isPersonalRelationshipCard(undefined, intentContext)
   const humanDevelopment = /\b(fils|fille|enfant|ado|adolescent|adolescente|parent|sport|p[eê]che|carpe|loisir|passion|motivation)\b/i.test(situation)
+  const startupCommunity =
+    (intentContext?.surface_domain === 'startup_vc' || intentContext?.interpreted_request?.domain === 'startup_vc') &&
+    /\b(cible|segment|communaut[eé]|utilisateurs?|audience|acquisition|activation|r[eé]tention|go[- ]?to[- ]?market|croissance|options? strat[eé]giques?)\b/i.test(situation)
   const firstDiamondSafeText = (values: unknown[], fallback: string): string => {
     for (const value of values) {
       const text = safePublicText(value, situation, '')
@@ -2794,6 +2797,8 @@ function buildFallbackCard(
       ? 'Le point fragile est le moment où une passion partagée devient pression, comparaison ou perte d’autonomie.'
     : isPersonalRelationship
       ? 'Le point fragile est le risque de transformer un signe affectif en certitude avant que les actes aient clarifié l’intention.'
+    : startupCommunity
+      ? 'Le point fragile est le choix du premier segment : une communauté trop large crée du bruit, une cible trop étroite peut manquer d’élan.'
     : firstDiamondSafeText(
         [arbre.main_vulnerability_candidate],
         'Le point fragile est le levier réel qui n’est pas encore protégé ou clarifié.'
@@ -2804,6 +2809,8 @@ function buildFallbackCard(
       ? 'Le parent veut comprendre et réparer le lien, tandis que l’adolescent peut protéger son autonomie, son image ou sa manière de vivre la déception.'
     : isPersonalRelationship
       ? 'Un message peut réchauffer un lien ancien, mais seule la suite des échanges montre s’il ouvre une rencontre, une clarification ou seulement une chaleur prudente.'
+    : startupCommunity
+      ? 'Une communauté peut donner de la visibilité, mais seule une cible assez précise produit de l’usage répété, des retours qualifiés et une preuve de traction.'
     : firstDiamondSafeText(
         [arbre.load_bearing_contradiction],
         'La lecture dépend du lien entre un acteur nommé, une contrainte précise et une preuve observable.'
@@ -2877,6 +2884,14 @@ function buildFallbackCard(
     `${capitalizeFirst(concreteProof)} peut changer le statut de la situation.`
   const genericWarning =
     'Ne pas transformer une hypothèse lisible en conclusion sans trace vérifiable.'
+  const startupCommunityInsight =
+    `${objectSentence} ne se joue pas d’abord comme une question de volume. La décision utile est de choisir le premier groupe capable de comprendre la promesse, de l’utiliser souvent, d’en parler et de produire des preuves visibles.`
+  const startupCommunityLecture =
+    `${objectSentence} doit être lu comme un arbitrage de lancement : partir d’un segment très qualifié, d’une communauté plus large, ou d’un relais prescripteur. Le bon premier choix n’est pas forcément le plus grand ; c’est celui qui réduit le plus vite l’incertitude sur l’usage réel.\n\n` +
+    `La contradiction centrale tient à ceci : une communauté donne de la surface, mais une startup a besoin d’un signal plus dur que l’attention. Le premier segment doit permettre d’observer activation, rétention, partage, recommandation, willingness to pay ou demande d’intégration.\n\n` +
+    `Le point de bascule sera mesurable : des utilisateurs reviennent sans relance, formulent le cas d’usage avec leurs mots, partagent la carte, demandent une fonctionnalité, invitent d’autres personnes ou acceptent un passage payant. Sans ce signal, la communauté reste audience ; avec lui, elle devient moteur de marché.`
+  const startupCommunitySignal =
+    'Le signal clé est le passage de l’intérêt à l’usage répété : retours qualifiés, partages spontanés, réutilisation, invitation d’autres utilisateurs ou demande d’intégration.'
   const siteFallback = siteAnalysisFallbackCard({
     situation,
     arbre,
@@ -2902,6 +2917,8 @@ function buildFallbackCard(
             ? 'La situation se lit par les forces discrètes du lien : autonomie adolescente, regard parental, ancienne passion, frustration vécue et besoin de ne pas perdre la face.'
           : isPersonalRelationship
             ? 'La situation se lit par la reprise concrète du lien : signe affectif, histoire passée, distance, rythme des messages et possibilité réelle d’une rencontre.'
+          : startupCommunity
+            ? startupCommunityInsight
             : genericInsight,
       insight_en:
         'The situation is first read through the powers in presence: who can act, block, legitimize, wear down, or tip the balance. The central point is the tension between what can still hold and what can now shift the system.',
@@ -2917,6 +2934,8 @@ function buildFallbackCard(
           ? understandingSignal
         : isPersonalRelationship
           ? 'Le signal clé est une cohérence entre le signe affectif et les actes : rendez-vous proposé, disponibilité, parole plus claire ou rythme régulier.'
+        : startupCommunity
+          ? startupCommunitySignal
         : 'Le signal clé est le moment où un acteur ou un canal change de registre : décision, blocage, coût visible, récit public ou seuil de rupture.',
       key_signal_en: firstSafeText(
         [arbre.temps?.[0], arbre.temporalites?.[0]],
@@ -3001,7 +3020,38 @@ function buildFallbackCard(
             },
           ]
         : isPersonalRelationship ? personalRelationshipTrajectories()
-        : humanDevelopment ? humanDevelopmentTrajectories() : defaultTrajectories(arbre, situation),
+        : humanDevelopment ? humanDevelopmentTrajectories()
+        : startupCommunity
+          ? [
+              {
+                type: 'stabilization',
+                title_fr: 'Segment validé',
+                title_en: 'Validated segment',
+                description_fr: 'La situation se clarifie si une première cible montre un usage répété et un langage commun autour du problème.',
+                description_en: 'The situation clarifies if a first target segment shows repeated usage and shared language around the problem.',
+                signal_fr: 'Des utilisateurs reviennent, partagent, recommandent ou demandent une suite concrète.',
+                signal_en: 'Users return, share, recommend, or request a concrete next step.',
+              },
+              {
+                type: 'escalation',
+                title_fr: 'Audience sans usage',
+                title_en: 'Audience without usage',
+                description_fr: 'La pression augmente si la communauté grossit mais ne produit ni rétention, ni preuve d’usage, ni demande claire.',
+                description_en: 'Pressure rises if the community grows but produces no retention, usage proof, or clear demand.',
+                signal_fr: 'Les réactions restent visibles mais ne se transforment pas en réutilisation ou en engagement qualifié.',
+                signal_en: 'Visible reactions do not turn into reuse or qualified commitment.',
+              },
+              {
+                type: 'regime_shift',
+                title_fr: 'Canal moteur',
+                title_en: 'Driving channel',
+                description_fr: 'La logique change quand un segment devient canal de distribution, de preuve et d’apprentissage à la fois.',
+                description_en: 'The logic shifts when one segment becomes distribution channel, proof source, and learning loop at once.',
+                signal_fr: 'Un relais prescripteur ou un groupe d’utilisateurs crée une boucle de recommandation mesurable.',
+                signal_en: 'A prescribing relay or user group creates a measurable recommendation loop.',
+              },
+            ]
+        : defaultTrajectories(arbre, situation),
       cap: {
         hook_fr: understands
           ? 'Une crainte ne devient structurante que lorsqu’elle trouve un relais capable d’agir.'
@@ -3009,6 +3059,8 @@ function buildFallbackCard(
           ? personalRelationshipCap().hook_fr
           : humanDevelopment
           ? 'Le refus ou le retrait peut protéger quelque chose que le parent ne voit pas encore.'
+          : startupCommunity
+          ? 'La bonne cible initiale n’est pas celle qui admire le produit, mais celle qui en fait un usage répété.'
           : genericCapHook,
         hook_en: isPersonalRelationship
           ? personalRelationshipCap().hook_en
@@ -3019,6 +3071,8 @@ function buildFallbackCard(
           ? personalRelationshipCap().watch_fr
           : humanDevelopment
           ? 'Surveiller s’il peut parler de fatigue, de honte, de comparaison ou d’envie sans se sentir jugé.'
+          : startupCommunity
+          ? 'Surveiller le moment où un segment produit activation, rétention, recommandation ou demande d’intégration.'
           : firstSafeText(
               [arbre.temps?.[0], arbre.temporalites?.[0]],
               situation,
@@ -3051,6 +3105,12 @@ function buildFallbackCard(
               'Observer le rythme des messages, la disponibilité et la clarté de la rencontre.',
               'Répondre sans surinterpréter : accueillir, proposer un cadre simple et laisser le réel préciser l’intention.',
             ]
+          : startupCommunity
+          ? [
+              'Nommer les trois options de cible et ce que chacune permet de vérifier.',
+              'Choisir le segment qui produit le meilleur signal d’usage répété, pas seulement le plus de visibilité.',
+              'Définir une preuve courte : activation, retour qualifié, partage, recommandation ou passage payant.',
+            ]
           : [
               'Identifier les forces qui agissent, bloquent ou supportent la situation.',
               'Repérer le signal concret qui rend la tension visible.',
@@ -3080,6 +3140,8 @@ function buildFallbackCard(
         ? `La situation ne parle pas seulement d’un adolescent qui réagit mal à une déception. Elle fait apparaître plusieurs forces discrètes : désir d’autonomie, regard parental, passion investie, honte de l’échec, fatigue possible et besoin de ne pas perdre la face.\n\n` +
           `La contradiction centrale est délicate : ce qui devait être un moment partagé peut devenir, à quatorze ans, une scène où l’échec paraît exposer l’adolescent. Le retrait ou le reproche ne sont donc pas forcément une accusation stable ; ils peuvent être une manière de reprendre la main, d’éviter la honte, ou de vérifier que le lien tient encore.\n\n` +
           `Le point de bascule sera le moment où la question cessera d’être “qui est responsable ?” pour devenir “comment reconnaître la déception sans enfermer chacun dans son rôle ?”. Le signal utile est sa capacité à revenir au lien, même indirectement, sans devoir justifier toute son émotion.`
+        : startupCommunity
+        ? startupCommunityLecture
         : genericLecture,
       lecture_systeme_en:
         `The situation is no longer only in the visible event. It is entering a phase where the system can still display control while its material, social, or political margins narrow.\n\n` +
