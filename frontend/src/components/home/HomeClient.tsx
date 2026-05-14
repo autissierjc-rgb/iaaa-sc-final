@@ -1921,7 +1921,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
     const dialogueEvents: DialogueEvent[] = []
     if (waitingForAnswers && lastMsg?.kind === 'clarify') {
       const directAnswer = typedText && typedText !== text
-        ? [`${lastMsg.questions[0] ?? 'Précision utilisateur'}\n${typedText}`]
+        ? [typedText]
         : []
       const answerText = typedText && typedText !== text
         ? typedText
@@ -1940,7 +1940,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       }
       const qa = [
         ...directAnswer,
-        ...lastMsg.questions.map((q, i) => answers[i]?.trim() ? `${q}\n${answers[i]}` : '').filter(Boolean),
+        ...lastMsg.questions.map((_q, i) => answers[i]?.trim() ?? '').filter(Boolean),
       ].join('\n\n')
       if (qa) fullText = `${text}\n\nPrécisions :\n${qa}`
     } else if (refiningOptional && typedText) {
