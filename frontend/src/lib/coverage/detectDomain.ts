@@ -34,8 +34,8 @@ export function detectDomain(input: string): SituationDomain {
   }
 
   if (
-    hasAny(text, ['communaute d utilisateurs', 'communaute utilisateur', 'communaute utilisateurs', 'utilisateurs', 'audience', 'acquisition', 'retention', 'activation', 'onboarding', 'go to market', 'go-to-market']) &&
-    hasAny(text, ['cible', 'segment', 'options', 'strategie', 'strategique', 'developper', 'croissance', 'produit', 'plateforme', 'app', 'saas'])
+    hasAny(text, ['communaute d utilisateurs', 'communaute utilisateur', 'communaute utilisateurs', 'utilisateur', 'utilisateurs', 'audience', 'acquisition', 'retention', 'activation', 'onboarding', 'go to market', 'go-to-market']) &&
+    hasAny(text, ['cible', 'segment', 'options', 'strategie', 'strategique', 'developper', 'croissance', 'produit', 'plateforme', 'app', 'saas', 'situation card', 'situationcard', 'situation car d'])
   ) {
     return 'startup_vc'
   }
