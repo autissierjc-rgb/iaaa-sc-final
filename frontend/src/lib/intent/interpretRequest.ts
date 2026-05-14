@@ -1,4 +1,5 @@
 import { detectDomain } from '../coverage/detectDomain'
+import { classifyUserMaterialResourceRole } from '../contracts/userMaterial'
 import type { InterpretedRequest, QuestionType, RequestIntentType } from '../resources/resourceContract'
 
 function normalize(value: string): string {
@@ -50,6 +51,9 @@ function isSiteOrStartupEvaluation(input: string): boolean {
   const text = normalize(input)
   const hasSite = Boolean(extractRequestedSite(input) || extractNamedSite(input))
   if (!hasSite) return false
+  const role = classifyUserMaterialResourceRole(input)
+  if (role.role !== 'object_of_analysis') return false
+  if (role.signals.includes('explicit object analysis request')) return true
 
   return /\b(startup|start-up|scaleup|scale-up|site|produit|saas|plateforme|marche|march[eé]|europe|europeen|europ[eé]en|potentiel|avis|penses tu|qu en penses tu|que penses tu|evaluation|evaluer|investissement|investir|positionnement|risque|traction)\b/.test(text)
 }
@@ -179,6 +183,7 @@ export function interpretRequest(input: string): InterpretedRequest {
   const normalized = normalize(text)
   const domain = detectDomain(text)
   const signals: string[] = []
+  const resourceRole = classifyUserMaterialResourceRole(text)
   const forcedSiteEvaluation = isSiteOrStartupEvaluation(text)
   const causalAttribution = isCausalAttributionQuestion(text)
 
@@ -198,6 +203,7 @@ export function interpretRequest(input: string): InterpretedRequest {
 
   const intent = detected?.intent ?? 'understand'
   if (detected) signals.push(detected.signal)
+  if (resourceRole.urls.length > 0) signals.push(`resource_role:${resourceRole.role}`)
 
   const object = extractObject(text)
   const tension = inferTension(text, intent)

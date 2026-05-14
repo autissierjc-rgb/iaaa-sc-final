@@ -256,6 +256,42 @@ Contrat cible :
 UserMaterial
 ```
 
+Role de ressource :
+
+```ts
+type ResourceRole =
+  | 'object_of_analysis'
+  | 'context_for_question'
+  | 'evidence_source'
+  | 'private_material'
+```
+
+Regle canonique :
+
+```txt
+Une URL, un document ou un plug doit etre lu selon son role dans la demande.
+La ressource peut etre analysee sans devenir l'objet principal.
+```
+
+Exemples :
+
+- `object_of_analysis` : "analyse ce site", "que fait cette entreprise",
+  "que penser de FlexUp" ;
+- `context_for_question` : "pour ma startup situationcard.com", "dans mon
+  projet", "avec notre site" ;
+- `evidence_source` : "selon cet article", "a partir de cette source",
+  "voici un rapport" ;
+- `private_material` : Drive, SharePoint, Notion, API metier, dossier ou
+  serveur prive.
+
+Regle de branchement :
+
+```txt
+ResourceService exploite la ressource.
+InterpretationService conserve l'intention principale.
+QualityGate signale une derive si la ressource remplace la question.
+```
+
 Le champ de chat reste toujours actif pour :
 
 - ecrire une question ;

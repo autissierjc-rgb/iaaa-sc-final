@@ -86,6 +86,7 @@ src/lib/
     fetchResources
     shouldUseWeb
     siteUnderstanding
+    ResourceRole via UserMaterial
 
   patterns/
     HumanCollectivePatterns
@@ -176,7 +177,7 @@ src/app/sis-system/v2/
 | DiamondValidation | quality / writing | branche public partiel | `src/lib/governance/diamondValidation.ts`, `src/app/api/generate/route.ts` | Detecte les phrases generiques et doit orienter vers clarification ou regeneration ciblee. |
 | RiskAdviceGuard | safety | passive | `src/lib/contracts/safety.ts`, `src/lib/safety` | Domaines medicaux, juridiques, financiers, mineurs, high stakes. |
 | SecurityAbuseGuard | security | passive | `src/lib/contracts/security.ts`, `src/lib/security` | Abus, injection, scraping, couts forces, fichiers hostiles, pics de trafic. |
-| UserMaterial + Plug prive | security / archive | passive | `src/lib/contracts/userMaterial.ts`, `src/components/home/HomeClient.tsx` | Unifie texte, fichiers, URL, image, plug comme matiere utilisateur. |
+| UserMaterial + ResourceRole + Plug prive | security / archive / resources | branche partiel | `src/lib/contracts/userMaterial.ts`, `src/components/home/HomeClient.tsx` | Unifie texte, fichiers, URL, image, plug comme matiere utilisateur et distingue objet d'analyse, contexte, preuve et materiau prive. |
 | ExpertisesMetiers | expertisesMetiers | passive | `src/lib/contracts/expertisesMetiers.ts`, `src/lib/expertisesMetiers` | Questions expertes, preuves attendues, sources et seuils. |
 | HumanCollectivePatterns | patterns / scoring | branche V2 | `src/lib/patterns`, `src/lib/governance/humanCollectivePatterns.md` | Lentilles humaines et triade legitimer / proteger / produire. |
 | BlindSpotEngine | inquiry | branche V2 | `src/lib/inquiry/BlindSpotEngine.ts` | Angles morts comme pistes avec preuves attendues. |
@@ -201,6 +202,7 @@ src/app/sis-system/v2/
 | Une information manque mais la carte conclut | dialogue / quality | `SituationReadinessGate`, `DialogueGate`, `inputQualityGate` |
 | Clarification trop bloquante | dialogue | `DialogueGate`, `SituationReadinessGate`, contrat REN |
 | Question URL ou entreprise hors-sol | resources / theatre / expertisesMetiers | `ResourceService`, `FastResourceRunner`, `siteUnderstanding`, `ConcreteTheatreBuilder`, `ExpertisesMetiers` |
+| URL ou domaine utilisateur remplace la question | interpretation / resources / quality | `UserMaterial ResourceRole`, `InterpretationService`, `ResourceService`, `siteUnderstanding`, `QualityGate` |
 | Ressources non cherchees alors que nécessaires | resources | `shouldUseWeb`, `SourceRouter`, `FastResourceRunner` |
 | Ressources longues bloquent SIS | performance / resources | `public_fast`, budgets sources rapides, Recherche+ separee |
 | Approfondir confond ressource et conclusion | resources / inquiry / writing | `Recherche+`, `BlindSpotEngine`, `WritingEngine` |
@@ -299,4 +301,3 @@ Avant toute correction :
 
 Si la reponse a la question 3 est "aucune", alors seulement on peut proposer
 une nouvelle brique canonique.
-

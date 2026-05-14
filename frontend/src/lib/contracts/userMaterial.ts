@@ -17,6 +17,19 @@ export type UserMaterialSourceType =
   | 'file_upload'
   | 'private_plug'
 
+export type UserMaterialResourceRole =
+  | 'object_of_analysis'
+  | 'context_for_question'
+  | 'evidence_source'
+  | 'private_material'
+
+export type UserMaterialResourceRoleAssessment = {
+  role: UserMaterialResourceRole
+  urls: string[]
+  signals: string[]
+  reason_fr: string
+}
+
 export type PrivatePlugConnectorType =
   | 'private_url'
   | 'drive'
@@ -149,6 +162,88 @@ function sourceTypeFor(kind: UserMaterialKind): UserMaterialSourceType {
   if (kind === 'private_plug') return 'private_plug'
   if (kind === 'text') return 'manual_text'
   return 'file_upload'
+}
+
+function normalizeMaterialText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’']/g, ' ')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function extractMaterialUrls(input: string): string[] {
+  const matches = input.match(/\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/gi) ?? []
+  return [...new Set(matches.map((value) =>
+    value
+      .replace(/^https?:\/\//i, '')
+      .replace(/^www\./i, '')
+      .replace(/[),.;:!?]+$/g, '')
+      .toLowerCase()
+  ))]
+}
+
+export function classifyUserMaterialResourceRole(input: string): UserMaterialResourceRoleAssessment {
+  const text = normalizeMaterialText(input)
+  const urls = extractMaterialUrls(input)
+  const signals: string[] = []
+
+  if (/\b(plug|drive|sharepoint|notion|dossier|serveur prive|api metier|connecteur|document interne)\b/.test(text)) {
+    return {
+      role: 'private_material',
+      urls,
+      signals: ['private material or connector signal'],
+      reason_fr: 'La matiere semble venir d un espace prive ou connecte : elle doit etre traitee comme materiau autorise, pas comme source publique par defaut.',
+    }
+  }
+
+  if (/\b(source|article|rapport|document|lien|url|selon|a partir de|d apres|preuve|ressource)\b/.test(text)) {
+    signals.push('source/evidence wording')
+    return {
+      role: 'evidence_source',
+      urls,
+      signals,
+      reason_fr: 'La ressource sert de preuve ou de matiere documentaire pour eclairer la question.',
+    }
+  }
+
+  const explicitObjectRequest =
+    /\b(analyse|analyser|evalue|evaluer|evaluation|avis sur|que fait|qu en penser|que penses tu|positionnement|potentiel|traction)\b/.test(text) ||
+    /\b(site|page|plateforme|application|app|service|outil)\s+(?:de|du|d )\b/.test(text)
+  const userProjectContext =
+    /\b(?:pour|de|avec|dans)\s+(?:ma|mon|notre|nos)\s+(?:startup|start up|entreprise|projet|plateforme|produit|app|application|site)\b/.test(text) ||
+    /\b(?:ma|mon|notre|nos)\s+(?:startup|start up|entreprise|projet|plateforme|produit|app|application|site)\b/.test(text)
+  const strategicQuestion =
+    /\b(options?|strategie|strategique|decision|plan|developper|communaute|utilisateurs?|audience|acquisition|retention|croissance|go to market)\b/.test(text)
+
+  if (userProjectContext && strategicQuestion && !explicitObjectRequest) {
+    return {
+      role: 'context_for_question',
+      urls,
+      signals: ['user project context', 'strategic question'],
+      reason_fr: 'La ressource nomme le projet de l utilisateur. Elle doit nourrir la question sans remplacer l objet de decision.',
+    }
+  }
+
+  if (explicitObjectRequest) {
+    return {
+      role: 'object_of_analysis',
+      urls,
+      signals: ['explicit object analysis request'],
+      reason_fr: 'La ressource est l objet explicite de l analyse demandee.',
+    }
+  }
+
+  return {
+    role: urls.length > 0 ? 'context_for_question' : 'evidence_source',
+    urls,
+    signals: urls.length > 0 ? ['url without explicit object request'] : ['manual material'],
+    reason_fr: urls.length > 0
+      ? 'Une URL est presente, mais l utilisateur ne demande pas explicitement d analyser le site comme objet principal.'
+      : 'La matiere sert de contexte a la question.',
+  }
 }
 
 export function buildUserMaterialPolicy(params: {
