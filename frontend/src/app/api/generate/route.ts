@@ -3399,7 +3399,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const explicitPrudentGeneration = Boolean(generate_prudently)
+    const explicitPrudentGeneration = Boolean(generate_prudently || (isPublicFast && refine_acknowledged))
     const earlyReadinessGate = situationReadinessGate({
       situation: urlAugmentedAnalysisText,
       intentContext,
