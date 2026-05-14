@@ -70,6 +70,16 @@ const SOFT_DIAMOND_PHRASES = [
   'le manque de communication',
 ]
 
+const RESOURCE_AS_OBJECT_PHRASES = [
+  'ce que l entreprise fait',
+  'ce que le site dit faire',
+  'que l entreprise dit faire',
+  'que le site dit faire',
+  'comprendre l offre avant',
+  'l objet a verifier',
+  'objet a verifier',
+]
+
 function hasSharpDiamond(writing: WritingContract): boolean {
   return writing.diamond_sentences.some((sentence) => sentence.style === 'diamant_tranchant' && sentence.must_be_public)
 }
@@ -89,16 +99,45 @@ function host(value: string): string {
   }
 }
 
+function hasResourceRoleSignal(input: QualityGateInput, role: string): boolean {
+  return input.interpretation.signals.some((signal) => signal === `resource_role:${role}`)
+}
+
 export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const started = Date.now()
   const issues: QualityIssue[] = []
   const text = publicText(input.writing)
+  const normalizedText = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
   const forbidden = containsForbiddenPublicPhrase(text)
   const publicDiamond = diamondText(input.writing)
   const normalizedDiamond = publicDiamond
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+
+  if (hasResourceRoleSignal(input, 'context_for_question') && input.interpretation.question_type === 'site_analysis') {
+    issues.push(issue(
+      'error',
+      'RESOURCE_CONTEXT_MISREAD_AS_OBJECT',
+      'A contextual resource must not replace the user question as a site analysis object.',
+      'interpretation.question_type',
+    ))
+  }
+
+  if (hasResourceRoleSignal(input, 'context_for_question')) {
+    const driftPhrase = RESOURCE_AS_OBJECT_PHRASES.find((phrase) => normalizedText.includes(phrase))
+    if (driftPhrase) {
+      issues.push(issue(
+        'warning',
+        'RESOURCE_CONTEXT_WRITING_DRIFT',
+        `Writing sounds as if the contextual resource became the object of analysis: ${driftPhrase}.`,
+        'writing',
+      ))
+    }
+  }
 
   for (const phrase of forbidden) {
     issues.push(issue('error', 'FORBIDDEN_PUBLIC_PHRASE', `Forbidden public phrase detected: ${phrase}.`, 'writing'))
