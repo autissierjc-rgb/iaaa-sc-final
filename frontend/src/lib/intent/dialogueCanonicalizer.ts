@@ -104,7 +104,8 @@ Rules:
 - header_subject must be only the subject, never the domain label, and must contain at least 3 meaningful words.
 - header_subject must be a clean noun phrase, not a copied fragment of the user's rough spelling or grammar.
 - For example, turn "trump peuvent ils conteste les resultat des election des midterm" into canonical_situation "Donald Trump peut-il contester les résultats des élections de mi-mandat ?" and header_subject "contestation résultats élections mi-mandat".
-- If any user message contains a URL, preserve that URL verbatim in canonical_situation unless the user explicitly withdraws it.
+- If a URL is the explicit object to analyze or the evidence source, preserve it in canonical_situation.
+- If a URL names the user's project context, keep the question clean and use the site as context rather than copying the URL into canonical_situation.
 - A user-provided URL is usable context, not a reason to ask a clarification by itself.
 - Do not keep clarification scaffolding such as "Précisions", "C'est bien cela", or the system question.
 - Do not invent facts. If still unclear, set can_generate=false and give one next_question.`,
