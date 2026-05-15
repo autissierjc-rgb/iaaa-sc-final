@@ -93,6 +93,14 @@ const GENERIC_PHRASES = [
   /quelle force r[eé]elle la soutient/i,
   /ce qui para[iî]t stable d[eé]pend d[’']un levier discret/i,
   /ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible/i,
+  /ne se tranche pas par une formule g[eé]n[eé]rale/i,
+  /la lecture doit partir des acteurs et passages oblig[eé]s/i,
+  /acteurs et passages oblig[eé]s d[eé]j[aà] visibles/i,
+  /tant que ce point n[’']est pas reli[eé] [aà] une trace v[eé]rifiable/i,
+  /elle indique une hypoth[eè]se de travail, pas une conclusion ferm[eé]e/i,
+  /c[’']est ce type de trace qui permet de passer d[’']une impression g[eé]n[eé]rale/i,
+  /un fait, une d[eé]cision, un document ou un changement de calendrier v[eé]rifiable/i,
+  /les r[eè]gles, proc[eé]dures ou contraintes qui peuvent transformer la situation/i,
 ]
 
 const CONCRETE_SIGNAL = /\b[A-ZÉÈÀÂÎÏÔÛÇ][A-Za-zÀ-ÿ'’-]{2,}\b|\b\d{4}\b|\b\d{1,2}\s+(janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)\b|https?:\/\//i

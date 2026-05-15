@@ -973,7 +973,7 @@ function listFromAxis(value: unknown, fallback: string[], situation = ''): strin
 }
 
 function rejectsDiamondGuardText(text: string): boolean {
-  return /la situation ne se joue pas seulement|distribution des leviers r[eé]els|qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer|la fa[cç]ade peut encore fonctionner|ce qui para[iî]t stable d[eé]pend d[’']un levier discret|ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible|fa[cç]ade de contr[oô]le|structural reading from available signals/i.test(text)
+  return /la situation ne se joue pas seulement|distribution des leviers r[eé]els|qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer|la fa[cç]ade peut encore fonctionner|ce qui para[iî]t stable d[eé]pend d[’']un levier discret|ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible|ne se tranche pas par une formule g[eé]n[eé]rale|la lecture doit partir des acteurs et passages oblig[eé]s|tant que ce point n[’']est pas reli[eé] [aà] une trace v[eé]rifiable|hypoth[eè]se de travail, pas une conclusion ferm[eé]e|passer d[’']une impression g[eé]n[eé]rale|un fait, une d[eé]cision, un document ou un changement de calendrier v[eé]rifiable|fa[cç]ade de contr[oô]le|structural reading from available signals/i.test(text)
 }
 
 function defaultTrajectories(arbre: ArbreACamesAnalysis, situation: string) {
