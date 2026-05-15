@@ -3597,8 +3597,9 @@ export async function POST(req: NextRequest) {
       branches,
       intentContext,
     })
+    const forceLocalTargetChoice = intentContext.dominant_frame === 'startup_target_choice'
     const useModelCard = process.env.SC_USE_MODEL_CARD === '1' && !isPublicFast
-    const useLocalFastCard = !prebuiltSiteCard && !useModelCard
+    const useLocalFastCard = forceLocalTargetChoice || (!prebuiltSiteCard && !useModelCard)
     let baseSc: SituationCard
     if (prebuiltSiteCard) {
       baseSc = {
