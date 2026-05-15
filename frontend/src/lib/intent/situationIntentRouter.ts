@@ -107,6 +107,9 @@ export function situationIntentRouter(input: string, interpretedOverride?: Inter
   const hasGeopoliticalSignal = ['geopolitics', 'war'].includes(surfaceDomain)
   const hasGeopoliticalCrisisSignal = surfaceDomain === 'war' || hasWarSecuritySignal(text)
   const hasSiteSignal = sites.length > 0 || hasNamedSiteSignal(text)
+  const hasStartupTargetChoiceSignal =
+    (surfaceDomain === 'startup_vc' || interpretedRequest.domain === 'startup_vc') &&
+    /\b(cible|segment|utilisateur|utilisateurs|communaut[eé]|audience|acquisition|activation|r[eé]tention|choisir|premier|premi[eè]re|go[- ]?to[- ]?market)\b/i.test(normalized)
   const canonicalSite = interpretedRequest.question_type === 'site_analysis'
   const canonicalPersonal =
     (
@@ -152,6 +155,27 @@ export function situationIntentRouter(input: string, interpretedOverride?: Inter
       signals: [
         ...interpretedRequest.signals,
         'contrat canonique : situation personnelle ou familiale',
+      ],
+    }
+  }
+
+  if (hasStartupTargetChoiceSignal) {
+    return {
+      surface_domain: 'startup_vc',
+      dominant_frame: 'professional_decision',
+      decision_type: 'choose_action',
+      interpreted_request: {
+        ...interpretedRequest,
+        domain: 'startup_vc',
+        question_type: interpretedRequest.question_type === 'site_analysis' ? 'decision' : interpretedRequest.question_type,
+      },
+      needs_clarification: false,
+      clarification_focus: ['cible utilisateur', 'segment initial', 'preuve d usage', 'activation', 'retention'],
+      questions: [],
+      signals: [
+        ...interpretedRequest.signals,
+        'choix de cible startup prioritaire',
+        'site ou URL traite comme contexte de projet',
       ],
     }
   }
