@@ -39,34 +39,33 @@ function siteLabel(site: string): string {
   return `${root.charAt(0).toUpperCase()}${root.slice(1)}`
 }
 
-function siteContextLabel(input: string): string {
-  const requestedSite = extractRequestedSite(input)
-  if (requestedSite) return siteLabel(requestedSite)
-
-  const namedSite = extractNamedSite(input)
-  return namedSite ? siteLabel(namedSite) : ''
-}
-
-function isStartupTargetChoiceQuestion(input: string): boolean {
-  const text = normalize(input)
-  return (
-    /\b(cible|segment|utilisateur|utilisateurs|communaute|audience|acquisition|activation|retention|choisir|prioriser|premier|premiere|go to market|go-to-market)\b/.test(text) &&
-    /\b(startup|start-up|produit|plateforme|app|saas|site|\.com|\.fr|\.io|\.ai|situation card|situationcard|situation car d)\b/.test(text)
-  )
-}
-
-function formalizeStartupTargetQuestion(input: string): string {
-  const context = siteContextLabel(input)
-  const contextSuffix = context ? ` de ${context}` : ''
-  return `Quelle cible utilisateur choisir en premier pour développer la communauté${contextSuffix} ?`
-}
-
 function extractNamedSite(input: string): string {
   const text = normalize(input)
   const match =
     text.match(/\b(?:site|page|plateforme|application|app|service|outil)\s+(?:de\s+|du\s+|d\s+)?([a-z0-9-]{3,})\b/i) ||
     text.match(/\b([a-z0-9-]{3,})\s+(?:site|page|plateforme|application|app|service|outil)\b/i)
   return match?.[1] ?? ''
+}
+
+function formalizePrefixedQuestion(input: string): string {
+  const match = input.trim().match(/^([^:\n]{3,100})\s*:\s*(.{10,})$/)
+  if (!match) return input
+
+  const context = match[1]?.trim().replace(/[.;!?]+$/g, '')
+  const question = match[2]?.trim()
+  if (!context || !question || !/[?]\s*$/.test(question)) return input
+
+  const normalizedContext = normalize(context)
+  const normalizedQuestion = normalize(question)
+  const contextRoot = normalizedContext.replace(/^https?:\/\//, '').replace(/^www\./, '').split(/[./\s]/)[0]
+  if (contextRoot && normalizedQuestion.includes(contextRoot)) return question
+
+  const stem = question.replace(/\s*\?\s*$/, '').trim()
+  if (/\bd[eé]velopper\s+(?:la|une|sa|notre)\s+(?:communaut[eé]|audience)\b/i.test(stem)) {
+    return `${stem} de ${context} ?`
+  }
+
+  return `${stem} pour ${context} ?`
 }
 
 function isSiteOrStartupEvaluation(input: string): boolean {
@@ -116,13 +115,6 @@ function extractObject(input: string): string {
       ? ' pour le marché européen'
       : ''
     return `${siteLabel(requestedSite)}${scope}`
-  }
-
-  if (isStartupTargetChoiceQuestion(text)) {
-    const context = siteContextLabel(text)
-    return context
-      ? `le choix de la première cible utilisateur pour ${context}`
-      : 'le choix de la première cible utilisateur'
   }
 
   if (namedSite) return namedSite
@@ -236,9 +228,7 @@ export function interpretRequest(input: string): InterpretedRequest {
 
   const object = extractObject(text)
   const tension = inferTension(text, intent)
-  const userQuestion = isStartupTargetChoiceQuestion(text)
-    ? formalizeStartupTargetQuestion(text)
-    : text
+  const userQuestion = formalizePrefixedQuestion(text)
   const questionType: QuestionType = causalAttribution
     ? 'causal_attribution'
     : forcedSiteEvaluation
