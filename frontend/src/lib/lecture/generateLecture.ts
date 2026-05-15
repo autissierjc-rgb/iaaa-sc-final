@@ -322,6 +322,28 @@ function fallbackLecture(
     return causalAttributionFallbackLecture(situation, arbre, intentContext, sc)
   }
 
+  if (intentContext?.dominant_frame === 'startup_target_choice') {
+    const object = cleanModelText(
+      intentContext.interpreted_request?.object_of_analysis ||
+      sc?.submitted_situation_fr ||
+      situation ||
+      'le choix de cible utilisateur'
+    ).replace(/[.;:]+$/g, '')
+
+    return {
+      lecture_systeme_fr: cleanModelText(
+        `${capitalizeFirst(object)} doit être lu comme un arbitrage de lancement, pas comme une simple évaluation de site. La question centrale est de choisir le premier segment capable de transformer l’intérêt en usage répété, retours qualifiés et preuve de traction.\n\n` +
+        `La contradiction est nette : une communauté donne de la surface, mais une startup a besoin d’un signal plus dur que l’attention. Le bon premier public n’est pas forcément le plus nombreux ; c’est celui qui comprend vite la promesse, revient sans relance, partage la carte, formule le cas d’usage avec ses mots ou accepte un passage payant.\n\n` +
+        `Le point de bascule sera observable : activation, rétention, recommandation, demande d’intégration, usage en réunion, export partagé ou paiement. Sans ce signal, la communauté reste audience ; avec lui, elle devient moteur de marché.`
+      ),
+      lecture_systeme_en: cleanModelText(
+        `${capitalizeFirst(object)} should be read as a launch arbitration, not as a website assessment. The central question is which first segment can turn interest into repeated use, qualified feedback, and traction proof.\n\n` +
+        `The contradiction is clear: a community creates visibility, but a startup needs a harder signal than attention. The right first audience is not necessarily the largest one; it is the group that understands the promise quickly, returns without being pushed, shares the card, names the use case in its own words, or accepts a paid step.\n\n` +
+        `The tipping point will be observable: activation, retention, recommendation, integration request, meeting use, shared export, or payment. Without that signal, the community remains an audience; with it, it becomes a market engine.`
+      ),
+    }
+  }
+
   if (intentContext?.dominant_frame === 'site_analysis' || intentContext?.dominant_frame === 'startup_investment') {
     const brief = siteBrief(resources)
     const company = siteNameFromBrief(
@@ -565,6 +587,7 @@ export async function generateLecture({
   const fallback = fallbackLecture(situation, arbre, resources, sc, patternContext, metierProfile, intentContext, scopeContext)
   if (
     intentContext?.dominant_frame === 'site_analysis' ||
+    intentContext?.dominant_frame === 'startup_target_choice' ||
     intentContext?.dominant_frame === 'startup_investment' ||
     isCausalAttributionContext(intentContext, sc)
   ) {

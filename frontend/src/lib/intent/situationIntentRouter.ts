@@ -5,6 +5,7 @@ import { interpretRequest } from './interpretRequest'
 export type DominantFrame =
   | 'causal_attribution'
   | 'founder_governance'
+  | 'startup_target_choice'
   | 'startup_investment'
   | 'site_analysis'
   | 'experience_explanation'
@@ -162,7 +163,7 @@ export function situationIntentRouter(input: string, interpretedOverride?: Inter
   if (hasStartupTargetChoiceSignal) {
     return {
       surface_domain: 'startup_vc',
-      dominant_frame: 'professional_decision',
+      dominant_frame: 'startup_target_choice',
       decision_type: 'choose_action',
       interpreted_request: {
         ...interpretedRequest,

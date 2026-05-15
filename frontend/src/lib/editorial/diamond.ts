@@ -29,7 +29,7 @@ export const DIAMOND_DEEP_HEADINGS_EN = [
 
 export function polishDiamondText(text: string): string {
   const polished = cleanModelText(text)
-    .replace(/\b(?:general_analysis|understand_situation|site_analysis|startup_investment|personal_relationship)\b/gi, '')
+    .replace(/\b(?:general_analysis|understand_situation|site_analysis|startup_investment|startup_target_choice|personal_relationship)\b/gi, '')
     .replace(/\bLa question décisive est simple\s*:\s*quel acteur, quel geste, quelle règle ou quelle preuve peut transformer l[’']hypothèse en fait observable\s*\??/gi, '')
     .replace(/\bDes éléments visibles existent, mais leur portée reste à établir par des preuves concrètes\.?/gi, '')
     .replace(/\bUn objet visible garde un rôle parce qu[’']il condense des rapports de confiance, de preuve et de pouvoir\.?/gi, '')
@@ -507,11 +507,54 @@ function siteBrief(resources: ResourceItem[]): ResourceItem | undefined {
 function isSiteReading(sc: SituationCard | undefined, resources: ResourceItem[]): boolean {
   const frame = sc?.intent_context?.dominant_frame ?? sc?.coverage_check?.intent_context?.dominant_frame
   const decision = sc?.intent_context?.decision_type ?? sc?.coverage_check?.intent_context?.decision_type
+  if (frame === 'startup_target_choice') return false
   return frame === 'site_analysis' ||
     frame === 'startup_investment' ||
     decision === 'analyze_site' ||
     decision === 'evaluate_investment' ||
     Boolean(siteBrief(resources))
+}
+
+function buildStartupTargetChoiceDeepFallback({ situation, sc }: {
+  situation: string
+  sc?: SituationCard
+}): DeepReading {
+  const object = compact(sc?.intent_context?.interpreted_request?.object_of_analysis) ||
+    compact(sc?.submitted_situation_fr) ||
+    compact(situation) ||
+    'le choix de la première cible utilisateur'
+
+  return {
+    approfondir_fr: polishDiamondText(
+      `${DIAMOND_DEEP_HEADINGS_FR[0]}\n\n` +
+      `${object} est une décision de lancement. Il ne s’agit pas de juger le site ou de décrire le marché en général, mais de choisir le premier groupe capable de produire une preuve d’usage.\n\n` +
+      `${DIAMOND_DEEP_HEADINGS_FR[1]}\n\n` +
+      `Ce qui tient le système, c’est la promesse de Situation Card : rendre une situation complexe lisible, partageable et traçable. Cette promesse peut parler à plusieurs publics, mais tous ne produisent pas le même apprentissage.\n\n` +
+      `${DIAMOND_DEEP_HEADINGS_FR[2]}\n\n` +
+      `Ce qui l’affaiblit, c’est la tentation de confondre communauté, audience et marché. Une communauté peut réagir, commenter ou admirer sans revenir, payer, partager une carte utile ou intégrer l’outil dans un vrai flux de décision.\n\n` +
+      `${DIAMOND_DEEP_HEADINGS_FR[3]}\n\n` +
+      `L’escalade serait une croissance visible mais peu qualifiée : beaucoup de curiosité, peu de réutilisation, peu de retours précis, aucun segment capable de dire pourquoi SC devient nécessaire dans son travail ou sa vie.\n\n` +
+      `${DIAMOND_DEEP_HEADINGS_FR[4]}\n\n` +
+      `La bascule positive viendrait d’un segment qui transforme la carte en habitude : retours qualifiés, rétention, partage, demande d’export, usage en réunion, intégration dans un processus ou volonté de payer.\n\n` +
+      `${DIAMOND_DEEP_HEADINGS_FR[5]}\n\n` +
+      `Il faut surveiller quatre signaux : qui revient sans relance, qui partage une carte, qui formule le problème mieux après usage, et qui demande une suite concrète. La première cible doit être choisie pour la qualité de ces signaux, pas seulement pour sa taille.`
+    ),
+    approfondir_en: polishDiamondText(
+      `${DIAMOND_DEEP_HEADINGS_EN[0]}\n\n` +
+      `${object} is a launch decision. It is not about judging the website or describing the market in general, but choosing the first group able to produce usage proof.\n\n` +
+      `${DIAMOND_DEEP_HEADINGS_EN[1]}\n\n` +
+      `What holds the system together is Situation Card's promise: making a complex situation legible, shareable, and traceable. This promise can speak to several audiences, but they do not all produce the same learning.\n\n` +
+      `${DIAMOND_DEEP_HEADINGS_EN[2]}\n\n` +
+      `What weakens it is confusing community, audience, and market. A community can react, comment, or admire without returning, paying, sharing a useful card, or integrating the tool into a real decision workflow.\n\n` +
+      `${DIAMOND_DEEP_HEADINGS_EN[3]}\n\n` +
+      `Escalation would be visible but weakly qualified growth: curiosity without reuse, vague feedback, and no segment able to explain why SC becomes necessary in its work or life.\n\n` +
+      `${DIAMOND_DEEP_HEADINGS_EN[4]}\n\n` +
+      `The positive shift comes from a segment that turns the card into a habit: qualified feedback, retention, sharing, export requests, meeting use, workflow integration, or willingness to pay.\n\n` +
+      `${DIAMOND_DEEP_HEADINGS_EN[5]}\n\n` +
+      `Watch four signals: who returns without prompting, who shares a card, who can name the problem better after using it, and who asks for a concrete next step. The first target should be chosen for signal quality, not only for size.`
+    ),
+    sources: [],
+  }
 }
 
 function lineAfterPrefix(value: string, prefix: string): string {
@@ -858,6 +901,10 @@ export function buildGeneralDiamondDeepFallback({
 }): DeepReading {
   if (isCausalAttributionReading(sc)) {
     return buildCausalAttributionDeepFallback({ situation, arbre, sc, resources })
+  }
+
+  if ((sc?.intent_context?.dominant_frame ?? sc?.coverage_check?.intent_context?.dominant_frame) === 'startup_target_choice') {
+    return buildStartupTargetChoiceDeepFallback({ situation, sc })
   }
 
   if (isSiteReading(sc, resources)) {

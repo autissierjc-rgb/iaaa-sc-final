@@ -2903,8 +2903,8 @@ function buildFallbackCard(
 
   return enrichWithScoring(
     {
-      title_fr: 'Lecture structurelle',
-      title_en: 'Structural Reading',
+      title_fr: startupCommunity ? 'choix cible utilisateur stratégique' : 'Lecture structurelle',
+      title_en: startupCommunity ? 'strategic user target choice' : 'Structural Reading',
       submitted_situation_fr: situation,
       submitted_situation_en: situation,
       insight_fr:
