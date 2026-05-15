@@ -1917,7 +1917,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       ? baseSituation
       : typedText
     const isFreshSituation = !waitingForAnswers && !refiningOptional && Boolean(typedText) && typedText !== baseSituation
-    let fullText = text
+    const generationSituation = text
     const dialogueEvents: DialogueEvent[] = []
     if (waitingForAnswers && lastMsg?.kind === 'clarify') {
       const directAnswer = typedText && typedText !== text
@@ -1942,24 +1942,24 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         ...directAnswer,
         ...lastMsg.questions.map((_q, i) => answers[i]?.trim() ?? '').filter(Boolean),
       ].join('\n\n')
-      if (qa) fullText = `${text}\n\nPrécisions :\n${qa}`
+      if (qa) dialogueEvents.push({ type: 'user_extra_context', text: qa })
     } else if (refiningOptional && typedText) {
       dialogueEvents.push({ type: 'user_initial_question', text })
       dialogueEvents.push({ type: 'user_extra_context', text: typedText })
-      fullText = `${text}\n\nPrécisions :\n${[...dialogueNotes, typedText].filter(Boolean).join('\n\n')}`
+      dialogueNotes.filter(Boolean).forEach(note => {
+        dialogueEvents.push({ type: 'user_extra_context', text: note })
+      })
     } else if (!scData && dialogueNotes.length > 0) {
       dialogueEvents.push({ type: 'user_initial_question', text })
       dialogueNotes.filter(Boolean).forEach(note => {
         dialogueEvents.push({ type: 'user_extra_context', text: note })
       })
-      fullText = `${text}\n\nPrécisions :\n${dialogueNotes.filter(Boolean).join('\n\n')}`
     } else if (scData && !isFreshSituation && (typedText || dialogueNotes.length > 0)) {
       const notes = [...dialogueNotes, typedText && typedText !== text ? typedText : ''].filter(Boolean)
       dialogueEvents.push({ type: 'user_initial_question', text })
       notes.forEach(note => {
         dialogueEvents.push({ type: 'user_extra_context', text: note })
       })
-      if (notes.length > 0) fullText = `${text}\n\nComplément utilisateur :\n${notes.join('\n\n')}`
     }
     setScLoading(true); setCompassMode('full')
     if (!activeSituation || isFreshSituation) setActiveSituation(text)
@@ -1975,7 +1975,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          situation: fullText,
+          situation: generationSituation,
           original_situation: text,
           lang: contentLang.toLowerCase(),
           mode: 'public_fast',
@@ -2016,7 +2016,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           headers: { 'Content-Type': 'application/json' },
           signal: fullController.signal,
           body: JSON.stringify({
-            situation: fullText,
+            situation: generationSituation,
             original_situation: text,
             lang: contentLang.toLowerCase(),
             mode: 'generate_full',
