@@ -19,6 +19,8 @@ import { buildCanonicalSituationFromDialogue } from '@/lib/intent/dialogueCanoni
 import { interpretRequest } from '@/lib/intent/interpretRequest'
 import { interpretRequestWithModel } from '@/lib/intent/modelIntentInterpreter'
 import { situationIntentRouter } from '@/lib/intent/situationIntentRouter'
+import { interpretSituation } from '@/lib/interpretation'
+import { runDialogueGate } from '@/lib/dialogue'
 import { detectPatterns, patternGuidance } from '@/lib/patterns/detectPatterns'
 import { detectMetierProfile } from '@/lib/profiles/detectMetierProfile'
 import { fetchResources } from '@/lib/resources/fetchResources'
@@ -3421,6 +3423,38 @@ export async function POST(req: NextRequest) {
       carriedPreviousContract,
       analysisText
     )
+    const canonicalInterpretation = await interpretSituation({
+      raw_input: analysisText,
+      mode: isPublicFast ? 'local_contract' : 'referent_llm',
+      preinterpreted: interpretedRequest,
+    })
+    const canonicalDialogueGate = runDialogueGate({ interpretation: canonicalInterpretation })
+    recordGenerationTrace({
+      status: canonicalDialogueGate.can_generate ? 'ok' : 'partial',
+      gate: canonicalDialogueGate.status === 'READY_TO_GENERATE' ? 'GENERATE' : 'CLARIFY',
+      route: '/api/generate',
+      canonicalLayer: 'interpretation',
+      pipelineStep: 'InterpretationService',
+      diagnostic: canonicalInterpretation.trace.status,
+      durationMs: canonicalInterpretation.trace.duration_ms ?? 0,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: interpretedRequest.intent_type,
+      questionType: interpretedRequest.question_type,
+    })
+    recordGenerationTrace({
+      status: canonicalDialogueGate.can_generate ? 'ok' : 'partial',
+      gate: canonicalDialogueGate.status === 'READY_TO_GENERATE' ? 'GENERATE' : 'CLARIFY',
+      route: '/api/generate',
+      canonicalLayer: 'dialogue',
+      pipelineStep: 'DialogueGate',
+      diagnostic: canonicalDialogueGate.status,
+      durationMs: Date.now() - requestStartedAt,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: interpretedRequest.intent_type,
+      questionType: interpretedRequest.question_type,
+    })
     const hasUsableInterpretation =
       !interpretedRequest.needs_clarification &&
       (interpretedRequest.object_of_analysis?.trim().length ?? 0) >= 4 &&
@@ -3458,6 +3492,20 @@ export async function POST(req: NextRequest) {
         questions: inputQuality.questions,
         signals: inputQuality.signals,
       },
+      canonical_interpretation: {
+        domain: canonicalInterpretation.domain,
+        header_domain: canonicalInterpretation.header_domain,
+        header_subject: canonicalInterpretation.header_subject,
+        situation_soumise: canonicalInterpretation.situation_soumise,
+        confidence: canonicalInterpretation.confidence,
+      },
+      dialogue_gate: {
+        status: canonicalDialogueGate.status,
+        reason: canonicalDialogueGate.reason,
+        can_generate: canonicalDialogueGate.can_generate,
+        question: canonicalDialogueGate.question,
+        user_can_ignore_question: canonicalDialogueGate.user_can_ignore_question,
+      },
     }
     const clarifyQuestions = selectClarifyingQuestions({
       situation: analysisText,
@@ -3489,6 +3537,33 @@ export async function POST(req: NextRequest) {
         intent_gate_signals: intentGate.signals,
       },
     }
+    const explicitPrudentGeneration = Boolean(generate_prudently || (isPublicFast && refine_acknowledged))
+
+    if (
+      canonicalDialogueGate.status === 'BLOCKING_CLARIFICATION' &&
+      canonicalDialogueGate.question &&
+      !explicitPrudentGeneration &&
+      !hasUrlInFlow
+    ) {
+      recordGenerationTrace({
+        status: 'partial',
+        gate: 'CLARIFY',
+        route: '/api/generate',
+        canonicalLayer: 'dialogue',
+        pipelineStep: 'DialogueGate',
+        diagnostic: 'blocking_clarification',
+        durationMs: Date.now() - requestStartedAt,
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+      })
+      return NextResponse.json({
+        gate: 'CLARIFY',
+        questions: [canonicalDialogueGate.question],
+        coverage_check: effectiveCoverage,
+      })
+    }
 
     if (canonicalDialogue && canonicalDialogue.can_generate === false && canonicalDialogue.next_question && !hasUrlInFlow) {
       recordGenerationTrace({
@@ -3511,7 +3586,6 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const explicitPrudentGeneration = Boolean(generate_prudently || (isPublicFast && refine_acknowledged))
     const earlyReadinessGate = situationReadinessGate({
       situation: urlAugmentedAnalysisText,
       intentContext,

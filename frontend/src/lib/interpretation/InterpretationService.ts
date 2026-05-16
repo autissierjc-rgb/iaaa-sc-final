@@ -13,6 +13,7 @@ import type { InterpretedRequest, SituationDomain } from '../resources/resourceC
 export type InterpretationServiceInput = {
   raw_input: string
   mode?: 'referent_llm' | 'local_contract'
+  preinterpreted?: InterpretedRequest
   reference_model?: {
     provider: ReferenceModelProvider
     model: string
@@ -206,7 +207,7 @@ export async function interpretSituation(
   const started = Date.now()
   const rawInput = input.raw_input.trim()
   const localMode = input.mode === 'local_contract'
-  const interpreted = localMode ? interpretRequest(rawInput) : await interpretRequestWithModel(rawInput)
+  const interpreted = input.preinterpreted ?? (localMode ? interpretRequest(rawInput) : await interpretRequestWithModel(rawInput))
   const domain = mapDomain(interpreted.domain)
   const referenceModel = localMode
     ? { provider: 'local' as const, model: 'local-contract' }
