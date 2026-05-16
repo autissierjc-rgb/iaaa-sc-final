@@ -25,6 +25,7 @@ import { runDialogueGate } from '@/lib/dialogue'
 import { runRiskAdviceGuard } from '@/lib/safety'
 import { routeExpertisesMetiers } from '@/lib/expertisesMetiers'
 import { detectPatterns, patternGuidance } from '@/lib/patterns/detectPatterns'
+import { selectHumanCollectivePatterns } from '@/lib/patterns/humanCollective'
 import { detectMetierProfile } from '@/lib/profiles/detectMetierProfile'
 import { fetchResources } from '@/lib/resources/fetchResources'
 import { planResources } from '@/lib/resources'
@@ -3559,7 +3560,20 @@ export async function POST(req: NextRequest) {
     const canonicalDialogueGate = runDialogueGate({ interpretation: canonicalInterpretation })
     const safetyGuard = runRiskAdviceGuard({ interpretation: canonicalInterpretation })
     const expertisesMetiers = routeExpertisesMetiers({ interpretation: canonicalInterpretation })
-    const initialResourcePlan = planResources({ interpretation: canonicalInterpretation })
+    const humanCollectivePatterns = selectHumanCollectivePatterns({
+      text: [
+        canonicalInterpretation.situation_soumise,
+        canonicalInterpretation.object_of_analysis,
+        canonicalInterpretation.angle,
+        canonicalInterpretation.user_need,
+        expertisesMetiers.blind_spots_to_test.join(' '),
+        expertisesMetiers.writing_anchors.join(' '),
+      ].join(' '),
+    })
+    const initialResourcePlan = planResources({
+      interpretation: canonicalInterpretation,
+      patterns: humanCollectivePatterns,
+    })
     recordGenerationTrace({
       status: canonicalDialogueGate.can_generate ? 'ok' : 'partial',
       gate: canonicalDialogueGate.status === 'READY_TO_GENERATE' ? 'GENERATE' : 'CLARIFY',
@@ -3626,6 +3640,19 @@ export async function POST(req: NextRequest) {
       questionType: interpretedRequest.question_type,
       resourcesStatus: initialResourcePlan.status,
       resourcesCount: initialResourcePlan.resources.length,
+    })
+    recordGenerationTrace({
+      status: 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'scoring',
+      pipelineStep: 'HumanCollectivePatterns',
+      diagnostic: `${humanCollectivePatterns.trace.rule}:matched=${humanCollectivePatterns.trace.matched_patterns}`,
+      durationMs: 1,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: interpretedRequest.intent_type,
+      questionType: interpretedRequest.question_type,
     })
     const hasUsableInterpretation =
       !interpretedRequest.needs_clarification &&
@@ -3971,6 +3998,7 @@ export async function POST(req: NextRequest) {
         })
     const canonicalResourcePlan = planResources({
       interpretation: canonicalInterpretation,
+      patterns: humanCollectivePatterns,
       supplied_resources: resourceContractsFromItems(resources),
     })
     canonicalResourcePlan.trace.duration_ms =
@@ -4093,6 +4121,7 @@ export async function POST(req: NextRequest) {
       concrete_theatre: concreteTheatre,
       canonical_theatre: canonicalTheatre,
       inquiry,
+      human_collective_patterns: humanCollectivePatterns,
       expertises_metiers: expertisesMetiers,
       resource_service: canonicalResourcePlan,
     }
@@ -4231,6 +4260,7 @@ export async function POST(req: NextRequest) {
             theatre: canonicalTheatre,
             scoring: canonicalScoringForWriting,
             resources: canonicalResourcePlan,
+            patterns: humanCollectivePatterns,
           },
           'local_contract',
         )
