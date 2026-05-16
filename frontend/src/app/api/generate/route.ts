@@ -1015,6 +1015,34 @@ function ensureContextualBlindSpotEn(list: string[], intentContext?: IntentConte
   return (hasRelational ? cleaned : [...cleaned, PERSONAL_BLIND_SPOT_EN]).slice(0, 4)
 }
 
+function contextualVulnerabilityFallbackFr(intentContext?: IntentContext): string {
+  const domain = intentContext?.interpreted_request?.domain ?? intentContext?.surface_domain
+  if (domain === 'management' || domain === 'professional') {
+    return 'Le point fragile est l’écart entre l’organisation annoncée, les rôles réellement tenus et la charge que les acteurs acceptent ou refusent de porter.'
+  }
+  if (domain === 'startup_vc') {
+    return 'Le point fragile est l’écart entre la promesse formulée, le premier usage répété et la preuve de traction observable.'
+  }
+  if (domain === 'personal') {
+    return 'Le point fragile est l’écart entre ce qui est ressenti, ce qui est dit et ce que les actes permettent réellement de vérifier.'
+  }
+  return 'Le point fragile est le passage entre les acteurs nommés, la contrainte décisive et le signal observable qui peut changer la lecture.'
+}
+
+function contextualVulnerabilityFallbackEn(intentContext?: IntentContext): string {
+  const domain = intentContext?.interpreted_request?.domain ?? intentContext?.surface_domain
+  if (domain === 'management' || domain === 'professional') {
+    return 'The fragile point is the gap between the announced organization, the roles actually held, and the load actors accept or refuse to carry.'
+  }
+  if (domain === 'startup_vc') {
+    return 'The fragile point is the gap between the stated promise, repeated first use, and observable traction proof.'
+  }
+  if (domain === 'personal') {
+    return 'The fragile point is the gap between what is felt, what is said, and what actions actually make verifiable.'
+  }
+  return 'The fragile point is the passage between named actors, the decisive constraint, and the observable signal that can change the reading.'
+}
+
 function normalizeRadarBlindSpotLabels(details: unknown): unknown {
   if (!Array.isArray(details)) return details
   return details.map((item) => {
@@ -2265,6 +2293,8 @@ function completeSituationCard(
   const trajectorySubject = conciseTrajectorySubject(objectLabel)
   const objectSentence = capitalizeFirst(objectLabel)
   const objectDe = afterDe(objectLabel)
+  const vulnerabilityFallbackFr = contextualVulnerabilityFallbackFr(sc.intent_context)
+  const vulnerabilityFallbackEn = contextualVulnerabilityFallbackEn(sc.intent_context)
   const isExperienceExplanation = isExperienceExplanationFrame(sc.intent_context)
   const experience = experienceLexicon(situation, objectLabel)
   const tensionLabel = tension || 'un rôle visible continue à organiser la confiance, la preuve et la décision'
@@ -2437,7 +2467,7 @@ function completeSituationCard(
       : firstSafeText(
           [sc.main_vulnerability_fr, sc.main_vulnerability, arbre.main_vulnerability_candidate],
           situation,
-          'Le point fragile est le levier réel qui n’est pas encore protégé ou clarifié.'
+          vulnerabilityFallbackFr
         ),
     main_vulnerability_en: isVcCard
       ? 'The fragile point is the gap between an intellectually strong proposition and proof still to be established: repeated use, willingness to pay, clear ICP, and distribution.'
@@ -2446,7 +2476,7 @@ function completeSituationCard(
       : firstSafeText(
           [sc.main_vulnerability_en, sc.main_vulnerability, arbre.main_vulnerability_candidate],
           situation,
-          'The fragile point is the real lever that is not yet protected or clarified.'
+          vulnerabilityFallbackEn
         ),
     asymmetry_fr: understands
       ? 'La tension peut être largement commentée, mais elle ne devient lisible qu’en identifiant qui peut réellement agir, bloquer ou légitimer.'
@@ -2920,6 +2950,7 @@ function buildFallbackCard(
   const startupCommunity =
     (intentContext?.surface_domain === 'startup_vc' || intentContext?.interpreted_request?.domain === 'startup_vc') &&
     /\b(cible|segment|communaut[eé]|utilisateurs?|audience|acquisition|activation|r[eé]tention|go[- ]?to[- ]?market|croissance|options? strat[eé]giques?)\b/i.test(situation)
+  const vulnerabilityFallbackFr = contextualVulnerabilityFallbackFr(intentContext)
   const firstDiamondSafeText = (values: unknown[], fallback: string): string => {
     for (const value of values) {
       const text = safePublicText(value, situation, '')
@@ -2942,7 +2973,7 @@ function buildFallbackCard(
       ? 'Le point fragile est le choix du premier segment : une communauté trop large crée du bruit, une cible trop étroite peut manquer d’élan.'
     : firstDiamondSafeText(
         [arbre.main_vulnerability_candidate],
-        'Le point fragile est le levier réel qui n’est pas encore protégé ou clarifié.'
+        vulnerabilityFallbackFr
       )
   const contradiction = wideGlobal
     ? 'Le théâtre initial peut rester contenu localement, mais ses effets peuvent circuler par l’énergie, les marchés, les alliances, les seuils militaires ou les récits politiques.'
