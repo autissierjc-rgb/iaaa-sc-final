@@ -21,6 +21,7 @@ import { interpretRequestWithModel } from '@/lib/intent/modelIntentInterpreter'
 import { situationIntentRouter } from '@/lib/intent/situationIntentRouter'
 import { interpretSituation } from '@/lib/interpretation'
 import { runDialogueGate } from '@/lib/dialogue'
+import { runRiskAdviceGuard } from '@/lib/safety'
 import { detectPatterns, patternGuidance } from '@/lib/patterns/detectPatterns'
 import { detectMetierProfile } from '@/lib/profiles/detectMetierProfile'
 import { fetchResources } from '@/lib/resources/fetchResources'
@@ -3429,6 +3430,7 @@ export async function POST(req: NextRequest) {
       preinterpreted: interpretedRequest,
     })
     const canonicalDialogueGate = runDialogueGate({ interpretation: canonicalInterpretation })
+    const safetyGuard = runRiskAdviceGuard({ interpretation: canonicalInterpretation })
     recordGenerationTrace({
       status: canonicalDialogueGate.can_generate ? 'ok' : 'partial',
       gate: canonicalDialogueGate.status === 'READY_TO_GENERATE' ? 'GENERATE' : 'CLARIFY',
@@ -3450,6 +3452,19 @@ export async function POST(req: NextRequest) {
       pipelineStep: 'DialogueGate',
       diagnostic: canonicalDialogueGate.status,
       durationMs: Date.now() - requestStartedAt,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: interpretedRequest.intent_type,
+      questionType: interpretedRequest.question_type,
+    })
+    recordGenerationTrace({
+      status: safetyGuard.domain_risk === 'normal' ? 'ok' : 'partial',
+      gate: safetyGuard.emergency ? 'ERROR' : 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'safety',
+      pipelineStep: 'RiskAdviceGuard',
+      diagnostic: `${safetyGuard.domain_risk}:${safetyGuard.advice_mode}`,
+      durationMs: safetyGuard.trace.duration_ms ?? 0,
       inputChars: analysisText.length,
       domain: canonicalInterpretation.domain,
       intentType: interpretedRequest.intent_type,
@@ -3505,6 +3520,16 @@ export async function POST(req: NextRequest) {
         can_generate: canonicalDialogueGate.can_generate,
         question: canonicalDialogueGate.question,
         user_can_ignore_question: canonicalDialogueGate.user_can_ignore_question,
+      },
+      safety: {
+        domain_risk: safetyGuard.domain_risk,
+        sensitive_domains: safetyGuard.sensitive_domains,
+        advice_mode: safetyGuard.advice_mode,
+        allowed_outputs: safetyGuard.allowed_outputs,
+        forbidden_outputs: safetyGuard.forbidden_outputs,
+        required_disclaimer_fr: safetyGuard.required_disclaimer_fr,
+        human_review_required: safetyGuard.human_review_required,
+        emergency: safetyGuard.emergency,
       },
     }
     const clarifyQuestions = selectClarifyingQuestions({
@@ -3563,6 +3588,33 @@ export async function POST(req: NextRequest) {
         questions: [canonicalDialogueGate.question],
         coverage_check: effectiveCoverage,
       })
+    }
+
+    if (safetyGuard.emergency) {
+      recordGenerationTrace({
+        status: 'error',
+        gate: 'ERROR',
+        route: '/api/generate',
+        canonicalLayer: 'safety',
+        pipelineStep: 'RiskAdviceGuard',
+        diagnostic: 'emergency_referral',
+        durationMs: Date.now() - requestStartedAt,
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+        errorKind: `safety:${safetyGuard.sensitive_domains.join(',')}`,
+      })
+      return NextResponse.json({
+        gate: 'BLOCK',
+        reason: safetyGuard.required_disclaimer_fr ?? 'Cette demande nécessite une aide urgente ou professionnelle avant toute analyse.',
+        safety: {
+          domain_risk: safetyGuard.domain_risk,
+          sensitive_domains: safetyGuard.sensitive_domains,
+          advice_mode: safetyGuard.advice_mode,
+          emergency: safetyGuard.emergency,
+        },
+      }, { status: 400 })
     }
 
     if (canonicalDialogue && canonicalDialogue.can_generate === false && canonicalDialogue.next_question && !hasUrlInFlow) {
