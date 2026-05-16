@@ -55,7 +55,7 @@ export function validateRegressionCase(sc: SituationCard, testCase: DiamondRegre
   for (const term of testCase.expectations.forbiddenTerms) {
     if (includesLoose(text, term)) {
       issues.push({
-        level: 'warning',
+        level: 'error',
         code: 'forbidden_term_present',
         message: `Forbidden term for regression case "${testCase.id}" detected: ${term}`,
       })
@@ -65,7 +65,7 @@ export function validateRegressionCase(sc: SituationCard, testCase: DiamondRegre
   for (const term of testCase.expectations.requiredTerms) {
     if (!includesLoose(text, term)) {
       issues.push({
-        level: 'warning',
+        level: 'error',
         code: 'required_term_missing',
         message: `Required term for regression case "${testCase.id}" missing: ${term}`,
       })
