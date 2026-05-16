@@ -22,6 +22,7 @@ import { situationIntentRouter } from '@/lib/intent/situationIntentRouter'
 import { interpretSituation } from '@/lib/interpretation'
 import { runDialogueGate } from '@/lib/dialogue'
 import { runRiskAdviceGuard } from '@/lib/safety'
+import { routeExpertisesMetiers } from '@/lib/expertisesMetiers'
 import { detectPatterns, patternGuidance } from '@/lib/patterns/detectPatterns'
 import { detectMetierProfile } from '@/lib/profiles/detectMetierProfile'
 import { fetchResources } from '@/lib/resources/fetchResources'
@@ -3431,6 +3432,7 @@ export async function POST(req: NextRequest) {
     })
     const canonicalDialogueGate = runDialogueGate({ interpretation: canonicalInterpretation })
     const safetyGuard = runRiskAdviceGuard({ interpretation: canonicalInterpretation })
+    const expertisesMetiers = routeExpertisesMetiers({ interpretation: canonicalInterpretation })
     recordGenerationTrace({
       status: canonicalDialogueGate.can_generate ? 'ok' : 'partial',
       gate: canonicalDialogueGate.status === 'READY_TO_GENERATE' ? 'GENERATE' : 'CLARIFY',
@@ -3465,6 +3467,19 @@ export async function POST(req: NextRequest) {
       pipelineStep: 'RiskAdviceGuard',
       diagnostic: `${safetyGuard.domain_risk}:${safetyGuard.advice_mode}`,
       durationMs: safetyGuard.trace.duration_ms ?? 0,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: interpretedRequest.intent_type,
+      questionType: interpretedRequest.question_type,
+    })
+    recordGenerationTrace({
+      status: 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'expertisesMetiers',
+      pipelineStep: 'ExpertisesMetiersRouter',
+      diagnostic: expertisesMetiers.trace.notes?.join(' | ').slice(0, 240) ?? expertisesMetiers.domain,
+      durationMs: expertisesMetiers.trace.duration_ms ?? 0,
       inputChars: analysisText.length,
       domain: canonicalInterpretation.domain,
       intentType: interpretedRequest.intent_type,
@@ -3530,6 +3545,20 @@ export async function POST(req: NextRequest) {
         required_disclaimer_fr: safetyGuard.required_disclaimer_fr,
         human_review_required: safetyGuard.human_review_required,
         emergency: safetyGuard.emergency,
+      },
+      expertises_metiers: {
+        domain: expertisesMetiers.domain,
+        playbook_id: expertisesMetiers.domain_playbook.id,
+        playbook_label_fr: expertisesMetiers.domain_playbook.label_fr,
+        metier_lenses: expertisesMetiers.metier_lenses.map((lens) => ({
+          id: lens.id,
+          label_fr: lens.label_fr,
+        })),
+        source_channels: expertisesMetiers.source_channels,
+        evidence_to_seek: expertisesMetiers.evidence_to_seek,
+        blind_spots_to_test: expertisesMetiers.blind_spots_to_test,
+        probability_markers: expertisesMetiers.probability_markers,
+        writing_anchors: expertisesMetiers.writing_anchors,
       },
     }
     const clarifyQuestions = selectClarifyingQuestions({
@@ -3843,8 +3872,10 @@ export async function POST(req: NextRequest) {
     const effectiveCoverageForGeneration = {
       ...effectiveCoverageWithReadiness,
       concrete_theatre: concreteTheatre,
+      expertises_metiers: expertisesMetiers,
     }
     const patternContext = detectPatterns({ situation: analysisText, arbre })
+    // Legacy lexical signal kept temporarily while ExpertisesMetiers becomes authoritative.
     const metierProfile = detectMetierProfile(analysisText)
     const prebuiltSiteCard = siteAnalysisFallbackCard({
       situation: displayText,
