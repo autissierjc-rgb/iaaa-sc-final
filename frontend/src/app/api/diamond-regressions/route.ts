@@ -45,17 +45,45 @@ type GenerateV2Payload = {
   total_duration_ms?: number
 }
 
-async function fetchWithTimeout(url: URL, init: RequestInit, timeoutMs: number) {
+type TimedGenerateResponse =
+  | {
+      timedOut: false
+      response: Response
+      payload: GenerateV2Payload
+    }
+  | {
+      timedOut: true
+      message: string
+    }
+
+async function fetchGenerateV2WithTimeout(url: URL, init: RequestInit, timeoutMs: number): Promise<TimedGenerateResponse> {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  let timeout: ReturnType<typeof setTimeout> | undefined
 
   try {
-    return await fetch(url, {
-      ...init,
-      signal: controller.signal,
+    const request = fetch(url, {
+        ...init,
+        signal: controller.signal,
+      })
+      .then(async (response) => ({
+        timedOut: false as const,
+        response,
+        payload: await response.json() as GenerateV2Payload,
+      }))
+
+    const guard = new Promise<TimedGenerateResponse>((resolve) => {
+      timeout = setTimeout(() => {
+        controller.abort()
+        resolve({
+          timedOut: true,
+          message: `Regression case exceeded ${timeoutMs} ms.`,
+        })
+      }, timeoutMs)
     })
+
+    return await Promise.race([request, guard])
   } finally {
-    clearTimeout(timeout)
+    if (timeout) clearTimeout(timeout)
   }
 }
 
@@ -92,7 +120,7 @@ export async function POST(request: NextRequest) {
 
   for (const testCase of DIAMOND_REGRESSION_CASES) {
     try {
-      const response = await fetchWithTimeout(new URL('/api/generate-v2', origin), {
+      const generated = await fetchGenerateV2WithTimeout(new URL('/api/generate-v2', origin), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,7 +128,24 @@ export async function POST(request: NextRequest) {
           mode: 'public_fast',
         }),
       }, CASE_TIMEOUT_MS)
-      const payload = await response.json() as GenerateV2Payload
+
+      if (generated.timedOut) {
+        results.push({
+          case_id: testCase.id,
+          ok: false,
+          domain: testCase.domain,
+          playbook: 'timeout',
+          duration_ms: CASE_TIMEOUT_MS,
+          issues: [{
+            level: 'error',
+            code: 'diamond_regression_timeout',
+            message: generated.message,
+          }],
+        })
+        continue
+      }
+
+      const { response, payload } = generated
 
       if (!response.ok || !payload.ok) {
         results.push({
