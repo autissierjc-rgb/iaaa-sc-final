@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  computeState,
   getStateLabel,
   AstrolabeBranch,
   RadarScores,
 } from '@/lib/scoring'
+import { computeStateV2 } from '@/lib/scoringV2'
 import { parseModelJSON } from '@/lib/ai/json'
 import { analyzeWithArbreACames } from '@/lib/analysis/arbreACames'
 import { coverageCheck } from '@/lib/coverage/coverageCheck'
@@ -49,7 +49,7 @@ import type {
   ConversationContract,
   ConcreteTheatre,
 } from '@/lib/resources/resourceContract'
-import type { ResourceContract, SourceChannel } from '@/lib/contracts'
+import type { AstrolabeBranchV2, RadarScoreV2, ResourceContract, SourceChannel } from '@/lib/contracts'
 
 function hasExplicitUrl(value: string): boolean {
   return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
@@ -255,23 +255,12 @@ function enrichWithScoring(
   const radar = sc.radar as RadarScores | undefined
   if (!radar) return sc
   const normalizedAstrolabe = normalizeAstrolabeScores(sc.astrolabe_scores, branches)
-  const scoringBranches = astrolabeScoresToBranches(normalizedAstrolabe)
-
-  const state =
-    scoringBranches.length > 0
-      ? computeState(scoringBranches, radar)
-      : Math.round(
-          Math.max(
-            0,
-            Math.min(
-              100,
-              radar.impact * 0.3 +
-                radar.urgency * 0.25 +
-                radar.uncertainty * 0.25 +
-                (100 - radar.reversibility) * 0.2
-            )
-          )
-        )
+  const scoringV2 = computeStateV2({
+    astrolabe: astrolabeScoresToV2(normalizedAstrolabe),
+    radar: radarToV2(radar),
+    trace_notes: ['public_route=/api/generate'],
+  })
+  const state = scoringV2.state_index_final
 
   return {
     ...sc,
@@ -279,6 +268,14 @@ function enrichWithScoring(
     state_index_final: state,
     state_label: getStateLabel(state, 'fr'),
     state_label_en: getStateLabel(state, 'en'),
+    scoring_v2: scoringV2,
+    scoring: {
+      engine: 'ScoringEngine',
+      version: scoringV2.trace.version,
+      state_index_final: scoringV2.state_index_final,
+      state_label: scoringV2.state_label,
+      warnings: scoringV2.scoring_warnings,
+    },
   }
 }
 
@@ -382,6 +379,47 @@ function astrolabeScoresToBranches(scores: ReturnType<typeof normalizeAstrolabeS
     s: score.display_score,
     p: score.is_primary,
   }))
+}
+
+function astrolabeScoresToV2(scores: ReturnType<typeof normalizeAstrolabeScores>): AstrolabeBranchV2[] {
+  return scores.map((score) => ({
+    branch: score.branch,
+    name_fr: score.name,
+    name_en: score.name_en,
+    score: score.display_score,
+    is_primary: score.is_primary,
+    rationale_fr: score.label || 'Score calcule depuis les branches Astrolabe normalisees.',
+    rationale_en: score.label_en || 'Score computed from normalized Astrolabe branches.',
+  }))
+}
+
+function radarToV2(radar: RadarScores): RadarScoreV2[] {
+  return [
+    {
+      axis: 'impact',
+      score: radar.impact,
+      explanation_fr: 'Impact calcule depuis le radar public de la carte.',
+      explanation_en: 'Impact computed from the public card radar.',
+    },
+    {
+      axis: 'urgency',
+      score: radar.urgency,
+      explanation_fr: 'Urgence calculee depuis le radar public de la carte.',
+      explanation_en: 'Urgency computed from the public card radar.',
+    },
+    {
+      axis: 'uncertainty',
+      score: radar.uncertainty,
+      explanation_fr: 'Incertitude calculee depuis le radar public de la carte.',
+      explanation_en: 'Uncertainty computed from the public card radar.',
+    },
+    {
+      axis: 'reversibility',
+      score: radar.reversibility,
+      explanation_fr: 'Reversibilite calculee depuis le radar public de la carte.',
+      explanation_en: 'Reversibility computed from the public card radar.',
+    },
+  ]
 }
 
 function hasTextSignal(text: string, patterns: RegExp[]): boolean {
