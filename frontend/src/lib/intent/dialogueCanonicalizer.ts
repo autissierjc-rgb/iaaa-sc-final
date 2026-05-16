@@ -44,6 +44,51 @@ function normalizeEvents(value: unknown): DialogueEvent[] {
     .slice(0, 12)
 }
 
+function stripDialogueScaffolding(value: string): string {
+  return value
+    .replace(/\bPr[eé]cisions?\s*:\s*/gi, ' ')
+    .replace(/\bR[eé]pondez librement,\s*ou g[eé]n[eé]rez une carte exploratoire\.?/gi, ' ')
+    .replace(/\bG[eé]n[eé]rer une carte exploratoire\b/gi, ' ')
+    .replace(/\bPour analyser votre situation\s*:\s*/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function buildLocalCanonicalSituationFromDialogue({
+  rawSituation,
+  originalSituation,
+  dialogueEvents,
+}: {
+  rawSituation: string
+  originalSituation?: string
+  dialogueEvents: unknown
+}): CanonicalDialogue | null {
+  const events = normalizeEvents(dialogueEvents)
+  const initial = events.find((event) => event.type === 'user_initial_question')?.text ||
+    asText(originalSituation) ||
+    asText(rawSituation)
+  if (!initial) return null
+
+  const userMaterial = events
+    .filter((event) =>
+      event.type === 'user_confirmation' ||
+      event.type === 'user_correction' ||
+      event.type === 'user_extra_context'
+    )
+    .map((event) => stripDialogueScaffolding(event.text))
+    .filter(Boolean)
+
+  const base = stripDialogueScaffolding(initial)
+  const additions = userMaterial.filter((item) => !base.toLowerCase().includes(item.toLowerCase()))
+  const canonical = normalizeSubmittedSituation([base, ...additions].filter(Boolean).join(' '))
+  if (!canonical) return null
+
+  return {
+    canonical_situation: canonical,
+    can_generate: true,
+  }
+}
+
 export async function buildCanonicalSituationFromDialogue({
   rawSituation,
   originalSituation,

@@ -15,7 +15,7 @@ import { selectClarifyingQuestions, selectRefineOptionalQuestions } from '@/lib/
 import { situationReadinessGate } from '@/lib/input/situationReadinessGate'
 import { clarifyBeforeGenerate } from '@/lib/intent/clarifyBeforeGenerate'
 import { applyConversationContractToIntent, buildConversationContract, shouldCarryConversationContract } from '@/lib/intent/conversationContract'
-import { buildCanonicalSituationFromDialogue } from '@/lib/intent/dialogueCanonicalizer'
+import { buildCanonicalSituationFromDialogue, buildLocalCanonicalSituationFromDialogue } from '@/lib/intent/dialogueCanonicalizer'
 import { interpretRequest } from '@/lib/intent/interpretRequest'
 import { interpretRequestWithModel } from '@/lib/intent/modelIntentInterpreter'
 import { situationIntentRouter } from '@/lib/intent/situationIntentRouter'
@@ -3619,12 +3619,19 @@ export async function POST(req: NextRequest) {
           originalSituation: typeof original_situation === 'string' ? original_situation : undefined,
           dialogueEvents: dialogue_events,
         })
+    const localCanonicalDialogue = buildLocalCanonicalSituationFromDialogue({
+      rawSituation: text,
+      originalSituation: typeof original_situation === 'string' ? original_situation : undefined,
+      dialogueEvents: dialogue_events,
+    })
     const analysisText = canonicalDialogue?.canonical_situation ||
+      localCanonicalDialogue?.canonical_situation ||
       applyDialogueClarifications(hasUserAdditions ? text : rawDisplayText || text)
     const urlSourceText = [
       text,
       rawDisplayText,
       canonicalDialogue?.canonical_situation ?? '',
+      localCanonicalDialogue?.canonical_situation ?? '',
       typeof original_situation === 'string' ? original_situation : '',
       dialogueText(dialogue_events),
     ].filter(Boolean).join('\n')
