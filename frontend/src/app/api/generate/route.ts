@@ -36,6 +36,7 @@ import { enrichResourcesWithSiteUnderstanding } from '@/lib/resources/siteUnders
 import { detectScopeContext } from '@/lib/scope/scopeContext'
 import { buildConcreteTheatre as buildLegacyConcreteTheatre } from '@/lib/context/concreteTheatre'
 import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/theatre'
+import { composeDiamondWritingWithMode } from '@/lib/writing'
 import { applyEntityExplanationsToSituationCard } from '@/lib/text/entityExplanations'
 import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
@@ -50,7 +51,7 @@ import type {
   ConversationContract,
   ConcreteTheatre,
 } from '@/lib/resources/resourceContract'
-import type { AstrolabeBranchV2, RadarScoreV2, ResourceContract, SourceChannel } from '@/lib/contracts'
+import type { AstrolabeBranchV2, RadarScoreV2, ResourceContract, ScoringContract, SourceChannel } from '@/lib/contracts'
 
 function hasExplicitUrl(value: string): boolean {
   return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
@@ -421,6 +422,18 @@ function radarToV2(radar: RadarScores): RadarScoreV2[] {
       explanation_en: 'Reversibility computed from the public card radar.',
     },
   ]
+}
+
+function scoringContractFromCard(sc: Record<string, unknown>): ScoringContract | null {
+  const scoring = sc.scoring_v2
+  if (!scoring || typeof scoring !== 'object') return null
+  const contract = scoring as Partial<ScoringContract>
+  if (!Array.isArray(contract.astrolabe) || !Array.isArray(contract.radar)) return null
+  if (typeof contract.state_index_final !== 'number') return null
+  if (typeof contract.state_label !== 'string') return null
+  if (!Array.isArray(contract.scoring_warnings)) return null
+  if (!contract.trace || typeof contract.trace !== 'object') return null
+  return contract as ScoringContract
 }
 
 function hasTextSignal(text: string, patterns: RegExp[]): boolean {
@@ -4206,6 +4219,38 @@ export async function POST(req: NextRequest) {
       resources_status: resourcesStatus,
     }
     baseSc = completeSituationCard(baseSc, displayText, arbre, resources, branches)
+    const canonicalScoringForWriting = scoringContractFromCard(baseSc)
+    const writingContract = canonicalScoringForWriting
+      ? await composeDiamondWritingWithMode(
+          {
+            interpretation: canonicalInterpretation,
+            safety: safetyGuard,
+            expertises_metiers: expertisesMetiers,
+            theatre: canonicalTheatre,
+            scoring: canonicalScoringForWriting,
+            resources: canonicalResourcePlan,
+          },
+          'local_contract',
+        )
+      : null
+    if (writingContract) {
+      recordGenerationTrace({
+        status: writingContract.trace.status === 'partial' ? 'partial' : writingContract.trace.status === 'error' ? 'error' : 'ok',
+        gate: 'GENERATE',
+        route: '/api/generate',
+        canonicalLayer: 'writing',
+        pipelineStep: 'WritingEngine',
+        diagnostic: writingContract.trace.notes?.join(' | ').slice(0, 240) ?? writingContract.trace.status,
+        durationMs: writingContract.trace.duration_ms ?? 0,
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+        resourcesStatus: canonicalResourcePlan.status,
+        resourcesCount: canonicalResourcePlan.resources.length,
+        modelPath: 'local',
+      })
+    }
     baseSc = {
       ...baseSc,
       coverage_check: effectiveCoverageForGeneration,
@@ -4213,6 +4258,7 @@ export async function POST(req: NextRequest) {
       conversation_contract: conversationContract,
       scope_context: scopeContext,
       concrete_theatre: concreteTheatre,
+      writing_contract: writingContract,
     }
     const siteGuard = prebuiltSiteCard ?? siteAnalysisFallbackCard({
       situation: displayText,
