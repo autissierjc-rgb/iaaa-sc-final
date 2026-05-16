@@ -26,6 +26,7 @@ import { routeExpertisesMetiers } from '@/lib/expertisesMetiers'
 import { detectPatterns, patternGuidance } from '@/lib/patterns/detectPatterns'
 import { detectMetierProfile } from '@/lib/profiles/detectMetierProfile'
 import { fetchResources } from '@/lib/resources/fetchResources'
+import { planResources } from '@/lib/resources'
 import { DIAMOND_EDITORIAL_CONTRACT, SC_INTERPRETATION_AUTHORITY } from '@/lib/governance/scDoctrine'
 import { validateDiamondContract } from '@/lib/governance/diamondValidation'
 import { sanitizeResources } from '@/lib/resources/sanitizeResources'
@@ -47,6 +48,7 @@ import type {
   ConversationContract,
   ConcreteTheatre,
 } from '@/lib/resources/resourceContract'
+import type { ResourceContract, SourceChannel } from '@/lib/contracts'
 
 function hasExplicitUrl(value: string): boolean {
   return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
@@ -981,6 +983,40 @@ function listFromAxis(value: unknown, fallback: string[], situation = ''): strin
 
 function rejectsDiamondGuardText(text: string): boolean {
   return /la situation ne se joue pas seulement|distribution des leviers r[eé]els|qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer|la fa[cç]ade peut encore fonctionner|ce qui para[iî]t stable d[eé]pend d[’']un levier discret|ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible|ne se tranche pas par une formule g[eé]n[eé]rale|la lecture doit partir des acteurs et passages oblig[eé]s|tant que ce point n[’']est pas reli[eé] [aà] une trace v[eé]rifiable|hypoth[eè]se de travail, pas une conclusion ferm[eé]e|passer d[’']une impression g[eé]n[eé]rale|un fait, une d[eé]cision, un document ou un changement de calendrier v[eé]rifiable|fa[cç]ade de contr[oô]le|structural reading from available signals/i.test(text)
+}
+
+function sourceChannelFromResourceType(value: string): SourceChannel {
+  const normalized = value.toLowerCase()
+  if (normalized.includes('official')) return 'official'
+  if (normalized.includes('legal')) return 'legal'
+  if (normalized.includes('research') || normalized.includes('science')) return 'research'
+  if (normalized.includes('company') || normalized.includes('linkedin')) return 'company'
+  if (normalized.includes('market')) return 'market'
+  if (normalized.includes('technical') || normalized.includes('github')) return 'technical'
+  if (normalized.includes('local')) return 'local_media'
+  if (normalized.includes('social')) return 'social_public'
+  if (normalized.includes('health')) return 'health_authority'
+  if (normalized.includes('news') || normalized.includes('agency')) return 'news_agency'
+  return 'other'
+}
+
+function resourceContractsFromItems(items: ResourceItem[]): ResourceContract[] {
+  const now = new Date().toISOString()
+  return items.map((item, index) => ({
+    id: `public_fast_${index + 1}`,
+    title: item.title,
+    url: item.url,
+    source: item.source,
+    channel: sourceChannelFromResourceType(`${item.type} ${item.source}`),
+    domain_relevance: ['general'],
+    excerpt: item.excerpt,
+    published_at: item.date,
+    retrieved_at: now,
+    reliability:
+      item.reliability === 'primary' || item.reliability === 'secondary' || item.reliability === 'signal'
+        ? item.reliability
+        : 'unknown',
+  }))
 }
 
 function defaultTrajectories(arbre: ArbreACamesAnalysis, situation: string) {
@@ -3433,6 +3469,7 @@ export async function POST(req: NextRequest) {
     const canonicalDialogueGate = runDialogueGate({ interpretation: canonicalInterpretation })
     const safetyGuard = runRiskAdviceGuard({ interpretation: canonicalInterpretation })
     const expertisesMetiers = routeExpertisesMetiers({ interpretation: canonicalInterpretation })
+    const initialResourcePlan = planResources({ interpretation: canonicalInterpretation })
     recordGenerationTrace({
       status: canonicalDialogueGate.can_generate ? 'ok' : 'partial',
       gate: canonicalDialogueGate.status === 'READY_TO_GENERATE' ? 'GENERATE' : 'CLARIFY',
@@ -3484,6 +3521,21 @@ export async function POST(req: NextRequest) {
       domain: canonicalInterpretation.domain,
       intentType: interpretedRequest.intent_type,
       questionType: interpretedRequest.question_type,
+    })
+    recordGenerationTrace({
+      status: initialResourcePlan.status === 'partial' ? 'partial' : 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'resources',
+      pipelineStep: 'ResourceService',
+      diagnostic: `${initialResourcePlan.status}:${initialResourcePlan.policy}`,
+      durationMs: initialResourcePlan.trace.duration_ms ?? 0,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: interpretedRequest.intent_type,
+      questionType: interpretedRequest.question_type,
+      resourcesStatus: initialResourcePlan.status,
+      resourcesCount: initialResourcePlan.resources.length,
     })
     const hasUsableInterpretation =
       !interpretedRequest.needs_clarification &&
@@ -3559,6 +3611,17 @@ export async function POST(req: NextRequest) {
         blind_spots_to_test: expertisesMetiers.blind_spots_to_test,
         probability_markers: expertisesMetiers.probability_markers,
         writing_anchors: expertisesMetiers.writing_anchors,
+      },
+      resource_service: {
+        status: initialResourcePlan.status,
+        policy: initialResourcePlan.policy,
+        needs_web: initialResourcePlan.needs_web,
+        policy_reason_fr: initialResourcePlan.policy_reason_fr,
+        functional_needs: initialResourcePlan.functional_needs,
+        requested_urls: initialResourcePlan.requested_urls,
+        extracted_urls: initialResourcePlan.extracted_urls,
+        fallback_searches: initialResourcePlan.fallback_searches,
+        public_sources_count: initialResourcePlan.public_sources.length,
       },
     }
     const clarifyQuestions = selectClarifyingQuestions({
@@ -3816,6 +3879,32 @@ export async function POST(req: NextRequest) {
           resources: rawFetchedResources,
           intentContext,
         })
+    const canonicalResourcePlan = planResources({
+      interpretation: canonicalInterpretation,
+      supplied_resources: resourceContractsFromItems(resources),
+    })
+    canonicalResourcePlan.trace.duration_ms =
+      (canonicalResourcePlan.trace.duration_ms ?? 0) + (rawFetchedResources.length > 0 ? 1 : 0)
+    canonicalResourcePlan.trace.notes = [
+      ...(canonicalResourcePlan.trace.notes ?? []),
+      `legacy_fast_resources=${resources.length}`,
+      'ResourceService is the public resource contract; legacy fetchers only execute fast retrieval.',
+    ]
+    recordGenerationTrace({
+      status: canonicalResourcePlan.status === 'partial' ? 'partial' : 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'resources',
+      pipelineStep: 'ResourceService:resolved',
+      diagnostic: `${canonicalResourcePlan.status}:${canonicalResourcePlan.policy}`,
+      durationMs: canonicalResourcePlan.trace.duration_ms ?? 0,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: intentContext.interpreted_request?.intent_type,
+      questionType: intentContext.interpreted_request?.question_type,
+      resourcesStatus: canonicalResourcePlan.status,
+      resourcesCount: canonicalResourcePlan.resources.length,
+    })
     const readinessGate = situationReadinessGate({
       situation: urlAugmentedAnalysisText,
       intentContext,
@@ -3873,6 +3962,7 @@ export async function POST(req: NextRequest) {
       ...effectiveCoverageWithReadiness,
       concrete_theatre: concreteTheatre,
       expertises_metiers: expertisesMetiers,
+      resource_service: canonicalResourcePlan,
     }
     const patternContext = detectPatterns({ situation: analysisText, arbre })
     // Legacy lexical signal kept temporarily while ExpertisesMetiers becomes authoritative.
