@@ -1,3 +1,7 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+
 type TraceStatus = 'ok' | 'partial' | 'error'
 type TraceGate = 'GENERATE' | 'CLARIFY' | 'REFINE_OPTIONAL' | 'ERROR'
 
@@ -10,6 +14,20 @@ type LayerTraceExample = {
   diagnostic: string
   durationMs: number
   route: string
+  at?: string
+}
+
+type TraceResponse = {
+  ok?: boolean
+  mode?: string
+  summary?: {
+    total?: number
+    byLayer?: Record<string, number>
+    byGate?: Record<string, number>
+    latest_at?: string
+  }
+  traces?: LayerTraceExample[]
+  error?: string
 }
 
 const TRACE_EXAMPLES: LayerTraceExample[] = [
@@ -72,10 +90,35 @@ function colorFor(status: TraceStatus) {
 }
 
 export default function GenerationLayerTracePanel() {
-  const layerCounts = TRACE_EXAMPLES.reduce<Record<string, number>>((acc, trace) => {
+  const [result, setResult] = useState<TraceResponse | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function refresh() {
+    setBusy(true)
+    try {
+      const response = await fetch('/api/generation-traces', { cache: 'no-store' })
+      setResult(await response.json())
+    } catch (error) {
+      setResult({ ok: false, error: error instanceof Error ? error.message : 'unknown_error' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  useEffect(() => {
+    refresh()
+  }, [])
+
+  const visibleTraces = useMemo(
+    () => (result?.traces?.length ? result.traces : TRACE_EXAMPLES),
+    [result],
+  )
+
+  const layerCounts = visibleTraces.reduce<Record<string, number>>((acc, trace) => {
     acc[trace.canonicalLayer] = (acc[trace.canonicalLayer] ?? 0) + 1
     return acc
   }, {})
+  const isLive = Boolean(result?.traces?.length)
 
   return (
     <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
@@ -88,11 +131,24 @@ export default function GenerationLayerTracePanel() {
           </p>
         </div>
         <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
-          <div><strong style={{ color: '#1A2E5A' }}>{TRACE_EXAMPLES.length}</strong> traces exemple</div>
+          <div><strong style={{ color: '#1A2E5A' }}>{visibleTraces.length}</strong> traces {isLive ? 'reelles' : 'exemple'}</div>
           <div><strong style={{ color: '#1A2E5A' }}>{Object.keys(layerCounts).length}</strong> couches visibles</div>
           <div><strong style={{ color: '#C8951A' }}>metadata only</strong> sans texte brut</div>
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={busy}
+            style={{ marginTop: 8, border: '1px solid #C8951A', background: '#FFF8E8', color: '#1A2E5A', borderRadius: 8, padding: '7px 10px', cursor: 'pointer' }}
+          >
+            {busy ? 'Lecture...' : 'Rafraichir'}
+          </button>
         </div>
       </div>
+
+      <p style={{ color: '#8B8174', fontSize: 11, lineHeight: 1.55, margin: '12px 0 0' }}>
+        Source : {isLive ? `/api/generation-traces · ${result?.mode}` : 'exemples cockpit en attente de generations reelles'}.
+        {result?.summary?.latest_at ? ` Derniere trace : ${result.summary.latest_at}.` : ''}
+      </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 16 }}>
         {Object.entries(layerCounts).map(([layer, count]) => (
@@ -105,7 +161,7 @@ export default function GenerationLayerTracePanel() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 10, marginTop: 12 }}>
-        {TRACE_EXAMPLES.map((trace) => (
+        {visibleTraces.map((trace) => (
           <article key={trace.id} style={{ border: '1px solid #E1D6C2', borderRadius: 8, padding: 12, background: '#fff' }}>
             <p style={{ margin: 0, color: colorFor(trace.status), fontFamily: 'monospace', fontSize: 10 }}>
               {trace.status} · {trace.gate} · {trace.durationMs} ms
@@ -120,6 +176,11 @@ export default function GenerationLayerTracePanel() {
             <p style={{ margin: '7px 0 0', color: '#8B8174', fontFamily: 'monospace', fontSize: 10 }}>
               {trace.route}
             </p>
+            {trace.at ? (
+              <p style={{ margin: '7px 0 0', color: '#8B8174', fontFamily: 'monospace', fontSize: 10 }}>
+                {trace.at}
+              </p>
+            ) : null}
           </article>
         ))}
       </div>
