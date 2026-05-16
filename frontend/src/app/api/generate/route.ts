@@ -3633,12 +3633,18 @@ export async function POST(req: NextRequest) {
       hasUrlInFlow && !hasExplicitUrl(analysisText)
         ? `${analysisText}\n${explicitUrls(urlSourceText).join('\n')}`
         : analysisText
+    const userMaterialRole = classifyUserMaterialResourceRole(urlAugmentedAnalysisText)
     const previousContract = conversation_contract && typeof conversation_contract === 'object'
       ? conversation_contract as ConversationContract
       : undefined
     const modelInterpreted = isPublicFast
       ? interpretRequest(analysisText)
       : await interpretRequestWithModel(analysisText)
+    modelInterpreted.signals = [
+      ...(modelInterpreted.signals ?? []),
+      `resource_role:${userMaterialRole.role}`,
+      ...userMaterialRole.signals,
+    ]
     const carriedPreviousContract = shouldCarryConversationContract(modelInterpreted, previousContract, analysisText)
       ? previousContract
       : undefined
@@ -4075,7 +4081,6 @@ export async function POST(req: NextRequest) {
       ? astrolabe_branches
       : inferAstrolabeBranches(analysisText, intentContext)
     const providedResources = sanitizeResources(rawResources)
-    const userMaterialRole = classifyUserMaterialResourceRole(urlAugmentedAnalysisText)
     const userMaterialPolicy = buildUserMaterialPolicy({
       kind: userMaterialRole.urls.length > 0 ? 'url' : 'text',
       public_source: userMaterialRole.role !== 'private_material',
