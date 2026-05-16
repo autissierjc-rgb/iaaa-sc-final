@@ -3108,14 +3108,17 @@ function buildFallbackCard(
   ).replace(/[.;]+$/g, '')
   const genericInsight =
     `${objectSentence} doit être lu à partir de ${concreteActors}. La question utile est de savoir comment ${concreteInstitutions} peut transformer la situation en acte, blocage, coût ou preuve observable.`
+  const cleanedVulnerability = vulnerability
+    .replace(/^Le point fragile est\s*/i, '')
+    .replace(/[.;]+$/g, '')
   const genericLecture =
-    `${objectSentence} ne se tranche pas par une formule générale. La lecture doit partir des acteurs et passages obligés déjà visibles : ${concreteActors}. Ce qui compte maintenant est le lien entre ces acteurs, ${concreteInstitutions}, et ${concreteProof}.\n\n` +
-    `Le point fragile est ${vulnerability.replace(/^Le point fragile est\s*/i, '').replace(/[.;]+$/g, '')}. Tant que ce point n’est pas relié à une trace vérifiable, la carte doit rester prudente : elle indique une hypothèse de travail, pas une conclusion fermée.\n\n` +
-    `Le signal à surveiller est concret : ${concreteProof}. C’est ce type de trace qui permet de passer d’une impression générale à une lecture partageable, contestable et révisable.`
+    `${objectSentence} prend forme dans le rapport entre ${concreteActors} et ${concreteInstitutions}. Ce premier plan ne suffit pas à conclure, mais il indique où regarder : qui peut agir, qui dépend de qui, et quel passage obligé rendra la situation plus lisible.\n\n` +
+    `La vulnérabilité principale tient à ${cleanedVulnerability}. Elle devient décisive si elle se traduit dans une décision, une action, un refus, un coût ou un changement de rythme identifiable.\n\n` +
+    `Le signal à surveiller est ${concreteProof}. Ce signal ne ferme pas la lecture à lui seul ; il sert de point d’appui pour distinguer ce qui est déjà établi, ce qui reste plausible et ce qui doit encore être vérifié.`
   const genericCapHook =
     `${capitalizeFirst(concreteProof)} peut changer le statut de la situation.`
   const genericWarning =
-    'Ne pas transformer une hypothèse lisible en conclusion sans trace vérifiable.'
+    'Ne pas transformer une hypothèse lisible en conclusion avant d’avoir situé l’acteur, la contrainte et le signal qui la confirment.'
   const startupCommunityInsight =
     `${objectSentence} ne se joue pas d’abord comme une question de volume. La décision utile est de choisir le premier groupe capable de comprendre la promesse, de l’utiliser souvent, d’en parler et de produire des preuves visibles.`
   const startupCommunityLecture =
