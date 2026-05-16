@@ -46,6 +46,7 @@ import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
 import { buildCtoWatchMetricsFromEvents, buildCtoWatchReport, buildGenerationEvent } from '@/lib/archive'
 import { DEFAULT_LANGUAGE_SERVICE_CONTRACT } from '@/lib/contracts/language'
 import { DEFAULT_BUZZ_READINESS, DEFAULT_PDF_EXPORT_CONTRACT, DEFAULT_UNIFIED_SHARE_BUTTON } from '@/lib/contracts/share'
+import { buildUserMaterialPolicy, classifyUserMaterialResourceRole } from '@/lib/contracts/userMaterial'
 import { planShare } from '@/lib/share'
 import { runSecurityAbuseGuard } from '@/lib/security/SecurityAbuseGuard'
 import type {
@@ -3983,6 +3984,27 @@ export async function POST(req: NextRequest) {
       ? astrolabe_branches
       : inferAstrolabeBranches(analysisText, intentContext)
     const providedResources = sanitizeResources(rawResources)
+    const userMaterialRole = classifyUserMaterialResourceRole(urlAugmentedAnalysisText)
+    const userMaterialPolicy = buildUserMaterialPolicy({
+      kind: userMaterialRole.urls.length > 0 ? 'url' : 'text',
+      public_source: userMaterialRole.role !== 'private_material',
+      user_confirmed_rights: userMaterialRole.role !== 'private_material',
+      retention_choice: 'discard_after_processing',
+    })
+    recordGenerationTrace({
+      status: 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'resources',
+      pipelineStep: 'UserMaterialResourceRole',
+      diagnostic: `${userMaterialRole.role}:${userMaterialRole.reason_fr}`.slice(0, 240),
+      durationMs: 0,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: intentContext.interpreted_request?.intent_type,
+      questionType: intentContext.interpreted_request?.question_type,
+      modelPath: 'local',
+    })
     const webNeeded = hasUrlInFlow || shouldUseWeb(urlAugmentedAnalysisText)
     const rawFetchedResources =
       isPublicFast
@@ -4530,6 +4552,10 @@ export async function POST(req: NextRequest) {
       conversation_contract: conversationContract,
       scope_context: scopeContext,
       concrete_theatre: concreteTheatre,
+      user_material: {
+        role: userMaterialRole,
+        policy: userMaterialPolicy,
+      },
       writing_contract: writingContract,
       quality: {
         status: qualityStatus,
