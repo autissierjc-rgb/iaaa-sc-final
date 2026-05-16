@@ -4261,7 +4261,7 @@ export async function POST(req: NextRequest) {
           modelPath: 'fallback',
           errorKind: error instanceof Error ? error.name : 'UnknownError',
         })
-        return NextResponse.json({ gate: 'GENERATE', sc: fallbackSc })
+        baseSc = fallbackSc
       }
     }
     baseSc = {
