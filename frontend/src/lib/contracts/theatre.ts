@@ -10,6 +10,8 @@ export type TheatreEvidence = {
 export type ConcreteTheatreContract = {
   domain: SituationDomainV2
   actors: string[]
+  named_actors?: string[]
+  role_anchors?: string[]
   institutions: string[]
   dates: string[]
   places: string[]
@@ -19,5 +21,6 @@ export type ConcreteTheatreContract = {
   evidence: TheatreEvidence[]
   unknowns: string[]
   missing_anchors: string[]
+  collaboration_questions?: string[]
   trace: TraceMeta
 }

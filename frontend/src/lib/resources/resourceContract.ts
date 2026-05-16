@@ -173,6 +173,8 @@ export type ConcreteTheatre = {
   domain: SituationDomain
   anchors: string[]
   actors: string[]
+  named_actors?: string[]
+  role_anchors?: string[]
   institutions: string[]
   procedures: string[]
   places: string[]
@@ -184,6 +186,7 @@ export type ConcreteTheatre = {
   thresholds: string[]
   evidence_to_watch: string[]
   missing_anchors: string[]
+  collaboration_questions?: string[]
   guidance_fr: string
   guidance_en: string
 }

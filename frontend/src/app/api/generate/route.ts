@@ -1149,6 +1149,8 @@ function mergeCanonicalTheatreIntoLegacy(
     ...legacy,
     domain: legacyDomainFromCanonical(canonical.domain) as ConcreteTheatre['domain'],
     actors: Array.from(new Set([...canonical.actors, ...legacy.actors])).slice(0, 12),
+    named_actors: canonical.named_actors,
+    role_anchors: canonical.role_anchors,
     institutions: Array.from(new Set([...canonical.institutions, ...legacy.institutions])).slice(0, 12),
     procedures: Array.from(new Set([...canonical.procedures, ...legacy.procedures])).slice(0, 10),
     places: Array.from(new Set([...canonical.places, ...legacy.places])).slice(0, 10),
@@ -1159,6 +1161,7 @@ function mergeCanonicalTheatreIntoLegacy(
       ...legacy.evidence_to_watch,
     ])).slice(0, 10),
     missing_anchors: Array.from(new Set([...canonical.missing_anchors, ...legacy.missing_anchors])).slice(0, 10),
+    collaboration_questions: canonical.collaboration_questions,
     guidance_fr: canonical.trace.status === 'partial'
       ? 'Le théâtre réel canonique signale encore des ancres manquantes : acteurs, procédures, preuves ou contraintes doivent rester visibles dans la lecture.'
       : legacy.guidance_fr,

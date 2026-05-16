@@ -63,6 +63,30 @@ function expectedMissingAnchors(input: ConcreteTheatreBuilderInput, present: str
   return expected.filter((anchor) => !text.includes(anchor.toLowerCase()))
 }
 
+function collaborationQuestions(input: ConcreteTheatreBuilderInput, namedActors: string[], missing: string[]): string[] {
+  const domain = input.interpretation.domain
+
+  if ((domain === 'management' || domain === 'professional') && namedActors.length === 0) {
+    return [
+      'Qui porte la charge principale dans cette situation ?',
+      'Qui peut décider, bloquer ou arbitrer maintenant ?',
+    ]
+  }
+
+  if (domain === 'startup_market' && namedActors.length === 0) {
+    return [
+      'Quelle cible, client ou partenaire faut-il nommer en premier ?',
+      'Quelle preuve d’usage ou de traction existe déjà ?',
+    ]
+  }
+
+  if (missing.length > 0) {
+    return [`Quel élément concret manque le plus : ${missing.slice(0, 3).join(', ')} ?`]
+  }
+
+  return []
+}
+
 export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): ConcreteTheatreContract {
   const started = Date.now()
   const interpretation = input.interpretation
@@ -79,10 +103,14 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
   const evidence = evidenceFromResources(input.resources)
   const sourceNames = unique((input.resources?.public_sources ?? []).map((resource) => resource.source))
   const playbook = input.expertises?.domain_playbook
-  const actors = unique([
+  const namedActors = unique([
     ...interpretation.entity_explanations.map((entity) => entity.label),
     ...namedAnchors,
-    ...(playbook?.typical_actors ?? []),
+  ]).slice(0, 12)
+  const roleAnchors = unique(playbook?.typical_actors ?? []).slice(0, 12)
+  const actors = unique([
+    ...namedActors,
+    ...roleAnchors,
   ]).slice(0, 12)
 
   const institutions = unique([
@@ -102,10 +130,13 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
   ]
 
   const missing = expectedMissingAnchors(input, present)
+  const questions = collaborationQuestions(input, namedActors, missing)
 
   return {
     domain: interpretation.domain,
     actors,
+    named_actors: namedActors,
+    role_anchors: roleAnchors,
     institutions,
     dates,
     places: [],
@@ -127,6 +158,7 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
       ...(input.expertises?.blind_spots_to_test ?? []),
       ...missing,
     ]).slice(0, 12),
+    collaboration_questions: questions,
     trace: {
       service: 'ConcreteTheatreBuilder',
       version: 'v2-foundation',
@@ -134,6 +166,9 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
       status: missing.length > 0 ? 'partial' : 'ok',
       notes: [
         `actors=${actors.length}`,
+        `named_actors=${namedActors.length}`,
+        `role_anchors=${roleAnchors.length}`,
+        `collaboration_questions=${questions.length}`,
         `evidence=${evidence.length}`,
         `missing_anchors=${missing.length}`,
         input.expertises ? `expertise_playbook=${input.expertises.domain_playbook.id}` : 'expertise_playbook=none',
