@@ -4172,7 +4172,7 @@ export async function POST(req: NextRequest) {
       situation: urlAugmentedAnalysisText,
       intentContext,
       resources,
-      forceGenerate: explicitPrudentGeneration || hasUrlInFlow || isPublicFast,
+      forceGenerate: explicitPrudentGeneration,
     })
     const resourcesStatus =
       rawFetchedResources.length > 0
@@ -4181,7 +4181,7 @@ export async function POST(req: NextRequest) {
           ? 'unavailable'
           : 'not_needed'
 
-    if (readinessGate.status === 'ask_user' && readinessGate.question && !explicitPrudentGeneration && !hasUrlInFlow) {
+    if (readinessGate.status === 'ask_user' && readinessGate.question && !explicitPrudentGeneration) {
       recordGenerationTrace({
         status: 'partial',
         gate: 'CLARIFY',
