@@ -46,6 +46,7 @@ import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
 import { buildGenerationEvent } from '@/lib/archive'
 import { DEFAULT_LANGUAGE_SERVICE_CONTRACT } from '@/lib/contracts/language'
 import { DEFAULT_BUZZ_READINESS, DEFAULT_PDF_EXPORT_CONTRACT, DEFAULT_UNIFIED_SHARE_BUTTON } from '@/lib/contracts/share'
+import { planShare } from '@/lib/share'
 import { runSecurityAbuseGuard } from '@/lib/security/SecurityAbuseGuard'
 import type {
   ArbreACamesAnalysis,
@@ -4381,24 +4382,59 @@ export async function POST(req: NextRequest) {
         modelPath: 'local',
       })
     }
-    const shareContract = {
-      share_button: DEFAULT_UNIFIED_SHARE_BUTTON,
-      buzz_readiness: DEFAULT_BUZZ_READINESS,
-      status: generationArchive?.archive_decision.store_snapshot ? 'snapshot_available' : 'snapshot_required',
-      generation_rule: 'share_requires_snapshot_no_regeneration',
-      reason_fr:
-        'La generation publique prepare le partage, mais ne cree pas de snapshot automatiquement. Le bouton Partager doit passer par share-v2 et ne jamais regenerer la carte.',
-    }
+    const sourceSnapshotLanguage = 'fr' as const
     const languageContract = {
       ...DEFAULT_LANGUAGE_SERVICE_CONTRACT,
-      input_language: 'fr',
-      output_language: 'fr',
-      snapshot_language: 'fr',
+      input_language: sourceSnapshotLanguage,
+      output_language: sourceSnapshotLanguage,
+      snapshot_language: sourceSnapshotLanguage,
       mode: 'source',
       status: 'ok',
       snapshot_rule: 'source_snapshot_language',
       translated_snapshot_route: '/api/language-v2/snapshot',
       share_rule: 'Une langue partagee exige un snapshot stable dans cette langue. Changer de langue passe par language-v2 avant lien, PDF ou envoi.',
+    }
+    const pendingShareSnapshot = {
+      id: '',
+      generation_event_id: generationArchive?.event.id ?? '',
+      created_at: generationArchive?.event.created_at ?? new Date().toISOString(),
+      language: languageContract.snapshot_language,
+      privacy_mode: 'snapshot_allowed',
+      admin_learning_only: false,
+      user_deletable: true,
+      card_version: '1.0',
+      canonical_question: displayText,
+      header_domain: canonicalInterpretation.header_domain,
+      header_subject: canonicalInterpretation.header_subject,
+      situation_soumise: canonicalInterpretation.situation_soumise,
+      payload: {
+        language: languageContract.snapshot_language,
+        writing: {
+          situation_card: baseSc,
+          lecture: writingContract?.lecture ?? baseSc.lecture_systeme_fr ?? baseSc.insight_fr,
+          approfondir: writingContract?.approfondir ?? baseSc.lecture_systeme_fr ?? baseSc.insight_fr,
+        },
+        resources: canonicalResourcePlan,
+        quality: canonicalQuality,
+      },
+      source_count: canonicalResourcePlan.public_sources.length,
+    } as const
+    const sharePlan = planShare({
+      snapshot: pendingShareSnapshot,
+      target_language: sourceSnapshotLanguage,
+      visibility: 'restricted',
+    })
+    const shareContract = {
+      share_button: DEFAULT_UNIFIED_SHARE_BUTTON,
+      buzz_readiness: DEFAULT_BUZZ_READINESS,
+      status: generationArchive?.archive_decision.store_snapshot ? 'snapshot_available' : 'snapshot_required',
+      generation_rule: 'share_requires_snapshot_no_regeneration',
+      plan_route: '/api/share-v2/plan',
+      planner_status: sharePlan.status,
+      planner_blockers: sharePlan.blockers,
+      planner_next_steps: sharePlan.next_steps,
+      reason_fr:
+        'La generation publique prepare le partage, mais ne cree pas de snapshot automatiquement. Le bouton Partager doit passer par share-v2 et ne jamais regenerer la carte.',
     }
     const pdfContract = {
       ...DEFAULT_PDF_EXPORT_CONTRACT,
