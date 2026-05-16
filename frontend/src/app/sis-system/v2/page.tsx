@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import CtoWatchTester from './CtoWatchTester'
+import GenerationLayerTracePanel from './GenerationLayerTracePanel'
 import GenerateV2Tester from './GenerateV2Tester'
 import LanguageV2Tester from './LanguageV2Tester'
 import PdfExportV2Tester from './PdfExportV2Tester'
@@ -278,6 +279,8 @@ export default function SisSystemV2Page() {
         <SharedSnapshotResolveTester />
 
         <CtoWatchTester />
+
+        <GenerationLayerTracePanel />
 
         <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
