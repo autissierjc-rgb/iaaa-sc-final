@@ -43,7 +43,7 @@ import { applyEntityExplanationsToSituationCard } from '@/lib/text/entityExplana
 import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
 import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
-import { buildGenerationEvent } from '@/lib/archive'
+import { buildCtoWatchMetricsFromEvents, buildCtoWatchReport, buildGenerationEvent } from '@/lib/archive'
 import { DEFAULT_LANGUAGE_SERVICE_CONTRACT } from '@/lib/contracts/language'
 import { DEFAULT_BUZZ_READINESS, DEFAULT_PDF_EXPORT_CONTRACT, DEFAULT_UNIFIED_SHARE_BUTTON } from '@/lib/contracts/share'
 import { planShare } from '@/lib/share'
@@ -4448,6 +4448,15 @@ export async function POST(req: NextRequest) {
       reason_fr:
         'Le PDF est une action du bouton Partager. Il doit etre exporte depuis un snapshot valide, dans la langue du snapshot, sans relancer le LLM, Tavily ou la generation.',
     }
+    const ctoWatchReport = generationArchive
+      ? buildCtoWatchReport({
+          metrics: buildCtoWatchMetricsFromEvents({
+            events: [generationArchive.event],
+            estimated_hourly_cost_eur: mode === 'generate_full' ? 0.4 : mode === 'public_fast' ? 0.08 : 0.2,
+            shared_card_cache_hit_rate: 1,
+          }),
+        })
+      : null
     recordGenerationTrace({
       status: 'ok',
       gate: 'GENERATE',
@@ -4496,6 +4505,24 @@ export async function POST(req: NextRequest) {
       resourcesCount: canonicalResourcePlan.resources.length,
       modelPath: 'local',
     })
+    if (ctoWatchReport) {
+      recordGenerationTrace({
+        status: ctoWatchReport.status === 'critical' ? 'error' : ctoWatchReport.status === 'watch' ? 'partial' : 'ok',
+        gate: 'GENERATE',
+        route: '/api/generate',
+        canonicalLayer: 'admin/cockpit',
+        pipelineStep: 'CtoWatch',
+        diagnostic: `${ctoWatchReport.status}:alert=${ctoWatchReport.should_alert}`.slice(0, 240),
+        durationMs: 0,
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+        resourcesStatus: canonicalResourcePlan.status,
+        resourcesCount: canonicalResourcePlan.resources.length,
+        modelPath: 'local',
+      })
+    }
     baseSc = {
       ...baseSc,
       coverage_check: effectiveCoverageForGeneration,
@@ -4513,6 +4540,7 @@ export async function POST(req: NextRequest) {
       share_contract: shareContract,
       language_contract: languageContract,
       pdf_contract: pdfContract,
+      cto_watch: ctoWatchReport,
     }
     const siteGuard = prebuiltSiteCard ?? siteAnalysisFallbackCard({
       situation: displayText,
