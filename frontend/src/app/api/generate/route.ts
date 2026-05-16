@@ -44,6 +44,7 @@ import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
 import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
 import { buildGenerationEvent } from '@/lib/archive'
+import { DEFAULT_LANGUAGE_SERVICE_CONTRACT } from '@/lib/contracts/language'
 import { DEFAULT_BUZZ_READINESS, DEFAULT_UNIFIED_SHARE_BUTTON } from '@/lib/contracts/share'
 import { runSecurityAbuseGuard } from '@/lib/security/SecurityAbuseGuard'
 import type {
@@ -4388,6 +4389,17 @@ export async function POST(req: NextRequest) {
       reason_fr:
         'La generation publique prepare le partage, mais ne cree pas de snapshot automatiquement. Le bouton Partager doit passer par share-v2 et ne jamais regenerer la carte.',
     }
+    const languageContract = {
+      ...DEFAULT_LANGUAGE_SERVICE_CONTRACT,
+      input_language: 'fr',
+      output_language: 'fr',
+      snapshot_language: 'fr',
+      mode: 'source',
+      status: 'ok',
+      snapshot_rule: 'source_snapshot_language',
+      translated_snapshot_route: '/api/language-v2/snapshot',
+      share_rule: 'Une langue partagee exige un snapshot stable dans cette langue. Changer de langue passe par language-v2 avant lien, PDF ou envoi.',
+    }
     recordGenerationTrace({
       status: 'ok',
       gate: 'GENERATE',
@@ -4395,6 +4407,22 @@ export async function POST(req: NextRequest) {
       canonicalLayer: 'share',
       pipelineStep: 'SharePolicy',
       diagnostic: `${shareContract.status}:${DEFAULT_UNIFIED_SHARE_BUTTON.language_rule}`.slice(0, 240),
+      durationMs: 0,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: intentContext.interpreted_request?.intent_type,
+      questionType: intentContext.interpreted_request?.question_type,
+      resourcesStatus: canonicalResourcePlan.status,
+      resourcesCount: canonicalResourcePlan.resources.length,
+      modelPath: 'local',
+    })
+    recordGenerationTrace({
+      status: 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'share',
+      pipelineStep: 'LanguageSnapshotRule',
+      diagnostic: `${languageContract.snapshot_language}:${languageContract.snapshot_rule}`.slice(0, 240),
       durationMs: 0,
       inputChars: analysisText.length,
       domain: canonicalInterpretation.domain,
@@ -4419,6 +4447,7 @@ export async function POST(req: NextRequest) {
       },
       generation_archive: generationArchive,
       share_contract: shareContract,
+      language_contract: languageContract,
     }
     const siteGuard = prebuiltSiteCard ?? siteAnalysisFallbackCard({
       situation: displayText,
