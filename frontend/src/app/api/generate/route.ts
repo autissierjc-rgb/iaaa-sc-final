@@ -45,7 +45,7 @@ import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituat
 import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
 import { buildGenerationEvent } from '@/lib/archive'
 import { DEFAULT_LANGUAGE_SERVICE_CONTRACT } from '@/lib/contracts/language'
-import { DEFAULT_BUZZ_READINESS, DEFAULT_UNIFIED_SHARE_BUTTON } from '@/lib/contracts/share'
+import { DEFAULT_BUZZ_READINESS, DEFAULT_PDF_EXPORT_CONTRACT, DEFAULT_UNIFIED_SHARE_BUTTON } from '@/lib/contracts/share'
 import { runSecurityAbuseGuard } from '@/lib/security/SecurityAbuseGuard'
 import type {
   ArbreACamesAnalysis,
@@ -4400,6 +4400,18 @@ export async function POST(req: NextRequest) {
       translated_snapshot_route: '/api/language-v2/snapshot',
       share_rule: 'Une langue partagee exige un snapshot stable dans cette langue. Changer de langue passe par language-v2 avant lien, PDF ou envoi.',
     }
+    const pdfContract = {
+      ...DEFAULT_PDF_EXPORT_CONTRACT,
+      export_id: generationArchive ? `pdf_pending_${generationArchive.event.id}` : 'pdf_pending_snapshot',
+      source_snapshot_id: 'snapshot_required',
+      language: languageContract.snapshot_language,
+      status: 'snapshot_required',
+      plan_route: '/api/pdf-v2/plan',
+      export_route: '/api/pdf-v2/export',
+      snapshot_rule: 'export_snapshot_language_only',
+      reason_fr:
+        'Le PDF est une action du bouton Partager. Il doit etre exporte depuis un snapshot valide, dans la langue du snapshot, sans relancer le LLM, Tavily ou la generation.',
+    }
     recordGenerationTrace({
       status: 'ok',
       gate: 'GENERATE',
@@ -4432,6 +4444,22 @@ export async function POST(req: NextRequest) {
       resourcesCount: canonicalResourcePlan.resources.length,
       modelPath: 'local',
     })
+    recordGenerationTrace({
+      status: 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'share',
+      pipelineStep: 'PdfExportPolicy',
+      diagnostic: `${pdfContract.status}:${pdfContract.snapshot_rule}`.slice(0, 240),
+      durationMs: 0,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: intentContext.interpreted_request?.intent_type,
+      questionType: intentContext.interpreted_request?.question_type,
+      resourcesStatus: canonicalResourcePlan.status,
+      resourcesCount: canonicalResourcePlan.resources.length,
+      modelPath: 'local',
+    })
     baseSc = {
       ...baseSc,
       coverage_check: effectiveCoverageForGeneration,
@@ -4448,6 +4476,7 @@ export async function POST(req: NextRequest) {
       generation_archive: generationArchive,
       share_contract: shareContract,
       language_contract: languageContract,
+      pdf_contract: pdfContract,
     }
     const siteGuard = prebuiltSiteCard ?? siteAnalysisFallbackCard({
       situation: displayText,
