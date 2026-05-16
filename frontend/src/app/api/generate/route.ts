@@ -33,6 +33,7 @@ import { applyEntityExplanationsToSituationCard } from '@/lib/text/entityExplana
 import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
 import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
+import { runSecurityAbuseGuard } from '@/lib/security/SecurityAbuseGuard'
 import type {
   ArbreACamesAnalysis,
   PatternContext,
@@ -3346,6 +3347,34 @@ export async function POST(req: NextRequest) {
     }
 
     const text = situation.trim()
+    const securityGuard = runSecurityAbuseGuard({
+      input_chars: text.length,
+      text_sample: [
+        text,
+        typeof original_situation === 'string' ? original_situation : '',
+        dialogueText(dialogue_events),
+      ].filter(Boolean).join('\n').slice(0, 4000),
+      estimated_cost_cents: mode === 'generate_full' ? 40 : mode === 'public_fast' ? 8 : 20,
+    })
+    if (securityGuard.risk_level === 'block' || securityGuard.risk_level === 'throttle') {
+      recordGenerationTrace({
+        status: 'error',
+        gate: 'ERROR',
+        route: '/api/generate',
+        durationMs: Date.now() - requestStartedAt,
+        inputChars: text.length,
+        errorKind: `security:${securityGuard.signals.join(',') || securityGuard.risk_level}`,
+      })
+      return NextResponse.json({
+        gate: 'BLOCK',
+        reason: 'La demande doit être ralentie ou bloquée par sécurité avant génération.',
+        security: {
+          risk_level: securityGuard.risk_level,
+          signals: securityGuard.signals,
+          cto_watch_required: securityGuard.cto_watch_required,
+        },
+      }, { status: securityGuard.risk_level === 'block' ? 400 : 429 })
+    }
     const rawDisplayText =
       typeof original_situation === 'string' && original_situation.trim()
         ? normalizeSubmittedSituation(original_situation.trim())
