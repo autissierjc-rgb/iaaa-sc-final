@@ -1918,6 +1918,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       : typedText
     const isFreshSituation = !waitingForAnswers && !refiningOptional && Boolean(typedText) && typedText !== baseSituation
     const generationSituation = text
+    const exploratoryGeneration = waitingForAnswers || refiningOptional
     const dialogueEvents: DialogueEvent[] = []
     if (waitingForAnswers && lastMsg?.kind === 'clarify') {
       const directAnswer = typedText && typedText !== text
@@ -1979,6 +1980,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           original_situation: text,
           lang: contentLang.toLowerCase(),
           mode: 'public_fast',
+          generate_prudently: exploratoryGeneration,
           refine_acknowledged: refiningOptional || waitingForAnswers,
           conversation_contract: scData?.conversation_contract,
           dialogue_events: dialogueEvents,
@@ -2020,6 +2022,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
             original_situation: text,
             lang: contentLang.toLowerCase(),
             mode: 'generate_full',
+            generate_prudently: exploratoryGeneration,
             refine_acknowledged: true,
             conversation_contract: scData2.sc.conversation_contract ?? scData?.conversation_contract,
             dialogue_events: dialogueEvents,
