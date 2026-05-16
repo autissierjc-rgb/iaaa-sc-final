@@ -33,7 +33,8 @@ import { sanitizeResources } from '@/lib/resources/sanitizeResources'
 import { shouldUseWeb } from '@/lib/resources/shouldUseWeb'
 import { enrichResourcesWithSiteUnderstanding } from '@/lib/resources/siteUnderstanding'
 import { detectScopeContext } from '@/lib/scope/scopeContext'
-import { buildConcreteTheatre } from '@/lib/context/concreteTheatre'
+import { buildConcreteTheatre as buildLegacyConcreteTheatre } from '@/lib/context/concreteTheatre'
+import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/theatre'
 import { applyEntityExplanationsToSituationCard } from '@/lib/text/entityExplanations'
 import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
@@ -1017,6 +1018,41 @@ function resourceContractsFromItems(items: ResourceItem[]): ResourceContract[] {
         ? item.reliability
         : 'unknown',
   }))
+}
+
+function legacyDomainFromCanonical(value: string) {
+  if (value === 'war_security') return 'war'
+  if (value === 'family' || value === 'couple' || value === 'school_adolescence' || value === 'health_body') return 'personal'
+  if (value === 'startup_market' || value === 'business_strategy' || value === 'product_platform') return 'startup_vc'
+  if (value === 'finance_macro') return 'economy'
+  if (value === 'public_governance' || value === 'institutional_crisis' || value === 'law_justice') return 'governance'
+  if (value === 'professional' || value === 'management') return value
+  if (value === 'humanitarian' || value === 'geopolitics') return value
+  return 'general'
+}
+
+function mergeCanonicalTheatreIntoLegacy(
+  legacy: ConcreteTheatre,
+  canonical: ReturnType<typeof buildCanonicalConcreteTheatre>,
+): ConcreteTheatre {
+  return {
+    ...legacy,
+    domain: legacyDomainFromCanonical(canonical.domain) as ConcreteTheatre['domain'],
+    actors: Array.from(new Set([...canonical.actors, ...legacy.actors])).slice(0, 12),
+    institutions: Array.from(new Set([...canonical.institutions, ...legacy.institutions])).slice(0, 12),
+    procedures: Array.from(new Set([...canonical.procedures, ...legacy.procedures])).slice(0, 10),
+    places: Array.from(new Set([...canonical.places, ...legacy.places])).slice(0, 10),
+    dates: Array.from(new Set([...canonical.dates, ...legacy.dates])).slice(0, 10),
+    mechanisms: Array.from(new Set([...canonical.visible_actions, ...legacy.mechanisms])).slice(0, 10),
+    evidence_to_watch: Array.from(new Set([
+      ...canonical.evidence.map((item) => item.label),
+      ...legacy.evidence_to_watch,
+    ])).slice(0, 10),
+    missing_anchors: Array.from(new Set([...canonical.missing_anchors, ...legacy.missing_anchors])).slice(0, 10),
+    guidance_fr: canonical.trace.status === 'partial'
+      ? 'Le théâtre réel canonique signale encore des ancres manquantes : acteurs, procédures, preuves ou contraintes doivent rester visibles dans la lecture.'
+      : legacy.guidance_fr,
+  }
 }
 
 function defaultTrajectories(arbre: ArbreACamesAnalysis, situation: string) {
@@ -3952,15 +3988,37 @@ export async function POST(req: NextRequest) {
     }
     const arbre = enrichArbreWithCoverage({ arbre: rawArbre, coverage: effectiveCoverageWithReadiness })
     const scopeContext = detectScopeContext(analysisText, arbre)
-    const concreteTheatre = buildConcreteTheatre({
+    const legacyConcreteTheatre = buildLegacyConcreteTheatre({
       situation: analysisText,
       arbre,
       resources,
       intentContext,
     })
+    const canonicalTheatre = buildCanonicalConcreteTheatre({
+      interpretation: canonicalInterpretation,
+      resources: canonicalResourcePlan,
+      expertises: expertisesMetiers,
+    })
+    const concreteTheatre = mergeCanonicalTheatreIntoLegacy(legacyConcreteTheatre, canonicalTheatre)
+    recordGenerationTrace({
+      status: canonicalTheatre.trace.status === 'partial' ? 'partial' : 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'theatre',
+      pipelineStep: 'ConcreteTheatreBuilder',
+      diagnostic: canonicalTheatre.trace.notes?.join(' | ').slice(0, 240) ?? canonicalTheatre.trace.status,
+      durationMs: canonicalTheatre.trace.duration_ms ?? 0,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: intentContext.interpreted_request?.intent_type,
+      questionType: intentContext.interpreted_request?.question_type,
+      resourcesStatus: canonicalResourcePlan.status,
+      resourcesCount: canonicalResourcePlan.resources.length,
+    })
     const effectiveCoverageForGeneration = {
       ...effectiveCoverageWithReadiness,
       concrete_theatre: concreteTheatre,
+      canonical_theatre: canonicalTheatre,
       expertises_metiers: expertisesMetiers,
       resource_service: canonicalResourcePlan,
     }
