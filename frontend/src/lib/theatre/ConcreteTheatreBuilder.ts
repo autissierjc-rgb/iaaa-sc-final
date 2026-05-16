@@ -26,7 +26,7 @@ const DOMAIN_EXPECTED_ANCHORS: Record<string, string[]> = {
   science_research: ['question scientifique', 'publication', 'methode', 'niveau preuve'],
   law_justice: ['texte applicable', 'juridiction', 'procedure', 'preuve'],
   professional: ['role', 'decisionnaire', 'contrainte', 'prochaine decision'],
-  management: ['manager', 'equipe', 'decisionnaire', 'charge reelle'],
+  management: ['manager', 'equipe', 'decisionnaire', 'decision ou regle contestee'],
 }
 
 function unique(items: string[]): string[] {
@@ -63,25 +63,87 @@ function expectedMissingAnchors(input: ConcreteTheatreBuilderInput, present: str
   return expected.filter((anchor) => !text.includes(anchor.toLowerCase()))
 }
 
-function collaborationQuestions(input: ConcreteTheatreBuilderInput, namedActors: string[], missing: string[]): string[] {
-  const domain = input.interpretation.domain
+function shortSubject(input: ConcreteTheatreBuilderInput): string {
+  const value =
+    input.interpretation.object_of_analysis ||
+    input.interpretation.header_subject ||
+    input.interpretation.situation_soumise ||
+    'cette situation'
 
-  if ((domain === 'management' || domain === 'professional') && namedActors.length === 0) {
+  return value
+    .replace(/^une?\s+/i, '')
+    .replace(/[?.!]+$/g, '')
+    .trim()
+    .slice(0, 90) || 'cette situation'
+}
+
+function firstUseful(items: string[], fallback: string): string {
+  return items.find((item) => item.length > 0 && !/^acteurs?$/i.test(item)) ?? fallback
+}
+
+function collaborationQuestions(
+  input: ConcreteTheatreBuilderInput,
+  namedActors: string[],
+  roleAnchors: string[],
+  missing: string[],
+): string[] {
+  const domain = input.interpretation.domain
+  const subject = shortSubject(input)
+  const visibleActor = firstUseful(namedActors, firstUseful(roleAnchors, 'l’acteur principal'))
+  const missingAnchor = firstUseful(missing, 'l’élément qui ferait changer la lecture')
+  const text = [
+    input.interpretation.raw_input,
+    input.interpretation.situation_soumise,
+    input.interpretation.object_of_analysis,
+    input.interpretation.angle,
+    input.interpretation.user_need,
+    input.interpretation.primary_hypothesis ?? '',
+  ].join(' ')
+
+  if (domain === 'management') {
+    if (/\b(conflit|tension|desaccord|désaccord|reorganisation|réorganisation|equipe|équipe)\b/i.test(text)) {
+      return [
+        `Dans ${subject}, quels groupes ne lisent pas la réorganisation de la même façon ?`,
+        `Quelle décision, règle ou annonce a rendu le désaccord visible ?`,
+      ]
+    }
+
     return [
-      'Qui porte la charge principale dans cette situation ?',
-      'Qui peut décider, bloquer ou arbitrer maintenant ?',
+      `Dans ${subject}, quel rôle reste trop flou pour comprendre le blocage ?`,
+      `Quel fait montrerait que ${visibleActor} accepte, ralentit ou conteste la décision ?`,
     ]
   }
 
-  if (domain === 'startup_market' && namedActors.length === 0) {
+  if (domain === 'professional') {
     return [
-      'Quelle cible, client ou partenaire faut-il nommer en premier ?',
-      'Quelle preuve d’usage ou de traction existe déjà ?',
+      `Pour ${subject}, quelle décision précise doit sortir de la carte ?`,
+      `Qui peut valider, refuser ou rendre cette décision coûteuse ?`,
+    ]
+  }
+
+  if (domain === 'startup_market' || domain === 'product_platform' || domain === 'business_strategy') {
+    return [
+      `Pour ${subject}, quel premier public donnerait le signal le plus net ?`,
+      `Quelle preuve d’usage séparerait l’intérêt poli d’un vrai besoin ?`,
+    ]
+  }
+
+  if (domain === 'family' || domain === 'couple' || domain === 'school_adolescence') {
+    return [
+      `Dans ${subject}, quel lien ou moment concret manque encore pour situer la scène ?`,
+      `Quel geste observable montrerait que la relation change vraiment ?`,
+    ]
+  }
+
+  if (domain === 'geopolitics' || domain === 'institutional_crisis') {
+    return [
+      `Dans ${subject}, quel acteur habilité peut transformer la tension en acte officiel ?`,
+      `Quelle procédure, décision ou date rendrait la lecture vérifiable ?`,
     ]
   }
 
   if (missing.length > 0) {
-    return [`Quel élément concret manque le plus : ${missing.slice(0, 3).join(', ')} ?`]
+    return [`Pour ${subject}, quelle précision manque encore sur ${missingAnchor} ?`]
   }
 
   return []
@@ -130,7 +192,7 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
   ]
 
   const missing = expectedMissingAnchors(input, present)
-  const questions = collaborationQuestions(input, namedActors, missing)
+  const questions = collaborationQuestions(input, namedActors, roleAnchors, missing)
 
   return {
     domain: interpretation.domain,
