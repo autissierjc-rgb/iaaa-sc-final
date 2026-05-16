@@ -5,6 +5,8 @@ import type { SituationCard } from '@/lib/resources/resourceContract'
 
 export const dynamic = 'force-dynamic'
 
+const CASE_TIMEOUT_MS = 15000
+
 type GenerateV2Payload = {
   ok?: boolean
   error?: string
@@ -43,6 +45,20 @@ type GenerateV2Payload = {
   total_duration_ms?: number
 }
 
+async function fetchWithTimeout(url: URL, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 function cardFromGenerateV2(payload: GenerateV2Payload): SituationCard {
   const writingCard = payload.writing?.situation_card ?? {}
   const astrolabe = payload.scoring?.astrolabe ?? []
@@ -76,14 +92,14 @@ export async function POST(request: NextRequest) {
 
   for (const testCase of DIAMOND_REGRESSION_CASES) {
     try {
-      const response = await fetch(new URL('/api/generate-v2', origin), {
+      const response = await fetchWithTimeout(new URL('/api/generate-v2', origin), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           input: testCase.input,
           mode: 'public_fast',
         }),
-      })
+      }, CASE_TIMEOUT_MS)
       const payload = await response.json() as GenerateV2Payload
 
       if (!response.ok || !payload.ok) {
@@ -117,11 +133,15 @@ export async function POST(request: NextRequest) {
         ok: false,
         domain: testCase.domain,
         playbook: 'route_error',
-        duration_ms: 0,
+        duration_ms: CASE_TIMEOUT_MS,
         issues: [{
           level: 'error',
-          code: 'diamond_regression_route_error',
-          message: error instanceof Error ? error.message : 'Unknown regression route error.',
+          code: error instanceof Error && error.name === 'AbortError'
+            ? 'diamond_regression_timeout'
+            : 'diamond_regression_route_error',
+          message: error instanceof Error && error.name === 'AbortError'
+            ? `Regression case exceeded ${CASE_TIMEOUT_MS} ms.`
+            : error instanceof Error ? error.message : 'Unknown regression route error.',
         }],
       })
     }

@@ -63,7 +63,7 @@ export default function DiamondRegressionTester() {
         <div style={{ maxWidth: 760 }}>
           <h2 style={{ margin: 0, fontSize: 15 }}>Runner non-regression</h2>
           <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
-            Execute les cas canoniques via generate-v2, puis applique DiamondRegressionRunner sur les cartes produites.
+            Execute les cas canoniques via generate-v2, puis applique DiamondRegressionRunner sur les cartes produites. Chaque cas est borne : un timeout devient un echec visible du benchmark.
           </p>
         </div>
         <button
