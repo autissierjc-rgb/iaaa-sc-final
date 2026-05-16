@@ -1425,12 +1425,17 @@ function siteAnalysisFallbackCard({
   const frame = intentContext?.dominant_frame
   const decisionType = intentContext?.decision_type
   const questionType = intentContext?.interpreted_request?.question_type
+  const materialRole = classifyUserMaterialResourceRole(situation)
+  const materialIsObject = materialRole.role === 'object_of_analysis'
   const canUseSiteBrief =
-    questionType === 'site_analysis' ||
-    frame === 'site_analysis' ||
-    frame === 'startup_investment' ||
-    decisionType === 'analyze_site' ||
-    decisionType === 'evaluate_investment'
+    materialIsObject &&
+    (
+      questionType === 'site_analysis' ||
+      frame === 'site_analysis' ||
+      frame === 'startup_investment' ||
+      decisionType === 'analyze_site' ||
+      decisionType === 'evaluate_investment'
+    )
   if (!canUseSiteBrief) return null
 
   const objectName = cleanPublicText(intentContext?.interpreted_request?.object_of_analysis ?? '')
