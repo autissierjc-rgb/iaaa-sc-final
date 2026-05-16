@@ -84,6 +84,31 @@ const FAST_SOURCE_TERMS = [
   'guerre',
 ]
 
+const INTERNAL_CONTEXT_DOMAINS = new Set<SituationDomainV2>([
+  'couple',
+  'family',
+  'management',
+  'professional',
+  'school_adolescence',
+])
+
+const EXPLICIT_EXTERNAL_SOURCE_TERMS = [
+  'actualite',
+  'actuel',
+  'aujourd hui',
+  'derniere',
+  'dernier',
+  'latest',
+  'recent',
+  'source',
+  'ressource',
+  'url',
+  'site',
+  'article',
+  'rapport',
+  'preuve publique',
+]
+
 type FastResourceDecision = {
   policy: FastResourcePolicy
   needs_web: boolean
@@ -115,6 +140,18 @@ function decideFastResourcePolicy(interpretation: InterpretationContract, urls: 
   ].join(' '))
   const termRequiresSources = FAST_SOURCE_TERMS.some((term) => haystack.includes(normalizeText(term)))
   const domainRequiresSources = FAST_SOURCE_DOMAINS.has(interpretation.domain)
+  const internalContext =
+    INTERNAL_CONTEXT_DOMAINS.has(interpretation.domain) &&
+    /\b(ma|mon|mes|notre|nos|dans ma|dans mon|dans notre|equipe|reorganisation|conflit interne)\b/.test(haystack) &&
+    !EXPLICIT_EXTERNAL_SOURCE_TERMS.some((term) => haystack.includes(normalizeText(term)))
+
+  if (internalContext && !domainRequiresSources) {
+    return {
+      policy: 'internal_context_ok',
+      needs_web: false,
+      reason_fr: 'La situation est un contexte interne ou relationnel : elle ne doit pas exiger de sources web sans URL, document ou demande explicite de verification externe.',
+    }
+  }
 
   if (domainRequiresSources || termRequiresSources) {
     return {
