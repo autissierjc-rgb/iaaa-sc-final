@@ -1196,12 +1196,15 @@ function siteAnalysisFallbackCard({
   branches: AstrolabeBranch[]
   intentContext?: IntentContext
 }): SituationCard | null {
-  const intent = intentContext?.interpreted_request?.intent_type
   const frame = intentContext?.dominant_frame
+  const decisionType = intentContext?.decision_type
+  const questionType = intentContext?.interpreted_request?.question_type
   const canUseSiteBrief =
+    questionType === 'site_analysis' ||
     frame === 'site_analysis' ||
     frame === 'startup_investment' ||
-    ((intent === 'evaluate' || intent === 'understand' || intent === 'compare') && frame === 'general_analysis')
+    decisionType === 'analyze_site' ||
+    decisionType === 'evaluate_investment'
   if (!canUseSiteBrief) return null
 
   const objectName = cleanPublicText(intentContext?.interpreted_request?.object_of_analysis ?? '')
@@ -1210,15 +1213,15 @@ function siteAnalysisFallbackCard({
     .replace(/[.;:]+$/g, '')
     .trim()
   const brief = siteBrief(resources, objectName, situation)
+  const hasExplicitUrlSignal = hasExplicitUrl(situation)
   const hasExplicitSiteSignal =
-    /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(situation) ||
+    hasExplicitUrlSignal ||
     /\b(site|page|plateforme|application|app|service|outil)\b/i.test(situation) ||
     resources.some((resource) => resource.type === 'site-brief')
   const hasCompanyEvaluationSignal =
     /\b(compagnie|entreprise|startup|soci[eé]t[eé]|rejoindre|partenariat|investir|client|march[eé]|business|go[- ]?to[- ]?market)\b/i.test(situation)
-  const hasExplicitUrlSignal = hasExplicitUrl(situation)
   if (frame === 'general_analysis' && !hasExplicitSiteSignal && !hasCompanyEvaluationSignal) return null
-  if (!brief && frame !== 'site_analysis' && frame !== 'startup_investment' && !hasCompanyEvaluationSignal) return null
+  if (!brief && questionType !== 'site_analysis' && frame !== 'site_analysis' && frame !== 'startup_investment' && decisionType !== 'analyze_site' && decisionType !== 'evaluate_investment') return null
   const excerpt = brief?.excerpt ?? ''
   const company = siteNameFromBrief(brief, companyNameFromQuestion(situation) || objectName || 'ce site')
   const product = lineAfterPrefix(excerpt, 'Ce que fait l’entreprise') ||
