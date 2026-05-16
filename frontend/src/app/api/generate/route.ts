@@ -19,6 +19,7 @@ import { buildCanonicalSituationFromDialogue } from '@/lib/intent/dialogueCanoni
 import { interpretRequest } from '@/lib/intent/interpretRequest'
 import { interpretRequestWithModel } from '@/lib/intent/modelIntentInterpreter'
 import { situationIntentRouter } from '@/lib/intent/situationIntentRouter'
+import { buildBlindSpotInquiry } from '@/lib/inquiry'
 import { interpretSituation } from '@/lib/interpretation'
 import { runDialogueGate } from '@/lib/dialogue'
 import { runRiskAdviceGuard } from '@/lib/safety'
@@ -4037,6 +4038,10 @@ export async function POST(req: NextRequest) {
       resources: canonicalResourcePlan,
       expertises: expertisesMetiers,
     })
+    const inquiry = buildBlindSpotInquiry({
+      interpretation: canonicalInterpretation,
+      theatre: canonicalTheatre,
+    })
     const concreteTheatre = mergeCanonicalTheatreIntoLegacy(legacyConcreteTheatre, canonicalTheatre)
     recordGenerationTrace({
       status: canonicalTheatre.trace.status === 'partial' ? 'partial' : 'ok',
@@ -4053,10 +4058,26 @@ export async function POST(req: NextRequest) {
       resourcesStatus: canonicalResourcePlan.status,
       resourcesCount: canonicalResourcePlan.resources.length,
     })
+    recordGenerationTrace({
+      status: inquiry.trace.status === 'partial' ? 'partial' : 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'inquiry',
+      pipelineStep: 'BlindSpotEngine',
+      diagnostic: inquiry.trace.notes?.join(' | ').slice(0, 240) ?? inquiry.trace.status,
+      durationMs: inquiry.trace.duration_ms ?? 0,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: intentContext.interpreted_request?.intent_type,
+      questionType: intentContext.interpreted_request?.question_type,
+      resourcesStatus: canonicalResourcePlan.status,
+      resourcesCount: canonicalResourcePlan.resources.length,
+    })
     const effectiveCoverageForGeneration = {
       ...effectiveCoverageWithReadiness,
       concrete_theatre: concreteTheatre,
       canonical_theatre: canonicalTheatre,
+      inquiry,
       expertises_metiers: expertisesMetiers,
       resource_service: canonicalResourcePlan,
     }

@@ -7,6 +7,7 @@ export type CanonicalTelemetryLayer =
   | 'resources'
   | 'expertisesMetiers'
   | 'theatre'
+  | 'inquiry'
   | 'scoring'
   | 'writing'
   | 'quality'
