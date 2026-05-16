@@ -59,7 +59,7 @@ import type {
   ConversationContract,
   ConcreteTheatre,
 } from '@/lib/resources/resourceContract'
-import type { AstrolabeBranchV2, RadarScoreV2, ResourceContract, ScoringContract, SourceChannel } from '@/lib/contracts'
+import type { AstrolabeBranchV2, RadarScoreV2, ResourceContract, ScoringContract, SourceChannel, WritingContract } from '@/lib/contracts'
 
 function hasExplicitUrl(value: string): boolean {
   return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
@@ -889,6 +889,40 @@ function firstSafeText(values: unknown[], situation: string, fallback: string): 
     if (text && !rejectsDiamondGuardText(text)) return text
   }
   return fallback
+}
+
+function applyWritingContractToCard(card: SituationCard, writing: WritingContract | null, situation: string): SituationCard {
+  if (!writing || writing.trace.status === 'error') return card
+
+  const sc = writing.situation_card
+  const approfondirSections = writing.approfondir.sections_fr
+    .map((section) => `${section.title}\n${section.body}`)
+    .filter(Boolean)
+    .join('\n\n')
+  const approfondirFr = [
+    writing.approfondir.analysis_fr,
+    approfondirSections,
+  ].filter(Boolean).join('\n\n')
+
+  return {
+    ...card,
+    title_fr: firstSafeText([sc.title_fr, card.title_fr], situation, card.title_fr ?? ''),
+    title_en: firstSafeText([sc.title_en, card.title_en], situation, card.title_en ?? card.title_fr ?? ''),
+    insight_fr: firstSafeText([sc.insight_fr, card.insight_fr], situation, card.insight_fr ?? ''),
+    insight_en: firstSafeText([sc.insight_en, card.insight_en], situation, card.insight_en ?? card.insight_fr ?? ''),
+    main_vulnerability_fr: firstSafeText([sc.main_vulnerability_fr, card.main_vulnerability_fr], situation, card.main_vulnerability_fr ?? ''),
+    main_vulnerability_en: firstSafeText([sc.main_vulnerability_en, card.main_vulnerability_en], situation, card.main_vulnerability_en ?? card.main_vulnerability_fr ?? ''),
+    asymmetry_fr: firstSafeText([sc.asymmetry_fr, card.asymmetry_fr], situation, card.asymmetry_fr ?? ''),
+    asymmetry_en: firstSafeText([sc.asymmetry_en, card.asymmetry_en], situation, card.asymmetry_en ?? card.asymmetry_fr ?? ''),
+    key_signal_fr: firstSafeText([sc.key_signal_fr, card.key_signal_fr], situation, card.key_signal_fr ?? ''),
+    key_signal_en: firstSafeText([sc.key_signal_en, card.key_signal_en], situation, card.key_signal_en ?? card.key_signal_fr ?? ''),
+    trajectories: writing.trajectories.length > 0 ? writing.trajectories : card.trajectories,
+    lecture_systeme_fr: firstSafeText([writing.lecture.text_fr, card.lecture_systeme_fr], situation, card.lecture_systeme_fr ?? ''),
+    lecture_systeme_en: firstSafeText([writing.lecture.text_en, card.lecture_systeme_en], situation, card.lecture_systeme_en ?? card.lecture_systeme_fr ?? ''),
+    approfondir_fr: firstSafeText([approfondirFr, card.approfondir_fr], situation, String(card.approfondir_fr ?? '')),
+    approfondir_en: firstSafeText([writing.approfondir.analysis_en, card.approfondir_en], situation, String(card.approfondir_en ?? card.approfondir_fr ?? '')),
+    writing_contract: writing,
+  }
 }
 
 function powersLabel(arbre: ArbreACamesAnalysis, fallback = 'acteurs, contraintes et temporalités'): string {
@@ -4394,6 +4428,7 @@ export async function POST(req: NextRequest) {
         modelPath: 'local',
       })
     }
+    baseSc = applyWritingContractToCard(baseSc, writingContract, displayText)
     const contractQuality = canonicalScoringForWriting
       ? runContractQualityGate({
           interpretation: canonicalInterpretation,
