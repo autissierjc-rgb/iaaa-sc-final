@@ -24,6 +24,7 @@ import {
   summarizePipelineRun,
 } from '@/lib/pipeline/PipelineTelemetry'
 import { buildCalibrationEvidence } from '@/lib/quality/CalibrationEvidence'
+import { DIAMOND_REGRESSION_CASES } from '@/lib/governance/diamondRegressionCases'
 import { buildUserReactionEvent } from '@/lib/archive'
 import {
   DEFAULT_BUZZ_READINESS,
@@ -93,6 +94,11 @@ export default function SisSystemV2Page() {
   const pdfExport = DEFAULT_PDF_EXPORT_CONTRACT
   const shareButton = DEFAULT_UNIFIED_SHARE_BUTTON
   const languageService = DEFAULT_LANGUAGE_SERVICE_CONTRACT
+  const regressionDomains = Array.from(new Set(DIAMOND_REGRESSION_CASES.map((item) => item.domain)))
+  const regressionForbiddenTerms = DIAMOND_REGRESSION_CASES.reduce(
+    (total, item) => total + item.expectations.forbiddenTerms.length,
+    0
+  )
 
   return (
     <main style={{ minHeight: '100vh', background: '#F5F0E8', color: '#1A2E5A', padding: '28px' }}>
@@ -281,6 +287,40 @@ export default function SisSystemV2Page() {
         <CtoWatchTester />
 
         <GenerationLayerTracePanel />
+
+        <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: 760 }}>
+              <h2 style={{ margin: 0, fontSize: 15 }}>Non-regressions diamant</h2>
+              <p style={{ color: '#6F6255', lineHeight: 1.65, fontSize: 13, margin: '10px 0 0' }}>
+                Les cas canoniques protegent les sorties contre les retours de formules generiques,
+                les domaines melanges, les fuites de dialogue et les ressources traitees comme mauvais objet.
+              </p>
+            </div>
+            <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
+              <div><strong style={{ color: '#1A2E5A' }}>{DIAMOND_REGRESSION_CASES.length}</strong> cas suivis</div>
+              <div><strong style={{ color: '#1A2E5A' }}>{regressionDomains.length}</strong> domaines couverts</div>
+              <div><strong style={{ color: '#C8951A' }}>{regressionForbiddenTerms}</strong> termes interdits</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10, marginTop: 16 }}>
+            {DIAMOND_REGRESSION_CASES.map((testCase) => (
+              <div key={testCase.id} style={{ border: '1px solid #F0EBE0', borderRadius: 8, padding: 12, background: '#FCFAF6' }}>
+                <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>
+                  {testCase.domain} · {testCase.expectations.forbiddenTerms.length} garde-fous
+                </p>
+                <h3 style={{ margin: '6px 0 0', color: '#1A2E5A', fontSize: 13 }}>{testCase.id}</h3>
+                <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+                  Requis : {testCase.expectations.requiredTerms.join(', ')}
+                </p>
+                <p style={{ margin: '7px 0 0', color: '#6F6255', fontSize: 11, lineHeight: 1.45 }}>
+                  {testCase.expectations.notes}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section style={{ background: '#fff', border: '1px solid #E1D6C2', borderRadius: 8, padding: 18, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>

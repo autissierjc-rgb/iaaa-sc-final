@@ -77,8 +77,8 @@ export const COCKPIT_TRACKS: CockpitTrack[] = [
         id: 'diamond-regressions',
         label: 'Tests diamant',
         source: 'src/lib/governance',
-        reliability: 'partial',
-        note: 'Les cas de regression existent, mais ils ne sont pas encore affiches comme indicateurs dans l admin.',
+        reliability: 'connected',
+        note: 'Les cas de regression sont maintenant visibles dans le cockpit V2 comme indicateur de couverture qualite.',
       },
       {
         id: 'calibration-benchmark',
