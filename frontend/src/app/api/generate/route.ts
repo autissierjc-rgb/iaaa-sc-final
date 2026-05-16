@@ -28,6 +28,7 @@ import { detectPatterns, patternGuidance } from '@/lib/patterns/detectPatterns'
 import { selectHumanCollectivePatterns } from '@/lib/patterns/humanCollective'
 import { detectMetierProfile } from '@/lib/profiles/detectMetierProfile'
 import { fetchResources } from '@/lib/resources/fetchResources'
+import { runFastResourceRunner } from '@/lib/resources/FastResourceRunner'
 import { planResources } from '@/lib/resources'
 import { DIAMOND_EDITORIAL_CONTRACT, SC_INTERPRETATION_AUTHORITY } from '@/lib/governance/scDoctrine'
 import { validateDiamondContract } from '@/lib/governance/diamondValidation'
@@ -1104,7 +1105,29 @@ function resourceContractsFromItems(items: ResourceItem[]): ResourceContract[] {
       item.reliability === 'primary' || item.reliability === 'secondary' || item.reliability === 'signal'
         ? item.reliability
         : 'unknown',
+    }))
+}
+
+function resourceItemsFromContracts(items: ResourceContract[]): ResourceItem[] {
+  return items.map((item) => ({
+    title: item.title,
+    url: item.url,
+    type: `fast-${item.channel}`,
+    source: item.source,
+    date: item.published_at,
+    excerpt: item.excerpt,
+    reliability: item.reliability,
   }))
+}
+
+function uniqueResourceItemsForGenerate(items: ResourceItem[]): ResourceItem[] {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = (item.url || item.title).trim().toLowerCase()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 function legacyDomainFromCanonical(value: string) {
@@ -4037,9 +4060,35 @@ export async function POST(req: NextRequest) {
       modelPath: 'local',
     })
     const webNeeded = hasUrlInFlow || shouldUseWeb(urlAugmentedAnalysisText)
+    const fastRunnerResult = isPublicFast && providedResources.length === 0
+      ? await runFastResourceRunner({
+          interpretation: canonicalInterpretation,
+          resource_plan: initialResourcePlan,
+          timeout_ms: hasUrlInFlow ? 1800 : 1200,
+          max_sources: 3,
+        })
+      : undefined
+    if (fastRunnerResult) {
+      recordGenerationTrace({
+        status: fastRunnerResult.status === 'ok' ? 'ok' : 'partial',
+        gate: 'GENERATE',
+        route: '/api/generate',
+        canonicalLayer: 'resources',
+        pipelineStep: 'FastResourceRunner',
+        diagnostic: `${fastRunnerResult.status}:${fastRunnerResult.provider}:${fastRunnerResult.query ?? ''}`.slice(0, 240),
+        durationMs: fastRunnerResult.duration_ms,
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: interpretedRequest.intent_type,
+        questionType: interpretedRequest.question_type,
+        resourcesStatus: fastRunnerResult.status === 'ok' ? 'available' : 'unavailable',
+        resourcesCount: fastRunnerResult.resources.length,
+      })
+    }
+    const fastRunnerResources = resourceItemsFromContracts(fastRunnerResult?.resources ?? [])
     const rawFetchedResources =
       isPublicFast
-        ? providedResources
+        ? uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources])
         : providedResources.length > 0
         ? providedResources
         : webNeeded
@@ -4061,7 +4110,10 @@ export async function POST(req: NextRequest) {
       (canonicalResourcePlan.trace.duration_ms ?? 0) + (rawFetchedResources.length > 0 ? 1 : 0)
     canonicalResourcePlan.trace.notes = [
       ...(canonicalResourcePlan.trace.notes ?? []),
-      `legacy_fast_resources=${resources.length}`,
+      `public_fast_resources=${resources.length}`,
+      fastRunnerResult
+        ? `fast_runner=${fastRunnerResult.status}:${fastRunnerResult.provider}:${fastRunnerResult.resources.length}`
+        : 'fast_runner=not_run',
       'ResourceService is the public resource contract; legacy fetchers only execute fast retrieval.',
     ]
     recordGenerationTrace({
