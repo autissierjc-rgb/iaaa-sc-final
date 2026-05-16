@@ -44,6 +44,7 @@ import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
 import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
 import { buildGenerationEvent } from '@/lib/archive'
+import { DEFAULT_BUZZ_READINESS, DEFAULT_UNIFIED_SHARE_BUTTON } from '@/lib/contracts/share'
 import { runSecurityAbuseGuard } from '@/lib/security/SecurityAbuseGuard'
 import type {
   ArbreACamesAnalysis,
@@ -4379,6 +4380,30 @@ export async function POST(req: NextRequest) {
         modelPath: 'local',
       })
     }
+    const shareContract = {
+      share_button: DEFAULT_UNIFIED_SHARE_BUTTON,
+      buzz_readiness: DEFAULT_BUZZ_READINESS,
+      status: generationArchive?.archive_decision.store_snapshot ? 'snapshot_available' : 'snapshot_required',
+      generation_rule: 'share_requires_snapshot_no_regeneration',
+      reason_fr:
+        'La generation publique prepare le partage, mais ne cree pas de snapshot automatiquement. Le bouton Partager doit passer par share-v2 et ne jamais regenerer la carte.',
+    }
+    recordGenerationTrace({
+      status: 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'share',
+      pipelineStep: 'SharePolicy',
+      diagnostic: `${shareContract.status}:${DEFAULT_UNIFIED_SHARE_BUTTON.language_rule}`.slice(0, 240),
+      durationMs: 0,
+      inputChars: analysisText.length,
+      domain: canonicalInterpretation.domain,
+      intentType: intentContext.interpreted_request?.intent_type,
+      questionType: intentContext.interpreted_request?.question_type,
+      resourcesStatus: canonicalResourcePlan.status,
+      resourcesCount: canonicalResourcePlan.resources.length,
+      modelPath: 'local',
+    })
     baseSc = {
       ...baseSc,
       coverage_check: effectiveCoverageForGeneration,
@@ -4393,6 +4418,7 @@ export async function POST(req: NextRequest) {
         writing_quality: writingQuality,
       },
       generation_archive: generationArchive,
+      share_contract: shareContract,
     }
     const siteGuard = prebuiltSiteCard ?? siteAnalysisFallbackCard({
       situation: displayText,
