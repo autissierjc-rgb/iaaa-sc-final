@@ -1749,6 +1749,20 @@ function sanitizeSituationDraft(value: string): string {
     .trimStart()
 }
 
+function collaborativeQuestionsFromSc(sc: any): string[] {
+  const candidates = [
+    sc?.coverage_check?.concrete_theatre?.collaboration_questions,
+    sc?.coverage_check?.theatre?.collaboration_questions,
+    sc?.concrete_theatre?.collaboration_questions,
+    sc?.theatre?.collaboration_questions,
+  ]
+  const questions = candidates
+    .flatMap((value) => Array.isArray(value) ? value : [])
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean)
+  return Array.from(new Set(questions)).slice(0, 2)
+}
+
 type VisibilityState = 'private' | 'public' | 'collab'
 
 type HistoryItem = {
@@ -2005,12 +2019,19 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       if (scData2.sc) {
         setScData(scData2.sc)
         const canonicalText = canonicalSituationFromResponse(scData2.sc, text)
+        const theatreQuestions = collaborativeQuestionsFromSc(scData2.sc)
         setActiveSituation(canonicalText)
-        setChatMsgs(prev => prev.map((msg, index) =>
-          index === prev.length - 1 && msg.kind === 'user'
-            ? { ...msg, text: canonicalText }
-            : msg
-        ))
+        setChatMsgs(prev => {
+          const normalized = prev.map((msg, index) =>
+            index === prev.length - 1 && msg.kind === 'user'
+              ? { ...msg, text: canonicalText }
+              : msg
+          )
+          if (theatreQuestions.length === 0) return normalized
+          const last = normalized[normalized.length - 1]
+          const sameRefine = last?.kind === 'refine' && last.questions.join('|') === theatreQuestions.join('|')
+          return sameRefine ? normalized : [...normalized, { kind: 'refine', questions: theatreQuestions }]
+        })
         const fullController = new AbortController()
         const fullTimeout = window.setTimeout(() => fullController.abort(), 30000)
         fetch('/api/generate', {
