@@ -4819,6 +4819,12 @@ export async function POST(req: NextRequest) {
     }
 
     const diamondValidation = validateDiamondContract(sc, effectiveCoverageForGeneration.domain)
+    const diamondQuality = {
+      status: diamondValidation.ok
+        ? diamondValidation.issues.length > 0 ? 'partial' : 'ok'
+        : 'error',
+      issues: diamondValidation.issues,
+    }
     if (!diamondValidation.ok) {
       recordGenerationTrace({
         status: 'partial',
@@ -4842,18 +4848,32 @@ export async function POST(req: NextRequest) {
           'La carte commence à répondre trop généralement. Quel élément concret faut-il intégrer pour situer la lecture : usage réel, public visé, preuve observée, contrainte, décision à prendre ou option stratégique prioritaire ?',
         ],
         quality_issues: diamondValidation.issues,
-        coverage_check: effectiveCoverageForGeneration,
+        coverage_check: {
+          ...effectiveCoverageForGeneration,
+          quality: {
+            ...(sc.quality && typeof sc.quality === 'object' ? sc.quality : {}),
+            diamond_validation: diamondQuality,
+          },
+        },
         resources_status: resourcesStatus,
       })
     }
 
+    const finalSc: SituationCard = {
+      ...sc,
+      quality: {
+        ...(sc.quality && typeof sc.quality === 'object' ? sc.quality : {}),
+        diamond_validation: diamondQuality,
+      },
+    }
+
     recordGenerationTrace({
-      status: sc.generation_status === 'partial' ? 'partial' : 'ok',
+      status: finalSc.generation_status === 'partial' ? 'partial' : 'ok',
       gate: 'GENERATE',
       route: '/api/generate',
       canonicalLayer: 'archive',
       pipelineStep: 'GenerationTelemetry',
-      diagnostic: sc.generation_status === 'partial' ? 'generated_partial_card' : 'generated_card',
+      diagnostic: finalSc.generation_status === 'partial' ? 'generated_partial_card' : 'generated_card',
       durationMs: Date.now() - requestStartedAt,
       inputChars: analysisText.length,
       domain: effectiveCoverageForGeneration.domain,
@@ -4863,7 +4883,7 @@ export async function POST(req: NextRequest) {
       resourcesCount: resources.length,
       modelPath: prebuiltSiteCard ? 'local' : 'openai',
     })
-    return NextResponse.json({ gate: 'GENERATE', sc })
+    return NextResponse.json({ gate: 'GENERATE', sc: finalSc })
   } catch (err: any) {
     console.error('generate error FULL:', err)
     console.error('generate error message:', err?.message)
