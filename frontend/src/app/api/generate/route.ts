@@ -3361,6 +3361,9 @@ export async function POST(req: NextRequest) {
         status: 'error',
         gate: 'ERROR',
         route: '/api/generate',
+        canonicalLayer: 'security',
+        pipelineStep: 'SecurityAbuseGuard',
+        diagnostic: securityGuard.risk_level,
         durationMs: Date.now() - requestStartedAt,
         inputChars: text.length,
         errorKind: `security:${securityGuard.signals.join(',') || securityGuard.risk_level}`,
@@ -3488,6 +3491,19 @@ export async function POST(req: NextRequest) {
     }
 
     if (canonicalDialogue && canonicalDialogue.can_generate === false && canonicalDialogue.next_question && !hasUrlInFlow) {
+      recordGenerationTrace({
+        status: 'partial',
+        gate: 'CLARIFY',
+        route: '/api/generate',
+        canonicalLayer: 'dialogue',
+        pipelineStep: 'dialogueCanonicalizer',
+        diagnostic: 'canonical_dialogue_requires_clarification',
+        durationMs: Date.now() - requestStartedAt,
+        inputChars: analysisText.length,
+        domain: coverage.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+      })
       return NextResponse.json({
         gate: 'CLARIFY',
         questions: [canonicalDialogue.next_question],
@@ -3511,6 +3527,19 @@ export async function POST(req: NextRequest) {
       (!hasUrlInFlow || earlyReadinessGate.reason === 'strategic_options_missing')
 
     if (shouldStopForEarlyReadiness) {
+      recordGenerationTrace({
+        status: 'partial',
+        gate: 'CLARIFY',
+        route: '/api/generate',
+        canonicalLayer: 'dialogue',
+        pipelineStep: 'SituationReadinessGate',
+        diagnostic: earlyReadinessGate.reason,
+        durationMs: Date.now() - requestStartedAt,
+        inputChars: analysisText.length,
+        domain: effectiveCoverage.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+      })
       return NextResponse.json({
         gate: 'CLARIFY',
         questions: [earlyReadinessGate.question],
@@ -3522,6 +3551,19 @@ export async function POST(req: NextRequest) {
     }
 
     if (intentGate.shouldClarify && !refine_acknowledged && !hasUrlInFlow) {
+      recordGenerationTrace({
+        status: 'partial',
+        gate: 'CLARIFY',
+        route: '/api/generate',
+        canonicalLayer: 'dialogue',
+        pipelineStep: 'clarifyBeforeGenerate',
+        diagnostic: intentGate.status,
+        durationMs: Date.now() - requestStartedAt,
+        inputChars: analysisText.length,
+        domain: effectiveCoverage.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+      })
       return NextResponse.json({
         gate: 'CLARIFY',
         questions: intentGate.questions,
@@ -3531,6 +3573,19 @@ export async function POST(req: NextRequest) {
 
     if (mode !== 'generate' && mode !== 'generate_full' && !isPublicFast) {
       if (inputQuality.questions.length > 0 && !hasUrlInFlow) {
+        recordGenerationTrace({
+          status: 'partial',
+          gate: 'CLARIFY',
+          route: '/api/generate',
+          canonicalLayer: 'dialogue',
+          pipelineStep: 'inputQualityGate',
+          diagnostic: inputQuality.status,
+          durationMs: Date.now() - requestStartedAt,
+          inputChars: analysisText.length,
+          domain: effectiveCoverage.domain,
+          intentType: intentContext.interpreted_request?.intent_type,
+          questionType: intentContext.interpreted_request?.question_type,
+        })
         return NextResponse.json({
           gate: 'CLARIFY',
           questions: clarifyQuestions,
@@ -3539,6 +3594,19 @@ export async function POST(req: NextRequest) {
       }
 
       if (coverage.status === 'clarify' && !hasUsableInterpretation && !hasUrlInFlow) {
+        recordGenerationTrace({
+          status: 'partial',
+          gate: 'CLARIFY',
+          route: '/api/generate',
+          canonicalLayer: 'interpretation',
+          pipelineStep: 'coverageCheck',
+          diagnostic: coverage.status,
+          durationMs: Date.now() - requestStartedAt,
+          inputChars: analysisText.length,
+          domain: effectiveCoverage.domain,
+          intentType: intentContext.interpreted_request?.intent_type,
+          questionType: intentContext.interpreted_request?.question_type,
+        })
         return NextResponse.json({
           gate: 'CLARIFY',
           questions: clarifyQuestions,
@@ -3547,6 +3615,19 @@ export async function POST(req: NextRequest) {
       }
 
       if (refineQuestions.length > 0 && !refine_acknowledged && !hasUrlInFlow) {
+        recordGenerationTrace({
+          status: 'partial',
+          gate: 'REFINE_OPTIONAL',
+          route: '/api/generate',
+          canonicalLayer: 'dialogue',
+          pipelineStep: 'selectRefineOptionalQuestions',
+          diagnostic: 'optional_refinement',
+          durationMs: Date.now() - requestStartedAt,
+          inputChars: analysisText.length,
+          domain: effectiveCoverage.domain,
+          intentType: intentContext.interpreted_request?.intent_type,
+          questionType: intentContext.interpreted_request?.question_type,
+        })
         return NextResponse.json({
           gate: 'REFINE_OPTIONAL',
           questions: refineQuestions,
@@ -3594,6 +3675,21 @@ export async function POST(req: NextRequest) {
           : 'not_needed'
 
     if (readinessGate.status === 'ask_user' && readinessGate.question && !explicitPrudentGeneration && !hasUrlInFlow) {
+      recordGenerationTrace({
+        status: 'partial',
+        gate: 'CLARIFY',
+        route: '/api/generate',
+        canonicalLayer: 'dialogue',
+        pipelineStep: 'SituationReadinessGate',
+        diagnostic: readinessGate.reason,
+        durationMs: Date.now() - requestStartedAt,
+        inputChars: analysisText.length,
+        domain: effectiveCoverage.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+        resourcesStatus,
+        resourcesCount: resources.length,
+      })
       return NextResponse.json({
         gate: 'CLARIFY',
         questions: [readinessGate.question],
@@ -3692,6 +3788,9 @@ export async function POST(req: NextRequest) {
             status: 'partial',
             gate: 'CLARIFY',
             route: '/api/generate',
+            canonicalLayer: 'quality',
+            pipelineStep: 'DiamondValidation',
+            diagnostic: fallbackValidation.issues.map((issue) => issue.code).join(' | ').slice(0, 240),
             durationMs: Date.now() - requestStartedAt,
             inputChars: analysisText.length,
             domain: effectiveCoverageForGeneration.domain,
@@ -3716,6 +3815,9 @@ export async function POST(req: NextRequest) {
           status: 'partial',
           gate: 'GENERATE',
           route: '/api/generate',
+          canonicalLayer: 'writing',
+          pipelineStep: 'modelCardFallback',
+          diagnostic: 'model_generation_failed_local_contract_used',
           durationMs: Date.now() - requestStartedAt,
           inputChars: analysisText.length,
           domain: effectiveCoverageForGeneration.domain,
@@ -3899,6 +4001,9 @@ export async function POST(req: NextRequest) {
         status: 'partial',
         gate: 'CLARIFY',
         route: '/api/generate',
+        canonicalLayer: 'quality',
+        pipelineStep: 'DiamondValidation',
+        diagnostic: diamondValidation.issues.map((issue) => issue.code).join(' | ').slice(0, 240),
         durationMs: Date.now() - requestStartedAt,
         inputChars: analysisText.length,
         domain: effectiveCoverageForGeneration.domain,
@@ -3923,6 +4028,9 @@ export async function POST(req: NextRequest) {
       status: sc.generation_status === 'partial' ? 'partial' : 'ok',
       gate: 'GENERATE',
       route: '/api/generate',
+      canonicalLayer: 'archive',
+      pipelineStep: 'GenerationTelemetry',
+      diagnostic: sc.generation_status === 'partial' ? 'generated_partial_card' : 'generated_card',
       durationMs: Date.now() - requestStartedAt,
       inputChars: analysisText.length,
       domain: effectiveCoverageForGeneration.domain,
@@ -3945,6 +4053,9 @@ export async function POST(req: NextRequest) {
       status: 'error',
       gate: 'ERROR',
       route: '/api/generate',
+      canonicalLayer: 'admin/cockpit',
+      pipelineStep: 'route_exception',
+      diagnostic: err instanceof Error ? err.message?.slice(0, 240) : 'unknown_route_exception',
       durationMs: Date.now() - requestStartedAt,
       inputChars: 0,
       errorKind: err instanceof Error ? err.name : 'UnknownError',

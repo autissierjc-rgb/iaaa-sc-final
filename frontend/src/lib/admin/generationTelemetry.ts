@@ -1,9 +1,27 @@
 type GenerationTraceStatus = 'ok' | 'partial' | 'error'
+type CanonicalTelemetryLayer =
+  | 'interpretation'
+  | 'dialogue'
+  | 'safety'
+  | 'security'
+  | 'resources'
+  | 'expertisesMetiers'
+  | 'theatre'
+  | 'scoring'
+  | 'writing'
+  | 'quality'
+  | 'archive'
+  | 'share'
+  | 'UI/mobile'
+  | 'admin/cockpit'
 
 export interface GenerationTraceInput {
   status: GenerationTraceStatus
   gate: 'GENERATE' | 'CLARIFY' | 'REFINE_OPTIONAL' | 'ERROR'
   route: string
+  canonicalLayer?: CanonicalTelemetryLayer
+  pipelineStep?: string
+  diagnostic?: string
   durationMs: number
   inputChars: number
   domain?: string
