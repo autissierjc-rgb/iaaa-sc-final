@@ -118,7 +118,9 @@ Editorial anchoring rule:
 - Never produce a field made only of abstract words such as system, channels, actors, risk, thresholds, order, constraints, or balance without concrete examples.
 - Do not force any specific country, person, or place. Select anchors only from the situation, Arbre a Cames, resources, coverage check, scope context, or professional profile.
 - For broad or global questions, keep the requested scale, but still name the concrete channels through which the crisis or situation travels.
-- If a resource of type "site-brief" exists, treat it as the primary factual base for site or startup analysis.
+- A resource of type "site-brief" is primary only when the interpreted request makes the site, company, document, or resource the explicit object of analysis.
+- If interpreted_request.signals contains "resource_role:context_for_question", the resource is contextual: use it to anchor theatre, evidence, limits, and sources, but never let it replace the user's main question, decision, or situation soumise.
+- If interpreted_request.signals contains "resource_role:evidence_source", use the resource as evidence for the question, not as the object of the card unless the user explicitly asks to analyze that resource.
 - For site_analysis, first state plainly what the company appears to do, for whom, with what visible promise, and what proof is visible or missing.
 - For site_analysis, never begin with abstract market forces, powers, regulation, liquidity, trust, prices, or scalability before the product is clear.
 - For site_analysis, do not infer funding, traction, customers, pricing, regulation, partnerships, revenue, or business model unless the site-brief/resources explicitly support it.
