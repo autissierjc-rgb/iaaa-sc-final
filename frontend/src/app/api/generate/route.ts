@@ -37,6 +37,7 @@ import { detectScopeContext } from '@/lib/scope/scopeContext'
 import { buildConcreteTheatre as buildLegacyConcreteTheatre } from '@/lib/context/concreteTheatre'
 import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWritingWithMode } from '@/lib/writing'
+import { runContractQualityGate, runQualityGate } from '@/lib/quality'
 import { applyEntityExplanationsToSituationCard } from '@/lib/text/entityExplanations'
 import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
@@ -4251,6 +4252,71 @@ export async function POST(req: NextRequest) {
         modelPath: 'local',
       })
     }
+    const contractQuality = canonicalScoringForWriting
+      ? runContractQualityGate({
+          interpretation: canonicalInterpretation,
+          theatre: canonicalTheatre,
+          scoring: canonicalScoringForWriting,
+          inquiry,
+        })
+      : null
+    const writingQuality = canonicalScoringForWriting && writingContract
+      ? runQualityGate({
+          interpretation: canonicalInterpretation,
+          theatre: canonicalTheatre,
+          scoring: canonicalScoringForWriting,
+          writing: writingContract,
+          resources: canonicalResourcePlan,
+        })
+      : null
+    const qualityIssues = [
+      ...(contractQuality?.issues ?? []),
+      ...(writingQuality?.issues ?? []),
+    ]
+    const qualityHasError = qualityIssues.some((issue) => issue.level === 'error')
+    const qualityStatus = qualityHasError
+      ? 'error'
+      : qualityIssues.length > 0
+        ? 'partial'
+        : 'ok'
+    if (contractQuality || writingQuality) {
+      recordGenerationTrace({
+        status: qualityHasError ? 'error' : qualityIssues.length > 0 ? 'partial' : 'ok',
+        gate: qualityHasError ? 'CLARIFY' : 'GENERATE',
+        route: '/api/generate',
+        canonicalLayer: 'quality',
+        pipelineStep: 'QualityGate',
+        diagnostic: qualityIssues.length > 0
+          ? qualityIssues.map((issue) => issue.code).join(' | ').slice(0, 240)
+          : 'quality_ok',
+        durationMs: (contractQuality?.trace.duration_ms ?? 0) + (writingQuality?.trace.duration_ms ?? 0),
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+        resourcesStatus: canonicalResourcePlan.status,
+        resourcesCount: canonicalResourcePlan.resources.length,
+        modelPath: 'local',
+      })
+    }
+    if (qualityHasError) {
+      return NextResponse.json({
+        gate: 'CLARIFY',
+        questions: [
+          'La carte ne respecte pas encore le contrat canonique. Quel élément faut-il préciser pour corriger la couche signalée : acteur, preuve, source, option, contrainte ou décision à prendre ?',
+        ],
+        quality_issues: qualityIssues,
+        coverage_check: {
+          ...effectiveCoverageForGeneration,
+          quality: {
+            status: qualityStatus,
+            contract_quality: contractQuality,
+            writing_quality: writingQuality,
+          },
+        },
+        resources_status: resourcesStatus,
+      })
+    }
     baseSc = {
       ...baseSc,
       coverage_check: effectiveCoverageForGeneration,
@@ -4259,6 +4325,11 @@ export async function POST(req: NextRequest) {
       scope_context: scopeContext,
       concrete_theatre: concreteTheatre,
       writing_contract: writingContract,
+      quality: {
+        status: qualityStatus,
+        contract_quality: contractQuality,
+        writing_quality: writingQuality,
+      },
     }
     const siteGuard = prebuiltSiteCard ?? siteAnalysisFallbackCard({
       situation: displayText,
