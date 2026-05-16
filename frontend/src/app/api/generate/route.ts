@@ -4568,41 +4568,7 @@ export async function POST(req: NextRequest) {
       pdf_contract: pdfContract,
       cto_watch: ctoWatchReport,
     }
-    const siteGuard = prebuiltSiteCard ?? siteAnalysisFallbackCard({
-      situation: displayText,
-      arbre,
-      resources,
-      branches,
-      intentContext,
-    })
-    if (siteGuard) {
-      baseSc = {
-        ...baseSc,
-        title_fr: siteGuard.title_fr,
-        title_en: siteGuard.title_en,
-        insight_fr: siteGuard.insight_fr,
-        insight_en: siteGuard.insight_en,
-        main_vulnerability_fr: siteGuard.main_vulnerability_fr,
-        main_vulnerability_en: siteGuard.main_vulnerability_en,
-        asymmetry_fr: siteGuard.asymmetry_fr,
-        asymmetry_en: siteGuard.asymmetry_en,
-        key_signal_fr: siteGuard.key_signal_fr,
-        key_signal_en: siteGuard.key_signal_en,
-        radar: siteGuard.radar,
-        radar_details: siteGuard.radar_details,
-        trajectories: siteGuard.trajectories,
-        cap: siteGuard.cap,
-        movements_fr: siteGuard.movements_fr,
-        movements_en: siteGuard.movements_en,
-        avertissement_fr: siteGuard.avertissement_fr,
-        avertissement_en: siteGuard.avertissement_en,
-        lecture_systeme_fr: siteGuard.lecture_systeme_fr,
-        lecture_systeme_en: siteGuard.lecture_systeme_en,
-        state_index_final: siteGuard.state_index_final,
-        state_label: siteGuard.state_label,
-        state_label_en: siteGuard.state_label_en,
-      }
-    }
+    const siteGuard = prebuiltSiteCard
     baseSc = applyPatternContextToCard(
       baseSc,
       patternContext,
