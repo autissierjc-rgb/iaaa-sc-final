@@ -4577,6 +4577,7 @@ export async function POST(req: NextRequest) {
     )
     if (intentContext.interpreted_request?.question_type === 'causal_attribution') {
       baseSc = {
+        ...baseSc,
         ...causalAttributionCard({
           situation: displayText,
           arbre,
@@ -4650,6 +4651,7 @@ export async function POST(req: NextRequest) {
       applyEntityExplanationsToSituationCard(
         intentContext.interpreted_request?.question_type === 'causal_attribution'
           ? {
+              ...assembledSc,
               ...causalAttributionCard({
                 situation: displayText,
                 arbre,
