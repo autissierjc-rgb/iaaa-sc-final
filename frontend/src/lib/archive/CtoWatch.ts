@@ -87,6 +87,9 @@ export function buildCtoWatchMetricsFromEvents(params: {
   const providerErrors = events.filter(
     (event) => event.error_kind?.includes('provider') || traceContains(event.trace, /provider|openai|anthropic|tavily/i),
   ).length
+  const securityBlocks = events.filter(
+    (event) => event.error_kind?.includes('security:') || traceContains(event.trace, /security:|security_abuse/i),
+  ).length
 
   return [
     { id: 'public_fast_p95_ms', value: percentile(events.map((event) => event.latency_ms), 95) },
@@ -94,6 +97,7 @@ export function buildCtoWatchMetricsFromEvents(params: {
     { id: 'missing_required_sources_rate', value: missingSources / denominator },
     { id: 'fallback_rate', value: fallback / denominator },
     { id: 'provider_error_rate', value: providerErrors / denominator },
+    { id: 'security_block_rate', value: securityBlocks / denominator },
     { id: 'estimated_hourly_cost_eur', value: params.estimated_hourly_cost_eur ?? 0 },
     { id: 'shared_card_cache_hit_rate', value: params.shared_card_cache_hit_rate ?? 1 },
   ]
@@ -149,6 +153,9 @@ export function buildCtoWatchReport(params: {
       }
       if (evaluation.id === 'fallback_rate') {
         return 'Verifier le LLM referent, les timeouts et les causes de fallback.'
+      }
+      if (evaluation.id === 'security_block_rate') {
+        return 'Inspecter SecurityAbuseGuard, WAF, quotas et flux suspects avant toute consommation provider.'
       }
       return 'Inspecter la couche concernee et limiter le flux si le seuil critique persiste.'
     })

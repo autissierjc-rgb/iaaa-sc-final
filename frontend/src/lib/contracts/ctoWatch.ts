@@ -6,6 +6,7 @@ export type CtoWatchMetricId =
   | 'missing_required_sources_rate'
   | 'fallback_rate'
   | 'provider_error_rate'
+  | 'security_block_rate'
   | 'estimated_hourly_cost_eur'
   | 'shared_card_cache_hit_rate'
 
@@ -96,6 +97,15 @@ export const DEFAULT_CTO_WATCH_THRESHOLDS: CtoWatchThreshold[] = [
     reason_fr: 'Les erreurs provider doivent declencher bascule, ralentissement ou alerte.',
   },
   {
+    id: 'security_block_rate',
+    label_fr: 'Blocages securite',
+    direction: 'max',
+    watch_at: 0.01,
+    critical_at: 0.03,
+    unit: 'rate',
+    reason_fr: 'Les attaques, injections ou abus doivent etre visibles avant de consommer ressources et LLM.',
+  },
+  {
     id: 'estimated_hourly_cost_eur',
     label_fr: 'Cout horaire estime',
     direction: 'max',
@@ -120,5 +130,6 @@ export const DEFAULT_CTO_WATCH_GUARDS = [
   'Generation must be quota-limited by IP/account.',
   'Recherche+ must be async, paid or quota-limited.',
   'Provider fallback must be visible in telemetry.',
+  'Security blocks must be visible in CTO Watch.',
   'Critical source gaps must degrade the verdict instead of pretending solidity.',
 ]
