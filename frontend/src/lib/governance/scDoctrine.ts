@@ -37,6 +37,21 @@ enrichissent ou signalent une incoherence a partir de l'interpretation canonique
 
 Si une couche aval detecte une contradiction, elle la signale. Elle ne remplace
 jamais silencieusement l'intention de l'utilisateur.
+
+Regle UserMaterial / ResourceRole :
+Une URL, un document, une image, un extrait ou un plug ne devient pas
+automatiquement l'objet principal de la carte. La matiere utilisateur doit
+d'abord etre classee selon son role :
+- object_of_analysis : l'utilisateur demande explicitement d'analyser ce site,
+  cette entreprise, ce document ou cette ressource ;
+- context_for_question : la ressource situe la question, par exemple "pour mon
+  projet", "dans notre startup", "avec notre site" ;
+- evidence_source : la ressource sert de preuve ou de matiere documentaire ;
+- private_material : la ressource vient d'un espace prive ou connecte.
+
+InterpretationService conserve l'intention principale. ResourceService exploite
+la ressource selon son role. QualityGate signale la derive si la ressource
+remplace la question.
 `.trim()
 
 export const DIAMOND_EDITORIAL_CONTRACT = `
@@ -106,6 +121,12 @@ Anti-hors-sol :
 Chaque sortie doit contenir, quand la situation le permet, des acteurs nommes,
 roles, lieux, institutions, objets concrets, temporalite, mecanisme, signal
 observable et au moins une phrase eclairante.
+
+Ressources et role :
+Un site brief, une URL ou un document ne devient base primaire que si la
+ressource est l'objet explicite de l'analyse. Si la ressource est seulement un
+contexte de question, elle nourrit le theatre reel, les preuves et les limites,
+mais elle ne remplace jamais la situation soumise ni l'arbitrage demande.
 
 Lectures = le court qui tranche :
 120 a 180 mots, 2 a 3 paragraphes, concret, sans sources, sans bullet points,
