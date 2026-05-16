@@ -42,6 +42,7 @@ import { applyEntityExplanationsToSituationCard } from '@/lib/text/entityExplana
 import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
 import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
+import { buildGenerationEvent } from '@/lib/archive'
 import { runSecurityAbuseGuard } from '@/lib/security/SecurityAbuseGuard'
 import type {
   ArbreACamesAnalysis,
@@ -4279,6 +4280,7 @@ export async function POST(req: NextRequest) {
       : qualityIssues.length > 0
         ? 'partial'
         : 'ok'
+    const canonicalQuality = writingQuality ?? contractQuality
     if (contractQuality || writingQuality) {
       recordGenerationTrace({
         status: qualityHasError ? 'error' : qualityIssues.length > 0 ? 'partial' : 'ok',
@@ -4317,6 +4319,36 @@ export async function POST(req: NextRequest) {
         resources_status: resourcesStatus,
       })
     }
+    const generationArchive = canonicalQuality
+      ? buildGenerationEvent({
+          route: '/api/generate',
+          raw_input: text,
+          interpretation: canonicalInterpretation,
+          dialogue: canonicalDialogueGate,
+          resources: canonicalResourcePlan,
+          quality: canonicalQuality,
+          latency_ms: Date.now() - requestStartedAt,
+          tension_family: expertisesMetiers.domain_playbook.id,
+        })
+      : null
+    if (generationArchive) {
+      recordGenerationTrace({
+        status: generationArchive.event.generation_status === 'partial' ? 'partial' : 'ok',
+        gate: 'GENERATE',
+        route: '/api/generate',
+        canonicalLayer: 'archive',
+        pipelineStep: 'GenerationEventBuilder',
+        diagnostic: `${generationArchive.event.privacy_mode}:${generationArchive.archive_decision.reason}`.slice(0, 240),
+        durationMs: 0,
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+        resourcesStatus: canonicalResourcePlan.status,
+        resourcesCount: canonicalResourcePlan.resources.length,
+        modelPath: 'local',
+      })
+    }
     baseSc = {
       ...baseSc,
       coverage_check: effectiveCoverageForGeneration,
@@ -4330,6 +4362,7 @@ export async function POST(req: NextRequest) {
         contract_quality: contractQuality,
         writing_quality: writingQuality,
       },
+      generation_archive: generationArchive,
     }
     const siteGuard = prebuiltSiteCard ?? siteAnalysisFallbackCard({
       situation: displayText,
