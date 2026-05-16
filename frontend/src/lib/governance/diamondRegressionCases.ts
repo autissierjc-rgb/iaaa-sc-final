@@ -69,7 +69,7 @@ export const DIAMOND_REGRESSION_CASES: DiamondRegressionCase[] = [
     domain: 'startup_vc',
     input: 'Que fait https://www.flexup.org/fr et est-ce intéressant ?',
     expectations: {
-      headerDomain: 'Startup',
+      headerDomain: 'Entreprise',
       forbiddenTerms: ['CGRI', 'détroit', 'enfant intérieur', 'site officiel à identifier', 'rituel ancien'],
       requiredTerms: ['FlexUp', 'site', 'preuve'],
       maxModerateBranches: 3,
@@ -84,7 +84,7 @@ export const DIAMOND_REGRESSION_CASES: DiamondRegressionCase[] = [
     domain: 'startup_vc',
     input: "Que fait la compagnie FlexUp et qu'en penser pour éventuellement la rejoindre avec ma startup ?",
     expectations: {
-      headerDomain: 'Startup',
+      headerDomain: 'Entreprise',
       forbiddenTerms: [
         'Quelle décision ou clarification doit être obtenue maintenant',
         'Qui sont les acteurs impliqués',
@@ -99,6 +99,53 @@ export const DIAMOND_REGRESSION_CASES: DiamondRegressionCase[] = [
       visibleAxisVI: 'Incertitudes',
       notes:
         'La demande contient déjà objet, évaluation, rôle utilisateur et décision potentielle. La clarification ne doit pas bloquer ; SC doit générer ou enquêter si la source manque.',
+    },
+  },
+  {
+    id: 'situationcard-target-choice-context',
+    domain: 'startup_vc',
+    input: 'Situationcard.com: quelle cible utilisateur choisir en premier pour développer une communauté ?',
+    expectations: {
+      headerDomain: 'Entreprise',
+      forbiddenTerms: [
+        'Précisions:',
+        'Répondez librement',
+        'Générer une carte exploratoire',
+        'site officiel à identifier',
+        'SC n’a pas encore identifié',
+        'contenu utile de Situationcard',
+        'activité réelle de Situationcard',
+      ],
+      requiredTerms: ['Situationcard', 'cible utilisateur', 'communauté'],
+      maxModerateBranches: 3,
+      maxDominantBranches: 2,
+      visibleAxisVI: 'Incertitudes',
+      notes:
+        'Le domaine du projet sert de contexte stratégique. La carte doit traiter le choix de cible, pas transformer situationcard.com en analyse de site.',
+    },
+  },
+  {
+    id: 'team-reorganization-no-site-fallback',
+    domain: 'management',
+    input: "Un conflit d'équipe autour d'une réorganisation dans ma société",
+    expectations: {
+      headerDomain: 'Management',
+      forbiddenTerms: [
+        'SC n’a pas encore identifié',
+        'contenu utile',
+        'site officiel',
+        'URL officielle',
+        'page produit',
+        'traction',
+        'go-to-market',
+        'marché visé',
+      ],
+      requiredTerms: ['conflit', 'équipe', 'réorganisation'],
+      maxModerateBranches: 3,
+      maxDominantBranches: 2,
+      visibleAxisVI: 'Incertitudes',
+      notes:
+        'Une situation de management doit rester dans le théâtre humain et organisationnel, même si la route dispose de briques site/resources.',
     },
   },
   {
