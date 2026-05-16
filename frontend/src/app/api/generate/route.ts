@@ -4715,6 +4715,7 @@ export async function POST(req: NextRequest) {
     }
 
     const shouldRegenerateLecture =
+      !writingContract &&
       !useLocalFastCard &&
       !siteGuard &&
       (intentContext.interpreted_request?.intent_type === 'understand' ||
