@@ -101,6 +101,18 @@ const GENERIC_PHRASES = [
   /c[’']est ce type de trace qui permet de passer d[’']une impression g[eé]n[eé]rale/i,
   /un fait, une d[eé]cision, un document ou un changement de calendrier v[eé]rifiable/i,
   /les r[eè]gles, proc[eé]dures ou contraintes qui peuvent transformer la situation/i,
+  /acteurs visibles,\s*contraintes mat[eé]rielles,\s*r[eè]gles et institutions,\s*r[eé]cit dominant/i,
+  /le levier r[eé]el qui n[’']est pas encore prot[eé]g[eé] ou clarifi[eé]/i,
+  /rythmes,\s*d[eé]lais,\s*fen[eê]tres d[’']action et risque de retard/i,
+  /plusieurs options restent ouvertes,\s*mais elles ne prot[eè]gent pas les m[eê]mes risques/i,
+]
+
+const PUBLIC_SCAFFOLDING_PATTERNS = [
+  /pr[eé]cisions?\s*:/i,
+  /vous [eé]voquez plusieurs options/i,
+  /quelles sont les 2 ou 3 options [aà] comparer/i,
+  /dois-je d[’']abord proposer une carte exploratoire/i,
+  /r[eé]pondez librement,\s*ou g[eé]n[eé]rez une carte exploratoire/i,
 ]
 
 const CONCRETE_SIGNAL = /\b[A-ZÉÈÀÂÎÏÔÛÇ][A-Za-zÀ-ÿ'’-]{2,}\b|\b\d{4}\b|\b\d{1,2}\s+(janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)\b|https?:\/\//i
@@ -147,6 +159,12 @@ export function validateAntiHorsSol(sc: SituationCard): DiamondValidationResult 
   for (const pattern of GENERIC_PHRASES) {
     if (pattern.test(text)) {
       issues.push(issue('error', 'generic_phrase', `Generic or fallback phrase detected: ${pattern.source}`))
+    }
+  }
+
+  for (const pattern of PUBLIC_SCAFFOLDING_PATTERNS) {
+    if (pattern.test(text)) {
+      issues.push(issue('error', 'public_scaffolding', `Dialogue or UI scaffolding leaked into public card: ${pattern.source}`))
     }
   }
 
