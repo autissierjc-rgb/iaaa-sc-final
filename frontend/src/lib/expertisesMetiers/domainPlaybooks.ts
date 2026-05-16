@@ -67,7 +67,7 @@ export const DOMAIN_PLAYBOOKS: Partial<Record<SituationDomainV2, ExpertiseMetier
   startup_market: {
     id: 'startup_market',
     domain: 'startup_market',
-    label_fr: 'Startup et marche',
+    label_fr: 'Entreprise et marche',
     typical_actors: ['fondateurs', 'equipe dirigeante', 'clients potentiels', 'partenaires', 'investisseurs'],
     typical_institutions: ['clients cibles', 'partenaires commerciaux', 'regulateurs eventuels'],
     procedures_or_rules: ['tarification', 'contrat client', 'conditions de partenariat', 'cadre fiscal et social', 'propriete intellectuelle'],

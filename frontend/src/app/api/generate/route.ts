@@ -726,7 +726,7 @@ function atlasDomainLabel(sc: SituationCard): string {
     personal: 'Personnel',
     professional: 'Professionnel',
     governance: 'Gouvernance',
-    startup_vc: 'Startup',
+    startup_vc: 'Entreprise',
     economy: 'Économie',
     humanitarian: 'Humanitaire',
     general: 'Général',

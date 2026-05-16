@@ -108,7 +108,7 @@ function headerDomainFor(domain: SituationDomainV2): string {
     school_adolescence: 'Ecole adolescence',
     science_research: 'Sciences',
     sport_performance: 'Sport',
-    startup_market: 'Startup marche',
+    startup_market: 'Entreprise marche',
     supply_chain: 'Supply chain',
     technology_ai: 'Technologie IA',
     territory_urbanism: 'Territoire',
