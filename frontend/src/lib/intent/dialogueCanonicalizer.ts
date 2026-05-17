@@ -47,11 +47,27 @@ function normalizeEvents(value: unknown): DialogueEvent[] {
 function stripDialogueScaffolding(value: string): string {
   return value
     .replace(/\bPr[eé]cisions?\s*:\s*/gi, ' ')
+    .replace(/\bVous [eé]voquez plusieurs options, mais elles ne sont pas encore nomm[eé]es\.\s*Quelles sont les 2 ou 3 options [aà] comparer, ou dois-je d[’']abord proposer une carte exploratoire pour les faire [eé]merger\s*\?/gi, ' ')
+    .replace(/\bQuelle question voulez-vous vraiment [eé]clairer avec cette carte\s*\?/gi, ' ')
+    .replace(/\bFaut-il traiter cette situation comme une d[eé]cision, un risque, un conflit, une opportunit[eé] ou une demande de compr[eé]hension\s*\?/gi, ' ')
+    .replace(/\bLe point le plus utile [aà] pr[eé]ciser maintenant est\s*:\s*[^.?!]+[.?!]?/gi, ' ')
     .replace(/\bR[eé]pondez librement,\s*ou g[eé]n[eé]rez une carte exploratoire\.?/gi, ' ')
     .replace(/\bG[eé]n[eé]rer une carte exploratoire\b/gi, ' ')
     .replace(/\bPour analyser votre situation\s*:\s*/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+function removeRepeatedBase(addition: string, base: string): string {
+  const normalizedAddition = addition.trim()
+  const normalizedBase = base.trim()
+  if (!normalizedAddition || !normalizedBase) return normalizedAddition
+
+  if (normalizedAddition.toLowerCase().startsWith(normalizedBase.toLowerCase())) {
+    return normalizedAddition.slice(normalizedBase.length).trim()
+  }
+
+  return normalizedAddition
 }
 
 export function buildLocalCanonicalSituationFromDialogue({
@@ -79,7 +95,9 @@ export function buildLocalCanonicalSituationFromDialogue({
     .filter(Boolean)
 
   const base = stripDialogueScaffolding(initial)
-  const additions = userMaterial.filter((item) => !base.toLowerCase().includes(item.toLowerCase()))
+  const additions = userMaterial
+    .map((item) => removeRepeatedBase(item, base))
+    .filter((item) => item && !base.toLowerCase().includes(item.toLowerCase()))
   const canonical = normalizeSubmittedSituation([base, ...additions].filter(Boolean).join(' '))
   if (!canonical) return null
 

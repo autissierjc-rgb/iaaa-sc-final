@@ -45,7 +45,7 @@ import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
 import { buildCtoWatchMetricsFromEvents, buildCtoWatchReport, buildGenerationEvent } from '@/lib/archive'
 import { DEFAULT_LANGUAGE_SERVICE_CONTRACT } from '@/lib/contracts/language'
 import { DEFAULT_BUZZ_READINESS, DEFAULT_PDF_EXPORT_CONTRACT, DEFAULT_UNIFIED_SHARE_BUTTON } from '@/lib/contracts/share'
-import { buildUserMaterialPolicy, classifyUserMaterialResourceRole } from '@/lib/contracts/userMaterial'
+import { buildUserMaterialPolicy, classifyUserMaterialResourceRole, type UserMaterialResourceRoleAssessment } from '@/lib/contracts/userMaterial'
 import { planShare } from '@/lib/share'
 import { runSecurityAbuseGuard } from '@/lib/security/SecurityAbuseGuard'
 import type {
@@ -73,6 +73,39 @@ function explicitUrls(value: string): string[] {
       seen.add(key)
       return true
     })
+}
+
+function stripExplicitUrls(value: string): string {
+  return value
+    .replace(/\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function stripPublicDialogueScaffolding(value: string): string {
+  return value
+    .replace(/\bPr[eé]cisions?\s*:\s*/gi, ' ')
+    .replace(/\bVous [eé]voquez plusieurs options, mais elles ne sont pas encore nomm[eé]es\.\s*Quelles sont les 2 ou 3 options [aà] comparer, ou dois-je d[’']abord proposer une carte exploratoire pour les faire [eé]merger\s*\?/gi, ' ')
+    .replace(/\bQuelle question voulez-vous vraiment [eé]clairer avec cette carte\s*\?/gi, ' ')
+    .replace(/\bFaut-il traiter cette situation comme une d[eé]cision, un risque, un conflit, une opportunit[eé] ou une demande de compr[eé]hension\s*\?/gi, ' ')
+    .replace(/\bR[eé]pondez librement,\s*ou g[eé]n[eé]rez une carte exploratoire\.?/gi, ' ')
+    .replace(/\bG[eé]n[eé]rer une carte exploratoire\b/gi, ' ')
+    .replace(/\bPour analyser votre situation\s*:\s*/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function canonicalQuestionForUserMaterialRole(
+  value: string,
+  role: UserMaterialResourceRoleAssessment
+): string {
+  const withoutScaffolding = stripPublicDialogueScaffolding(value)
+  const publicQuestion =
+    role.role === 'context_for_question'
+      ? stripExplicitUrls(withoutScaffolding)
+      : withoutScaffolding
+
+  return normalizeSubmittedSituation(publicQuestion || withoutScaffolding || value)
 }
 
 function dialogueText(value: unknown): string {
@@ -3520,27 +3553,28 @@ export async function POST(req: NextRequest) {
         ? `${analysisText}\n${explicitUrls(urlSourceText).join('\n')}`
         : analysisText
     const userMaterialRole = classifyUserMaterialResourceRole(urlAugmentedAnalysisText)
+    const interpretationText = canonicalQuestionForUserMaterialRole(analysisText, userMaterialRole)
     const previousContract = conversation_contract && typeof conversation_contract === 'object'
       ? conversation_contract as ConversationContract
       : undefined
     const modelInterpreted = isPublicFast
-      ? interpretRequest(analysisText)
-      : await interpretRequestWithModel(analysisText)
+      ? interpretRequest(interpretationText)
+      : await interpretRequestWithModel(interpretationText)
     modelInterpreted.signals = [
       ...(modelInterpreted.signals ?? []),
       `resource_role:${userMaterialRole.role}`,
       ...userMaterialRole.signals,
     ]
-    const carriedPreviousContract = shouldCarryConversationContract(modelInterpreted, previousContract, analysisText)
+    const carriedPreviousContract = shouldCarryConversationContract(modelInterpreted, previousContract, interpretationText)
       ? previousContract
       : undefined
     const interpretedRequest = applyConversationContractToIntent(
       modelInterpreted,
       carriedPreviousContract,
-      analysisText
+      interpretationText
     )
     const canonicalInterpretation = await interpretSituation({
-      raw_input: analysisText,
+      raw_input: interpretationText,
       mode: isPublicFast ? 'local_contract' : 'referent_llm',
       preinterpreted: interpretedRequest,
     })
@@ -3569,7 +3603,7 @@ export async function POST(req: NextRequest) {
       pipelineStep: 'InterpretationService',
       diagnostic: canonicalInterpretation.trace.status,
       durationMs: canonicalInterpretation.trace.duration_ms ?? 0,
-      inputChars: analysisText.length,
+      inputChars: interpretationText.length,
       domain: canonicalInterpretation.domain,
       intentType: interpretedRequest.intent_type,
       questionType: interpretedRequest.question_type,
@@ -3582,7 +3616,7 @@ export async function POST(req: NextRequest) {
       pipelineStep: 'DialogueGate',
       diagnostic: canonicalDialogueGate.status,
       durationMs: Date.now() - requestStartedAt,
-      inputChars: analysisText.length,
+      inputChars: interpretationText.length,
       domain: canonicalInterpretation.domain,
       intentType: interpretedRequest.intent_type,
       questionType: interpretedRequest.question_type,
@@ -3595,7 +3629,7 @@ export async function POST(req: NextRequest) {
       pipelineStep: 'RiskAdviceGuard',
       diagnostic: `${safetyGuard.domain_risk}:${safetyGuard.advice_mode}`,
       durationMs: safetyGuard.trace.duration_ms ?? 0,
-      inputChars: analysisText.length,
+      inputChars: interpretationText.length,
       domain: canonicalInterpretation.domain,
       intentType: interpretedRequest.intent_type,
       questionType: interpretedRequest.question_type,
@@ -3608,7 +3642,7 @@ export async function POST(req: NextRequest) {
       pipelineStep: 'ExpertisesMetiersRouter',
       diagnostic: expertisesMetiers.trace.notes?.join(' | ').slice(0, 240) ?? expertisesMetiers.domain,
       durationMs: expertisesMetiers.trace.duration_ms ?? 0,
-      inputChars: analysisText.length,
+      inputChars: interpretationText.length,
       domain: canonicalInterpretation.domain,
       intentType: interpretedRequest.intent_type,
       questionType: interpretedRequest.question_type,
@@ -3621,7 +3655,7 @@ export async function POST(req: NextRequest) {
       pipelineStep: 'ResourceService',
       diagnostic: `${initialResourcePlan.status}:${initialResourcePlan.policy}`,
       durationMs: initialResourcePlan.trace.duration_ms ?? 0,
-      inputChars: analysisText.length,
+      inputChars: interpretationText.length,
       domain: canonicalInterpretation.domain,
       intentType: interpretedRequest.intent_type,
       questionType: interpretedRequest.question_type,
@@ -3636,7 +3670,7 @@ export async function POST(req: NextRequest) {
       pipelineStep: 'HumanCollectivePatterns',
       diagnostic: `${humanCollectivePatterns.trace.rule}:matched=${humanCollectivePatterns.trace.matched_patterns}`,
       durationMs: 1,
-      inputChars: analysisText.length,
+      inputChars: interpretationText.length,
       domain: canonicalInterpretation.domain,
       intentType: interpretedRequest.intent_type,
       questionType: interpretedRequest.question_type,
@@ -3649,12 +3683,13 @@ export async function POST(req: NextRequest) {
     const displayText = normalizeSubmittedSituation(
       canonicalDialogue?.canonical_situation ||
       interpretedRequest.user_question ||
+      interpretationText ||
       rawDisplayText ||
       text
     )
-    const intentContext = situationIntentRouter(analysisText, interpretedRequest)
+    const intentContext = situationIntentRouter(interpretationText, interpretedRequest)
     const conversationContract = buildConversationContract({
-      situation: analysisText,
+      situation: interpretationText,
       intentContext,
       previous: carriedPreviousContract,
     })
@@ -3664,9 +3699,9 @@ export async function POST(req: NextRequest) {
       conversationContract.canonical_situation ||
       displayText
     )
-    const initialScopeContext = detectScopeContext(analysisText)
-    const coverage = coverageCheck(analysisText)
-    const inputQuality = inputQualityGate(analysisText)
+    const initialScopeContext = detectScopeContext(interpretationText)
+    const coverage = coverageCheck(interpretationText)
+    const inputQuality = inputQualityGate(interpretationText)
     const coverageWithQuality = {
       ...coverage,
       intent_context: intentContext,
