@@ -895,6 +895,19 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
   if (!writing || writing.trace.status === 'error') return card
 
   const sc = writing.situation_card
+  const preferCompletedManagementCard =
+    card.intent_context?.surface_domain === 'management' ||
+    card.intent_context?.interpreted_request?.domain === 'management' ||
+    card.coverage_check?.domain === 'management'
+  const vulnerabilityFrCandidates = preferCompletedManagementCard
+    ? [card.main_vulnerability_fr, sc.main_vulnerability_fr]
+    : [sc.main_vulnerability_fr, card.main_vulnerability_fr]
+  const asymmetryFrCandidates = preferCompletedManagementCard
+    ? [card.asymmetry_fr, sc.asymmetry_fr]
+    : [sc.asymmetry_fr, card.asymmetry_fr]
+  const keySignalFrCandidates = preferCompletedManagementCard
+    ? [card.key_signal_fr, sc.key_signal_fr]
+    : [sc.key_signal_fr, card.key_signal_fr]
   const approfondirSections = writing.approfondir.sections_fr
     .map((section) => `${section.title}\n${section.body}`)
     .filter(Boolean)
@@ -910,11 +923,11 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
     title_en: firstSafeText([sc.title_en, card.title_en], situation, card.title_en ?? card.title_fr ?? ''),
     insight_fr: firstSafeText([sc.insight_fr, card.insight_fr], situation, card.insight_fr ?? ''),
     insight_en: firstSafeText([sc.insight_en, card.insight_en], situation, card.insight_en ?? card.insight_fr ?? ''),
-    main_vulnerability_fr: firstSafeText([sc.main_vulnerability_fr, card.main_vulnerability_fr], situation, card.main_vulnerability_fr ?? ''),
+    main_vulnerability_fr: firstSafeText(vulnerabilityFrCandidates, situation, card.main_vulnerability_fr ?? ''),
     main_vulnerability_en: firstSafeText([sc.main_vulnerability_en, card.main_vulnerability_en], situation, card.main_vulnerability_en ?? card.main_vulnerability_fr ?? ''),
-    asymmetry_fr: firstSafeText([sc.asymmetry_fr, card.asymmetry_fr], situation, card.asymmetry_fr ?? ''),
+    asymmetry_fr: firstSafeText(asymmetryFrCandidates, situation, card.asymmetry_fr ?? ''),
     asymmetry_en: firstSafeText([sc.asymmetry_en, card.asymmetry_en], situation, card.asymmetry_en ?? card.asymmetry_fr ?? ''),
-    key_signal_fr: firstSafeText([sc.key_signal_fr, card.key_signal_fr], situation, card.key_signal_fr ?? ''),
+    key_signal_fr: firstSafeText(keySignalFrCandidates, situation, card.key_signal_fr ?? ''),
     key_signal_en: firstSafeText([sc.key_signal_en, card.key_signal_en], situation, card.key_signal_en ?? card.key_signal_fr ?? ''),
     trajectories: writing.trajectories.length > 0 ? writing.trajectories : card.trajectories,
     lecture_systeme_fr: firstSafeText([writing.lecture.text_fr, card.lecture_systeme_fr], situation, card.lecture_systeme_fr ?? ''),
@@ -2348,10 +2361,14 @@ function completeSituationCard(
     allowLegacyScenarioOverrides &&
     sc.intent_context?.dominant_frame === 'professional_decision' &&
     /\b(pitch|jury|pairs?|presentation|présentation|anglais|lancement|lancer|entrain|entraine)\b/i.test(situation)
+  const isManagementContext =
+    sc.intent_context?.surface_domain === 'management' ||
+    sc.intent_context?.interpreted_request?.domain === 'management' ||
+    sc.coverage_check?.domain === 'management'
   const radar = sc.radar && typeof sc.radar === 'object'
     ? sc.radar
     : { impact: 55, urgency: 50, uncertainty: 60, reversibility: 45 }
-  const understands = isUnderstandingRequest(sc) && !isPersonalRelationship
+  const understands = isUnderstandingRequest(sc) && !isPersonalRelationship && !isManagementContext
   const object = interpretedObject(sc)
   const tension = interpretedTension(sc)
   const objectLabel = object || 'l’objet de la question'
@@ -2371,6 +2388,36 @@ function completeSituationCard(
     ? humanDevelopmentTrajectories()
     : isPersonalRelationship
     ? personalRelationshipTrajectories()
+    : isManagementContext
+    ? [
+        {
+          type: 'stabilization',
+          title_fr: 'Rôles clarifiés',
+          title_en: 'Roles clarified',
+          description_fr: 'La situation se stabilise si les rôles, les arbitrages et la charge réelle deviennent explicites.',
+          description_en: 'The situation stabilizes when roles, arbitration points, and real load become explicit.',
+          signal_fr: 'Un responsable nommé clarifie ce qui change, qui décide et quelle charge doit être absorbée.',
+          signal_en: 'A named owner clarifies what changes, who decides, and which load must be absorbed.',
+        },
+        {
+          type: 'escalation',
+          title_fr: 'Charge déplacée',
+          title_en: 'Load displaced',
+          description_fr: 'La tension augmente si la réorganisation avance sans traiter la charge portée par l’équipe.',
+          description_en: 'Tension rises if the reorganization moves forward without addressing the load carried by the team.',
+          signal_fr: 'Retrait, refus, surcharge visible, conflit ouvert ou demande d’arbitrage.',
+          signal_en: 'Withdrawal, refusal, visible overload, open conflict, or request for arbitration.',
+        },
+        {
+          type: 'regime_shift',
+          title_fr: 'Arbitrage assumé',
+          title_en: 'Arbitration owned',
+          description_fr: 'La logique change si une décision explicite redistribue rôle, priorité, charge ou pouvoir.',
+          description_en: 'The logic shifts if an explicit decision redistributes role, priority, load, or power.',
+          signal_fr: 'Une limite est posée et transforme le conflit diffus en décision organisationnelle.',
+          signal_en: 'A boundary is set and turns diffuse conflict into an organizational decision.',
+        },
+      ]
     : isPitchReadiness
     ? pitchReadinessTrajectories()
     : isExperienceExplanation
@@ -2431,6 +2478,13 @@ function completeSituationCard(
       }
     : isPersonalRelationship
     ? personalRelationshipCap()
+    : isManagementContext
+    ? {
+        hook_fr: 'Le conflit devient lisible quand les rôles, la charge et le pouvoir de décision sont nommés.',
+        hook_en: 'The conflict becomes readable when roles, load, and decision power are named.',
+        watch_fr: 'Surveiller qui porte la charge réelle, qui peut arbitrer, et quelle limite devient explicite.',
+        watch_en: 'Watch who carries the real load, who can arbitrate, and which boundary becomes explicit.',
+      }
     : isPitchReadiness
     ? {
         hook_fr: 'Le risque n’est pas le niveau d’anglais ; c’est un message trop large sous regard public.',
@@ -2501,6 +2555,8 @@ function completeSituationCard(
       ? 'La situation se lit par les forces discrètes du lien : autonomie adolescente, regard parental, passion investie, déception vécue et besoin de ne pas perdre la face.'
       : isPersonalRelationship
       ? 'La situation se lit par la reprise concrète du lien : signe affectif, histoire passée, distance, rythme des messages et possibilité réelle d’une rencontre.'
+      : isManagementContext
+      ? `${objectSentence} doit être lu comme une tension d’organisation : ce qui change officiellement, ce que l’équipe comprend, et ce que chacun doit porter concrètement.`
       : isPitchReadiness
       ? 'La situation se lit par les forces en présence du pitch : clarté du message, regard du jury, anglais moyen, manque de répétition et proximité du lancement.'
       : safePublicText(
@@ -2527,6 +2583,8 @@ function completeSituationCard(
       ? 'Le point fragile est le moment où une passion partagée devient pression, comparaison ou perte d’autonomie.'
       : isPersonalRelationship
       ? 'Le point fragile est le risque de transformer un signe affectif en certitude avant que les actes aient clarifié l’intention.'
+      : isManagementContext
+      ? 'Le point fragile est l’écart entre l’organisation annoncée, les rôles réellement tenus et la charge que chacun porte ou refuse de porter.'
       : isPitchReadiness
       ? 'Le point fragile est l’écart entre l’importance publique du lancement et le manque de répétition qui rend le message vulnérable.'
       : firstSafeText(
@@ -2553,6 +2611,8 @@ function completeSituationCard(
       ? 'Le parent veut comprendre et réparer le lien, tandis que l’adolescent peut protéger son autonomie, son image ou sa manière de vivre la déception.'
       : isPersonalRelationship
       ? 'Un message peut réchauffer un lien ancien, mais seule la suite des échanges montre s’il ouvre une rencontre, une clarification ou seulement une chaleur prudente.'
+      : isManagementContext
+      ? 'La réorganisation promet un cadre plus lisible, mais l’équipe peut vivre surtout une redistribution de charge, de pouvoir et de reconnaissance.'
       : isPitchReadiness
       ? 'Vous portez une vision forte, mais le jury évaluera surtout la clarté, la confiance, la preuve et la capacité à répondre sous pression.'
       : firstSafeText(
@@ -2579,6 +2639,8 @@ function completeSituationCard(
       ? 'Le signal clé est sa capacité à dire ce qu’il refuse, ce qu’il protège et ce qui pourrait redevenir désirable autrement.'
       : isPersonalRelationship
       ? 'Le signal clé est une cohérence entre le signe affectif et les actes : rendez-vous proposé, disponibilité, parole plus claire ou rythme régulier.'
+      : isManagementContext
+      ? 'Le signal clé est le moment où la charge réelle devient visible : refus, surcharge, arbitrage demandé, rôle clarifié ou limite explicitement posée.'
       : isPitchReadiness
       ? 'Le signal clé est votre capacité à répéter une version courte en anglais sans perdre le fil sous questions.'
       : firstSafeText(
@@ -3011,6 +3073,9 @@ function buildFallbackCard(
   const scope = detectScopeContext(situation, arbre)
   const wideGlobal = scope.scope === 'global'
   const isPersonalRelationship = isPersonalRelationshipCard(undefined, intentContext)
+  const isManagementContext =
+    intentContext?.surface_domain === 'management' ||
+    intentContext?.interpreted_request?.domain === 'management'
   const humanDevelopment = /\b(fils|fille|enfant|ado|adolescent|adolescente|parent|sport|p[eê]che|carpe|loisir|passion|motivation)\b/i.test(situation)
   const startupCommunity =
     (intentContext?.surface_domain === 'startup_vc' || intentContext?.interpreted_request?.domain === 'startup_vc') &&
@@ -3034,6 +3099,8 @@ function buildFallbackCard(
       ? 'Le point fragile est le moment où une passion partagée devient pression, comparaison ou perte d’autonomie.'
     : isPersonalRelationship
       ? 'Le point fragile est le risque de transformer un signe affectif en certitude avant que les actes aient clarifié l’intention.'
+    : isManagementContext
+      ? 'Le point fragile est l’écart entre l’organisation annoncée, les rôles réellement tenus et la charge que chacun porte ou refuse de porter.'
     : startupCommunity
       ? 'Le point fragile est le choix du premier segment : une communauté trop large crée du bruit, une cible trop étroite peut manquer d’élan.'
     : firstDiamondSafeText(
@@ -3046,6 +3113,8 @@ function buildFallbackCard(
       ? 'Le parent veut comprendre et réparer le lien, tandis que l’adolescent peut protéger son autonomie, son image ou sa manière de vivre la déception.'
     : isPersonalRelationship
       ? 'Un message peut réchauffer un lien ancien, mais seule la suite des échanges montre s’il ouvre une rencontre, une clarification ou seulement une chaleur prudente.'
+    : isManagementContext
+      ? 'La réorganisation promet un cadre plus lisible, mais l’équipe peut vivre surtout une redistribution de charge, de pouvoir et de reconnaissance.'
     : startupCommunity
       ? 'Une communauté peut donner de la visibilité, mais seule une cible assez précise produit de l’usage répété, des retours qualifiés et une preuve de traction.'
     : firstDiamondSafeText(
@@ -3062,6 +3131,7 @@ function buildFallbackCard(
   const understands =
     interpreted?.intent_type === 'understand' &&
     !isPersonalRelationship &&
+    !isManagementContext &&
     intentContext?.dominant_frame !== 'site_analysis' &&
     intentContext?.dominant_frame !== 'startup_investment' &&
     intentContext?.dominant_frame !== 'causal_attribution' &&
@@ -3086,6 +3156,14 @@ function buildFallbackCard(
     `${objectSentence} ne se résume pas à une inquiétude générale. La situation se joue dans l’écart entre une crainte formulée et la capacité concrète des acteurs à la traduire en acte : décision, blocage, procédure, pression publique ou déplacement du calendrier.\n\n` +
     `La contradiction centrale tient à ceci : ${tensionLabel}. Une perception peut devenir politiquement puissante avant d’être prouvée, mais elle ne devient structurante que si elle rencontre des relais capables de la porter, de la légaliser, de la financer, de la médiatiser ou de la bloquer.\n\n` +
     `Le point de bascule sera observable. Il apparaîtra lorsqu’un acteur, une institution ou un canal changera de registre : recours, refus, consigne publique, arbitrage, calendrier modifié ou preuve qui rend impossible de traiter la situation comme une simple inquiétude.`
+  const managementInsight =
+    `${objectSentence} doit être lu comme une tension d’organisation : ce qui change officiellement, ce que l’équipe comprend, et ce que chacun doit porter concrètement.`
+  const managementLecture =
+    `${objectSentence} ne se résume pas à une résistance au changement. La situation se joue dans l’écart entre le schéma annoncé, les rôles réellement tenus et la charge quotidienne que l’équipe doit absorber.\n\n` +
+    `La contradiction centrale tient à ceci : ${sentenceFragment(contradiction)}. Le conflit devient sérieux si les responsabilités, les priorités ou les limites restent implicites pendant que la réorganisation avance.\n\n` +
+    `Le point de bascule sera concret : refus ouvert, surcharge visible, départ, blocage de décision, demande d’arbitrage ou clarification nette des rôles. C’est ce signal qui dira si la tension peut être retravaillée ou si elle devient un conflit durable.`
+  const managementSignal =
+    'Le signal clé est le moment où la charge réelle devient visible : refus, surcharge, arbitrage demandé, rôle clarifié ou limite explicitement posée.'
   const concreteActors = firstDiamondSafeText(
     [
       arbre.powers_in_presence?.primary?.map((power) => power.name).filter(Boolean).join(', '),
@@ -3157,6 +3235,8 @@ function buildFallbackCard(
             ? 'La situation se lit par les forces discrètes du lien : autonomie adolescente, regard parental, ancienne passion, frustration vécue et besoin de ne pas perdre la face.'
           : isPersonalRelationship
             ? 'La situation se lit par la reprise concrète du lien : signe affectif, histoire passée, distance, rythme des messages et possibilité réelle d’une rencontre.'
+          : isManagementContext
+            ? managementInsight
           : startupCommunity
             ? startupCommunityInsight
             : genericInsight,
@@ -3174,6 +3254,8 @@ function buildFallbackCard(
           ? understandingSignal
         : isPersonalRelationship
           ? 'Le signal clé est une cohérence entre le signe affectif et les actes : rendez-vous proposé, disponibilité, parole plus claire ou rythme régulier.'
+        : isManagementContext
+          ? managementSignal
         : startupCommunity
           ? startupCommunitySignal
         : 'Le signal clé est le moment où un acteur ou un canal change de registre : décision, blocage, coût visible, récit public ou seuil de rupture.',
@@ -3299,6 +3381,8 @@ function buildFallbackCard(
           ? personalRelationshipCap().hook_fr
           : humanDevelopment
           ? 'Le refus ou le retrait peut protéger quelque chose que le parent ne voit pas encore.'
+          : isManagementContext
+          ? 'Le conflit devient lisible quand les rôles, la charge et le pouvoir de décision sont nommés.'
           : startupCommunity
           ? 'La bonne cible initiale n’est pas celle qui admire le produit, mais celle qui en fait un usage répété.'
           : genericCapHook,
@@ -3311,6 +3395,8 @@ function buildFallbackCard(
           ? personalRelationshipCap().watch_fr
           : humanDevelopment
           ? 'Surveiller s’il peut parler de fatigue, de honte, de comparaison ou d’envie sans se sentir jugé.'
+          : isManagementContext
+          ? 'Surveiller qui porte la charge réelle, qui peut arbitrer, et quelle limite devient explicite.'
           : startupCommunity
           ? 'Surveiller le moment où un segment produit activation, rétention, recommandation ou demande d’intégration.'
           : firstSafeText(
@@ -3344,6 +3430,12 @@ function buildFallbackCard(
               'Séparer le signe affectif, l’histoire du lien et ce qui est proposé concrètement.',
               'Observer le rythme des messages, la disponibilité et la clarté de la rencontre.',
               'Répondre sans surinterpréter : accueillir, proposer un cadre simple et laisser le réel préciser l’intention.',
+            ]
+          : isManagementContext
+          ? [
+              'Nommer les rôles réels, pas seulement l’organigramme annoncé.',
+              'Identifier qui porte la charge, qui décide et qui peut arbitrer.',
+              'Clarifier la limite concrète : surcharge, refus, calendrier, mandat ou responsabilité.',
             ]
           : startupCommunity
           ? [
@@ -3380,6 +3472,8 @@ function buildFallbackCard(
         ? `La situation ne parle pas seulement d’un adolescent qui réagit mal à une déception. Elle fait apparaître plusieurs forces discrètes : désir d’autonomie, regard parental, passion investie, honte de l’échec, fatigue possible et besoin de ne pas perdre la face.\n\n` +
           `La contradiction centrale est délicate : ce qui devait être un moment partagé peut devenir, à quatorze ans, une scène où l’échec paraît exposer l’adolescent. Le retrait ou le reproche ne sont donc pas forcément une accusation stable ; ils peuvent être une manière de reprendre la main, d’éviter la honte, ou de vérifier que le lien tient encore.\n\n` +
           `Le point de bascule sera le moment où la question cessera d’être “qui est responsable ?” pour devenir “comment reconnaître la déception sans enfermer chacun dans son rôle ?”. Le signal utile est sa capacité à revenir au lien, même indirectement, sans devoir justifier toute son émotion.`
+        : isManagementContext
+        ? managementLecture
         : startupCommunity
         ? startupCommunityLecture
         : genericLecture,
