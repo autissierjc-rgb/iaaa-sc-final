@@ -2349,25 +2349,7 @@ function completeSituationCard(
     if (siteFallback) return siteFallback
   }
 
-  const allowLegacyScenarioOverrides = false
-  const isVcCard =
-    allowLegacyScenarioOverrides &&
-    sc.intent_context?.interpreted_request?.intent_type !== 'understand' &&
-    (sc.coverage_check?.domain === 'startup_vc' ||
-      sc.metier_profile?.id === 'vc_investisseur')
-  const isFounderGovernance =
-    allowLegacyScenarioOverrides &&
-    (sc.intent_context?.dominant_frame === 'founder_governance' ||
-      sc.coverage_check?.intent_context?.dominant_frame === 'founder_governance')
-  const isHumanDevelopment =
-    allowLegacyScenarioOverrides &&
-    sc.intent_context?.dominant_frame === 'personal_relationship' &&
-    /\b(fils|fille|enfant|ado|adolescent|adolescente|parent|sport|p[eê]che|carpe|loisir|passion|motivation)\b/i.test(situation)
   const isPersonalRelationship = isPersonalRelationshipCard(sc)
-  const isPitchReadiness =
-    allowLegacyScenarioOverrides &&
-    sc.intent_context?.dominant_frame === 'professional_decision' &&
-    /\b(pitch|jury|pairs?|presentation|présentation|anglais|lancement|lancer|entrain|entraine)\b/i.test(situation)
   const isManagementContext =
     sc.intent_context?.surface_domain === 'management' ||
     sc.intent_context?.interpreted_request?.domain === 'management' ||
@@ -2389,13 +2371,7 @@ function completeSituationCard(
   const isExperienceExplanation = isExperienceExplanationFrame(sc.intent_context)
   const experience = experienceLexicon(situation, objectLabel)
   const tensionLabel = tension || 'un rôle visible continue à organiser la confiance, la preuve et la décision'
-  const trajectories = isVcCard
-    ? vcTrajectories()
-    : isFounderGovernance
-    ? founderGovernanceTrajectories()
-    : isHumanDevelopment
-    ? humanDevelopmentTrajectories()
-    : isPersonalRelationship
+  const trajectories = isPersonalRelationship
     ? personalRelationshipTrajectories()
     : isManagementContext
     ? [
@@ -2457,8 +2433,6 @@ function completeSituationCard(
           signal_en: 'Repeated use becomes observable and makes the target choice defensible.',
         },
       ]
-    : isPitchReadiness
-    ? pitchReadinessTrajectories()
     : isExperienceExplanation
     ? experienceTrajectories(experience.subject)
     : understands
@@ -2494,28 +2468,7 @@ function completeSituationCard(
     : Array.isArray(sc.trajectories) && sc.trajectories.length > 0
     ? sc.trajectories
     : defaultTrajectories(arbre, situation)
-  const cap = isVcCard
-    ? {
-        hook_fr: 'Une startup devient investissable quand la preuve d’usage dépasse la beauté du concept.',
-        hook_en: 'A startup becomes investable when usage proof exceeds the beauty of the concept.',
-        watch_fr: 'Surveiller l’usage répété, la volonté de payer, l’ICP et la capacité à convertir une démonstration en décision d’achat.',
-        watch_en: 'Watch repeated usage, willingness to pay, ICP, and the ability to turn a demo into a buying decision.',
-      }
-    : isFounderGovernance
-    ? {
-        hook_fr: 'Une aide décisive ne suffit pas à faire un bon pacte d’associés.',
-        hook_en: 'Decisive help is not enough to make a good cofounder pact.',
-        watch_fr: 'Surveiller le premier désaccord concret sur rôle, parts, stratégie, recrutement ou autorité finale.',
-        watch_en: 'Watch the first concrete disagreement over role, equity, strategy, hiring, or final authority.',
-      }
-    : isHumanDevelopment
-    ? {
-        hook_fr: 'Le refus du sport peut protéger quelque chose que le parent ne voit pas encore.',
-        hook_en: 'Refusing sport may protect something the parent does not yet see.',
-        watch_fr: 'Surveiller s’il peut parler de fatigue, de honte, de comparaison ou d’envie sans se sentir jugé.',
-        watch_en: 'Watch whether he can speak about fatigue, shame, comparison, or desire without feeling judged.',
-      }
-    : isPersonalRelationship
+  const cap = isPersonalRelationship
     ? personalRelationshipCap()
     : isManagementContext
     ? {
@@ -2530,13 +2483,6 @@ function completeSituationCard(
         hook_en: 'The right first target is not the widest one, but the one that proves usage fastest.',
         watch_fr: 'Surveiller activation, rétention, partage, recommandation, demande d’intégration ou passage payant.',
         watch_en: 'Watch activation, retention, sharing, recommendation, integration request, or paid step.',
-      }
-    : isPitchReadiness
-    ? {
-        hook_fr: 'Le risque n’est pas le niveau d’anglais ; c’est un message trop large sous regard public.',
-        hook_en: 'The risk is not English level; it is an overwide message under public scrutiny.',
-        watch_fr: 'Surveiller si vous pouvez dire en une minute : problème, promesse, preuve, demande.',
-        watch_en: 'Watch whether you can state in one minute: problem, promise, proof, ask.',
       }
     : understands
     ? {
@@ -2593,118 +2539,72 @@ function completeSituationCard(
     submitted_situation_en: normalizeSubmittedSituation(cleanPublicText(firstText([sc.submitted_situation_en, sc.submitted_situation], situation))),
     insight_fr: understands
       ? `${objectSentence} met en tension ce qui est craint, ce qui est possible et ce qui est prouvable. Le point décisif est la capacité réelle des acteurs à transformer cette tension en décision, blocage ou changement observable.`
-      : isVcCard
-      ? 'Pour un VC, le produit devient intéressant si sa promesse se transforme en preuve d’usage répétable.'
-      : isFounderGovernance
-      ? 'La vraie décision n’est pas d’ajouter un profil brillant, mais de savoir si une relation passée peut devenir une gouvernance claire.'
-      : isHumanDevelopment
-      ? 'La situation se lit par les forces discrètes du lien : autonomie adolescente, regard parental, passion investie, déception vécue et besoin de ne pas perdre la face.'
       : isPersonalRelationship
       ? 'La situation se lit par la reprise concrète du lien : signe affectif, histoire passée, distance, rythme des messages et possibilité réelle d’une rencontre.'
       : isManagementContext
       ? `${objectSentence} doit être lu comme une tension d’organisation : ce qui change officiellement, ce que l’équipe comprend, et ce que chacun doit porter concrètement.`
       : isStartupTargetChoice
       ? `${objectSentence} ne se joue pas d’abord comme une question de volume. La décision utile est de choisir le premier groupe capable de comprendre la promesse, de l’utiliser souvent, d’en parler et de produire des preuves visibles.`
-      : isPitchReadiness
-      ? 'La situation se lit par les forces en présence du pitch : clarté du message, regard du jury, anglais moyen, manque de répétition et proximité du lancement.'
       : safePublicText(
           firstText([sc.insight_fr, sc.insight], ''),
           situation,
           `La situation se lit par les leviers réels en présence : ${powersLabel(arbre)}.`
         ),
-    insight_en: isVcCard
-      ? 'For a VC, the product becomes interesting if its promise turns into repeatable usage proof.'
-      : isFounderGovernance
-      ? 'The real decision is not adding a brilliant profile, but whether a past relationship can become clear governance.'
-      : safePublicText(
+    insight_en: safePublicText(
           firstText([sc.insight_en, sc.insight], ''),
           situation,
           'The situation is read through the real levers in presence.'
         ),
     main_vulnerability_fr: understands
       ? 'Le point fragile est le passage entre crainte, intention, capacité réelle et acte vérifiable.'
-      : isVcCard
-      ? 'Le point fragile est l’écart entre une proposition intellectuellement forte et des preuves encore à établir : usage répété, volonté de payer, ICP clair et distribution.'
-      : isFounderGovernance
-      ? 'Le point fragile est le passage d’une dette relationnelle à un pouvoir d’associée sans pacte explicite sur rôle, parts, décision et sortie.'
-      : isHumanDevelopment
-      ? 'Le point fragile est le moment où une passion partagée devient pression, comparaison ou perte d’autonomie.'
       : isPersonalRelationship
       ? 'Le point fragile est le risque de transformer un signe affectif en certitude avant que les actes aient clarifié l’intention.'
       : isManagementContext
       ? 'Le point fragile est l’écart entre l’organisation annoncée, les rôles réellement tenus et la charge que chacun porte ou refuse de porter.'
       : isStartupTargetChoice
       ? 'Le point fragile est le choix du premier segment : une communauté trop large crée du bruit, une cible trop étroite peut manquer d’élan.'
-      : isPitchReadiness
-      ? 'Le point fragile est l’écart entre l’importance publique du lancement et le manque de répétition qui rend le message vulnérable.'
       : firstSafeText(
           [sc.main_vulnerability_fr, sc.main_vulnerability, arbre.main_vulnerability_candidate],
           situation,
           vulnerabilityFallbackFr
         ),
-    main_vulnerability_en: isVcCard
-      ? 'The fragile point is the gap between an intellectually strong proposition and proof still to be established: repeated use, willingness to pay, clear ICP, and distribution.'
-      : isFounderGovernance
-      ? 'The fragile point is the move from relational debt to cofounder power without an explicit pact on role, equity, decision, and exit.'
-      : firstSafeText(
+    main_vulnerability_en: firstSafeText(
           [sc.main_vulnerability_en, sc.main_vulnerability, arbre.main_vulnerability_candidate],
           situation,
           vulnerabilityFallbackEn
         ),
     asymmetry_fr: understands
       ? 'La tension peut être largement commentée, mais elle ne devient lisible qu’en identifiant qui peut réellement agir, bloquer ou légitimer.'
-      : isVcCard
-      ? 'Le fondateur vend une vision ; le VC cherche une preuve que cette vision devient un marché achetable, répétable et défendable.'
-      : isFounderGovernance
-      ? 'Elle apporte accès, prestige et capacité de scale ; vous devez protéger la startup d’une gouvernance dictée par la gratitude ou l’histoire personnelle.'
-      : isHumanDevelopment
-      ? 'Le parent veut comprendre et réparer le lien, tandis que l’adolescent peut protéger son autonomie, son image ou sa manière de vivre la déception.'
       : isPersonalRelationship
       ? 'Un message peut réchauffer un lien ancien, mais seule la suite des échanges montre s’il ouvre une rencontre, une clarification ou seulement une chaleur prudente.'
       : isManagementContext
       ? 'La réorganisation promet un cadre plus lisible, mais l’équipe peut vivre surtout une redistribution de charge, de pouvoir et de reconnaissance.'
       : isStartupTargetChoice
       ? 'Une communauté peut donner de la visibilité, mais seule une cible assez précise produit de l’usage répété, des retours qualifiés et une preuve de traction.'
-      : isPitchReadiness
-      ? 'Vous portez une vision forte, mais le jury évaluera surtout la clarté, la confiance, la preuve et la capacité à répondre sous pression.'
       : firstSafeText(
           [sc.asymmetry_fr, sc.asymmetry, arbre.load_bearing_contradiction],
           situation,
           'Ce qui semble tenir publiquement dépend d’un levier plus discret qui peut bloquer, user ou faire basculer.'
         ),
-    asymmetry_en: isVcCard
-      ? 'The founder sells a vision; the VC looks for proof that this vision becomes a payable, repeatable, defensible market.'
-      : isFounderGovernance
-      ? 'She brings access, prestige, and scaling capacity; you must protect the startup from governance dictated by gratitude or personal history.'
-      : firstSafeText(
+    asymmetry_en: firstSafeText(
           [sc.asymmetry_en, sc.asymmetry, arbre.load_bearing_contradiction],
           situation,
           'What appears to hold publicly depends on a quieter lever that can block, wear down, or tip the situation.'
         ),
     key_signal_fr: understands
       ? 'Le signal clé serait un acte vérifiable : décision, refus, procédure, pression organisée, changement de calendrier ou prise de position qui modifie les marges d’action.'
-      : isVcCard
-      ? 'Le signal clé est l’apparition d’un usage répété par un ICP identifiable, avec volonté de payer ou intégration dans un flux de décision.'
-      : isFounderGovernance
-      ? 'Le signal clé est sa capacité à accepter un pacte écrit qui limite clairement rôle, pouvoir, parts et conditions de sortie.'
-      : isHumanDevelopment
-      ? 'Le signal clé est sa capacité à dire ce qu’il refuse, ce qu’il protège et ce qui pourrait redevenir désirable autrement.'
       : isPersonalRelationship
       ? 'Le signal clé est une cohérence entre le signe affectif et les actes : rendez-vous proposé, disponibilité, parole plus claire ou rythme régulier.'
       : isManagementContext
       ? 'Le signal clé est le moment où la charge réelle devient visible : refus, surcharge, arbitrage demandé, rôle clarifié ou limite explicitement posée.'
       : isStartupTargetChoice
       ? 'Le signal clé est le passage de l’intérêt à l’usage répété : retours qualifiés, partages spontanés, réutilisation, invitation d’autres utilisateurs ou demande d’intégration.'
-      : isPitchReadiness
-      ? 'Le signal clé est votre capacité à répéter une version courte en anglais sans perdre le fil sous questions.'
       : firstSafeText(
           [sc.key_signal_fr, sc.key_signal],
           situation,
           'Le signal clé est un changement observable de rythme : décision, refus, coût visible, seuil ou déplacement de pouvoir.'
         ),
-    key_signal_en: isFounderGovernance
-      ? 'The key signal is her ability to accept a written pact that clearly limits role, power, equity, and exit terms.'
-      : firstSafeText(
+    key_signal_en: firstSafeText(
           [sc.key_signal_en, sc.key_signal, arbre.temps?.[0], arbre.temporalites?.[0]],
           situation,
           'The key signal is an observable tempo shift: decision, refusal, visible cost, threshold, or power move.'
@@ -2745,98 +2645,8 @@ function completeSituationCard(
               explanation_en: 'The reading remains reversible until no verifiable act closes the counter-hypotheses.',
             },
           ]
-        : isVcCard
-        ? vcRadarDetails()
-        : isFounderGovernance
-        ? founderGovernanceRadarDetails()
-        : isHumanDevelopment
-        ? [
-            {
-              axis: 'impact',
-              label_fr: 'Impact',
-              label_en: 'Impact',
-              score: 2,
-              explanation_fr:
-                'Impact significatif sur le lien parent-enfant, l’image de soi de l’adolescent et son rapport durable au mouvement.',
-              explanation_en:
-                'Significant impact on the parent-child bond, the teenager’s self-image, and his long-term relationship to movement.',
-            },
-            {
-              axis: 'urgency',
-              label_fr: 'Urgence',
-              label_en: 'Urgency',
-              score: 1,
-              explanation_fr:
-                'Pas d’urgence immédiate sur l’activité ; l’urgence réelle est de ne pas transformer le sujet en bras de fer.',
-              explanation_en:
-                'No immediate sporting urgency; the real urgency is not turning the subject into a power struggle.',
-            },
-            {
-              axis: 'uncertainty',
-              label_fr: 'Incertitudes',
-              label_en: 'Uncertainties',
-              score: 2,
-              explanation_fr:
-                'L’inconnu principal est ce qu’il protège par ce refus : fatigue, honte, comparaison, perte de désir ou besoin d’autonomie.',
-              explanation_en:
-                'The main unknown is what he protects through refusal: fatigue, shame, comparison, loss of desire, or need for autonomy.',
-            },
-            {
-              axis: 'reversibility',
-              label_fr: 'Réversibilité',
-              label_en: 'Reversibility',
-              score: 2,
-              explanation_fr:
-                'La situation reste réversible si un autre cadre lui permet de choisir sans devoir sauver la face.',
-              explanation_en:
-                'The situation remains reversible if another frame lets him choose without having to save face.',
-            },
-          ]
         : isPersonalRelationship
         ? personalRelationshipRadarDetails()
-        : isPitchReadiness
-        ? [
-            {
-              axis: 'impact',
-              label_fr: 'Impact',
-              label_en: 'Impact',
-              score: 2,
-              explanation_fr:
-                'Impact élevé sur la première impression d’IAAA auprès des pairs, du jury et des relais possibles.',
-              explanation_en:
-                'High impact on IAAA’s first impression among peers, jury, and possible relays.',
-            },
-            {
-              axis: 'urgency',
-              label_fr: 'Urgence',
-              label_en: 'Urgency',
-              score: 3,
-              explanation_fr:
-                'Urgence forte : le pitch arrive dans quelques jours et la préparation doit produire une version répétable immédiatement.',
-              explanation_en:
-                'High urgency: the pitch is coming in days and preparation must produce a repeatable version immediately.',
-            },
-            {
-              axis: 'uncertainty',
-              label_fr: 'Incertitudes',
-              label_en: 'Uncertainties',
-              score: 2,
-              explanation_fr:
-                'L’incertitude porte sur la réaction du jury, les questions en anglais et la capacité à rester clair sous pression.',
-              explanation_en:
-                'Uncertainty concerns jury reaction, questions in English, and the ability to stay clear under pressure.',
-            },
-            {
-              axis: 'reversibility',
-              label_fr: 'Réversibilité',
-              label_en: 'Reversibility',
-              score: 2,
-              explanation_fr:
-                'La situation est encore réversible si le message est resserré, répété et préparé avec des réponses courtes aux objections.',
-              explanation_en:
-                'The situation is still reversible if the message is tightened, rehearsed, and prepared with short answers to objections.',
-            },
-          ]
         : Array.isArray(sc.radar_details) && sc.radar_details.length > 0 && !radarDetailsLookInternal(sc.radar_details)
         ? sc.radar_details
         : defaultRadarDetails(radar as Record<string, number>, arbre, situation),
@@ -2844,35 +2654,11 @@ function completeSituationCard(
     cap,
     constraints_fr: understands
       ? understandingConstraintsFr
-      : isVcCard
-      ? [
-        'Prouver un ICP précis : le métier, le budget et la décision que le produit aide réellement à traiter.',
-        'Transformer la démonstration produit en usage répété, mesurable et partageable par plusieurs utilisateurs.',
-        'Montrer une différenciation défendable face aux outils de synthèse, de conseil, de veille ou de collaboration existants.',
-      ]
-      : isFounderGovernance
-      ? [
-        'Séparer la gratitude pour l’aide passée de la décision d’ouvrir le capital ou le pouvoir.',
-        'Définir par écrit rôle, parts, autorité finale, vesting, période d’essai et conditions de sortie.',
-        'Vérifier si le besoin réel est un profil de scale, une conseillère, une salariée senior ou une cofondatrice.',
-      ]
-      : isHumanDevelopment
-      ? [
-        'Ne pas transformer l’activité ou la passion en preuve d’obéissance ou de motivation retrouvée.',
-        'Distinguer plaisir, performance, fatigue, regard des autres et besoin d’autonomie.',
-        'Créer un cadre de parole où il peut expliquer son refus sans perdre la face.',
-      ]
       : isPersonalRelationship
       ? [
         'Ne pas transformer un signe affectif isolé en preuve définitive d’intention.',
         'Distinguer histoire passée, chaleur du message, disponibilité réelle et rencontre concrète.',
         'Répondre de façon accueillante sans forcer l’autre à clarifier plus vite que le lien ne le permet.',
-      ]
-      : isPitchReadiness
-      ? [
-        'Réduire le pitch à une phrase de promesse, trois preuves et une demande explicite.',
-        'Préparer une version anglaise courte, simple et répétable plutôt qu’un anglais parfait.',
-        'Anticiper cinq questions du jury avec des réponses de vingt secondes.',
       ]
       : constraintsFr,
     constraints_en: understands
@@ -2881,44 +2667,14 @@ function completeSituationCard(
         'Distinguish direct technical proof from the trust needed to decide.',
         'Observe who still requires this format, and for what function: filtering, framing, reputation, or commitment.',
       ]
-      : isVcCard
-      ? [
-        'Prove a precise ICP: the role, budget, and decision the product actually helps process.',
-        'Turn the product demo into repeated, measurable usage shared by several users.',
-        'Show defensible differentiation against existing synthesis, consulting, monitoring, or collaboration tools.',
-      ]
       : listFromAxis(sc.constraints_en, constraintsFr, situation),
     uncertainties_fr: understands
       ? ensureContextualBlindSpotFr(understandingUncertaintiesFr, sc.intent_context)
-      : isVcCard
-      ? ensureContextualBlindSpotFr([
-        'Volonté de payer : les utilisateurs voient-ils un gain assez fort pour acheter, renouveler ou recommander ?',
-        'Répétabilité : le cas d’usage se reproduit-il dans plusieurs organisations ou reste-t-il trop artisanal ?',
-        'Distribution : quel canal permet d’atteindre les premiers acheteurs sans dépendre uniquement du fondateur ?',
-      ])
-      : isFounderGovernance
-      ? ensureContextualBlindSpotFr([
-        'Sa demande porte-t-elle sur un vrai engagement opérationnel ou sur une reconnaissance symbolique de l’aide donnée ?',
-        'Le lien personnel peut-il supporter un désaccord dur sur stratégie, parts ou autorité ?',
-        'Quel rôle précis manque à la startup pour scaler : cofondatrice, COO, board advisor ou apport ponctuel ?',
-      ])
-      : isHumanDevelopment
-      ? ensureContextualBlindSpotFr([
-        'Refuse-t-il l’activité, l’échec vécu, le regard des autres, la pression implicite ou la façon dont l’épisode a été partagé ?',
-        'Y a-t-il fatigue, honte, perte de plaisir, besoin de réparation ou autre centre d’intérêt plus fort ?',
-        'Quel cadre lui permettrait de revenir au lien sans devoir se justifier ?',
-      ])
       : isPersonalRelationship
       ? ensureContextualBlindSpotFr([
         'Le signe affectif annonce-t-il une intention, une nostalgie, une politesse chaleureuse ou une simple reprise de lien ?',
         'Qui prend l’initiative concrète : proposer un rendez-vous, maintenir le rythme des messages, clarifier le ton ?',
         'Quelle part vient de l’histoire passée, de la distance, de la projection ou du moment présent ?',
-      ])
-      : isPitchReadiness
-      ? ensureContextualBlindSpotFr([
-        'Quel message doit rester en mémoire si le jury ne retient qu’une seule phrase ?',
-        'Quelles objections risquent de déstabiliser : marché, produit, traction, différenciation ou crédibilité ?',
-        'Quelle partie du pitch devient fragile en anglais : ouverture, transition, preuve ou réponse aux questions ?',
       ])
       : ensureContextualBlindSpotFr(uncertaintiesFr, sc.intent_context),
     uncertainties_en: understands
@@ -2927,44 +2683,14 @@ function completeSituationCard(
         'Which actors still give it authority, and why?',
         'When does the format stop clarifying the decision and become only a ritual?',
       ])
-      : isVcCard
-      ? ensureContextualBlindSpotEn([
-        'Willingness to pay: do users see enough value to buy, renew, or recommend?',
-        'Repeatability: does the use case recur across organizations or remain too bespoke?',
-        'Distribution: which channel reaches early buyers without depending only on the founder?',
-      ])
       : ensureContextualBlindSpotEn(listFromAxis(sc.uncertainties_en, uncertaintiesFr, situation), sc.intent_context),
     movements_fr: understands
       ? understandingMovementsFr
-      : isVcCard
-      ? [
-        'Identifier l’ICP prioritaire et la décision critique que la carte rend plus claire.',
-        'Mesurer l’usage répété, le temps gagné et la volonté de payer sur quelques utilisateurs qualifiés.',
-        'Transformer la démo en preuve investissable : pipeline, rétention, prix et canal d’acquisition.',
-      ]
-      : isFounderGovernance
-      ? [
-        'Écrire le rôle demandé, les pouvoirs associés et ce qui serait explicitement exclu.',
-        'Tester une collaboration limitée avant toute attribution de parts ou de titre fondateur.',
-        'Prévoir dès le départ une clause de sortie et un mode de résolution des conflits.',
-      ]
-      : isHumanDevelopment
-      ? [
-        'Explorer ce que l’épisode représente maintenant pour lui : plaisir abîmé, pression, honte, fatigue ou besoin de réparation.',
-        'Lui laisser choisir une activité, un rythme, une pause ou une manière de reprendre sans objectif de performance immédiat.',
-        'Observer si le dialogue rouvre du désir ou si le refus protège une difficulté plus profonde.',
-      ]
       : isPersonalRelationship
       ? [
         'Accueillir le signe sans le transformer immédiatement en promesse.',
         'Proposer un cadre simple de rencontre ou d’échange, puis observer la réponse réelle.',
         'Laisser VI enquêter sur le rythme, les actes et les mots exacts plutôt que remplir l’ambiguïté.',
-      ]
-      : isPitchReadiness
-      ? [
-        'Écrire une version de 60 secondes : problème, promesse, preuve, demande.',
-        'Répéter à voix haute en anglais trois fois par jour jusqu’au pitch.',
-        'Préparer une réponse courte aux objections probables plutôt que défendre tout le projet.',
       ]
       : cleanList(ensureList(sc.movements_fr, [
       'Identifier les forces qui agissent, bloquent ou supportent la situation.',
@@ -2977,12 +2703,6 @@ function completeSituationCard(
         'Compare that function with the more direct proofs already available.',
         'Spot the signal showing authority moving from narrative to usage.',
       ]
-      : isVcCard
-      ? [
-        'Identify the priority ICP and the critical decision the card makes clearer.',
-        'Measure repeated usage, time saved, and willingness to pay among qualified users.',
-        'Turn the demo into investable proof: pipeline, retention, pricing, and acquisition channel.',
-      ]
       : cleanList(ensureList(sc.movements_en, [
       'Identify the forces acting, blocking, or carrying the situation.',
       'Turn VI into inquiry: which absent angle could reverse the reading?',
@@ -2990,16 +2710,8 @@ function completeSituationCard(
     ])),
     avertissement_fr: understands
       ? 'Ne pas confondre compréhension de la question et remplissage d’un cadre.'
-      : isVcCard
-      ? 'Ne pas confondre intérêt en démonstration et preuve d’investissement.'
-      : isFounderGovernance
-      ? 'Ne pas confondre gratitude, prestige du profil et solidité d’un pacte d’associés.'
-      : isHumanDevelopment
-      ? 'Ne pas confondre refus de l’activité, déception vécue et besoin de reprendre la main.'
       : isPersonalRelationship
       ? 'Ne pas confondre signe affectif, intention claire et projection personnelle.'
-      : isPitchReadiness
-      ? 'Ne pas confondre niveau d’anglais et clarté stratégique du message.'
       : cleanPublicText(firstText(
         [sc.avertissement_fr, sc.avertissement],
         'Ne pas confondre tenue apparente et capacité réelle d’absorption.'
