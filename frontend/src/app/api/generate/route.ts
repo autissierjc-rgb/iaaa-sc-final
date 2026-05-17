@@ -35,7 +35,6 @@ import { sanitizeResources } from '@/lib/resources/sanitizeResources'
 import { shouldUseWeb } from '@/lib/resources/shouldUseWeb'
 import { enrichResourcesWithSiteUnderstanding } from '@/lib/resources/siteUnderstanding'
 import { detectScopeContext } from '@/lib/scope/scopeContext'
-import { buildConcreteTheatre as buildLegacyConcreteTheatre } from '@/lib/context/concreteTheatre'
 import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWritingWithMode } from '@/lib/writing'
 import { runContractQualityGate, runQualityGate } from '@/lib/quality'
@@ -1194,30 +1193,43 @@ function legacyDomainFromCanonical(value: string) {
   return 'general'
 }
 
-function mergeCanonicalTheatreIntoLegacy(
-  legacy: ConcreteTheatre,
+function concreteTheatreFromCanonical(
   canonical: ReturnType<typeof buildCanonicalConcreteTheatre>,
 ): ConcreteTheatre {
+  const evidenceLabels = canonical.evidence.map((item) => item.label)
+  const anchors = Array.from(new Set([
+    ...(canonical.named_actors ?? []),
+    ...canonical.actors,
+    ...canonical.institutions,
+    ...canonical.procedures,
+    ...canonical.visible_actions,
+    ...canonical.constraints,
+    ...evidenceLabels,
+  ])).filter(Boolean).slice(0, 18)
+
   return {
-    ...legacy,
     domain: legacyDomainFromCanonical(canonical.domain) as ConcreteTheatre['domain'],
-    actors: Array.from(new Set([...canonical.actors, ...legacy.actors])).slice(0, 12),
+    anchors,
+    actors: canonical.actors.slice(0, 12),
     named_actors: canonical.named_actors,
     role_anchors: canonical.role_anchors,
-    institutions: Array.from(new Set([...canonical.institutions, ...legacy.institutions])).slice(0, 12),
-    procedures: Array.from(new Set([...canonical.procedures, ...legacy.procedures])).slice(0, 10),
-    places: Array.from(new Set([...canonical.places, ...legacy.places])).slice(0, 10),
-    dates: Array.from(new Set([...canonical.dates, ...legacy.dates])).slice(0, 10),
-    mechanisms: Array.from(new Set([...canonical.visible_actions, ...legacy.mechanisms])).slice(0, 10),
-    evidence_to_watch: Array.from(new Set([
-      ...canonical.evidence.map((item) => item.label),
-      ...legacy.evidence_to_watch,
-    ])).slice(0, 10),
-    missing_anchors: Array.from(new Set([...canonical.missing_anchors, ...legacy.missing_anchors])).slice(0, 10),
+    institutions: canonical.institutions.slice(0, 12),
+    procedures: canonical.procedures.slice(0, 10),
+    places: canonical.places.slice(0, 10),
+    dates: canonical.dates.slice(0, 10),
+    precedents: [],
+    relays: canonical.role_anchors?.slice(0, 8) ?? [],
+    blockers: canonical.unknowns.slice(0, 8),
+    mechanisms: canonical.visible_actions.slice(0, 10),
+    thresholds: canonical.constraints.slice(0, 10),
+    evidence_to_watch: evidenceLabels.slice(0, 10),
+    missing_anchors: canonical.missing_anchors.slice(0, 10),
     collaboration_questions: canonical.collaboration_questions,
     guidance_fr: canonical.trace.status === 'partial'
       ? 'Le théâtre réel canonique signale encore des ancres manquantes : acteurs, procédures, preuves ou contraintes doivent rester visibles dans la lecture.'
-      : legacy.guidance_fr,
+      : 'Ancrer la lecture dans le théâtre réel canonique : acteurs, institutions, procédures, gestes, contraintes, preuves et absences structurantes.',
+    guidance_en:
+      'Anchor the reading in the canonical real theatre: actors, institutions, procedures, gestures, constraints, evidence, and structural absences.',
   }
 }
 
@@ -4094,12 +4106,6 @@ export async function POST(req: NextRequest) {
     }
     const arbre = enrichArbreWithCoverage({ arbre: rawArbre, coverage: effectiveCoverageWithReadiness })
     const scopeContext = detectScopeContext(analysisText, arbre)
-    const legacyConcreteTheatre = buildLegacyConcreteTheatre({
-      situation: analysisText,
-      arbre,
-      resources,
-      intentContext,
-    })
     const canonicalTheatre = buildCanonicalConcreteTheatre({
       interpretation: canonicalInterpretation,
       resources: canonicalResourcePlan,
@@ -4109,7 +4115,7 @@ export async function POST(req: NextRequest) {
       interpretation: canonicalInterpretation,
       theatre: canonicalTheatre,
     })
-    const concreteTheatre = mergeCanonicalTheatreIntoLegacy(legacyConcreteTheatre, canonicalTheatre)
+    const concreteTheatre = concreteTheatreFromCanonical(canonicalTheatre)
     recordGenerationTrace({
       status: canonicalTheatre.trace.status === 'partial' ? 'partial' : 'ok',
       gate: 'GENERATE',

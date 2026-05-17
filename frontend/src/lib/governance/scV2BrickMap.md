@@ -171,7 +171,7 @@ src/app/sis-system/v2/
 | ResourceService + SourceRouter | resources | passive | `src/lib/resources/ResourceService.ts`, `src/lib/resources/SourceRouter.ts` | Route URL, fallback search et sources par domaine. |
 | FastResourceRunner / fetchResources | resources | branche public | `src/lib/resources`, `src/app/api/generate/route.ts` | Sources rapides pour eviter le hors-sol sans bloquer Recherche+. |
 | Share policy | share | passive | `src/lib/contracts/share.ts` | Snapshot stable, visibilite, anonymisation, OpenGraph. |
-| ConcreteTheatreBuilder | theatre | passive | `src/lib/theatre` | Acteurs, institutions, dates, procedures, preuves, absences. |
+| ConcreteTheatreBuilder | theatre | branche public | `src/lib/theatre`, `src/app/api/generate/route.ts` | Acteurs, institutions, dates, procedures, preuves, absences ; source unique du theatre public, adaptee ensuite au format legacy. |
 | Writing contract | writing | passive | `src/lib/contracts/writing.ts` | Fond, forme, probabilites, phrase diamant, exemples. |
 | WritingEngine + QualityGate | writing / quality | passive | `src/lib/writing`, `src/lib/quality` | Sortie contractuelle et verification hors-sol. |
 | DiamondValidation | quality / writing | branche public partiel | `src/lib/governance/diamondValidation.ts`, `src/app/api/generate/route.ts` | Detecte les phrases generiques et doit orienter vers clarification ou regeneration ciblee. |
