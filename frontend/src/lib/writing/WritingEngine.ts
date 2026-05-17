@@ -118,7 +118,7 @@ function resourceWarning(resources?: ResourceServiceContract): string | undefine
   if (!resources?.needs_web) return undefined
   if (resources.public_sources.length > 0) return undefined
   if (resources.policy === 'url_extract_required') {
-    return 'Une URL est presente : l analyse doit rester provisoire tant que son contenu n a pas ete extrait ou verifie.'
+    return 'Un site ou une URL est present : l analyse doit rester provisoire tant que son contenu, sa promesse et ses preuves visibles n ont pas ete extraits ou verifies.'
   }
   return 'Des sources rapides sont requises pour ce domaine : l analyse doit distinguer ce qui est structurellement lisible de ce qui reste a verifier.'
 }
@@ -255,10 +255,36 @@ function patternWritingContext(patterns?: HumanCollectivePatternContext) {
 }
 
 function isBusinessWritingDomain(domain: string) {
-  return ['startup_market', 'business_strategy', 'product_platform', 'professional', 'management'].includes(domain)
+  return ['startup_market', 'business_strategy', 'product_platform', 'professional'].includes(domain)
 }
 
 function writingGrammar(input: WritingEngineInput) {
+  if (input.expertises_metiers.domain_playbook.domain === 'management') {
+    return {
+      actorsFallback: 'les personnes directement concernees',
+      institutionsFallback: 'l organisation interne, la direction ou les ressources humaines',
+      actionFallback: 'une clarification de roles, de charge ou de decision',
+      evidenceFallback: 'un fait de travail observable',
+      tensionNoun: 'la reorganisation elle-meme',
+      diamond: (tension: string, institutions: string, action: string) =>
+        `Le risque ne tient pas a ${tension} ; il commence quand ${institutions} laissent ${action} sans cadre partage.`,
+      insight: (subject: string, tension: string, action: string, institutions: string) =>
+        `${subject} ne se comprend pas par les positions affichees seules. Le point decisif est le passage entre ${tension}, ${action} et les marges detenues par ${institutions}.`,
+      lectureEntry: (subject: string, institutions: string) =>
+        `${subject} se joue comme une epreuve d organisation : la tension devient serieuse quand elle touche ${institutions}.`,
+      approfondirEntry:
+        'Le fond de la situation tient a la repartition concrete des roles, de la charge, de la decision et des limites acceptables.',
+      supportSentence: (actors: string, institutions: string) =>
+        `Les acteurs visibles sont ${actors}, mais les points d appui sont ${institutions}.`,
+      vulnerability: (blindSpot: string) =>
+        `La vulnerabilite centrale est ${blindSpot} : tant que ce point reste implicite, le conflit se deplace au lieu d etre traite.`,
+      asymmetry: (actors: string, institutions: string) =>
+        `${actors} vivent la tension au quotidien, mais ${institutions} peuvent clarifier, arbitrer ou laisser la charge se concentrer au mauvais endroit.`,
+      keySignal: (evidence: string) =>
+        `Signal cle : ${evidence} montrant qui decide, qui porte la charge et quelle limite devient visible.`,
+    }
+  }
+
   if (isBusinessWritingDomain(input.expertises_metiers.domain_playbook.domain)) {
     return {
       actorsFallback: 'les acteurs economiques concernes',
