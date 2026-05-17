@@ -594,6 +594,8 @@ function cleanPublicText(text: string): string {
   return text
     .replace(/\n{2,}\s*(?:Ressources|Resources|Sources)\b[\s\S]*$/i, '')
     .replace(/\b(?:general_analysis|understand_situation|site_analysis|startup_investment|personal_relationship)\b/gi, '')
+    .replace(/\bresource_role\s*:\s*(?:context_for_question|evidence_source|object_of_analysis|private_material)\b/gi, '')
+    .replace(/\b(?:manual material|user project context|strategic question|url without explicit object request|source\/evidence wording|explicit object analysis request|private material or connector signal)\b/gi, '')
     .replace(/\bLa question décisive est simple\s*:\s*quel acteur, quel geste, quelle règle ou quelle preuve peut transformer l[’']hypothèse en fait observable\s*\??/gi, '')
     .replace(/\bDes éléments visibles existent, mais leur portée reste à établir par des preuves concrètes\.?/gi, '')
     .replace(/\bUn objet visible garde un rôle parce qu[’']il condense des rapports de confiance, de preuve et de pouvoir\.?/gi, '')
@@ -2272,7 +2274,7 @@ function defaultRadarDetails(
 
 function radarDetailsLookInternal(value: unknown): boolean {
   const text = JSON.stringify(value ?? '')
-  return /\b(?:objet|tension)\s+interpr[ée]t[ée]|\bunderstand_situation\b|\bActeurs visibles\b|\bContraintes mat[ée]rielles\b|\bR[èe]gles et institutions\b|\bR[ée]cit dominant\b/i.test(text)
+  return /\b(?:objet|tension)\s+interpr[ée]t[ée]|\bunderstand_situation\b|\bActeurs visibles\b|\bContraintes mat[ée]rielles\b|\bR[èe]gles et institutions\b|\bR[ée]cit dominant\b|\bresource_role\s*:|\bmanual material\b|\buser project context\b|\burl without explicit object request\b/i.test(text)
 }
 
 function vcRadarDetails() {

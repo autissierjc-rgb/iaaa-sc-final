@@ -105,7 +105,10 @@ function cleanIntentSignals(signals: string[]): string[] {
   return signals.filter((signal) =>
     !/^demande de /i.test(signal) &&
     !/^contrat canonique/i.test(signal) &&
-    !/interpr[ée]tation LLM/i.test(signal)
+    !/interpr[ée]tation LLM/i.test(signal) &&
+    !/^resource_role:/i.test(signal) &&
+    !/^(manual material|user project context|strategic question|url without explicit object request|source\/evidence wording|explicit object analysis request|private material or connector signal)$/i.test(signal) &&
+    !/^(general_analysis|understand_situation|site_analysis|startup_investment|personal_relationship)$/i.test(signal)
   )
 }
 
