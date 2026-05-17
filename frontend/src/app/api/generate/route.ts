@@ -899,13 +899,21 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
     card.intent_context?.surface_domain === 'management' ||
     card.intent_context?.interpreted_request?.domain === 'management' ||
     card.coverage_check?.domain === 'management'
+  const preferCompletedStartupTargetCard =
+    card.intent_context?.dominant_frame === 'startup_target_choice'
   const vulnerabilityFrCandidates = preferCompletedManagementCard
+    ? [card.main_vulnerability_fr, sc.main_vulnerability_fr]
+    : preferCompletedStartupTargetCard
     ? [card.main_vulnerability_fr, sc.main_vulnerability_fr]
     : [sc.main_vulnerability_fr, card.main_vulnerability_fr]
   const asymmetryFrCandidates = preferCompletedManagementCard
     ? [card.asymmetry_fr, sc.asymmetry_fr]
+    : preferCompletedStartupTargetCard
+    ? [card.asymmetry_fr, sc.asymmetry_fr]
     : [sc.asymmetry_fr, card.asymmetry_fr]
   const keySignalFrCandidates = preferCompletedManagementCard
+    ? [card.key_signal_fr, sc.key_signal_fr]
+    : preferCompletedStartupTargetCard
     ? [card.key_signal_fr, sc.key_signal_fr]
     : [sc.key_signal_fr, card.key_signal_fr]
   const approfondirSections = writing.approfondir.sections_fr
@@ -2365,6 +2373,8 @@ function completeSituationCard(
     sc.intent_context?.surface_domain === 'management' ||
     sc.intent_context?.interpreted_request?.domain === 'management' ||
     sc.coverage_check?.domain === 'management'
+  const isStartupTargetChoice =
+    sc.intent_context?.dominant_frame === 'startup_target_choice'
   const radar = sc.radar && typeof sc.radar === 'object'
     ? sc.radar
     : { impact: 55, urgency: 50, uncertainty: 60, reversibility: 45 }
@@ -2416,6 +2426,36 @@ function completeSituationCard(
           description_en: 'The logic shifts if an explicit decision redistributes role, priority, load, or power.',
           signal_fr: 'Une limite est posée et transforme le conflit diffus en décision organisationnelle.',
           signal_en: 'A boundary is set and turns diffuse conflict into an organizational decision.',
+        },
+      ]
+    : isStartupTargetChoice
+    ? [
+        {
+          type: 'stabilization',
+          title_fr: 'Segment qualifié',
+          title_en: 'Qualified segment',
+          description_fr: 'La situation se stabilise si un premier public précis comprend la promesse et revient sans relance.',
+          description_en: 'The situation stabilizes if a precise first audience understands the promise and returns without being pushed.',
+          signal_fr: 'Activation, rétention, partage ou retour qualifié par un même segment utilisateur.',
+          signal_en: 'Activation, retention, sharing, or qualified feedback from one user segment.',
+        },
+        {
+          type: 'escalation',
+          title_fr: 'Audience sans usage',
+          title_en: 'Audience without usage',
+          description_fr: 'La pression augmente si la communauté grossit sans produire d’usage répété ni preuve de besoin.',
+          description_en: 'Pressure rises if the community grows without repeated use or need proof.',
+          signal_fr: 'Beaucoup d’attention, mais peu de retours précis, de réutilisation ou de demande concrète.',
+          signal_en: 'Lots of attention, but little precise feedback, reuse, or concrete demand.',
+        },
+        {
+          type: 'regime_shift',
+          title_fr: 'Preuve de marché',
+          title_en: 'Market proof',
+          description_fr: 'La logique change si un segment transforme l’intérêt en usage, recommandation, intégration ou paiement.',
+          description_en: 'The logic shifts if one segment turns interest into usage, recommendation, integration, or payment.',
+          signal_fr: 'Un usage répété devient observable et rend le choix de cible défendable.',
+          signal_en: 'Repeated use becomes observable and makes the target choice defensible.',
         },
       ]
     : isPitchReadiness
@@ -2484,6 +2524,13 @@ function completeSituationCard(
         hook_en: 'The conflict becomes readable when roles, load, and decision power are named.',
         watch_fr: 'Surveiller qui porte la charge réelle, qui peut arbitrer, et quelle limite devient explicite.',
         watch_en: 'Watch who carries the real load, who can arbitrate, and which boundary becomes explicit.',
+      }
+    : isStartupTargetChoice
+    ? {
+        hook_fr: 'La bonne cible initiale n’est pas la plus large, mais celle qui prouve le plus vite l’usage.',
+        hook_en: 'The right first target is not the widest one, but the one that proves usage fastest.',
+        watch_fr: 'Surveiller activation, rétention, partage, recommandation, demande d’intégration ou passage payant.',
+        watch_en: 'Watch activation, retention, sharing, recommendation, integration request, or paid step.',
       }
     : isPitchReadiness
     ? {
@@ -2557,6 +2604,8 @@ function completeSituationCard(
       ? 'La situation se lit par la reprise concrète du lien : signe affectif, histoire passée, distance, rythme des messages et possibilité réelle d’une rencontre.'
       : isManagementContext
       ? `${objectSentence} doit être lu comme une tension d’organisation : ce qui change officiellement, ce que l’équipe comprend, et ce que chacun doit porter concrètement.`
+      : isStartupTargetChoice
+      ? `${objectSentence} ne se joue pas d’abord comme une question de volume. La décision utile est de choisir le premier groupe capable de comprendre la promesse, de l’utiliser souvent, d’en parler et de produire des preuves visibles.`
       : isPitchReadiness
       ? 'La situation se lit par les forces en présence du pitch : clarté du message, regard du jury, anglais moyen, manque de répétition et proximité du lancement.'
       : safePublicText(
@@ -2585,6 +2634,8 @@ function completeSituationCard(
       ? 'Le point fragile est le risque de transformer un signe affectif en certitude avant que les actes aient clarifié l’intention.'
       : isManagementContext
       ? 'Le point fragile est l’écart entre l’organisation annoncée, les rôles réellement tenus et la charge que chacun porte ou refuse de porter.'
+      : isStartupTargetChoice
+      ? 'Le point fragile est le choix du premier segment : une communauté trop large crée du bruit, une cible trop étroite peut manquer d’élan.'
       : isPitchReadiness
       ? 'Le point fragile est l’écart entre l’importance publique du lancement et le manque de répétition qui rend le message vulnérable.'
       : firstSafeText(
@@ -2613,6 +2664,8 @@ function completeSituationCard(
       ? 'Un message peut réchauffer un lien ancien, mais seule la suite des échanges montre s’il ouvre une rencontre, une clarification ou seulement une chaleur prudente.'
       : isManagementContext
       ? 'La réorganisation promet un cadre plus lisible, mais l’équipe peut vivre surtout une redistribution de charge, de pouvoir et de reconnaissance.'
+      : isStartupTargetChoice
+      ? 'Une communauté peut donner de la visibilité, mais seule une cible assez précise produit de l’usage répété, des retours qualifiés et une preuve de traction.'
       : isPitchReadiness
       ? 'Vous portez une vision forte, mais le jury évaluera surtout la clarté, la confiance, la preuve et la capacité à répondre sous pression.'
       : firstSafeText(
@@ -2641,6 +2694,8 @@ function completeSituationCard(
       ? 'Le signal clé est une cohérence entre le signe affectif et les actes : rendez-vous proposé, disponibilité, parole plus claire ou rythme régulier.'
       : isManagementContext
       ? 'Le signal clé est le moment où la charge réelle devient visible : refus, surcharge, arbitrage demandé, rôle clarifié ou limite explicitement posée.'
+      : isStartupTargetChoice
+      ? 'Le signal clé est le passage de l’intérêt à l’usage répété : retours qualifiés, partages spontanés, réutilisation, invitation d’autres utilisateurs ou demande d’intégration.'
       : isPitchReadiness
       ? 'Le signal clé est votre capacité à répéter une version courte en anglais sans perdre le fil sous questions.'
       : firstSafeText(
