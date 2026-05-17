@@ -891,29 +891,28 @@ function firstSafeText(values: unknown[], situation: string, fallback: string): 
   return fallback
 }
 
+function shouldPreferCompletedCardAfterWriting(card: SituationCard): boolean {
+  const frame = card.intent_context?.dominant_frame
+  const domain =
+    card.intent_context?.surface_domain ??
+    card.intent_context?.interpreted_request?.domain ??
+    card.coverage_check?.domain
+
+  return domain === 'management' || frame === 'startup_target_choice'
+}
+
 function applyWritingContractToCard(card: SituationCard, writing: WritingContract | null, situation: string): SituationCard {
   if (!writing || writing.trace.status === 'error') return card
 
   const sc = writing.situation_card
-  const preferCompletedManagementCard =
-    card.intent_context?.surface_domain === 'management' ||
-    card.intent_context?.interpreted_request?.domain === 'management' ||
-    card.coverage_check?.domain === 'management'
-  const preferCompletedStartupTargetCard =
-    card.intent_context?.dominant_frame === 'startup_target_choice'
-  const vulnerabilityFrCandidates = preferCompletedManagementCard
-    ? [card.main_vulnerability_fr, sc.main_vulnerability_fr]
-    : preferCompletedStartupTargetCard
+  const preferCompletedCard = shouldPreferCompletedCardAfterWriting(card)
+  const vulnerabilityFrCandidates = preferCompletedCard
     ? [card.main_vulnerability_fr, sc.main_vulnerability_fr]
     : [sc.main_vulnerability_fr, card.main_vulnerability_fr]
-  const asymmetryFrCandidates = preferCompletedManagementCard
-    ? [card.asymmetry_fr, sc.asymmetry_fr]
-    : preferCompletedStartupTargetCard
+  const asymmetryFrCandidates = preferCompletedCard
     ? [card.asymmetry_fr, sc.asymmetry_fr]
     : [sc.asymmetry_fr, card.asymmetry_fr]
-  const keySignalFrCandidates = preferCompletedManagementCard
-    ? [card.key_signal_fr, sc.key_signal_fr]
-    : preferCompletedStartupTargetCard
+  const keySignalFrCandidates = preferCompletedCard
     ? [card.key_signal_fr, sc.key_signal_fr]
     : [sc.key_signal_fr, card.key_signal_fr]
   const approfondirSections = writing.approfondir.sections_fr
