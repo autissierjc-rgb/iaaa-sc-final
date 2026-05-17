@@ -26,7 +26,6 @@ import { runRiskAdviceGuard } from '@/lib/safety'
 import { routeExpertisesMetiers } from '@/lib/expertisesMetiers'
 import { detectPatterns, patternGuidance } from '@/lib/patterns/detectPatterns'
 import { selectHumanCollectivePatterns } from '@/lib/patterns/humanCollective'
-import { detectMetierProfile } from '@/lib/profiles/detectMetierProfile'
 import { fetchResources } from '@/lib/resources/fetchResources'
 import { runFastResourceRunner } from '@/lib/resources/FastResourceRunner'
 import { planResources } from '@/lib/resources'
@@ -4151,8 +4150,7 @@ export async function POST(req: NextRequest) {
       resource_service: canonicalResourcePlan,
     }
     const patternContext = detectPatterns({ situation: analysisText, arbre })
-    // Legacy lexical signal kept temporarily while ExpertisesMetiers becomes authoritative.
-    const metierProfile = detectMetierProfile(analysisText)
+    const metierProfile = undefined
     const prebuiltSiteCard = siteAnalysisFallbackCard({
       situation: displayText,
       arbre,
@@ -4600,7 +4598,7 @@ export async function POST(req: NextRequest) {
       !siteGuard &&
       (intentContext.interpreted_request?.intent_type === 'understand' ||
       effectiveCoverageWithReadiness.domain === 'startup_vc' ||
-      metierProfile?.id === 'vc_investisseur' ||
+      expertisesMetiers.domain_playbook.id === 'startup_market' ||
       scopeContext.scope === 'global' ||
       intentContext.dominant_frame !== 'general_analysis')
     const hasLecture =
