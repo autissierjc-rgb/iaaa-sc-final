@@ -896,7 +896,7 @@ function shouldPreferCompletedCardAfterWriting(card: SituationCard): boolean {
     card.intent_context?.interpreted_request?.domain ??
     card.coverage_check?.domain
 
-  return domain === 'management' || frame === 'startup_target_choice'
+  return domain === 'management'
 }
 
 function applyWritingContractToCard(card: SituationCard, writing: WritingContract | null, situation: string): SituationCard {
