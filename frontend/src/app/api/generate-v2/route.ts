@@ -23,7 +23,7 @@ import type { AstrolabeBranchV2, GenerationModeId, RadarScoreV2 } from '@/lib/co
 
 export const dynamic = 'force-dynamic'
 
-type GenerateV2Body = {
+export type GenerateV2Body = {
   input?: string
   raw_input?: string
   mode?: GenerationModeId
@@ -199,20 +199,19 @@ async function interpretForMode(rawInput: string, generationModeId: GenerationMo
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function runGenerateV2Contract(body: GenerateV2Body, route = '/api/generate-v2') {
   const started = Date.now()
-  const body = await readBody(request)
   const rawInput = (body.input ?? body.raw_input ?? '').trim()
 
   if (!rawInput) {
-    return NextResponse.json(
-      {
+    return {
+      status: 400,
+      payload: {
         ok: false,
         error: 'missing_input',
         message: 'Provide input or raw_input.',
       },
-      { status: 400 },
-    )
+    }
   }
 
   const requestedMode = body.mode ?? 'admin_benchmark'
@@ -328,7 +327,7 @@ export async function POST(request: NextRequest) {
     },
   }
   const generation_archive = buildGenerationEvent({
-    route: '/api/generate-v2',
+    route,
     raw_input: rawInput,
     interpretation,
     dialogue,
@@ -340,7 +339,7 @@ export async function POST(request: NextRequest) {
 
   const pipeline_trace = buildPipelineRunTrace({
     id: `generate-v2-${Date.now()}`,
-    route: '/api/generate-v2',
+    route,
     blueprint: SITUATION_CARD_V2_PIPELINE,
     measurements: [
       { stage_id: 'interpretation', duration_ms: interpretation.trace.duration_ms ?? 0, outcome: 'ok' },
@@ -380,28 +379,38 @@ export async function POST(request: NextRequest) {
     totalDurationMs,
   })
 
-  return NextResponse.json({
-    ok: true,
-    mode: 'v2_contract_dry_run',
-    generation_mode,
-    runtime_summary,
-    total_duration_ms: totalDurationMs,
-    dialogue,
-    interpretation,
-    safety,
-    resources,
-    fast_resource_run: fastResourceRun,
-    expertises,
-    patterns,
-    triad_astrolabe,
-    theatre,
-    scoring,
-    inquiry,
-    recherche_plus,
-    writing,
-    writing_benchmark,
-    quality,
-    generation_archive,
-    pipeline_trace,
-  })
+  return {
+    status: 200,
+    payload: {
+      ok: true,
+      mode: 'v2_contract_dry_run',
+      generation_mode,
+      runtime_summary,
+      total_duration_ms: totalDurationMs,
+      dialogue,
+      interpretation,
+      safety,
+      resources,
+      fast_resource_run: fastResourceRun,
+      expertises,
+      patterns,
+      triad_astrolabe,
+      theatre,
+      scoring,
+      inquiry,
+      recherche_plus,
+      writing,
+      writing_benchmark,
+      quality,
+      generation_archive,
+      pipeline_trace,
+    },
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const body = await readBody(request)
+  const result = await runGenerateV2Contract(body)
+
+  return NextResponse.json(result.payload, { status: result.status })
 }

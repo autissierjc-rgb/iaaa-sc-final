@@ -1,11 +1,10 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 import { DIAMOND_REGRESSION_CASES } from '@/lib/governance/diamondRegressionCases'
 import { validateRegressionCase } from '@/lib/governance/diamondRegressionRunner'
 import type { SituationCard } from '@/lib/resources/resourceContract'
+import { runGenerateV2Contract } from '@/app/api/generate-v2/route'
 
 export const dynamic = 'force-dynamic'
-
-const CASE_TIMEOUT_MS = 15000
 
 type GenerateV2Payload = {
   ok?: boolean
@@ -45,48 +44,6 @@ type GenerateV2Payload = {
   total_duration_ms?: number
 }
 
-type TimedGenerateResponse =
-  | {
-      timedOut: false
-      response: Response
-      payload: GenerateV2Payload
-    }
-  | {
-      timedOut: true
-      message: string
-    }
-
-async function fetchGenerateV2WithTimeout(url: URL, init: RequestInit, timeoutMs: number): Promise<TimedGenerateResponse> {
-  const controller = new AbortController()
-  let timeout: ReturnType<typeof setTimeout> | undefined
-
-  try {
-    const request = fetch(url, {
-        ...init,
-        signal: controller.signal,
-      })
-      .then(async (response) => ({
-        timedOut: false as const,
-        response,
-        payload: await response.json() as GenerateV2Payload,
-      }))
-
-    const guard = new Promise<TimedGenerateResponse>((resolve) => {
-      timeout = setTimeout(() => {
-        controller.abort()
-        resolve({
-          timedOut: true,
-          message: `Regression case exceeded ${timeoutMs} ms.`,
-        })
-      }, timeoutMs)
-    })
-
-    return await Promise.race([request, guard])
-  } finally {
-    if (timeout) clearTimeout(timeout)
-  }
-}
-
 function cardFromGenerateV2(payload: GenerateV2Payload): SituationCard {
   const writingCard = payload.writing?.situation_card ?? {}
   const astrolabe = payload.scoring?.astrolabe ?? []
@@ -113,41 +70,22 @@ function cardFromGenerateV2(payload: GenerateV2Payload): SituationCard {
   } as SituationCard
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   const started = Date.now()
-  const origin = request.nextUrl.origin
   const results = []
 
   for (const testCase of DIAMOND_REGRESSION_CASES) {
     try {
-      const generated = await fetchGenerateV2WithTimeout(new URL('/api/generate-v2', origin), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const generated = await runGenerateV2Contract(
+        {
           input: testCase.input,
-          mode: 'public_fast',
-        }),
-      }, CASE_TIMEOUT_MS)
+          mode: 'admin_benchmark',
+        },
+        '/api/diamond-regressions',
+      )
+      const payload = generated.payload as GenerateV2Payload
 
-      if (generated.timedOut) {
-        results.push({
-          case_id: testCase.id,
-          ok: false,
-          domain: testCase.domain,
-          playbook: 'timeout',
-          duration_ms: CASE_TIMEOUT_MS,
-          issues: [{
-            level: 'error',
-            code: 'diamond_regression_timeout',
-            message: generated.message,
-          }],
-        })
-        continue
-      }
-
-      const { response, payload } = generated
-
-      if (!response.ok || !payload.ok) {
+      if (generated.status >= 400 || !payload.ok) {
         results.push({
           case_id: testCase.id,
           ok: false,
@@ -178,15 +116,11 @@ export async function POST(request: NextRequest) {
         ok: false,
         domain: testCase.domain,
         playbook: 'route_error',
-        duration_ms: CASE_TIMEOUT_MS,
+        duration_ms: 0,
         issues: [{
           level: 'error',
-          code: error instanceof Error && error.name === 'AbortError'
-            ? 'diamond_regression_timeout'
-            : 'diamond_regression_route_error',
-          message: error instanceof Error && error.name === 'AbortError'
-            ? `Regression case exceeded ${CASE_TIMEOUT_MS} ms.`
-            : error instanceof Error ? error.message : 'Unknown regression route error.',
+          code: 'diamond_regression_route_error',
+          message: error instanceof Error ? error.message : 'Unknown regression route error.',
         }],
       })
     }
