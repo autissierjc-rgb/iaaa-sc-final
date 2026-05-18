@@ -3920,7 +3920,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    if (intentGate.shouldClarify && !refine_acknowledged && !hasUrlInFlow) {
+    if (intentGate.shouldClarify && !refine_acknowledged && !hasUrlInFlow && !explicitPrudentGeneration) {
       recordGenerationTrace({
         status: 'partial',
         gate: 'CLARIFY',
