@@ -42,7 +42,7 @@ function unique(items: string[]): string[] {
 
 function isPublicPlaceholder(item: string): boolean {
   const normalized = normalizeAnchor(item)
-  return [
+  if ([
     'acteurs directs',
     'acteurs visibles',
     'acteurs impliques',
@@ -56,12 +56,49 @@ function isPublicPlaceholder(item: string): boolean {
     'general_analysis',
     'understand situation',
     'understand_situation',
-  ].includes(normalized)
+  ].includes(normalized)) return true
+
+  return /^(acteurs?|institutions?|contraintes?|preuves?|sources?|signal|fait observable|trace verifiable|une trace verifiable|preuve publique)$/i.test(normalized)
 }
 
 function publicAnchors(items: string[], fallback: string, max = 4): string {
   const cleaned = unique(items).filter((item) => !isPublicPlaceholder(item))
   return (cleaned.length > 0 ? cleaned : [fallback]).slice(0, max).join(', ')
+}
+
+function theatreEvidenceLabels(theatre: ConcreteTheatreContract): string[] {
+  return theatre.evidence.map((item) => item.label)
+}
+
+function theatreActionAnchors(theatre: ConcreteTheatreContract): string[] {
+  return unique([
+    ...theatre.visible_actions,
+    ...theatre.procedures,
+    ...theatre.constraints,
+  ]).filter((item) => !isPublicPlaceholder(item))
+}
+
+function theatreProofAnchors(
+  theatre: ConcreteTheatreContract,
+  expertises: ExpertisesMetiersContract,
+): string[] {
+  return unique([
+    ...theatreEvidenceLabels(theatre),
+    ...theatre.visible_actions,
+    ...theatre.constraints,
+    ...expertises.evidence_to_seek,
+  ]).filter((item) => !isPublicPlaceholder(item))
+}
+
+function theatreFragilityAnchors(
+  theatre: ConcreteTheatreContract,
+  expertises: ExpertisesMetiersContract,
+): string[] {
+  return unique([
+    ...theatre.unknowns,
+    ...theatre.missing_anchors,
+    ...expertises.blind_spots_to_test,
+  ]).filter((item) => !isPublicPlaceholder(item))
 }
 
 function namedAction(items: string[], fallback: string): string {
@@ -342,10 +379,13 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const grammar = writingGrammar(input)
   const actors = publicAnchors(input.theatre.actors, grammar.actorsFallback)
   const institutions = publicAnchors(input.theatre.institutions, grammar.institutionsFallback)
-  const evidence = publicAnchors(input.expertises_metiers.evidence_to_seek, 'une trace verifiable')
-  const blindSpot = publicAnchors(input.expertises_metiers.blind_spots_to_test, 'le relais qui transforme l hypothese en acte')
-  const firstProcedure = namedAction(input.theatre.procedures, grammar.actionFallback)
-  const firstEvidence = namedAction(input.expertises_metiers.evidence_to_seek, grammar.evidenceFallback)
+  const actionAnchors = theatreActionAnchors(input.theatre)
+  const proofAnchors = theatreProofAnchors(input.theatre, input.expertises_metiers)
+  const fragilityAnchors = theatreFragilityAnchors(input.theatre, input.expertises_metiers)
+  const evidence = publicAnchors(proofAnchors, 'une trace verifiable')
+  const blindSpot = publicAnchors(fragilityAnchors, 'le point qui ferait changer la lecture')
+  const firstProcedure = namedAction(actionAnchors, grammar.actionFallback)
+  const firstEvidence = namedAction(proofAnchors, grammar.evidenceFallback)
   const tension = grammar.tensionNoun ?? tensionLabel(input)
   const probability = probabilityFromResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
