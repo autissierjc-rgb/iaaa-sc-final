@@ -48,9 +48,29 @@ function hasAxisVIVisibleLabel(sc: SituationCard): boolean {
   })
 }
 
+const GLOBAL_FORBIDDEN_PUBLIC_FORMULAS = [
+  'ne se tranche pas par une formule générale',
+  'acteurs et passages obligés',
+  'levier réel qui n’est pas encore protégé ou clarifié',
+  'tant que ce point n’est pas relié à une trace vérifiable',
+  'passer d’une impression générale',
+  'un fait, une décision, un document ou un changement de calendrier vérifiable',
+  'qui décide, qui porte la charge',
+]
+
 export function validateRegressionCase(sc: SituationCard, testCase: DiamondRegressionCase): DiamondRegressionCheck {
   const issues = [...validateDiamondContract(sc, testCase.domain).issues]
   const text = cardText(sc)
+
+  for (const term of GLOBAL_FORBIDDEN_PUBLIC_FORMULAS) {
+    if (includesLoose(text, term)) {
+      issues.push({
+        level: 'error',
+        code: 'global_mechanical_formula_present',
+        message: `Forbidden mechanical public formula detected: ${term}`,
+      })
+    }
+  }
 
   for (const term of testCase.expectations.forbiddenTerms) {
     if (includesLoose(text, term)) {
