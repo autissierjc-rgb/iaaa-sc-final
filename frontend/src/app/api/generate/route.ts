@@ -3006,7 +3006,7 @@ function buildFallbackCard(
       arbre.contraintes?.[0],
       arbre.rapports_de_force?.[0],
     ],
-    'les règles, procédures ou contraintes qui peuvent transformer la situation'
+    'le passage obligé que les acteurs devront rendre explicite'
   ).replace(/[.;]+$/g, '')
   const concreteProof = firstDiamondSafeText(
     [arbre.temps?.[0], arbre.temporalites?.[0], arbre.incertitudes?.[0], resources[0]?.title],
