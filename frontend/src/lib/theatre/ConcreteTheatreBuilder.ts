@@ -53,6 +53,62 @@ function evidenceFromResources(resources?: ResourceServiceContract): TheatreEvid
   }))
 }
 
+function lineAfterPrefix(value: string, prefix: string): string {
+  const line = value
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .find((item) => item.toLowerCase().startsWith(prefix.toLowerCase()))
+  return line?.slice(prefix.length).replace(/^[:\s]+/, '').trim().slice(0, 220) ?? ''
+}
+
+function resourceHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, '')
+  } catch {
+    return ''
+  }
+}
+
+function resourceTheatreAnchors(resources?: ResourceServiceContract) {
+  const publicSources = resources?.public_sources ?? []
+  const siteBriefs = publicSources.filter((resource) => resource.title.toLowerCase().startsWith('fiche site'))
+  const sourceNames = unique(publicSources.map((resource) => resource.source || resourceHost(resource.url)))
+  const siteNames = unique(siteBriefs.map((resource) =>
+    resource.title.replace(/^Fiche site\s*-\s*/i, '').trim()
+  ))
+  const officialHosts = unique(publicSources
+    .map((resource) => resourceHost(resource.url))
+    .filter(Boolean))
+
+  const visibleActions = unique(siteBriefs.flatMap((resource) => {
+    const excerpt = resource.excerpt ?? ''
+    return [
+      lineAfterPrefix(excerpt, 'Ce que fait l’entreprise'),
+      lineAfterPrefix(excerpt, 'Ce que le site permet d’établir'),
+      lineAfterPrefix(excerpt, 'Workflow produit'),
+      lineAfterPrefix(excerpt, 'Cas d’usage visibles'),
+      lineAfterPrefix(excerpt, 'Preuves ou signaux visibles'),
+    ]
+  })).slice(0, 8)
+
+  const constraints = unique(siteBriefs.flatMap((resource) => {
+    const excerpt = resource.excerpt ?? ''
+    return [
+      lineAfterPrefix(excerpt, 'Preuves manquantes'),
+      lineAfterPrefix(excerpt, 'Angles morts critiques à vérifier'),
+      lineAfterPrefix(excerpt, 'Règle d’analyse'),
+    ]
+  })).slice(0, 8)
+
+  return {
+    actors: unique([...siteNames, ...sourceNames]).slice(0, 10),
+    institutions: officialHosts.slice(0, 10),
+    visibleActions,
+    constraints,
+    unknowns: constraints,
+  }
+}
+
 function expectedMissingAnchors(input: ConcreteTheatreBuilderInput, present: string[]): string[] {
   const expected = DOMAIN_EXPECTED_ANCHORS[input.interpretation.domain] ?? [
     'acteurs nommes',
@@ -164,10 +220,12 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
   const dates = extractDates(text)
   const evidence = evidenceFromResources(input.resources)
   const sourceNames = unique((input.resources?.public_sources ?? []).map((resource) => resource.source))
+  const resourceAnchors = resourceTheatreAnchors(input.resources)
   const playbook = input.expertises?.domain_playbook
   const namedActors = unique([
     ...interpretation.entity_explanations.map((entity) => entity.label),
     ...namedAnchors,
+    ...resourceAnchors.actors,
   ]).slice(0, 12)
   const roleAnchors = unique(playbook?.typical_actors ?? []).slice(0, 12)
   const actors = unique([
@@ -177,6 +235,7 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
 
   const institutions = unique([
     ...(playbook?.typical_institutions ?? []),
+    ...resourceAnchors.institutions,
     ...actors.filter((actor) =>
       /\b(cour|congres|congrès|etat|état|ministere|ministère|parti|onu|ue|commission|tribunal|entreprise|startup|ecole|école|hopital|hôpital)\b/i.test(actor),
     ),
@@ -189,6 +248,8 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
     interpretation.object_of_analysis,
     interpretation.expected_answer_shape,
     ...sourceNames,
+    ...resourceAnchors.visibleActions,
+    ...resourceAnchors.constraints,
   ]
 
   const missing = expectedMissingAnchors(input, present)
@@ -204,15 +265,17 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
     places: [],
     procedures: unique(playbook?.procedures_or_rules ?? []).slice(0, 10),
     visible_actions: interpretation.must_answer_first
-      ? ['tester une hypothese avant elargissement']
-      : [],
+      ? unique(['tester une hypothese avant elargissement', ...resourceAnchors.visibleActions]).slice(0, 10)
+      : resourceAnchors.visibleActions.slice(0, 10),
     constraints: unique([
       ...(playbook?.procedures_or_rules ?? []),
+      ...resourceAnchors.constraints,
       ...(input.expertises?.evidence_to_seek ?? []).map((item) => `preuve attendue: ${item}`),
     ]).slice(0, 10),
     evidence,
     unknowns: [
       ...(interpretation.needs_clarification ? [interpretation.clarification_question ?? 'precision utilisateur manquante'] : []),
+      ...resourceAnchors.unknowns,
       ...(input.expertises?.blind_spots_to_test ?? []),
       ...missing,
     ].slice(0, 12),
@@ -232,6 +295,7 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
         `role_anchors=${roleAnchors.length}`,
         `collaboration_questions=${questions.length}`,
         `evidence=${evidence.length}`,
+        `resource_anchors=${resourceAnchors.actors.length + resourceAnchors.visibleActions.length + resourceAnchors.constraints.length}`,
         `missing_anchors=${missing.length}`,
         input.expertises ? `expertise_playbook=${input.expertises.domain_playbook.id}` : 'expertise_playbook=none',
       ],
