@@ -77,7 +77,11 @@ function explicitUrls(value: string): string[] {
 
 function stripExplicitUrls(value: string): string {
   return value
-    .replace(/\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/gi, ' ')
+    .replace(/\b(https?:\/\/)?(www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)(\/[^\s]*)?/gi, (match, protocol, www, _domain, path) => {
+      // A bare domain can be the named object of the user's question:
+      // "Situationcard.com: quelle cible choisir ?" is not a source URL to hide.
+      return protocol || www || path ? ' ' : match
+    })
     .replace(/\s+/g, ' ')
     .trim()
 }
