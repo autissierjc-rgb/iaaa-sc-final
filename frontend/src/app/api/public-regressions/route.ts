@@ -14,6 +14,13 @@ type PublicGeneratePayload = {
   quality_issues?: unknown[]
 }
 
+type PublicRegressionIssue = {
+  level: 'info' | 'warning' | 'error'
+  code: string
+  message: string
+  field?: string
+}
+
 type PublicRegressionInput = {
   case_ids?: string[]
   limit?: number
@@ -66,8 +73,14 @@ export async function POST(req: NextRequest) {
       const payload = generated.payload
 
       if (generated.status >= 400 || payload.gate !== 'GENERATE' || !payload.sc) {
-        const qualityIssues = Array.isArray(payload.quality_issues)
-          ? payload.quality_issues
+        const qualityIssues: PublicRegressionIssue[] = Array.isArray(payload.quality_issues)
+          ? payload.quality_issues.filter((issue): issue is PublicRegressionIssue =>
+              Boolean(issue) &&
+              typeof issue === 'object' &&
+              ['info', 'warning', 'error'].includes(String((issue as Record<string, unknown>).level)) &&
+              typeof (issue as Record<string, unknown>).code === 'string' &&
+              typeof (issue as Record<string, unknown>).message === 'string',
+            )
           : []
         results.push({
           case_id: testCase.id,
