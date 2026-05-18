@@ -48,7 +48,7 @@ export function detectDomain(input: string): SituationDomain {
     return 'personal'
   }
 
-  if (hasAny(text, ['client', 'mission', 'associe', 'sponsor', 'poste', 'travail', 'carriere', 'conflit pro', 'pitch', 'jury', 'presentation', 'présentation', 'anglais', 'lancement', 'lancer', 'entrain', 'entraine'])) {
+  if (hasAny(text, ['client', 'mission', 'associe', 'sponsor', 'poste', 'travail', 'carriere', 'contrat de travail', 'employeur', 'licenciement', 'rh', 'conflit pro', 'pitch', 'jury', 'presentation', 'présentation', 'anglais', 'lancement', 'lancer', 'entrain', 'entraine'])) {
     return 'professional'
   }
 
