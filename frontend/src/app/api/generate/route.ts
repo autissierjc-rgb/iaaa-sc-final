@@ -750,11 +750,11 @@ function atlasDomainLabel(sc: SituationCard): string {
   }
 
   const domain =
-    sc.intent_context?.interpreted_request?.domain ??
-    sc.intent_context?.surface_domain ??
-    sc.coverage_check?.intent_context?.interpreted_request?.domain ??
-    sc.coverage_check?.intent_context?.surface_domain ??
     sc.coverage_check?.domain ??
+    sc.intent_context?.surface_domain ??
+    sc.coverage_check?.intent_context?.surface_domain ??
+    sc.intent_context?.interpreted_request?.domain ??
+    sc.coverage_check?.intent_context?.interpreted_request?.domain ??
     'general'
 
   const labels: Record<string, string> = {
