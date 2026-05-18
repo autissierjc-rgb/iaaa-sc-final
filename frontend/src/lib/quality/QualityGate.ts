@@ -80,6 +80,16 @@ const RESOURCE_AS_OBJECT_PHRASES = [
   'objet a verifier',
 ]
 
+const MECHANICAL_WRITING_PATTERNS = [
+  /ne se tranche pas par une formule generale/i,
+  /acteurs et passages obliges/i,
+  /levier reel qui n.?est pas encore protege ou clarifie/i,
+  /tant que ce point n.?est pas relie a une trace verifiable/i,
+  /passer d.?une impression generale a une lecture partageable/i,
+  /un fait, une decision, un document ou un changement de calendrier verifiable/i,
+  /qui decide, qui porte la charge/i,
+]
+
 function hasSharpDiamond(writing: WritingContract): boolean {
   return writing.diamond_sentences.some((sentence) => sentence.style === 'diamant_tranchant' && sentence.must_be_public)
 }
@@ -103,6 +113,32 @@ function hasResourceRoleSignal(input: QualityGateInput, role: string): boolean {
   return input.interpretation.signals.some((signal) => signal === `resource_role:${role}`)
 }
 
+function normalize(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function meaningfulTheatreAnchors(theatre: ConcreteTheatreContract): string[] {
+  return Array.from(new Set([
+    ...(theatre.named_actors ?? []),
+    ...(theatre.actors ?? []),
+    ...(theatre.institutions ?? []),
+    ...(theatre.visible_actions ?? []),
+    ...(theatre.constraints ?? []),
+    ...theatre.evidence.map((item) => item.label),
+  ].map((item) => item.trim()).filter((item) => item.length >= 4)))
+    .filter((item) => !/^(acteurs?|institutions?|contraintes?|preuves?|sources?|trace verifiable|fait observable)$/i.test(normalize(item)))
+    .slice(0, 20)
+}
+
+function countAnchorsUsed(anchors: string[], normalizedText: string): number {
+  return anchors.filter((anchor) => normalize(anchor).split(/\s+/).some((part) =>
+    part.length >= 5 && normalizedText.includes(part),
+  )).length
+}
+
 export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const started = Date.now()
   const issues: QualityIssue[] = []
@@ -117,6 +153,8 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+  const theatreAnchors = meaningfulTheatreAnchors(input.theatre)
+  const theatreAnchorsUsed = countAnchorsUsed(theatreAnchors, normalizedText)
 
   if (hasResourceRoleSignal(input, 'context_for_question') && input.interpretation.question_type === 'site_analysis') {
     issues.push(issue(
@@ -155,6 +193,25 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
 
   if (input.theatre.actors.length === 0 && input.theatre.evidence.length === 0) {
     issues.push(issue('warning', 'WEAK_THEATRE', 'Concrete theatre has no actors and no evidence anchors.', 'theatre'))
+  }
+
+  if (theatreAnchors.length >= 3 && theatreAnchorsUsed < 2) {
+    issues.push(issue(
+      'warning',
+      'THEATRE_ANCHORS_UNDERUSED',
+      'Writing uses too few concrete theatre anchors despite available actors, constraints, actions or evidence.',
+      'writing',
+    ))
+  }
+
+  const mechanicalMatch = MECHANICAL_WRITING_PATTERNS.find((pattern) => pattern.test(normalizedText))
+  if (theatreAnchors.length >= 3 && mechanicalMatch) {
+    issues.push(issue(
+      'warning',
+      'MECHANICAL_WRITING_WITH_THEATRE',
+      `Writing still contains a mechanical formula while concrete theatre anchors exist: ${mechanicalMatch.source}.`,
+      'writing',
+    ))
   }
 
   if (input.writing.diamond_sentences.length === 0) {
