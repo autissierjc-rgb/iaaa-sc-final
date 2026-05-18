@@ -117,20 +117,56 @@ const PUBLIC_SCAFFOLDING_PATTERNS = [
 
 const CONCRETE_SIGNAL = /\b[A-ZÉÈÀÂÎÏÔÛÇ][A-Za-zÀ-ÿ'’-]{2,}\b|\b\d{4}\b|\b\d{1,2}\s+(janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)\b|https?:\/\//i
 
-function collectCardText(sc: SituationCard): string {
-  const parts: string[] = []
-  for (const value of Object.values(sc)) {
-    if (typeof value === 'string') parts.push(value)
-    else if (Array.isArray(value)) {
-      for (const item of value) {
-        if (typeof item === 'string') parts.push(item)
-        else if (item && typeof item === 'object') {
-          for (const nested of Object.values(item as Record<string, unknown>)) {
-            if (typeof nested === 'string') parts.push(nested)
-          }
-        }
-      }
+function collectPublicText(value: unknown, parts: string[]): void {
+  if (typeof value === 'string') {
+    parts.push(value)
+    return
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) collectPublicText(item, parts)
+    return
+  }
+
+  if (value && typeof value === 'object') {
+    for (const nested of Object.values(value as Record<string, unknown>)) {
+      collectPublicText(nested, parts)
     }
+  }
+}
+
+function collectCardText(sc: SituationCard): string {
+  const record = sc as Record<string, unknown>
+  const publicFields = [
+    'title_fr',
+    'title_en',
+    'submitted_situation_fr',
+    'submitted_situation_en',
+    'insight_fr',
+    'insight_en',
+    'main_vulnerability_fr',
+    'main_vulnerability_en',
+    'asymmetry_fr',
+    'asymmetry_en',
+    'key_signal_fr',
+    'key_signal_en',
+    'avertissement_fr',
+    'lecture_systeme_fr',
+    'lecture_systeme_en',
+    'approfondir_fr',
+    'approfondir_en',
+    'constraints_fr',
+    'constraints_en',
+    'uncertainties_fr',
+    'uncertainties_en',
+    'trajectories',
+    'cap',
+    'movements_fr',
+    'movements_en',
+  ]
+  const parts: string[] = []
+  for (const field of publicFields) {
+    collectPublicText(record[field], parts)
   }
   return parts.join('\n')
 }

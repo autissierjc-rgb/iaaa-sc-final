@@ -191,7 +191,7 @@ function inferTension(input: string, intent: RequestIntentType): string {
   }
 
   if (intent === 'understand') return 'la question demande de distinguer ce qui est établi, plausible et encore à vérifier'
-  if (intent === 'decide') return 'plusieurs options restent ouvertes, mais elles ne protègent pas les mêmes risques'
+  if (intent === 'decide') return 'la décision doit comparer les options par le signal observable qu elles peuvent produire ensuite'
   if (intent === 'evaluate') return 'la valeur apparente doit être confrontée aux preuves disponibles et aux risques d’exécution'
   if (intent === 'prepare') return 'la réussite dépend moins de l’intention que de la traduction en gestes, preuves et séquence'
   if (intent === 'predict') return 'la suite dépend des signaux observables qui rendront un seuil irréversible'
