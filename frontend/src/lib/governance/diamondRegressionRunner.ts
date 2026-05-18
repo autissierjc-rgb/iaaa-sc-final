@@ -61,6 +61,18 @@ const GLOBAL_FORBIDDEN_PUBLIC_FORMULAS = [
 export function validateRegressionCase(sc: SituationCard, testCase: DiamondRegressionCase): DiamondRegressionCheck {
   const issues = [...validateDiamondContract(sc, testCase.domain).issues]
   const text = cardText(sc)
+  const actualDomain =
+    sc.coverage_check?.domain ??
+    sc.intent_context?.interpreted_request?.domain ??
+    sc.intent_context?.surface_domain
+
+  if (actualDomain && actualDomain !== testCase.domain) {
+    issues.push({
+      level: 'error',
+      code: 'domain_contract_mismatch',
+      message: `Domain contract mismatch for "${testCase.id}": expected ${testCase.domain}, got ${actualDomain}.`,
+    })
+  }
 
   for (const term of GLOBAL_FORBIDDEN_PUBLIC_FORMULAS) {
     if (includesLoose(text, term)) {
