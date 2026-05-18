@@ -2437,7 +2437,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
 
         {/* WORKSPACE */}
         <main style={{ maxWidth: 1160, margin: '0 auto', padding: '24px 28px 0' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, minHeight: 480 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, minHeight: 'clamp(420px, 58vh, 480px)' }}>
 
             {/* BLOC GAUCHE */}
             <div style={{ background: BG_P, border: `1px solid ${BDR}`, borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
