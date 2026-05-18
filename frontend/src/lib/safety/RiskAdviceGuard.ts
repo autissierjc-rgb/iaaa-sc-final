@@ -25,7 +25,7 @@ const SENSITIVE_PATTERNS: Array<{
   { domain: 'public_benefits', risk: 'regulated', mode: 'professional_referral', pattern: /\b(allocation|caf|rsa|aide sociale|titre de s[eé]jour|prestation)\b/i },
   { domain: 'fundamental_rights', risk: 'high_stakes', mode: 'professional_referral', pattern: /\b(droit fondamental|asile|expulsion|detention|liberte|discrimination)\b/i },
   { domain: 'minors', risk: 'regulated', mode: 'analysis_only', pattern: /\b(enfant|ado|adolescent|mineur|fils|fille|ecole|coll[eè]ge|lyc[eé]e)\b/i },
-  { domain: 'safety_violence', risk: 'high_stakes', mode: 'emergency_referral', pattern: /\b(violence|menace|danger imminent|agression|arme|se tuer|suicide|abus)\b/i },
+  { domain: 'safety_violence', risk: 'high_stakes', mode: 'emergency_referral', pattern: /\b(violence|menace physique|menace de mort|danger imminent|agression|arme|se tuer|suicide|abus)\b/i },
 ]
 
 function strongestRisk(risks: DomainRiskLevel[]): DomainRiskLevel {
