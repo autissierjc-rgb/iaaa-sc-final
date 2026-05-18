@@ -7,6 +7,8 @@ export type SituationReadinessGate = {
   status: ReadinessStatus
   reason: string
   question?: string
+  can_generate_prudently?: boolean
+  prudent_generation_label_fr?: string
   message_fr?: string
   warning_fr?: string
   needs: string[]
@@ -110,6 +112,8 @@ export function situationReadinessGate({
       status: 'ask_user',
       reason: 'strategic_options_missing',
       question,
+      can_generate_prudently: true,
+      prudent_generation_label_fr: 'Générer une carte exploratoire',
       message_fr: question,
       warning_fr: 'Options stratégiques non précisées : SC doit collaborer avant de conclure.',
       needs: ['options à comparer', 'critère de décision', 'contrainte prioritaire'],
@@ -138,6 +142,8 @@ export function situationReadinessGate({
         status: forceGenerate ? 'generate_prudently' : 'ask_user',
         reason: !siteIdentityMatches ? 'site_identity_ambiguous' : hasUrl ? 'site_content_insufficient' : 'site_not_identified',
         question,
+        can_generate_prudently: true,
+        prudent_generation_label_fr: 'Générer une carte exploratoire',
         message_fr: question,
         warning_fr: hasUrl
           ? `Site insuffisamment compris : SC ne peut pas affirmer ce que fait ${name} sans contenu utile.`

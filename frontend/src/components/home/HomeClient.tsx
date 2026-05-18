@@ -1849,7 +1849,8 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
   const refiningOptional = lastMsg?.kind === 'refine'
   const isBlocked = lastMsg?.kind === 'block' && !hasText
   const hasClarifyAnswer = answers.some(a => a.trim().length > 0)
-  const compassDisabled = scLoading || isBlocked || (waitingForAnswers ? !(hasClarifyAnswer || hasText) : !hasText)
+  const canGenerateExploratory = waitingForAnswers && Boolean(activeSituation.trim())
+  const compassDisabled = scLoading || isBlocked || (waitingForAnswers ? !(hasClarifyAnswer || hasText || canGenerateExploratory) : !hasText)
   const effectiveCompassMode = compassMode === 'off' && hasText ? 'idle' : compassMode
   const renActionLabel = renLoading
     ? (lang === 'FR' ? 'REN reflechit...' : 'REN is thinking...')

@@ -166,7 +166,7 @@ src/app/sis-system/v2/
 | --- | --- | --- | --- | --- |
 | Archive generations | archive | passive | `src/lib/contracts/generationArchive.ts` | Trace metadata, snapshot prive, apprentissage lancement et partage public. |
 | Interpretation + DialogueGate | interpretation / dialogue | passive | `src/lib/interpretation`, `src/lib/dialogue` | Autorite unique de comprehension et clarifications limitees. |
-| SituationReadinessGate | dialogue / quality | branche partiel | `src/lib/input/situationReadinessGate.ts` | Decide si une information manquante doit etre demandee avant generation. |
+| SituationReadinessGate | dialogue / quality / UI-mobile | branche public | `src/lib/input/situationReadinessGate.ts`, `src/components/home/HomeClient.tsx`, `src/app/api/generate/route.ts` | Decide si une information manquante doit etre demandee avant generation et expose une generation prudente/exploratoire sans transformer la question de clarification en situation publique. |
 | ScoringEngine | scoring | passive | `src/lib/scoringV2` | Formule canonique branches + radar. |
 | ResourceService + SourceRouter | resources | passive | `src/lib/resources/ResourceService.ts`, `src/lib/resources/SourceRouter.ts` | Route URL, fallback search et sources par domaine. |
 | FastResourceRunner / fetchResources | resources | branche public | `src/lib/resources`, `src/app/api/generate/route.ts` | Sources rapides pour eviter le hors-sol sans bloquer Recherche+. |
