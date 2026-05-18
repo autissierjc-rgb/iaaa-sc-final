@@ -489,7 +489,7 @@ function inquiryFor(item: string, input: BlindSpotEngineInput): BlindSpotInquiry
       situated?.decisive_evidence ??
       (level === 'documentary'
         ? 'Une source verifiable qui confirme ou infirme directement le point manquant.'
-        : 'Une reponse situee qui nomme l acteur concerne, le geste attendu, la contrainte et la consequence observable.'),
+        : `Une trace verifiable qui relie "${item}" a un acteur concerne, une contrainte precise et une consequence observable.`),
     counter_hypothesis:
       situated?.counter_hypothesis ??
       'La lecture actuelle peut rester valable si cet angle mort n a pas de lien causal avec la decision ou la tension observee.',
