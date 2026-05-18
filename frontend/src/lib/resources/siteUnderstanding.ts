@@ -364,10 +364,12 @@ export async function buildSiteUnderstandingResource({
   situation,
   resources,
   intentContext,
+  allowModel = true,
 }: {
   situation: string
   resources: ResourceItem[]
   intentContext?: IntentContext
+  allowModel?: boolean
 }): Promise<ResourceItem | null> {
   const domains = consultedDomainCandidates({ situation, resources, intentContext })
   const domain = domains[0]
@@ -379,12 +381,14 @@ export async function buildSiteUnderstandingResource({
   const summary = crawlSummary(ownResources)
   const pagesRead = crawlPageCount(summary)
   const hasExplicitDomain = requestedDomains(situation).length > 0
-  const canonical = await buildCanonicalSiteUnderstanding({
-    situation,
-    domain,
-    resources: ownResources,
-    intentContext,
-  })
+  const canonical = allowModel
+    ? await buildCanonicalSiteUnderstanding({
+        situation,
+        domain,
+        resources: ownResources,
+        intentContext,
+      })
+    : null
   const name = canonical?.company_name || brandName(ownResources, companyName(domain))
   const visibleFacts = uniq(
     ownResources
@@ -455,12 +459,14 @@ export async function enrichResourcesWithSiteUnderstanding({
   situation,
   resources,
   intentContext,
+  allowModel = true,
 }: {
   situation: string
   resources: ResourceItem[]
   intentContext?: IntentContext
+  allowModel?: boolean
 }): Promise<ResourceItem[]> {
-  const siteBrief = await buildSiteUnderstandingResource({ situation, resources, intentContext })
+  const siteBrief = await buildSiteUnderstandingResource({ situation, resources, intentContext, allowModel })
   if (!siteBrief) return resources
   return [siteBrief, ...resources]
 }

@@ -4059,13 +4059,12 @@ export async function POST(req: NextRequest) {
         : webNeeded
           ? await fetchResourcesFast(urlAugmentedAnalysisText)
           : []
-    const resources = isPublicFast
-      ? rawFetchedResources
-      : await enrichResourcesWithSiteUnderstanding({
-          situation: urlAugmentedAnalysisText,
-          resources: rawFetchedResources,
-          intentContext,
-        })
+    const resources = await enrichResourcesWithSiteUnderstanding({
+      situation: urlAugmentedAnalysisText,
+      resources: rawFetchedResources,
+      intentContext,
+      allowModel: !isPublicFast,
+    })
     const canonicalResourcePlan = planResources({
       interpretation: canonicalInterpretation,
       patterns: humanCollectivePatterns,

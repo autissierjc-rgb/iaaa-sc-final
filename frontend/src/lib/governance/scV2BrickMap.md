@@ -169,7 +169,7 @@ src/app/sis-system/v2/
 | SituationReadinessGate | dialogue / quality / UI-mobile | branche public | `src/lib/input/situationReadinessGate.ts`, `src/components/home/HomeClient.tsx`, `src/app/api/generate/route.ts` | Decide si une information manquante doit etre demandee avant generation et expose une generation prudente/exploratoire sans transformer la question de clarification en situation publique. |
 | ScoringEngine | scoring | passive | `src/lib/scoringV2` | Formule canonique branches + radar. |
 | ResourceService + SourceRouter | resources | passive | `src/lib/resources/ResourceService.ts`, `src/lib/resources/SourceRouter.ts` | Route URL, fallback search et sources par domaine. |
-| FastResourceRunner / fetchResources | resources | branche public | `src/lib/resources`, `src/app/api/generate/route.ts` | Sources rapides pour eviter le hors-sol sans bloquer Recherche+. |
+| FastResourceRunner / fetchResources / siteUnderstanding | resources | branche public | `src/lib/resources`, `src/app/api/generate/route.ts` | Sources rapides et fiche site heuristique en public fast pour eviter le hors-sol sans bloquer Recherche+ ni appeler un LLM supplementaire. |
 | Share policy | share | passive | `src/lib/contracts/share.ts` | Snapshot stable, visibilite, anonymisation, OpenGraph. |
 | ConcreteTheatreBuilder | theatre | branche public | `src/lib/theatre`, `src/app/api/generate/route.ts` | Acteurs, institutions, dates, procedures, preuves, absences ; source unique du theatre public, adaptee ensuite au format legacy. |
 | Writing contract | writing | passive | `src/lib/contracts/writing.ts` | Fond, forme, probabilites, phrase diamant, exemples. |
