@@ -1724,7 +1724,7 @@ function siteAnalysisFallbackCard({
         'La lecture du marché européen exige des preuves externes : clients, usages, partenariats, revenus ou distribution.',
       ],
       uncertainties_fr: [
-        'Client cible exact, fréquence d’usage, modèle économique et différenciation réelle.',
+        'Angle mort principal : client cible exact, fréquence d’usage, modèle économique et différenciation réelle.',
         'Capacité à convertir une promesse de site en adoption répétée sur un segment européen précis.',
       ],
       generation_status: 'partial',

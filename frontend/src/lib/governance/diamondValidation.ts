@@ -214,7 +214,7 @@ export function validateAntiHorsSol(sc: SituationCard): DiamondValidationResult 
   }
 
   const hasBlindSpot =
-    /\bangle mort\b|\bangles morts\b|\binvisible\b|\bnon[- ]dit\b|\bimplicite\b|\bce qui manque\b/i.test(text)
+    /\bangle mort\b|\bangles morts\b|\binvisible\b|\bnon[- ]dit\b|\bimplicite\b|\bce qui manque\b|\babsence(?:\s+\w+){0,3}\s+d[ée]cisive\b|\bpreuve(?:s)?\s+manquante?s?\b|\bcontre[- ]hypoth[eè]se?s?\b|\brenverser la lecture\b|\bchanger la lecture\b/i.test(text)
   if (!hasBlindSpot) {
     issues.push(issue(
       'info',
