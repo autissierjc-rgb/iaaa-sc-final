@@ -4374,16 +4374,17 @@ export async function POST(req: NextRequest) {
       ...(contractQuality?.issues ?? []),
       ...(writingQuality?.issues ?? []),
     ]
+    const qualityActionableIssues = qualityIssues.filter((issue) => issue.level !== 'info')
     const qualityHasError = qualityIssues.some((issue) => issue.level === 'error')
     const qualityStatus = qualityHasError
       ? 'error'
-      : qualityIssues.length > 0
+      : qualityActionableIssues.length > 0
         ? 'partial'
         : 'ok'
     const canonicalQuality = writingQuality ?? contractQuality
     if (contractQuality || writingQuality) {
       recordGenerationTrace({
-        status: qualityHasError ? 'error' : qualityIssues.length > 0 ? 'partial' : 'ok',
+        status: qualityHasError ? 'error' : qualityActionableIssues.length > 0 ? 'partial' : 'ok',
         gate: qualityHasError ? 'CLARIFY' : 'GENERATE',
         route: '/api/generate',
         canonicalLayer: 'quality',
@@ -4728,9 +4729,10 @@ export async function POST(req: NextRequest) {
     }
 
     const diamondValidation = validateDiamondContract(sc, effectiveCoverageForGeneration.domain)
+    const diamondActionableIssues = diamondValidation.issues.filter((issue) => issue.level !== 'info')
     const diamondQuality = {
       status: diamondValidation.ok
-        ? diamondValidation.issues.length > 0 ? 'partial' : 'ok'
+        ? diamondActionableIssues.length > 0 ? 'partial' : 'ok'
         : 'error',
       issues: diamondValidation.issues,
     }
