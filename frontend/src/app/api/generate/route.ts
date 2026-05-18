@@ -1169,7 +1169,7 @@ function listFromAxis(value: unknown, fallback: string[], situation = ''): strin
 }
 
 function rejectsDiamondGuardText(text: string): boolean {
-  return /la situation ne se joue pas seulement|distribution des leviers r[eé]els|qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer|la fa[cç]ade peut encore fonctionner|ce qui para[iî]t stable d[eé]pend d[’']un levier discret|ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible|ne se tranche pas par une formule g[eé]n[eé]rale|la lecture doit partir des acteurs et passages oblig[eé]s|tant que ce point n[’']est pas reli[eé] [aà] une trace v[eé]rifiable|hypoth[eè]se de travail, pas une conclusion ferm[eé]e|passer d[’']une impression g[eé]n[eé]rale|un fait, une d[eé]cision, un document ou un changement de calendrier v[eé]rifiable|rythmes,\s*d[eé]lais,\s*fen[eê]tres d[’']action et risque de retard|plusieurs options restent ouvertes,\s*mais elles ne prot[eè]gent pas les m[eê]mes risques|fa[cç]ade de contr[oô]le|structural reading from available signals/i.test(text)
+  return /la situation ne se joue pas seulement|distribution des leviers r[eé]els|qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer|la fa[cç]ade peut encore fonctionner|ce qui para[iî]t stable d[eé]pend d[’']un levier discret|ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible|ne se tranche pas par une formule g[eé]n[eé]rale|la lecture doit partir des acteurs et passages oblig[eé]s|acteurs visibles,\s*contraintes mat[eé]rielles,\s*r[eè]gles et institutions,\s*r[eé]cit dominant|tant que ce point n[’']est pas reli[eé] [aà] une trace v[eé]rifiable|hypoth[eè]se de travail, pas une conclusion ferm[eé]e|passer d[’']une impression g[eé]n[eé]rale|un fait, une d[eé]cision, un document ou un changement de calendrier v[eé]rifiable|rythmes,\s*d[eé]lais,\s*fen[eê]tres d[’']action et risque de retard|plusieurs options restent ouvertes,\s*mais elles ne prot[eè]gent pas les m[eê]mes risques|fa[cç]ade de contr[oô]le|structural reading from available signals/i.test(text)
 }
 
 function sourceChannelFromResourceType(value: string): SourceChannel {
@@ -2911,10 +2911,9 @@ function buildFallbackCard(
     }
     return fallback
   }
-  const powerLens = firstSafeText(
+  const powerLens = firstDiamondSafeText(
     [arbre.rapports_de_force?.[0], arbre.forces?.[0]],
-    situation,
-    `les acteurs, contraintes et passages obligés : ${powersLabel(arbre, 'acteurs, contraintes et preuves disponibles')}`
+    `les acteurs directement concernés, les contraintes visibles et les preuves disponibles : ${powersLabel(arbre, 'acteurs, contraintes et preuves disponibles')}`
   ).replace(/^puissances en présence\s*:\s*/i, '').replace(/[.;]+$/g, '')
   const vulnerability = wideGlobal
     ? 'Le point fragile est le passage d’un choc local vers plusieurs canaux de puissance à la fois.'
