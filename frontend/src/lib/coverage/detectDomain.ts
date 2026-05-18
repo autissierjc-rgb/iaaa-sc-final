@@ -23,13 +23,20 @@ export function detectDomain(input: string): SituationDomain {
   }
 
   if (
-    hasAny(text, ['ex', 'ancien conjoint', 'ancienne conjointe', 'relation']) &&
+    /\b(ex|ancien conjoint|ancienne conjointe|relation)\b/.test(text) &&
     hasAny(text, ['cofondateur', 'co-fondateur', 'confondateur', 'associe', 'associer', 'associer comme', 's associer', 'startup', 'start-up'])
   ) {
     return 'professional'
   }
 
   if (hasAny(text, ['startup', 'start-up', 'vc', 'venture capital', 'capital-risque', 'levee', 'term sheet', 'dealflow', 'deal flow', 'due diligence', 'investissement startup', 'investisseur startup', 'investisseurs startup', 'pre-seed', 'seed', 'traction', 'runway'])) {
+    return 'startup_vc'
+  }
+
+  if (
+    hasAny(text, ['http://', 'https://', 'www.', '.com', '.fr', '.io', '.ai']) &&
+    hasAny(text, ['que fait', 'interessant', 'intéressant', 'avis', 'evaluer', 'évaluer', 'potentiel', 'produit', 'service', 'site', 'startup', 'marche', 'marché'])
+  ) {
     return 'startup_vc'
   }
 
@@ -44,7 +51,7 @@ export function detectDomain(input: string): SituationDomain {
     return 'management'
   }
 
-  if (hasAny(text, ['couple', 'famille', 'ami', 'amour', 'relation', 'separation', 'parent', 'enfant', 'fils', 'fille', 'ado', 'adolescent', 'adolescente', 'sport', 'tennis', 'motivation'])) {
+  if (hasAny(text, ['couple', 'famille', 'ami', 'amour', 'aime', 'aimait', 'relation', 'separation', 'parent', 'enfant', 'fils', 'fille', 'ado', 'adolescent', 'adolescente', 'symptome', 'symptomes', 'sante', 'santé', 'consulter', 'sport', 'tennis', 'motivation'])) {
     return 'personal'
   }
 
@@ -52,7 +59,7 @@ export function detectDomain(input: string): SituationDomain {
     return 'professional'
   }
 
-  if (hasAny(text, ['gouvernance', 'conseil', 'elu', 'mairie', 'ministere', 'administration', 'institution'])) {
+  if (hasAny(text, ['gouvernance', 'conseil', 'elu', 'mairie', 'ministere', 'administration', 'institution', 'commune', 'habitants', 'projet industriel', 'conteste', 'contesté'])) {
     return 'governance'
   }
 

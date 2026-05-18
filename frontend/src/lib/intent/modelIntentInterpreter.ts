@@ -97,6 +97,23 @@ function asDomain(value: unknown, fallback: SituationDomain): SituationDomain {
   return DOMAINS.includes(value as SituationDomain) ? value as SituationDomain : fallback
 }
 
+function harmonizeDomain(value: unknown, fallback: SituationDomain, input: string): SituationDomain {
+  const modelDomain = asDomain(value, fallback)
+  const text = input
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+  const personalFounderGovernance =
+    /\b(ex|ancien conjoint|ancienne conjointe|relation)\b/.test(text) &&
+    /\b(cofondateur|co-fondateur|confondateur|associe|associer|startup|start-up)\b/.test(text)
+  const businessStartupSignal =
+    /\b(startup|start-up|compagnie|entreprise|societe|société|partenariat|rejoindre|collaborer|traction|marche|march[eé]|produit|service)\b/.test(text) &&
+    !personalFounderGovernance
+  if (modelDomain === 'general' && fallback !== 'general') return fallback
+  if (modelDomain === 'professional' && (fallback === 'startup_vc' || businessStartupSignal)) return 'startup_vc'
+  return modelDomain
+}
+
 function asQuestionType(value: unknown, fallback: QuestionType | undefined): QuestionType {
   return QUESTION_TYPES.includes(value as QuestionType) ? value as QuestionType : fallback ?? 'open_analysis'
 }
@@ -252,7 +269,7 @@ export async function interpretRequestWithModel(input: string): Promise<Interpre
 
     const parsed = parseModelJSON(raw)
     const intentType = asIntentType(parsed.intent_type, fallback.intent_type)
-    const domain = asDomain(parsed.domain, fallback.domain)
+    const domain = harmonizeDomain(parsed.domain, fallback.domain, input)
     const userQuestion = asText(parsed.user_question, input.trim())
 
     const parsedObject = asText(parsed.object_of_analysis, fallback.object_of_analysis)
