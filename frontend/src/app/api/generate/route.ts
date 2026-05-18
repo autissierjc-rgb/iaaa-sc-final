@@ -3010,7 +3010,7 @@ function buildFallbackCard(
   ).replace(/[.;]+$/g, '')
   const concreteProof = firstDiamondSafeText(
     [arbre.temps?.[0], arbre.temporalites?.[0], arbre.incertitudes?.[0], resources[0]?.title],
-    'un fait, une décision, un document ou un changement de calendrier vérifiable'
+    'une trace située qui change les marges d’action'
   ).replace(/[.;]+$/g, '')
   const genericInsight =
     `${objectSentence} doit être lu à partir de ${concreteActors}. La question utile est de savoir comment ${concreteInstitutions} peut transformer la situation en acte, blocage, coût ou preuve observable.`
