@@ -262,7 +262,8 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       ))
     }
 
-    if (input.resources.public_sources.length >= 2 && sourceHosts.length < 2) {
+    const contextualResource = hasResourceRoleSignal(input, 'context_for_question')
+    if (!contextualResource && input.resources.public_sources.length >= 2 && sourceHosts.length < 2) {
       issues.push(issue(
         'warning',
         'FAST_SOURCES_LOW_DIVERSITY',
