@@ -318,7 +318,7 @@ function writingGrammar(input: WritingEngineInput) {
       asymmetry: (actors: string, institutions: string) =>
         `${actors} vivent la tension au quotidien, mais ${institutions} peuvent clarifier, arbitrer ou laisser la charge se concentrer au mauvais endroit.`,
       keySignal: (evidence: string) =>
-        `Signal cle : ${evidence} montrant qui decide, qui porte la charge et quelle limite devient visible.`,
+        `Signal cle : ${evidence} qui montre si la reorganisation clarifie les responsabilites ou deplace la charge vers un point deja fragile.`,
     }
   }
 
