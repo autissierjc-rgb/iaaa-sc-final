@@ -66,19 +66,24 @@ export async function POST(req: NextRequest) {
       const payload = generated.payload
 
       if (generated.status >= 400 || payload.gate !== 'GENERATE' || !payload.sc) {
+        const qualityIssues = Array.isArray(payload.quality_issues)
+          ? payload.quality_issues
+          : []
         results.push({
           case_id: testCase.id,
           ok: false,
           domain: testCase.domain,
           gate: payload.gate ?? 'ERROR',
           duration_ms: Date.now() - caseStarted,
-          issues: [{
-            level: 'error',
-            code: payload.error ?? 'public_generate_not_generated',
-            message:
-              payload.questions?.join(' | ') ||
-              'The public /api/generate route did not produce a Situation Card.',
-          }],
+          issues: qualityIssues.length > 0
+            ? qualityIssues
+            : [{
+                level: 'error',
+                code: payload.error ?? 'public_generate_not_generated',
+                message:
+                  payload.questions?.join(' | ') ||
+                  'The public /api/generate route did not produce a Situation Card.',
+              }],
         })
         continue
       }
