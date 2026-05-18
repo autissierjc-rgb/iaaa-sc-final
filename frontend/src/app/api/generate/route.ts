@@ -812,11 +812,18 @@ function compactHeaderTitle(sc: SituationCard, situation: string): string {
   ) {
     return `${domain} · ${ensureMinimumSubjectWords(rawExistingTitle, rawExistingTitle)}`
   }
-  const dialogueHeaderSubject = typeof (sc.coverage_check as Record<string, unknown> | undefined)?.canonical_header_subject === 'string'
-    ? String((sc.coverage_check as Record<string, unknown>).canonical_header_subject).trim()
-    : ''
-  if (dialogueHeaderSubject) {
-    return `${domain} · ${ensureMinimumSubjectWords(dialogueHeaderSubject, question)}`
+  const coverageContract = sc.coverage_check as Record<string, unknown> | undefined
+  const nestedCanonicalInterpretation = coverageContract?.canonical_interpretation as Record<string, unknown> | undefined
+  const canonicalHeaderSubjectText = firstText([
+    typeof coverageContract?.canonical_header_subject === 'string'
+      ? String(coverageContract.canonical_header_subject).trim()
+      : '',
+    typeof nestedCanonicalInterpretation?.header_subject === 'string'
+      ? String(nestedCanonicalInterpretation.header_subject).trim()
+      : '',
+  ], '')
+  if (canonicalHeaderSubjectText) {
+    return `${domain} · ${ensureMinimumSubjectWords(canonicalHeaderSubjectText, question)}`
   }
   let subject = ''
 
@@ -3713,7 +3720,7 @@ export async function POST(req: NextRequest) {
       intent_context: intentContext,
       conversation_contract: conversationContract,
       scope_context: initialScopeContext,
-      canonical_header_subject: canonicalDialogue?.header_subject,
+      canonical_header_subject: canonicalDialogue?.header_subject || canonicalInterpretation.header_subject,
       input_quality: {
         status: inputQuality.status,
         questions: inputQuality.questions,

@@ -29,6 +29,7 @@ const SIGNIFICANT_WORD_MINIMUM = 3
 
 const STOP_WORDS = new Set([
   'a',
+  'autour',
   'au',
   'aux',
   'avec',
@@ -37,6 +38,7 @@ const STOP_WORDS = new Set([
   'cette',
   'de',
   'des',
+  'dans',
   'du',
   'en',
   'et',
@@ -122,7 +124,7 @@ function meaningfulWords(text: string): string[] {
     .replace(/https?:\/\/\S+/gi, '')
     .replace(/[^\p{L}\p{N}'-]+/gu, ' ')
     .split(/\s+/)
-    .map((word) => word.trim())
+    .map((word) => word.trim().replace(/^(?:d|l|qu|n|s|m|t|c)[’']/i, ''))
     .filter((word) => word.length > 1)
     .filter((word) => !STOP_WORDS.has(word.toLowerCase()))
 }
