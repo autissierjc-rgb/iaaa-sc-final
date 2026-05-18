@@ -616,6 +616,7 @@ function cleanPublicText(text: string): string {
     .replace(/\bLa carte ne doit donc pas inventer une activit[eé], une cible ou un segment [^.?!]*[.?!]?/gi, '')
     .replace(/\bLa bonne lecture est une suspension prudente\s*:\s*il faut d[’']abord identifier l[’']URL officielle[^.?!]*[.?!]?/gi, '')
     .replace(/\bLe prochain signal utile n[’']est pas une conclusion sur le march[eé] vis[eé][^.?!]*[.?!]?/gi, '')
+    .replace(/\bActeurs visibles,\s*Contraintes mat[eé]rielles,\s*R[eè]gles et institutions,\s*R[eé]cit dominant\b/gi, '')
     .replace(/acteurs et s[eé]quences disponibles dans la situation fournie/gi, '')
     .replace(/ressources web absentes ou non stabilis[eé]es/gi, '')
     .replace(/ressources absentes|ressources web absentes|web absent/gi, '')
