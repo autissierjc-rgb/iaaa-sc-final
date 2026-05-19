@@ -91,6 +91,43 @@ function asksToCompareUnspecifiedOptions(situation: string, intentContext: Inten
   return !namedOptions
 }
 
+function hasSuppliedMaterial(situation: string, resources: ResourceItem[]): boolean {
+  if (hasExplicitUrl(situation)) return true
+  return resources.some((resource) => {
+    const text = [resource.title, resource.url, resource.excerpt, resource.source, resource.type]
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+    return text.length >= 30
+  })
+}
+
+function asksTargetChoiceWithoutMaterial(situation: string, intentContext: IntentContext, resources: ResourceItem[]): boolean {
+  if (hasSuppliedMaterial(situation, resources)) return false
+
+  const interpreted = intentContext.interpreted_request as Record<string, unknown> | undefined
+  const text = normalize([
+    situation,
+    interpreted?.user_need,
+    interpreted?.object_of_analysis,
+    intentContext.dominant_frame,
+    intentContext.decision_type,
+  ].filter(Boolean).join(' '))
+
+  const targetChoice =
+    /\b(cible|client|clients|utilisateur|utilisateurs|communaute|communaute|segment|persona|icp|audience)\b/.test(text) &&
+    /\b(choisir|prioriser|premier|premiere|lancement|lancer|developper|developpement|acquisition|activation|go to market|go market|marche)\b/.test(text)
+
+  if (!targetChoice) return false
+
+  const productOrProject =
+    /\b(produit|service|site|app|application|plateforme|startup|entreprise|projet|offre|situation card|situationcard|situation carte|situationcarte|situation car)\b/.test(text) ||
+    intentContext.surface_domain === 'startup_vc' ||
+    intentContext.dominant_frame === 'startup_target_choice'
+
+  return productOrProject
+}
+
 export function situationReadinessGate({
   situation,
   intentContext,
@@ -117,6 +154,23 @@ export function situationReadinessGate({
       message_fr: question,
       warning_fr: 'Options stratégiques non précisées : SC doit collaborer avant de conclure.',
       needs: ['options à comparer', 'critère de décision', 'contrainte prioritaire'],
+      doctrine: `${SC_NON_COMPLETION_PRINCIPLE}\n\n${SC_COLLABORATION_RULE}`,
+    }
+  }
+
+  if (asksTargetChoiceWithoutMaterial(situation, intentContext, resources)) {
+    const question =
+      'Pour choisir une cible client ou utilisateur, il manque la matière produit. Donnez-moi l’URL du site, une page de présentation, un document ou un plug autorisé ; sinon je peux générer une carte exploratoire clairement provisoire.'
+
+    return {
+      status: forceGenerate ? 'generate_prudently' : 'ask_user',
+      reason: 'target_choice_material_missing',
+      question,
+      can_generate_prudently: true,
+      prudent_generation_label_fr: 'Générer une carte exploratoire',
+      message_fr: question,
+      warning_fr: 'Choix de cible sans matière produit/source : SC doit collaborer avant de conclure.',
+      needs: ['URL, document ou plug autorisé', 'segments envisagés', 'critère de priorité'],
       doctrine: `${SC_NON_COMPLETION_PRINCIPLE}\n\n${SC_COLLABORATION_RULE}`,
     }
   }

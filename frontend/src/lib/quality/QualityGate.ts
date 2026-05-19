@@ -88,6 +88,13 @@ const MECHANICAL_WRITING_PATTERNS = [
   /passer d.?une impression generale a une lecture partageable/i,
   /un fait, une decision, un document ou un changement de calendrier verifiable/i,
   /qui decide, qui porte la charge/i,
+  /mandat officiel/i,
+  /role reel/i,
+  /hierarchie et arbitrage/i,
+  /charge collective/i,
+  /choose_action/i,
+  /contestation trouve un relais capable de ralentir ou delegitimer la procedure/i,
+  /fait opposable/i,
 ]
 
 function hasSharpDiamond(writing: WritingContract): boolean {

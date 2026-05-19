@@ -105,6 +105,14 @@ const GENERIC_PHRASES = [
   /le levier r[eé]el qui n[’']est pas encore prot[eé]g[eé] ou clarifi[eé]/i,
   /rythmes,\s*d[eé]lais,\s*fen[eê]tres d[’']action et risque de retard/i,
   /plusieurs options restent ouvertes,\s*mais elles ne prot[eè]gent pas les m[eê]mes risques/i,
+  /\bMandat officiel\b/i,
+  /\bR[oô]le r[eé]el\b/i,
+  /\bHi[eé]rarchie et arbitrage\b/i,
+  /\bCharge collective\b/i,
+  /\bchoose_action\b/i,
+  /qui d[eé]cide, qui porte la charge, qui bloque, qui rend possible/i,
+  /la contestation trouve un relais capable de ralentir ou d[eé]l[eé]gitimer la proc[eé]dure/i,
+  /fait opposable/i,
 ]
 
 const PUBLIC_SCAFFOLDING_PATTERNS = [
