@@ -3731,6 +3731,7 @@ export async function POST(req: NextRequest) {
         header_domain: canonicalInterpretation.header_domain,
         header_subject: canonicalInterpretation.header_subject,
         situation_soumise: canonicalInterpretation.situation_soumise,
+        treatment_plan: canonicalInterpretation.treatment_plan,
         confidence: canonicalInterpretation.confidence,
       },
       dialogue_gate: {

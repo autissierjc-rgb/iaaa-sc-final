@@ -9,6 +9,7 @@ import type {
 import { interpretRequestWithModel } from '../intent/modelIntentInterpreter'
 import { interpretRequest } from '../intent/interpretRequest'
 import type { InterpretedRequest, SituationDomain } from '../resources/resourceContract'
+import { buildTreatmentPlan } from './TreatmentPlan'
 
 export type InterpretationServiceInput = {
   raw_input: string
@@ -214,6 +215,11 @@ export async function interpretSituation(
   const referenceModel = localMode
     ? { provider: 'local' as const, model: 'local-contract' }
     : input.reference_model ?? DEFAULT_REFERENCE_MODEL
+  const treatmentPlan = buildTreatmentPlan({
+    rawInput,
+    interpreted,
+    domain,
+  })
 
   return {
     raw_input: rawInput,
@@ -233,6 +239,7 @@ export async function interpretSituation(
     needs_clarification: shouldClarify(interpreted, rawInput),
     clarification_question: interpreted.confirmation_hypothesis || undefined,
     entity_explanations: toEntityExplanations(interpreted.entity_explanations),
+    treatment_plan: treatmentPlan,
     confidence: interpreted.confidence,
     signals: interpreted.signals,
     trace: {
@@ -246,6 +253,7 @@ export async function interpretSituation(
         localMode
           ? 'Local contract interpreter used for cockpit dry-run.'
           : 'LLM referent or legacy interpreter adapter produced canonical interpretation',
+        ...treatmentPlan.trace_notes,
       ],
     },
   }
