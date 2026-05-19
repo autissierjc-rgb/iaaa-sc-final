@@ -1005,6 +1005,40 @@ function firstSafeText(values: unknown[], situation: string, fallback: string): 
   return fallback
 }
 
+function hasFrenchFallbackDebt(value: string): boolean {
+  return /\b(?:vulnerabilite|dependance|opportunite|decision|verifiable|reel|equipe|role|cout|cle|hypothese|regle|deja|interet|differenciation)\b/i.test(value)
+}
+
+function hasTruncatedPublicFragment(value: string): boolean {
+  const text = cleanPublicText(value)
+  if (!text) return false
+  if (/\ben consid\b/i.test(text)) return true
+  if (/\b(?:utilisteur|utilisteurs|quels sont)\b/i.test(text)) return true
+  const firstSentence = text.split(/\n|[.!?]\s/)[0]?.trim() ?? ''
+  if (/\b(?:consid|utilisteur|utilisteurs|question|options?)\s*$/i.test(firstSentence) && firstSentence.length > 45) return true
+  return firstSentence.length > 110 && /\b(?:comment|quelle|quel|quels|choisir|prendre)\b/i.test(firstSentence) && !/[?.!]$/.test(firstSentence)
+}
+
+function isUnsafePublicFrenchWriting(value: string): boolean {
+  const text = cleanPublicText(value)
+  if (!text) return true
+  if (rejectsDiamondGuardText(text)) return true
+  if (hasTruncatedPublicFragment(text)) return true
+  return hasFrenchFallbackDebt(text)
+}
+
+function firstPublicFrenchText(values: unknown[], situation: string, fallback: string): string {
+  for (const value of values) {
+    const text = safePublicText(value, situation, '')
+    if (text && !isUnsafePublicFrenchWriting(text)) return text
+  }
+
+  const safeFallback = safePublicText(fallback, situation, '')
+  if (safeFallback && !isUnsafePublicFrenchWriting(safeFallback)) return safeFallback
+
+  return firstSafeText(values, situation, fallback)
+}
+
 function shouldPreferCompletedCardAfterWriting(card: SituationCard): boolean {
   const frame = card.intent_context?.dominant_frame
   const domain =
@@ -1040,20 +1074,20 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
 
   return {
     ...card,
-    title_fr: firstSafeText([sc.title_fr, card.title_fr], situation, card.title_fr ?? ''),
+    title_fr: firstPublicFrenchText([sc.title_fr, card.title_fr], situation, card.title_fr ?? ''),
     title_en: firstSafeText([sc.title_en, card.title_en], situation, card.title_en ?? card.title_fr ?? ''),
-    insight_fr: firstSafeText([sc.insight_fr, card.insight_fr], situation, card.insight_fr ?? ''),
+    insight_fr: firstPublicFrenchText([sc.insight_fr, card.insight_fr], situation, card.insight_fr ?? ''),
     insight_en: firstSafeText([sc.insight_en, card.insight_en], situation, card.insight_en ?? card.insight_fr ?? ''),
-    main_vulnerability_fr: firstSafeText(vulnerabilityFrCandidates, situation, card.main_vulnerability_fr ?? ''),
+    main_vulnerability_fr: firstPublicFrenchText(vulnerabilityFrCandidates, situation, card.main_vulnerability_fr ?? ''),
     main_vulnerability_en: firstSafeText([sc.main_vulnerability_en, card.main_vulnerability_en], situation, card.main_vulnerability_en ?? card.main_vulnerability_fr ?? ''),
-    asymmetry_fr: firstSafeText(asymmetryFrCandidates, situation, card.asymmetry_fr ?? ''),
+    asymmetry_fr: firstPublicFrenchText(asymmetryFrCandidates, situation, card.asymmetry_fr ?? ''),
     asymmetry_en: firstSafeText([sc.asymmetry_en, card.asymmetry_en], situation, card.asymmetry_en ?? card.asymmetry_fr ?? ''),
-    key_signal_fr: firstSafeText(keySignalFrCandidates, situation, card.key_signal_fr ?? ''),
+    key_signal_fr: firstPublicFrenchText(keySignalFrCandidates, situation, card.key_signal_fr ?? ''),
     key_signal_en: firstSafeText([sc.key_signal_en, card.key_signal_en], situation, card.key_signal_en ?? card.key_signal_fr ?? ''),
     trajectories: writing.trajectories.length > 0 ? writing.trajectories : card.trajectories,
-    lecture_systeme_fr: firstSafeText([writing.lecture.text_fr, card.lecture_systeme_fr], situation, card.lecture_systeme_fr ?? ''),
+    lecture_systeme_fr: firstPublicFrenchText([writing.lecture.text_fr, card.lecture_systeme_fr], situation, card.lecture_systeme_fr ?? ''),
     lecture_systeme_en: firstSafeText([writing.lecture.text_en, card.lecture_systeme_en], situation, card.lecture_systeme_en ?? card.lecture_systeme_fr ?? ''),
-    approfondir_fr: firstSafeText([approfondirFr, card.approfondir_fr], situation, String(card.approfondir_fr ?? '')),
+    approfondir_fr: firstPublicFrenchText([approfondirFr, card.approfondir_fr], situation, String(card.approfondir_fr ?? '')),
     approfondir_en: firstSafeText([writing.approfondir.analysis_en, card.approfondir_en], situation, String(card.approfondir_en ?? card.approfondir_fr ?? '')),
     writing_contract: writing,
   }
@@ -3031,7 +3065,14 @@ function buildFallbackCard(
     interpreted?.domain !== 'war' &&
     intentContext?.decision_type !== 'analyze_site' &&
     intentContext?.decision_type !== 'evaluate_investment'
-  const objectLabel = cleanPublicText(interpreted?.object_of_analysis ?? '').replace(/[.;:]+$/g, '') || 'l’objet de la question'
+  const rawObjectLabel = cleanPublicText(interpreted?.object_of_analysis ?? '').replace(/[.;:]+$/g, '')
+  const submittedLabel = normalizeSubmittedSituation(cleanPublicText(firstText([interpreted?.user_question, situation], situation)))
+    .replace(/[?.!]+$/g, '')
+  const objectLabel = startupCommunity
+    ? submittedLabel || 'le choix de cible utilisateur'
+    : hasTruncatedPublicFragment(rawObjectLabel)
+      ? submittedLabel || 'l’objet de la question'
+      : rawObjectLabel || 'l’objet de la question'
   const trajectorySubject = conciseTrajectorySubject(objectLabel)
   const objectSentence = capitalizeFirst(objectLabel)
   const objectDe = afterDe(objectLabel)
