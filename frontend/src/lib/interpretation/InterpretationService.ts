@@ -159,6 +159,13 @@ function extractBusinessSubject(rawInput: string): string | null {
     return null
   }
 
+  if (
+    /\b(?:cible|segment|public|audience|utilisateurs?|clients?|client[eè]le)\b/i.test(cleaned) &&
+    /\b(?:choisir|viser|prioriser|prioritaire|premiers?|premi[eè]re|options?|strat[eé]gique|lancement)\b/i.test(cleaned)
+  ) {
+    return `${company} cible utilisateur`
+  }
+
   if (/\b(startup|start-up|rejoindre|partenariat|partner|associer|collaborer|investir)\b/i.test(cleaned)) {
     return `${company} partenariat startup`
   }

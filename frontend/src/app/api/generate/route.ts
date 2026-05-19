@@ -1039,6 +1039,33 @@ function firstPublicFrenchText(values: unknown[], situation: string, fallback: s
   return firstSafeText(values, situation, fallback)
 }
 
+type CanonicalWritingFamily =
+  | 'target_choice'
+  | 'organization_change'
+  | 'relationship_clarification'
+  | 'experience_explanation'
+  | 'understanding'
+  | 'general'
+
+function canonicalWritingFamilyFromIntentContext(intentContext: IntentContext | undefined, situation: string): CanonicalWritingFamily {
+  const interpreted = intentContext?.interpreted_request
+  const frame = intentContext?.dominant_frame ?? ''
+  const domain = intentContext?.surface_domain ?? interpreted?.domain ?? ''
+  const decisionType = intentContext?.decision_type ?? ''
+  const signals = [...(intentContext?.signals ?? []), ...(interpreted?.signals ?? [])].join(' ')
+  const text = `${situation} ${interpreted?.user_question ?? ''} ${interpreted?.object_of_analysis ?? ''} ${signals}`.toLowerCase()
+  const asksTargetChoice =
+    /\b(?:cible|segment|public|audience|utilisateurs?|clients?|client[eè]le)\b/i.test(text) &&
+    /\b(?:choisir|viser|prioriser|prioritaire|premiers?|premi[eè]re|options?|strat[eé]gique|lancement)\b/i.test(text)
+
+  if (frame === 'startup_target_choice' || asksTargetChoice) return 'target_choice'
+  if (frame === 'personal_relationship' || domain === 'personal') return 'relationship_clarification'
+  if (frame === 'experience_explanation') return 'experience_explanation'
+  if (domain === 'management' || decisionType === 'organization_change') return 'organization_change'
+  if (interpreted?.intent_type === 'understand' || frame === 'understand_situation') return 'understanding'
+  return 'general'
+}
+
 function shouldPreferCompletedCardAfterWriting(card: SituationCard): boolean {
   const frame = card.intent_context?.dominant_frame
   const domain =
@@ -2515,12 +2542,13 @@ function completeSituationCard(
     sc.intent_context?.surface_domain === 'management' ||
     sc.intent_context?.interpreted_request?.domain === 'management' ||
     sc.coverage_check?.domain === 'management'
+  const writingFamily = canonicalWritingFamilyFromIntentContext(sc.intent_context, situation)
   const isStartupTargetChoice =
-    sc.intent_context?.dominant_frame === 'startup_target_choice'
+    writingFamily === 'target_choice'
   const radar = sc.radar && typeof sc.radar === 'object'
     ? sc.radar
     : { impact: 55, urgency: 50, uncertainty: 60, reversibility: 45 }
-  const understands = isUnderstandingRequest(sc) && !isPersonalRelationship && !isManagementContext
+  const understands = isUnderstandingRequest(sc) && !isPersonalRelationship && !isManagementContext && writingFamily !== 'target_choice'
   const object = interpretedObject(sc)
   const tension = interpretedTension(sc)
   const objectLabel = object || 'l’objet de la question'
@@ -3004,9 +3032,9 @@ function buildFallbackCard(
     intentContext?.surface_domain === 'management' ||
     intentContext?.interpreted_request?.domain === 'management'
   const humanDevelopment = /\b(fils|fille|enfant|ado|adolescent|adolescente|parent|sport|p[eê]che|carpe|loisir|passion|motivation)\b/i.test(situation)
+  const writingFamily = canonicalWritingFamilyFromIntentContext(intentContext, situation)
   const startupCommunity =
-    (intentContext?.surface_domain === 'startup_vc' || intentContext?.interpreted_request?.domain === 'startup_vc') &&
-    /\b(cible|segment|communaut[eé]|utilisateurs?|audience|acquisition|activation|r[eé]tention|go[- ]?to[- ]?market|croissance|options? strat[eé]giques?)\b/i.test(situation)
+    writingFamily === 'target_choice'
   const vulnerabilityFallbackFr = contextualVulnerabilityFallbackFr(intentContext)
   const firstDiamondSafeText = (values: unknown[], fallback: string): string => {
     for (const value of values) {
@@ -3060,6 +3088,7 @@ function buildFallbackCard(
     !isManagementContext &&
     intentContext?.dominant_frame !== 'site_analysis' &&
     intentContext?.dominant_frame !== 'startup_investment' &&
+    writingFamily !== 'target_choice' &&
     intentContext?.dominant_frame !== 'causal_attribution' &&
     intentContext?.surface_domain !== 'war' &&
     interpreted?.domain !== 'war' &&
