@@ -1961,6 +1961,11 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       if (qa) dialogueEvents.push({ type: 'user_extra_context', text: qa })
     } else if (refiningOptional && typedText) {
       dialogueEvents.push({ type: 'user_initial_question', text })
+      if (lastMsg?.kind === 'refine') {
+        lastMsg.questions.forEach((question) => {
+          dialogueEvents.push({ type: 'system_clarification_question', text: question })
+        })
+      }
       dialogueEvents.push({ type: 'user_extra_context', text: typedText })
       dialogueNotes.filter(Boolean).forEach(note => {
         dialogueEvents.push({ type: 'user_extra_context', text: note })
@@ -2021,13 +2026,16 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         setScData(scData2.sc)
         const canonicalText = canonicalSituationFromResponse(scData2.sc, text)
         const theatreQuestions = collaborativeQuestionsFromSc(scData2.sc)
+        const canReplaceLastUserMessage = !waitingForAnswers && !refiningOptional && !scData
         setActiveSituation(canonicalText)
         setChatMsgs(prev => {
-          const normalized = prev.map((msg, index) =>
-            index === prev.length - 1 && msg.kind === 'user'
-              ? { ...msg, text: canonicalText }
-              : msg
-          )
+          const normalized = canReplaceLastUserMessage
+            ? prev.map((msg, index) =>
+                index === prev.length - 1 && msg.kind === 'user'
+                  ? { ...msg, text: canonicalText }
+                  : msg
+              )
+            : prev
           if (theatreQuestions.length === 0) return normalized
           const last = normalized[normalized.length - 1]
           const sameRefine = last?.kind === 'refine' && last.questions.join('|') === theatreQuestions.join('|')

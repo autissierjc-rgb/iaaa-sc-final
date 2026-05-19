@@ -91,6 +91,55 @@ function pointsToExternalMaterial(value: string): boolean {
   return pointer && material
 }
 
+function looksLikeShortDialogueAnswer(value: string): boolean {
+  const raw = value.trim()
+  const text = normalizeForIntent(raw)
+  if (!text) return false
+  if (/[?]/.test(raw)) return false
+  if (/^(oui|yes|ok|exact|exactement|non|no|plutot|plutôt)\b/.test(text)) return true
+
+  const words = text.split(/\s+/).filter(Boolean)
+  if (words.length > 7) return false
+
+  const hasQuestionShape =
+    /\b(comment|pourquoi|quelle|quelles|quel|quels|dois|devons|faut|choisir|prioriser|analyser|comprendre|decider|developper)\b/.test(text)
+  if (hasQuestionShape) return false
+
+  return true
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function shortDialogueAnswers(events: DialogueEvent[]): string[] {
+  const hasDialogue = events.some((event) => event.type === 'system_clarification_question') || events.length > 1
+  if (!hasDialogue) return []
+
+  return events
+    .filter((event) =>
+      event.type === 'user_confirmation' ||
+      event.type === 'user_correction' ||
+      event.type === 'user_extra_context'
+    )
+    .map((event) => stripDialogueScaffolding(event.text))
+    .map((item) => item.trim())
+    .filter((item) => item && looksLikeShortDialogueAnswer(item))
+}
+
+function stripShortDialogueAnswersFromCanonical(canonical: string, events: DialogueEvent[]): string {
+  let clean = canonical.trim()
+  for (const answer of shortDialogueAnswers(events)) {
+    const escaped = escapeRegExp(answer)
+    clean = clean
+      .replace(new RegExp(`\\s+(?:pour|avec|sur|selon|en|via)\\s+${escaped}\\s*([?.!]?)$`, 'i'), '$1')
+      .replace(new RegExp(`\\s+${escaped}\\s*([?.!]?)$`, 'i'), '$1')
+      .replace(/\s+([?.!])$/g, '$1')
+      .trim()
+  }
+  return clean
+}
+
 export function buildLocalCanonicalSituationFromDialogue({
   rawSituation,
   originalSituation,
@@ -116,11 +165,16 @@ export function buildLocalCanonicalSituationFromDialogue({
     .filter(Boolean)
 
   const base = stripDialogueScaffolding(initial)
+  const hasSystemDialogue = events.some((event) => event.type === 'system_clarification_question') || events.length > 1
   const additions = userMaterial
     .map((item) => removeRepeatedBase(item, base))
     .filter((item) => !pointsToExternalMaterial(item))
+    .filter((item) => !(hasSystemDialogue && looksLikeShortDialogueAnswer(item)))
     .filter((item) => item && !base.toLowerCase().includes(item.toLowerCase()))
-  const canonical = normalizeSubmittedSituation([base, ...additions].filter(Boolean).join(' '))
+  const canonical = normalizeSubmittedSituation(stripShortDialogueAnswersFromCanonical(
+    [base, ...additions].filter(Boolean).join(' '),
+    events
+  ))
   if (!canonical) return null
 
   return {
@@ -186,6 +240,7 @@ Rules:
 - If the user confirms a clarification hypothesis, apply the confirmed meaning.
 - If the user corrects a referent, replace the ambiguous referent with the correction.
 - If a user answer only points to material elsewhere, such as "it is on the site", "it is in the document", or "the targets are on the card", treat it as dialogue context or missing material, not as the canonical_situation itself.
+- If a user answer to a clarification is a short criterion, constraint, signal or noun phrase such as "un abonnement", "DSI", "usage réel", "clients payants", or "la traction", use it as context for treatment, but do not append it to canonical_situation and do not add it at the end of canonical_situation.
 - canonical_situation must preserve the user's intention, actors, facts, relations, requested action and useful context.
 - header_subject must be only the subject, never the domain label, and must contain at least 3 meaningful words.
 - header_subject must be a clean noun phrase, not a copied fragment of the user's rough spelling or grammar.
@@ -214,7 +269,10 @@ Rules:
     if (typeof raw !== 'string') return null
 
     const parsed = parseModelJSON(raw)
-    const canonical = normalizeSubmittedSituation(asText(parsed.canonical_situation))
+    const canonical = normalizeSubmittedSituation(stripShortDialogueAnswersFromCanonical(
+      asText(parsed.canonical_situation),
+      events
+    ))
     if (!canonical) return null
 
     return {
