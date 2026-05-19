@@ -20,6 +20,17 @@ function pointsToExternalMaterial(text: string): boolean {
   return /\b(site|page|document|dossier|source|url|lien|plug|presentation)\b/.test(normalized)
 }
 
+function pointsToMissingMaterialAnswer(text: string): boolean {
+  const normalized = normalize(text)
+  const materialTarget = /\b(site|page|document|doc|pdf|fichier|dossier|source|url|lien|plug|presentation|drive|notion|serveur)\b/
+  const pointer =
+    /\b(c est|elles|ils|tout|les options|les infos|les details|la matiere|la source)\b.*\b(sur|dans|via)\b/.test(normalized) ||
+    /\b(sur|dans|via)\b.*\b(le|la|les|mon|ma|mes|ce|cette)\b/.test(normalized) ||
+    /\b(voir|regarde|consulte)\b/.test(normalized)
+
+  return pointer && materialTarget.test(normalized)
+}
+
 function asksTargetChoice(text: string, interpreted: InterpretedRequest): boolean {
   const normalized = normalize([
     text,
@@ -78,6 +89,7 @@ export function buildTreatmentPlan({
 }): TreatmentPlanContract {
   const hasMaterial = hasExplicitMaterialUrl(rawInput)
   const sourcePointer = pointsToExternalMaterial(rawInput)
+  const missingMaterialAnswer = pointsToMissingMaterialAnswer(rawInput)
   const targetChoice = asksTargetChoice(rawInput, interpreted)
   const optionsMissing = asksUnspecifiedOptions(rawInput)
   const instructions = baseInstructions()
@@ -98,6 +110,30 @@ export function buildTreatmentPlan({
       public_clarification_fr:
         interpreted.confirmation_hypothesis || 'Quelle precision changerait vraiment la lecture de cette situation ?',
       trace_notes: ['treatment_plan=collaborative_clarification', `domain=${domain}`],
+    }
+  }
+
+  if (missingMaterialAnswer && !hasMaterial) {
+    return {
+      mode: 'resource_first',
+      source_status: 'missing',
+      can_generate: false,
+      can_generate_exploratory: true,
+      missing_material_fr: ['URL, document, extrait ou plug autorise'],
+      must_not_reinterpret_fr: [
+        'ne pas transformer une reference a une matiere absente en carte definitive',
+        'ne pas conclure depuis un document, un site ou un plug non fourni',
+      ],
+      instructions: [
+        ...instructions,
+        {
+          layer: 'dialogue',
+          instruction_fr: 'Demander la matiere indiquee ou proposer une carte exploratoire explicitement provisoire.',
+        },
+      ],
+      public_clarification_fr:
+        'Je comprends que la matiere existe. Donnez l URL exacte, collez l extrait utile, ajoutez le document ou utilisez Plug ; sinon je peux produire une carte exploratoire clairement provisoire.',
+      trace_notes: ['treatment_plan=resource_first', 'missing_material_answer', `domain=${domain}`],
     }
   }
 

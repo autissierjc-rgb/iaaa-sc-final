@@ -2098,7 +2098,14 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         body: JSON.stringify({
           message: text,
           language: contentLang.toLowerCase(),
-          working_context: renWorkingContext ?? undefined,
+          working_context: {
+            ...(renWorkingContext ?? {}),
+            situation_hint: activeSituation || renWorkingContext?.situation_hint,
+            pending_questions:
+              lastMsg && (lastMsg.kind === 'clarify' || lastMsg.kind === 'refine')
+                ? lastMsg.questions
+                : renWorkingContext?.pending_questions,
+          },
           material_sources: materialSources,
         }),
       })

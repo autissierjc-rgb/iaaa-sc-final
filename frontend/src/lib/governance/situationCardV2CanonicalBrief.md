@@ -100,6 +100,29 @@ Le LLM referent comprend et donne l'ordre de traitement.
 SC structure et produit la Situation Card.
 ```
 
+Application au chat REN :
+
+```txt
+Le LLM referent comprend.
+REN collabore.
+SC structure.
+La boussole genere.
+```
+
+REN ne doit pas devenir un interprete autonome de tous les cas de figure. Il
+doit consommer une instruction canonique issue de l'InterpretationService ou du
+TreatmentPlanContract, puis l'afficher sous forme de collaboration utilisateur :
+
+- demander une precision ;
+- demander une URL, un document, un extrait ou un plug ;
+- proposer une carte exploratoire ;
+- inviter a cliquer la boussole ;
+- challenger l'hypothese sans regenerer la question.
+
+Les heuristiques locales de REN ne sont admises que comme garde-fous courts
+quand le contrat d'interpretation est absent ou indisponible. Elles ne doivent
+pas remplacer durablement le plan de traitement produit par le LLM referent.
+
 ## 4. Architecture cible
 
 ```txt

@@ -24,6 +24,33 @@ SC applique ensuite ce plan. Les couches aval peuvent verifier, enrichir,
 mesurer ou refuser ; elles ne doivent pas reinterpreter silencieusement
 l'intention.
 
+## Application a REN
+
+REN n'est pas l'autorite d'interpretation. Il ne doit pas empiler des
+detecteurs locaux pour comprendre tous les cas de figure.
+
+Regle :
+
+```txt
+GPT / LLM referent comprend la demande et produit l'instruction.
+REN transforme cette instruction en collaboration.
+La boussole cristallise la Situation Card.
+```
+
+Exemples d'instructions que REN doit recevoir ou deriver du
+TreatmentPlanContract :
+
+- `ask_precision` : poser une precision courte ;
+- `ask_source` : demander une URL, un document, un extrait ou un plug ;
+- `allow_exploratory_card` : proposer une carte exploratoire ;
+- `ready_for_card` : inviter a cliquer la boussole ;
+- `challenge_hypothesis` : challenger sans generer ;
+- `protect_request` : appliquer un garde-fou safety ou security.
+
+Les heuristiques REN ne sont tolerees qu'en fallback temporaire si le plan
+canonique est absent. Elles doivent rester minimes et ne pas devenir une
+deuxieme interpretation concurrente.
+
 ## Ce que le contrat doit dire
 
 - mode de traitement : direct, exploratoire, clarification, source d'abord,

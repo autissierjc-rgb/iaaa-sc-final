@@ -1,4 +1,5 @@
 import type { LanguageCode, TraceMeta } from './common'
+import type { TreatmentPlanContract } from './interpretation'
 import type { RiskAdviceGuardContract } from './safety'
 import type { SecurityAbuseGuardContract } from './security'
 import type { UserMaterialSourceType } from './userMaterial'
@@ -19,6 +20,7 @@ export type RenSuggestedNextAction =
 
 export type RenWorkingContext = {
   situation_hint?: string
+  pending_questions?: string[]
   actors: string[]
   constraints: string[]
   hypotheses: string[]
@@ -30,6 +32,7 @@ export type RenWorkingContext = {
 export type RenChatRequest = {
   message: string
   language?: LanguageCode
+  treatment_plan?: TreatmentPlanContract
   working_context?: Partial<RenWorkingContext>
   material_sources?: UserMaterialSourceType[]
 }
@@ -37,6 +40,7 @@ export type RenChatRequest = {
 export type RenChatResponseContract = {
   answer: string
   ren_mode: RenChatMode
+  treatment_plan?: TreatmentPlanContract
   useful_context: string[]
   missing_context: string[]
   suggested_next_action: RenSuggestedNextAction
