@@ -3806,7 +3806,11 @@ export async function POST(req: NextRequest) {
         intent_gate_signals: intentGate.signals,
       },
     }
-    const explicitPrudentGeneration = Boolean(generate_prudently || (isPublicFast && refine_acknowledged))
+    const explicitPrudentGeneration = Boolean(generate_prudently)
+    const readinessAnalysisText = [
+      urlAugmentedAnalysisText,
+      dialogueText(dialogue_events),
+    ].filter(Boolean).join('\n')
 
     if (
       canonicalDialogueGate.status === 'BLOCKING_CLARIFICATION' &&
@@ -3883,7 +3887,7 @@ export async function POST(req: NextRequest) {
     }
 
     const earlyReadinessGate = situationReadinessGate({
-      situation: urlAugmentedAnalysisText,
+      situation: readinessAnalysisText,
       intentContext,
       resources: sanitizeResources(rawResources),
       forceGenerate: explicitPrudentGeneration,
@@ -3894,7 +3898,11 @@ export async function POST(req: NextRequest) {
       earlyReadinessGate.reason !== 'site_content_insufficient' &&
       earlyReadinessGate.question &&
       !explicitPrudentGeneration &&
-      (!hasUrlInFlow || earlyReadinessGate.reason === 'strategic_options_missing')
+      (
+        !hasUrlInFlow ||
+        earlyReadinessGate.reason === 'strategic_options_missing' ||
+        earlyReadinessGate.reason === 'target_choice_material_missing'
+      )
 
     if (shouldStopForEarlyReadiness) {
       recordGenerationTrace({
@@ -4107,7 +4115,7 @@ export async function POST(req: NextRequest) {
       resourcesCount: canonicalResourcePlan.resources.length,
     })
     const readinessGate = situationReadinessGate({
-      situation: urlAugmentedAnalysisText,
+      situation: readinessAnalysisText,
       intentContext,
       resources,
       forceGenerate: explicitPrudentGeneration,
@@ -4744,7 +4752,13 @@ export async function POST(req: NextRequest) {
         : 'error',
       issues: diamondValidation.issues,
     }
-    if (!diamondValidation.ok && !explicitPrudentGeneration) {
+    const canReleaseQualityPartial =
+      !diamondValidation.ok &&
+      resourcesStatus === 'available' &&
+      resources.length > 0 &&
+      hasUrlInFlow
+
+    if (!diamondValidation.ok && !explicitPrudentGeneration && !canReleaseQualityPartial) {
       recordGenerationTrace({
         status: 'partial',
         gate: 'CLARIFY',
@@ -4780,7 +4794,7 @@ export async function POST(req: NextRequest) {
 
     const finalSc: SituationCard = {
       ...sc,
-      generation_status: explicitPrudentGeneration && !diamondValidation.ok
+      generation_status: (explicitPrudentGeneration || canReleaseQualityPartial) && !diamondValidation.ok
         ? 'partial'
         : sc.generation_status,
       quality: {

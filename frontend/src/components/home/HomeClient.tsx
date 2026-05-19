@@ -1924,7 +1924,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
     }
   }
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(async (forceExploratoryGeneration = false) => {
     if (compassDisabled) return
     const typedText = sanitizeSituationDraft(situation).trim()
     const baseSituation = activeSituation || typedText
@@ -1933,7 +1933,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       : typedText
     const isFreshSituation = !waitingForAnswers && !refiningOptional && Boolean(typedText) && typedText !== baseSituation
     const generationSituation = text
-    const exploratoryGeneration = waitingForAnswers || refiningOptional
+    const exploratoryGeneration = forceExploratoryGeneration
     const dialogueEvents: DialogueEvent[] = []
     if (waitingForAnswers && lastMsg?.kind === 'clarify') {
       const directAnswer = typedText && typedText !== text
@@ -2346,7 +2346,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
                       <button
                         type="button"
-                        onClick={handleGenerate}
+                        onClick={() => handleGenerate(true)}
                         disabled={scLoading || !activeSituation.trim()}
                         style={{ border: `1px solid ${BDR_G}`, background: 'rgba(204,163,100,0.14)', color: TXT, borderRadius: 999, padding: '7px 11px', fontSize: 11, fontStyle: 'normal', cursor: scLoading || !activeSituation.trim() ? 'not-allowed' : 'pointer' }}
                       >
@@ -2380,7 +2380,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                   <span style={{ fontSize: 9, color: renLoading ? GOLD : TXT3, whiteSpace: 'nowrap' }}>{renActionLabel}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                  <Boussole mode={effectiveCompassMode} onClick={handleGenerate} disabled={compassDisabled} title={t.compass_title} />
+                  <Boussole mode={effectiveCompassMode} onClick={() => handleGenerate()} disabled={compassDisabled} title={t.compass_title} />
                   <span style={{ fontSize: 9, color: scLoading ? GOLD : TXT3, whiteSpace: 'nowrap' }}>{compassActionLabel}</span>
                 </div>
               </div>
@@ -2532,7 +2532,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                         {msg.kind === 'clarify' && (
                           <button
                             type="button"
-                            onClick={handleGenerate}
+                            onClick={() => handleGenerate(true)}
                             disabled={scLoading || !activeSituation.trim()}
                             style={{ marginTop: 10, border: `1px solid ${BDR_G}`, background: 'rgba(204,163,100,0.14)', color: TXT, borderRadius: 999, padding: '7px 12px', fontSize: 11, fontStyle: 'normal', cursor: scLoading || !activeSituation.trim() ? 'not-allowed' : 'pointer' }}
                           >
@@ -2594,7 +2594,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                   <span style={{ fontSize: 8.5, color: renLoading ? GOLD : TXT3, whiteSpace: 'nowrap' }}>{renActionLabel}</span>
                 </div>
                 <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                  <Boussole mode={effectiveCompassMode} onClick={handleGenerate} disabled={compassDisabled} title={t.compass_title} />
+                  <Boussole mode={effectiveCompassMode} onClick={() => handleGenerate()} disabled={compassDisabled} title={t.compass_title} />
                   <span style={{ fontSize: 8.5, color: scLoading ? GOLD : TXT3, whiteSpace: 'nowrap' }}>{compassActionLabel}</span>
                 </div>
               </div>
