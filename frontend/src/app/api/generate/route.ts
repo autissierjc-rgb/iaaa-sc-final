@@ -99,6 +99,43 @@ function stripPublicDialogueScaffolding(value: string): string {
     .trim()
 }
 
+function stripMissingMaterialPointers(value: string): string {
+  return value
+    .replace(/\b(?:les\s+)?options?\s+(?:sont|se trouvent|figurent)\s+sur\s+(?:le\s+)?site\.?/gi, ' ')
+    .replace(/\b(?:les\s+)?options?\s+(?:sont|se trouvent|figurent)\s+sur\s+(?:le\s+)?s\b\.?/gi, ' ')
+    .replace(/\b(?:tout\s+)?(?:est|c['’]est)\s+sur\s+(?:le\s+)?site\.?/gi, ' ')
+    .replace(/\b(?:tout\s+)?(?:est|c['’]est)\s+sur\s+(?:le\s+)?s\b\.?/gi, ' ')
+    .replace(/\bvoir\s+(?:le\s+)?site\.?/gi, ' ')
+    .replace(/\b(?:source|mati[eè]re|d[eé]tails?)\s+sur\s+(?:le\s+)?site\.?/gi, ' ')
+    .replace(/\s+([.;:,!?])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .replace(/[.;:,!?]\s*$/g, '')
+    .trim()
+}
+
+function sanitizeArbreEntityNoise(arbre: ArbreACamesAnalysis): ArbreACamesAnalysis {
+  const isNoise = (value: string) => /^(?:un|une|le|la|les|des|de|du|d['’]?|l['’]?)$/i.test(value.trim())
+  const cleanList = (items?: string[]) =>
+    (items ?? []).filter((item) => !isNoise(item))
+  const cleanPowers = arbre.powers_in_presence
+    ? {
+        ...arbre.powers_in_presence,
+        primary: arbre.powers_in_presence.primary.filter((power) => !isNoise(power.name)),
+        hidden: arbre.powers_in_presence.hidden.filter((power) => !isNoise(power.name)),
+        blocking: arbre.powers_in_presence.blocking.filter((power) => !isNoise(power.name)),
+        tipping: arbre.powers_in_presence.tipping.filter((power) => !isNoise(power.name)),
+      }
+    : undefined
+
+  return {
+    ...arbre,
+    acteurs: cleanList(arbre.acteurs),
+    forces: cleanList(arbre.forces),
+    rapports_de_force: cleanList(arbre.rapports_de_force),
+    powers_in_presence: cleanPowers,
+  }
+}
+
 function canonicalQuestionForUserMaterialRole(
   value: string,
   role: UserMaterialResourceRoleAssessment
@@ -617,6 +654,7 @@ function cleanPublicText(text: string): string {
     .replace(/\bLa bonne lecture est une suspension prudente\s*:\s*il faut d[’']abord identifier l[’']URL officielle[^.?!]*[.?!]?/gi, '')
     .replace(/\bLe prochain signal utile n[’']est pas une conclusion sur le march[eé] vis[eé][^.?!]*[.?!]?/gi, '')
     .replace(/\bActeurs visibles,\s*Contraintes mat[eé]rielles,\s*R[eè]gles et institutions,\s*R[eé]cit dominant\b/gi, '')
+    .replace(/\b(?:un|une|le|la|les|des|de|du),\s+(?=[a-zà-ÿ])/gi, '')
     .replace(/acteurs et s[eé]quences disponibles dans la situation fournie/gi, '')
     .replace(/ressources web absentes ou non stabilis[eé]es/gi, '')
     .replace(/ressources absentes|ressources web absentes|web absent/gi, '')
@@ -4020,10 +4058,69 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    const providedResources = sanitizeResources(rawResources)
+    const treatmentPlan = canonicalInterpretation.treatment_plan
+    const sanitizedMissingMaterialAnalysisText = stripMissingMaterialPointers(analysisText)
+    const hasMissingMaterialPointer =
+      sanitizedMissingMaterialAnalysisText.length > 0 &&
+      sanitizedMissingMaterialAnalysisText !== analysisText.trim()
+    const exploratoryWithoutMaterial =
+      explicitPrudentGeneration &&
+      !hasUrlInFlow &&
+      providedResources.length === 0 &&
+      (
+        (treatmentPlan?.mode === 'resource_first' && treatmentPlan.source_status === 'missing') ||
+        hasMissingMaterialPointer
+      )
+    const generationDisplayText = exploratoryWithoutMaterial
+      ? normalizeSubmittedSituation(sanitizedMissingMaterialAnalysisText || stripMissingMaterialPointers(displayText) || displayText)
+      : displayText
+    const generationAnalysisText = exploratoryWithoutMaterial
+      ? normalizeSubmittedSituation(sanitizedMissingMaterialAnalysisText || analysisText)
+      : analysisText
+    const generationIntentContext = exploratoryWithoutMaterial
+      ? {
+          ...intentContext,
+          interpreted_request: intentContext.interpreted_request
+            ? {
+                ...intentContext.interpreted_request,
+                user_question: generationDisplayText,
+                object_of_analysis:
+                  stripMissingMaterialPointers(intentContext.interpreted_request.object_of_analysis ?? '') ||
+                  generationDisplayText,
+                implicit_tension:
+                  stripMissingMaterialPointers(intentContext.interpreted_request.implicit_tension ?? '') ||
+                  intentContext.interpreted_request.implicit_tension,
+              }
+            : intentContext.interpreted_request,
+        } as IntentContext
+      : intentContext
+    const generationInterpretation = exploratoryWithoutMaterial
+      ? {
+          ...canonicalInterpretation,
+          raw_input: generationAnalysisText,
+          situation_soumise: generationDisplayText,
+          object_of_analysis:
+            stripMissingMaterialPointers(canonicalInterpretation.object_of_analysis) ||
+            generationDisplayText,
+          user_need:
+            stripMissingMaterialPointers(canonicalInterpretation.user_need) ||
+            canonicalInterpretation.user_need,
+          header_subject:
+            stripMissingMaterialPointers(canonicalInterpretation.header_subject) ||
+            canonicalInterpretation.header_subject,
+          trace: {
+            ...canonicalInterpretation.trace,
+            notes: [
+              ...(canonicalInterpretation.trace.notes ?? []),
+              'writing_input_sanitized_by_treatment_plan',
+            ],
+          },
+        }
+      : canonicalInterpretation
     const branches = Array.isArray(astrolabe_branches) && astrolabe_branches.length > 0
       ? astrolabe_branches
-      : inferAstrolabeBranches(analysisText, intentContext)
-    const providedResources = sanitizeResources(rawResources)
+      : inferAstrolabeBranches(generationAnalysisText, generationIntentContext)
     const userMaterialPolicy = buildUserMaterialPolicy({
       kind: userMaterialRole.urls.length > 0 ? 'url' : 'text',
       public_source: userMaterialRole.role !== 'private_material',
@@ -4045,7 +4142,7 @@ export async function POST(req: NextRequest) {
       modelPath: 'local',
     })
     const webNeeded = hasUrlInFlow || shouldUseWeb(urlAugmentedAnalysisText)
-    const fastRunnerResult = isPublicFast && providedResources.length === 0
+    const fastRunnerResult = isPublicFast && providedResources.length === 0 && !exploratoryWithoutMaterial
       ? await runFastResourceRunner({
           interpretation: canonicalInterpretation,
           resource_plan: initialResourcePlan,
@@ -4072,7 +4169,9 @@ export async function POST(req: NextRequest) {
     }
     const fastRunnerResources = resourceItemsFromContracts(fastRunnerResult?.resources ?? [])
     const rawFetchedResources =
-      isPublicFast
+      exploratoryWithoutMaterial
+        ? []
+      : isPublicFast
         ? uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources])
         : providedResources.length > 0
         ? providedResources
@@ -4080,16 +4179,43 @@ export async function POST(req: NextRequest) {
           ? await fetchResourcesFast(urlAugmentedAnalysisText)
           : []
     const resources = await enrichResourcesWithSiteUnderstanding({
-      situation: urlAugmentedAnalysisText,
+      situation: exploratoryWithoutMaterial ? generationAnalysisText : urlAugmentedAnalysisText,
       resources: rawFetchedResources,
-      intentContext,
+      intentContext: generationIntentContext,
       allowModel: !isPublicFast,
     })
-    const canonicalResourcePlan = planResources({
-      interpretation: canonicalInterpretation,
+    let canonicalResourcePlan = planResources({
+      interpretation: generationInterpretation,
       patterns: humanCollectivePatterns,
       supplied_resources: resourceContractsFromItems(resources),
     })
+    if (exploratoryWithoutMaterial) {
+      canonicalResourcePlan = {
+        ...canonicalResourcePlan,
+        status: 'partial',
+        needs_web: false,
+        requested_urls: [],
+        extracted_urls: [],
+        fallback_searches: [],
+        resources: [],
+        public_sources: [],
+        policy_reason_fr:
+          'Carte exploratoire demandee sans matiere source : SC ne lance pas de recherche rapide et ne transforme pas une source absente en preuve.',
+        internal_notes: [
+          ...canonicalResourcePlan.internal_notes,
+          'TreatmentPlanContract applied: resource_first/missing + exploratory generation => no fast resource lookup.',
+        ],
+        trace: {
+          ...canonicalResourcePlan.trace,
+          status: 'partial',
+          notes: [
+            ...(canonicalResourcePlan.trace.notes ?? []),
+            'treatment_plan_applied=resource_first_missing_exploratory',
+            'fast_runner=skipped_by_treatment_plan',
+          ],
+        },
+      }
+    }
     canonicalResourcePlan.trace.duration_ms =
       (canonicalResourcePlan.trace.duration_ms ?? 0) + (rawFetchedResources.length > 0 ? 1 : 0)
     canonicalResourcePlan.trace.notes = [
@@ -4116,8 +4242,8 @@ export async function POST(req: NextRequest) {
       resourcesCount: canonicalResourcePlan.resources.length,
     })
     const readinessGate = situationReadinessGate({
-      situation: readinessAnalysisText,
-      intentContext,
+      situation: exploratoryWithoutMaterial ? generationAnalysisText : readinessAnalysisText,
+      intentContext: generationIntentContext,
       resources,
       forceGenerate: explicitPrudentGeneration,
     })
@@ -4155,20 +4281,22 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const rawArbre = await analyzeWithArbreACames(analysisText, resources, intentContext)
+    const rawArbre = await analyzeWithArbreACames(generationAnalysisText, resources, generationIntentContext)
     const effectiveCoverageWithReadiness = {
       ...effectiveCoverage,
       readiness_gate: readinessGate,
     }
-    const arbre = enrichArbreWithCoverage({ arbre: rawArbre, coverage: effectiveCoverageWithReadiness })
-    const scopeContext = detectScopeContext(analysisText, arbre)
+    const arbre = exploratoryWithoutMaterial
+      ? sanitizeArbreEntityNoise(enrichArbreWithCoverage({ arbre: rawArbre, coverage: effectiveCoverageWithReadiness }))
+      : enrichArbreWithCoverage({ arbre: rawArbre, coverage: effectiveCoverageWithReadiness })
+    const scopeContext = detectScopeContext(generationAnalysisText, arbre)
     const canonicalTheatre = buildCanonicalConcreteTheatre({
-      interpretation: canonicalInterpretation,
+      interpretation: generationInterpretation,
       resources: canonicalResourcePlan,
       expertises: expertisesMetiers,
     })
     const inquiry = buildBlindSpotInquiry({
-      interpretation: canonicalInterpretation,
+      interpretation: generationInterpretation,
       theatre: canonicalTheatre,
     })
     const concreteTheatre = concreteTheatreFromCanonical(canonicalTheatre)
@@ -4211,16 +4339,16 @@ export async function POST(req: NextRequest) {
       expertises_metiers: expertisesMetiers,
       resource_service: canonicalResourcePlan,
     }
-    const patternContext = detectPatterns({ situation: analysisText, arbre })
+    const patternContext = detectPatterns({ situation: generationAnalysisText, arbre })
     const metierProfile = undefined
     const prebuiltSiteCard = siteAnalysisFallbackCard({
-      situation: displayText,
+      situation: generationDisplayText,
       arbre,
       resources,
       branches,
-      intentContext,
+      intentContext: generationIntentContext,
     })
-    const forceLocalTargetChoice = intentContext.dominant_frame === 'startup_target_choice'
+    const forceLocalTargetChoice = generationIntentContext.dominant_frame === 'startup_target_choice'
     const useModelCard = process.env.SC_USE_MODEL_CARD === '1' && !isPublicFast
     const useLocalFastCard = forceLocalTargetChoice || (!prebuiltSiteCard && !useModelCard)
     let baseSc: SituationCard
@@ -4231,36 +4359,36 @@ export async function POST(req: NextRequest) {
       }
     } else if (useLocalFastCard) {
       baseSc = {
-        ...(intentContext.interpreted_request?.question_type === 'causal_attribution'
+        ...(generationIntentContext.interpreted_request?.question_type === 'causal_attribution'
           ? causalAttributionCard({
-              situation: displayText,
+              situation: generationDisplayText,
               arbre,
               branches,
-              intentContext,
+              intentContext: generationIntentContext,
               resources,
             })
-          : buildFallbackCard(displayText, arbre, resources, branches, intentContext)),
+          : buildFallbackCard(generationDisplayText, arbre, resources, branches, generationIntentContext)),
         generation_status: readinessGate.status === 'generate_prudently' ? 'partial' : 'ok',
       }
     } else {
       try {
-        baseSc = await generateFastCard(displayText, branches, arbre, resources, intentContext, concreteTheatre) as SituationCard
+        baseSc = await generateFastCard(generationDisplayText, branches, arbre, resources, generationIntentContext, concreteTheatre) as SituationCard
       } catch (error) {
         console.warn('model card generation unavailable, using local fallback:', error)
-        const localFallback = intentContext.interpreted_request?.question_type === 'causal_attribution'
+        const localFallback = generationIntentContext.interpreted_request?.question_type === 'causal_attribution'
           ? causalAttributionCard({
-              situation: displayText,
+              situation: generationDisplayText,
               arbre,
               branches,
-              intentContext,
+              intentContext: generationIntentContext,
               resources,
             })
-          : buildFallbackCard(displayText, arbre, resources, branches, intentContext)
+          : buildFallbackCard(generationDisplayText, arbre, resources, branches, generationIntentContext)
         const fallbackSc: SituationCard = sanitizeSituationCardPublicText(enforceHeaderContract(
           applyEntityExplanationsToSituationCard({
             ...localFallback,
             coverage_check: effectiveCoverageForGeneration,
-            intent_context: intentContext,
+            intent_context: generationIntentContext,
             conversation_contract: conversationContract,
             scope_context: scopeContext,
             concrete_theatre: concreteTheatre,
@@ -4273,7 +4401,7 @@ export async function POST(req: NextRequest) {
             generation_status: 'partial',
             generation_error_internal: error instanceof Error ? error.message : String(error),
           }),
-          displayText
+          generationDisplayText
         ))
         const fallbackValidation = validateDiamondContract(fallbackSc, effectiveCoverageForGeneration.domain)
         if (!fallbackValidation.ok) {
@@ -4327,19 +4455,19 @@ export async function POST(req: NextRequest) {
     baseSc = {
       ...baseSc,
       coverage_check: effectiveCoverageForGeneration,
-      intent_context: intentContext,
+      intent_context: generationIntentContext,
       conversation_contract: conversationContract,
       scope_context: scopeContext,
       concrete_theatre: concreteTheatre,
       metier_profile: metierProfile,
       resources_status: resourcesStatus,
     }
-    baseSc = completeSituationCard(baseSc, displayText, arbre, resources, branches)
+    baseSc = completeSituationCard(baseSc, generationDisplayText, arbre, resources, branches)
     const canonicalScoringForWriting = scoringContractFromCard(baseSc)
     const writingContract = canonicalScoringForWriting
       ? await composeDiamondWritingWithMode(
           {
-            interpretation: canonicalInterpretation,
+            interpretation: generationInterpretation,
             safety: safetyGuard,
             expertises_metiers: expertisesMetiers,
             theatre: canonicalTheatre,
@@ -4368,10 +4496,10 @@ export async function POST(req: NextRequest) {
         modelPath: 'local',
       })
     }
-    baseSc = applyWritingContractToCard(baseSc, writingContract, displayText)
+    baseSc = applyWritingContractToCard(baseSc, writingContract, generationDisplayText)
     const contractQuality = canonicalScoringForWriting
       ? runContractQualityGate({
-          interpretation: canonicalInterpretation,
+          interpretation: generationInterpretation,
           theatre: canonicalTheatre,
           scoring: canonicalScoringForWriting,
           inquiry,
@@ -4379,7 +4507,7 @@ export async function POST(req: NextRequest) {
       : null
     const writingQuality = canonicalScoringForWriting && writingContract
       ? runQualityGate({
-          interpretation: canonicalInterpretation,
+          interpretation: generationInterpretation,
           theatre: canonicalTheatre,
           scoring: canonicalScoringForWriting,
           writing: writingContract,
@@ -4440,7 +4568,7 @@ export async function POST(req: NextRequest) {
       ? buildGenerationEvent({
           route: '/api/generate',
           raw_input: text,
-          interpretation: canonicalInterpretation,
+          interpretation: generationInterpretation,
           dialogue: canonicalDialogueGate,
           resources: canonicalResourcePlan,
           quality: canonicalQuality,
@@ -4487,10 +4615,10 @@ export async function POST(req: NextRequest) {
       admin_learning_only: false,
       user_deletable: true,
       card_version: '1.0',
-      canonical_question: displayText,
-      header_domain: canonicalInterpretation.header_domain,
-      header_subject: canonicalInterpretation.header_subject,
-      situation_soumise: canonicalInterpretation.situation_soumise,
+      canonical_question: generationDisplayText,
+      header_domain: generationInterpretation.header_domain,
+      header_subject: generationInterpretation.header_subject,
+      situation_soumise: generationInterpretation.situation_soumise,
       payload: {
         language: languageContract.snapshot_language,
         writing: {
@@ -4610,7 +4738,7 @@ export async function POST(req: NextRequest) {
     baseSc = {
       ...baseSc,
       coverage_check: effectiveCoverageForGeneration,
-      intent_context: intentContext,
+      intent_context: generationIntentContext,
       conversation_contract: conversationContract,
       scope_context: scopeContext,
       concrete_theatre: concreteTheatre,
@@ -4635,20 +4763,20 @@ export async function POST(req: NextRequest) {
       baseSc,
       patternContext,
       effectiveCoverageForGeneration.domain,
-      intentContext.dominant_frame
+      generationIntentContext.dominant_frame
     )
-    if (intentContext.interpreted_request?.question_type === 'causal_attribution') {
+    if (generationIntentContext.interpreted_request?.question_type === 'causal_attribution') {
       baseSc = {
         ...baseSc,
         ...causalAttributionCard({
-          situation: displayText,
+          situation: generationDisplayText,
           arbre,
           branches,
-          intentContext,
+          intentContext: generationIntentContext,
           resources,
         }),
         coverage_check: effectiveCoverageForGeneration,
-        intent_context: intentContext,
+        intent_context: generationIntentContext,
         conversation_contract: conversationContract,
         scope_context: scopeContext,
         concrete_theatre: concreteTheatre,
@@ -4659,11 +4787,11 @@ export async function POST(req: NextRequest) {
       !writingContract &&
       !useLocalFastCard &&
       !siteGuard &&
-      (intentContext.interpreted_request?.intent_type === 'understand' ||
+      (generationIntentContext.interpreted_request?.intent_type === 'understand' ||
       effectiveCoverageWithReadiness.domain === 'startup_vc' ||
       expertisesMetiers.domain_playbook.id === 'startup_market' ||
       scopeContext.scope === 'global' ||
-      intentContext.dominant_frame !== 'general_analysis')
+      generationIntentContext.dominant_frame !== 'general_analysis')
     const hasLecture =
       baseSc.generation_status !== 'partial' &&
       !shouldRegenerateLecture &&
@@ -4683,13 +4811,13 @@ export async function POST(req: NextRequest) {
           lecture_systeme_en: baseSc.lecture_systeme_en,
         }
       : await generateLecture({
-          situation: analysisText,
+          situation: generationAnalysisText,
           arbre,
           sc: baseSc,
           resources,
           patternContext,
           metierProfile,
-          intentContext,
+          intentContext: generationIntentContext,
           scopeContext,
         })
 
@@ -4700,7 +4828,7 @@ export async function POST(req: NextRequest) {
       arbre_a_cames: arbre,
       powers_context: arbre.powers_in_presence,
       coverage_check: effectiveCoverageForGeneration,
-      intent_context: intentContext,
+      intent_context: generationIntentContext,
       conversation_contract: conversationContract,
       scope_context: scopeContext,
       concrete_theatre: concreteTheatre,
@@ -4712,14 +4840,14 @@ export async function POST(req: NextRequest) {
     const sc: SituationCard = {
       ...sanitizeSituationCardPublicText(enforceHeaderContract(
       applyEntityExplanationsToSituationCard(
-        intentContext.interpreted_request?.question_type === 'causal_attribution'
+        generationIntentContext.interpreted_request?.question_type === 'causal_attribution'
           ? {
               ...assembledSc,
               ...causalAttributionCard({
-                situation: displayText,
+                situation: generationDisplayText,
                 arbre,
                 branches,
-                intentContext,
+                intentContext: generationIntentContext,
                 resources,
               }),
             ...lecture,
@@ -4727,21 +4855,21 @@ export async function POST(req: NextRequest) {
             arbre_a_cames: arbre,
             powers_context: arbre.powers_in_presence,
             coverage_check: effectiveCoverageForGeneration,
-            intent_context: intentContext,
+            intent_context: generationIntentContext,
             conversation_contract: conversationContract,
             scope_context: scopeContext,
             concrete_theatre: concreteTheatre,
             pattern_context: patternContext,
               metier_profile: metierProfile,
-              generation_status: assembledSc.generation_status ?? 'partial',
-              resources_status: resourcesStatus,
+      generation_status: assembledSc.generation_status ?? 'partial',
+      resources_status: resourcesStatus,
             }
           : assembledSc
       ),
-      displayText
+      generationDisplayText
       )),
-      submitted_situation_fr: canonicalSubmittedText,
-      submitted_situation_en: canonicalSubmittedText,
+      submitted_situation_fr: exploratoryWithoutMaterial ? generationDisplayText : canonicalSubmittedText,
+      submitted_situation_en: exploratoryWithoutMaterial ? generationDisplayText : canonicalSubmittedText,
     }
 
     const diamondValidation = validateDiamondContract(sc, effectiveCoverageForGeneration.domain)
