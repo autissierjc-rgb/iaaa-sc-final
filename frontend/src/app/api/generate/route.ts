@@ -161,6 +161,37 @@ function dialogueText(value: unknown): string {
     .join('\n')
 }
 
+function hasAnsweredClarification(value: unknown): boolean {
+  if (!Array.isArray(value)) return false
+  let sawClarification = false
+
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue
+    const event = item as Record<string, unknown>
+    const type = typeof event.type === 'string' ? event.type : ''
+    const text = typeof event.text === 'string' ? event.text.trim() : ''
+
+    if (type === 'system_clarification_question' && text) {
+      sawClarification = true
+      continue
+    }
+
+    if (
+      sawClarification &&
+      text &&
+      (
+        type === 'user_correction' ||
+        type === 'user_confirmation' ||
+        type === 'user_extra_context'
+      )
+    ) {
+      return true
+    }
+  }
+
+  return false
+}
+
 const FAST_CARD_PROMPT = `You are the IAAA Situation Card engine.
 
 ${SC_INTERPRETATION_AUTHORITY}
@@ -3575,7 +3606,8 @@ export async function POST(req: NextRequest) {
       typeof original_situation === 'string' &&
       original_situation.trim() &&
       normalizeSubmittedSituation(text) !== rawDisplayText
-    const canonicalDialogue = isPublicFast
+    const answeredClarification = Boolean(refine_acknowledged) || hasAnsweredClarification(dialogue_events)
+    const canonicalDialogue = isPublicFast && !answeredClarification
       ? null
       : await buildCanonicalSituationFromDialogue({
           rawSituation: text,
@@ -3846,6 +3878,8 @@ export async function POST(req: NextRequest) {
       },
     }
     const explicitPrudentGeneration = Boolean(generate_prudently)
+    const acknowledgedClarificationGeneration = Boolean(answeredClarification)
+    const readinessForceGenerate = explicitPrudentGeneration || acknowledgedClarificationGeneration
     const readinessAnalysisText = [
       urlAugmentedAnalysisText,
       dialogueText(dialogue_events),
@@ -3929,7 +3963,7 @@ export async function POST(req: NextRequest) {
       situation: readinessAnalysisText,
       intentContext,
       resources: sanitizeResources(rawResources),
-      forceGenerate: explicitPrudentGeneration,
+      forceGenerate: readinessForceGenerate,
     })
 
     const shouldStopForEarlyReadiness =
@@ -3937,6 +3971,7 @@ export async function POST(req: NextRequest) {
       earlyReadinessGate.reason !== 'site_content_insufficient' &&
       earlyReadinessGate.question &&
       !explicitPrudentGeneration &&
+      !answeredClarification &&
       (
         !hasUrlInFlow ||
         earlyReadinessGate.reason === 'strategic_options_missing' ||
@@ -4245,7 +4280,7 @@ export async function POST(req: NextRequest) {
       situation: exploratoryWithoutMaterial ? generationAnalysisText : readinessAnalysisText,
       intentContext: generationIntentContext,
       resources,
-      forceGenerate: explicitPrudentGeneration,
+      forceGenerate: readinessForceGenerate,
     })
     const resourcesStatus =
       rawFetchedResources.length > 0
@@ -4254,7 +4289,7 @@ export async function POST(req: NextRequest) {
           ? 'unavailable'
           : 'not_needed'
 
-    if (readinessGate.status === 'ask_user' && readinessGate.question && !explicitPrudentGeneration) {
+    if (readinessGate.status === 'ask_user' && readinessGate.question && !explicitPrudentGeneration && !answeredClarification) {
       recordGenerationTrace({
         status: 'partial',
         gate: 'CLARIFY',

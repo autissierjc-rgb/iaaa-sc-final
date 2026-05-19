@@ -70,6 +70,27 @@ function removeRepeatedBase(addition: string, base: string): string {
   return normalizedAddition
 }
 
+function normalizeForIntent(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function pointsToExternalMaterial(value: string): boolean {
+  const text = normalizeForIntent(value)
+  const pointer =
+    /\b(c est|elles|ils|tout|les options|les cibles|les infos|les details|la matiere|la source)\b.*\b(sur|dans|via)\b/.test(text) ||
+    /\b(sur|dans|via)\b.*\b(le|la|les|mon|ma|mes|ce|cette)\b/.test(text) ||
+    /\b(voir|regarde|consulte)\b/.test(text)
+  const material =
+    /\b(site|page|document|doc|pdf|fichier|dossier|source|url|lien|plug|presentation|drive|notion|serveur|carte|crte)\b/.test(text)
+
+  return pointer && material
+}
+
 export function buildLocalCanonicalSituationFromDialogue({
   rawSituation,
   originalSituation,
@@ -97,6 +118,7 @@ export function buildLocalCanonicalSituationFromDialogue({
   const base = stripDialogueScaffolding(initial)
   const additions = userMaterial
     .map((item) => removeRepeatedBase(item, base))
+    .filter((item) => !pointsToExternalMaterial(item))
     .filter((item) => item && !base.toLowerCase().includes(item.toLowerCase()))
   const canonical = normalizeSubmittedSituation([base, ...additions].filter(Boolean).join(' '))
   if (!canonical) return null
@@ -163,6 +185,7 @@ Rules:
 - canonical_situation must not preserve obvious spelling, agreement, conjugation or punctuation errors when the intended question is clear.
 - If the user confirms a clarification hypothesis, apply the confirmed meaning.
 - If the user corrects a referent, replace the ambiguous referent with the correction.
+- If a user answer only points to material elsewhere, such as "it is on the site", "it is in the document", or "the targets are on the card", treat it as dialogue context or missing material, not as the canonical_situation itself.
 - canonical_situation must preserve the user's intention, actors, facts, relations, requested action and useful context.
 - header_subject must be only the subject, never the domain label, and must contain at least 3 meaningful words.
 - header_subject must be a clean noun phrase, not a copied fragment of the user's rough spelling or grammar.
