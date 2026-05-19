@@ -63,6 +63,46 @@ export type EntityExplanation = {
   certainty: 'known' | 'inferred' | 'unknown'
 }
 
+export type TreatmentMode =
+  | 'direct_sc'
+  | 'exploratory_sc'
+  | 'collaborative_clarification'
+  | 'resource_first'
+  | 'safety_first'
+
+export type TreatmentSourceStatus =
+  | 'not_needed'
+  | 'missing'
+  | 'provided'
+  | 'insufficient'
+  | 'private_plug_required'
+
+export type TreatmentInstruction = {
+  layer:
+    | 'dialogue'
+    | 'safety'
+    | 'resources'
+    | 'expertisesMetiers'
+    | 'theatre'
+    | 'scoring'
+    | 'writing'
+    | 'quality'
+    | 'share'
+  instruction_fr: string
+}
+
+export type TreatmentPlanContract = {
+  mode: TreatmentMode
+  source_status: TreatmentSourceStatus
+  can_generate: boolean
+  can_generate_exploratory: boolean
+  missing_material_fr: string[]
+  must_not_reinterpret_fr: string[]
+  instructions: TreatmentInstruction[]
+  public_clarification_fr?: string
+  trace_notes: string[]
+}
+
 export type InterpretationContract = {
   raw_input: string
   reference_model: {
@@ -84,6 +124,7 @@ export type InterpretationContract = {
   needs_clarification: boolean
   clarification_question?: string
   entity_explanations: EntityExplanation[]
+  treatment_plan?: TreatmentPlanContract
   confidence: number
   signals: string[]
   trace: TraceMeta

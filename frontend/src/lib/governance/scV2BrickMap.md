@@ -22,6 +22,8 @@ User Input
   ->
 InterpretationService
   ->
+TreatmentPlanContract
+  ->
 DialogueGate / SituationReadinessGate
   ->
 RiskAdviceGuard
@@ -61,6 +63,7 @@ src/lib/
     InterpretationService
     modelIntentInterpreter
     dialogueCanonicalizer
+    TreatmentPlanContract
 
   dialogue/
     DialogueGate
@@ -166,6 +169,7 @@ src/app/sis-system/v2/
 | --- | --- | --- | --- | --- |
 | Archive generations | archive | passive | `src/lib/contracts/generationArchive.ts` | Trace metadata, snapshot prive, apprentissage lancement et partage public. |
 | Interpretation + DialogueGate | interpretation / dialogue | passive | `src/lib/interpretation`, `src/lib/dialogue` | Autorite unique de comprehension et clarifications limitees. |
+| TreatmentPlanContract | interpretation / dialogue | passive | `src/lib/contracts/interpretation.ts`, `src/lib/governance/treatmentPlanContract.md` | Transforme l'interpretation du LLM referent en instructions de traitement verifiables pour les couches aval. |
 | SituationReadinessGate | dialogue / quality / UI-mobile | branche public | `src/lib/input/situationReadinessGate.ts`, `src/components/home/HomeClient.tsx`, `src/app/api/generate/route.ts` | Decide si une information manquante doit etre demandee avant generation et expose une generation prudente/exploratoire sans transformer la question de clarification en situation publique. |
 | ScoringEngine | scoring | passive | `src/lib/scoringV2` | Formule canonique branches + radar. |
 | ResourceService + SourceRouter | resources | passive | `src/lib/resources/ResourceService.ts`, `src/lib/resources/SourceRouter.ts` | Route URL, fallback search et sources par domaine. |

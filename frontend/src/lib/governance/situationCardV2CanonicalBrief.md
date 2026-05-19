@@ -68,6 +68,7 @@ Le LLM referent est l'autorite unique pour :
 - le domaine ;
 - l'angle d'analyse ;
 - le besoin ou non de clarification.
+- les instructions de traitement a appliquer par SC.
 
 Aujourd'hui ce referent peut etre ChatGPT / GPT. Demain il peut etre un autre
 LLM si le projet change de modele. La regle ne depend pas d'une marque ; elle
@@ -81,12 +82,32 @@ verifier, enrichir ou signaler une incoherence.
 
 Ils ne remplacent jamais silencieusement l'intention canonique.
 
+Le contrat d'interpretation peut produire un `TreatmentPlanContract`.
+Ce plan ne repond pas a l'utilisateur. Il dit comment SC doit traiter la
+demande :
+
+- generer directement ;
+- demander une precision ;
+- demander une source ou un plug ;
+- produire une carte exploratoire ;
+- proteger la demande avant generation ;
+- interdire a une couche aval de remplacer l'objet de la question.
+
+Regle :
+
+```txt
+Le LLM referent comprend et donne l'ordre de traitement.
+SC structure et produit la Situation Card.
+```
+
 ## 4. Architecture cible
 
 ```txt
 User Input
   ->
 InterpretationService
+  ->
+TreatmentPlanContract
   ->
 DialogueGate
   ->
