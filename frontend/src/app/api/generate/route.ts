@@ -1075,15 +1075,68 @@ function cleanTargetSegmentCandidate(value: string): string {
     .trim()
 }
 
-function splitTargetSegmentLine(value: string): string[] {
+function normalizedTargetText(value: string): string {
+  return cleanTargetSegmentCandidate(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function isTechnicalTargetSegment(value: string, resource?: ResourceItem): boolean {
+  const normalized = normalizedTargetText(value)
+  return (
+    !normalized ||
+    resource?.type === 'site-crawl-summary' ||
+    /\b(?:synthese|summary|crawl|fiche site|site understanding|accueil|privacy|mentions|contact|login|dashboard)\b/.test(normalized) ||
+    /^[a-z0-9-]+\.(?:com|fr|io|ai|org|net)$/.test(normalized)
+  )
+}
+
+function publicTargetsFromUsage(value: string): string[] {
+  const text = cleanTargetSegmentCandidate(value)
+  const normalized = normalizedTargetText(text)
+  const targets: string[] = []
+
+  if (/\b(personnelle?|relationnelle?|intime|particulier|individuel|individuelle)\b/.test(normalized)) {
+    targets.push('particuliers en clarification personnelle ou professionnelle')
+  }
+  if (/\b(conflits? d equipe|equipe|management|manager|rh|reorganisation|decisions? strategiques?)\b/.test(normalized)) {
+    targets.push('managers, équipes et professionnels confrontés à des décisions complexes')
+  }
+  if (/\b(evenements? publics?|actualite|geopolitique|journalistes?|analystes?|veille|societe|cartes publiques)\b/.test(normalized)) {
+    targets.push('analystes, journalistes et publics de veille sur événements complexes')
+  }
+  if (/\b(organisation|institution|gouvernance|board|comite|comité|direction|entreprise|collectif)\b/.test(normalized)) {
+    targets.push('organisations et instances de gouvernance')
+  }
+  if (/\b(cyber|it|soc|dsi|rssi|risque|conformite|conformité)\b/.test(normalized)) {
+    targets.push('équipes risque, cyber, DSI et conformité')
+  }
+
+  return targets
+}
+
+function publicTargetFromSegment(value: string): string {
+  const text = cleanTargetSegmentCandidate(value)
+  return publicTargetsFromUsage(text)[0] ?? text
+}
+
+function splitTargetSegmentLine(value: string, fromUsageLine = false): string[] {
   return value
     .split(/\s+(?:\/|;|\||•)\s+|,(?=\s+(?:[A-ZÉÈÀÂÊÎÔÛÇ]|[a-z]{3,}\s+(?:et|ou)\s+))/)
-    .map(cleanTargetSegmentCandidate)
+    .flatMap((item) => {
+      const cleaned = cleanTargetSegmentCandidate(item)
+      if (!cleaned) return []
+      const mapped = fromUsageLine ? publicTargetsFromUsage(cleaned) : [publicTargetFromSegment(cleaned)]
+      return mapped.length > 0 ? mapped : []
+    })
     .filter((item) =>
       item.length >= 4 &&
       item.length <= 90 &&
       !/^(?:et|ou|pour|avec|sans|le|la|les|un|une|des|du|de)$/i.test(item) &&
-      !/\b(preuves?|signaux|angles morts?|cadre légal|fiscalité|responsabilité)\b/i.test(item)
+      !/^(?:comprendre|analyser|transformer|créer|creer|explorer)\b/i.test(item) &&
+      !/\b(preuves?|signaux|angles morts?|cadre légal|fiscalité|responsabilité|synthèse crawl|synthese crawl|fiche site|résumé crawl|resume crawl)\b/i.test(item) &&
+      !isTechnicalTargetSegment(item)
     )
 }
 
@@ -1106,7 +1159,10 @@ function targetSegmentsFromResources(resources: ResourceItem[]): string[] {
     for (const label of relevantLines) {
       const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const match = excerpt.match(new RegExp(`${escaped}\\s*:\\s*([^\\n]+)`, 'i'))
-      if (match?.[1]) candidates.push(...splitTargetSegmentLine(match[1]))
+      if (match?.[1]) {
+        const fromUsageLine = /cas d['’ ]?usage|faits extraits/i.test(label)
+        candidates.push(...splitTargetSegmentLine(match[1], fromUsageLine))
+      }
     }
 
     const title = cleanTargetSegmentCandidate(String(resource.title ?? '').split(/\s[|–—-]\s/)[0] ?? '')
@@ -1114,7 +1170,8 @@ function targetSegmentsFromResources(resources: ResourceItem[]): string[] {
       title &&
       title.length >= 4 &&
       title.length <= 42 &&
-      !/\b(?:fiche site|accueil|privacy|mentions|situation card|iaaa site understanding)\b/i.test(title)
+      !isTechnicalTargetSegment(title, resource) &&
+      !/\b(?:situation card|iaaa site understanding)\b/i.test(title)
     ) {
       candidates.push(title)
     }
