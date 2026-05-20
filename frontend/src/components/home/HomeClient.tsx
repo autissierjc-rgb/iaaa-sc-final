@@ -1717,6 +1717,65 @@ type DialogueEvent = {
   text: string
 }
 
+function appendDialogueEvent(events: DialogueEvent[], event: DialogueEvent) {
+  const text = event.text.trim()
+  if (!text) return
+  const key = `${event.type}:${text.toLowerCase()}`
+  const exists = events.some(existing => `${existing.type}:${existing.text.trim().toLowerCase()}` === key)
+  if (!exists) events.push({ ...event, text })
+}
+
+function buildVisibleDialogueEvents({
+  initialText,
+  typedText,
+  chatMsgs,
+  dialogueNotes,
+}: {
+  initialText: string
+  typedText: string
+  chatMsgs: ChatMsg[]
+  dialogueNotes: string[]
+}): DialogueEvent[] {
+  const events: DialogueEvent[] = []
+  const initial = initialText.trim()
+  if (initial) appendDialogueEvent(events, { type: 'user_initial_question', text: initial })
+
+  for (const msg of chatMsgs) {
+    if (msg.kind === 'user') {
+      const value = msg.text.trim()
+      if (!value) continue
+      if (!events.some(event => event.type === 'user_initial_question')) {
+        appendDialogueEvent(events, { type: 'user_initial_question', text: value })
+      } else if (value.toLowerCase() !== initial.toLowerCase()) {
+        appendDialogueEvent(events, { type: 'user_extra_context', text: value })
+      }
+    }
+    if (msg.kind === 'clarify' || msg.kind === 'refine') {
+      msg.questions.forEach(question => {
+        appendDialogueEvent(events, { type: 'system_clarification_question', text: question })
+      })
+    }
+    if (msg.kind === 'material') {
+      appendDialogueEvent(events, { type: 'user_extra_context', text: msg.text })
+    }
+  }
+
+  dialogueNotes.forEach(note => {
+    appendDialogueEvent(events, { type: 'user_extra_context', text: note })
+  })
+  if (typedText && typedText.toLowerCase() !== initial.toLowerCase()) {
+    appendDialogueEvent(events, { type: 'user_extra_context', text: typedText })
+  }
+
+  return events.slice(0, 12)
+}
+
+function mergeDialogueEvents(...groups: DialogueEvent[][]): DialogueEvent[] {
+  const merged: DialogueEvent[] = []
+  groups.flat().forEach(event => appendDialogueEvent(merged, event))
+  return merged.slice(0, 12)
+}
+
 function canonicalSituationFromResponse(data: any, fallback: string): string {
   const canonical = String(
     data?.submitted_situation_fr ??
@@ -1934,7 +1993,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
     const isFreshSituation = !waitingForAnswers && !refiningOptional && Boolean(typedText) && typedText !== baseSituation
     const generationSituation = text
     const exploratoryGeneration = forceExploratoryGeneration
-    const dialogueEvents: DialogueEvent[] = []
+    const branchDialogueEvents: DialogueEvent[] = []
     if (waitingForAnswers && lastMsg?.kind === 'clarify') {
       const directAnswer = typedText && typedText !== text
         ? [typedText]
@@ -1942,12 +2001,12 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       const answerText = typedText && typedText !== text
         ? typedText
         : answers.find(a => a.trim().length > 0)?.trim()
-      dialogueEvents.push({ type: 'user_initial_question', text })
+      branchDialogueEvents.push({ type: 'user_initial_question', text })
       lastMsg.questions.forEach((question) => {
-        dialogueEvents.push({ type: 'system_clarification_question', text: question })
+        branchDialogueEvents.push({ type: 'system_clarification_question', text: question })
       })
       if (answerText) {
-        dialogueEvents.push({
+        branchDialogueEvents.push({
           type: /^(oui|yes|ok|exact|exactement|c(?:'|’)?est\s+(?:ça|cela))$/i.test(answerText.trim())
             ? 'user_confirmation'
             : 'user_correction',
@@ -1958,30 +2017,34 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         ...directAnswer,
         ...lastMsg.questions.map((_q, i) => answers[i]?.trim() ?? '').filter(Boolean),
       ].join('\n\n')
-      if (qa) dialogueEvents.push({ type: 'user_extra_context', text: qa })
+      if (qa) branchDialogueEvents.push({ type: 'user_extra_context', text: qa })
     } else if (refiningOptional && typedText) {
-      dialogueEvents.push({ type: 'user_initial_question', text })
+      branchDialogueEvents.push({ type: 'user_initial_question', text })
       if (lastMsg?.kind === 'refine') {
         lastMsg.questions.forEach((question) => {
-          dialogueEvents.push({ type: 'system_clarification_question', text: question })
+          branchDialogueEvents.push({ type: 'system_clarification_question', text: question })
         })
       }
-      dialogueEvents.push({ type: 'user_extra_context', text: typedText })
+      branchDialogueEvents.push({ type: 'user_extra_context', text: typedText })
       dialogueNotes.filter(Boolean).forEach(note => {
-        dialogueEvents.push({ type: 'user_extra_context', text: note })
+        branchDialogueEvents.push({ type: 'user_extra_context', text: note })
       })
     } else if (!scData && dialogueNotes.length > 0) {
-      dialogueEvents.push({ type: 'user_initial_question', text })
+      branchDialogueEvents.push({ type: 'user_initial_question', text })
       dialogueNotes.filter(Boolean).forEach(note => {
-        dialogueEvents.push({ type: 'user_extra_context', text: note })
+        branchDialogueEvents.push({ type: 'user_extra_context', text: note })
       })
     } else if (scData && !isFreshSituation && (typedText || dialogueNotes.length > 0)) {
       const notes = [...dialogueNotes, typedText && typedText !== text ? typedText : ''].filter(Boolean)
-      dialogueEvents.push({ type: 'user_initial_question', text })
+      branchDialogueEvents.push({ type: 'user_initial_question', text })
       notes.forEach(note => {
-        dialogueEvents.push({ type: 'user_extra_context', text: note })
+        branchDialogueEvents.push({ type: 'user_extra_context', text: note })
       })
     }
+    const dialogueEvents = mergeDialogueEvents(
+      buildVisibleDialogueEvents({ initialText: text, typedText, chatMsgs, dialogueNotes }),
+      branchDialogueEvents,
+    )
     setScLoading(true); setCompassMode('full')
     if (!activeSituation || isFreshSituation) setActiveSituation(text)
     if (typedText) {
@@ -2085,7 +2148,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       }])
       setScLoading(false)
     }
-  }, [situation, activeSituation, scData, lang, compassDisabled, waitingForAnswers, refiningOptional, lastMsg, answers, dialogueNotes])
+  }, [situation, activeSituation, scData, lang, compassDisabled, waitingForAnswers, refiningOptional, lastMsg, answers, dialogueNotes, chatMsgs])
 
   async function sendChatMessage() {
     const text = sanitizeSituationDraft(situation).trim()
