@@ -27,9 +27,9 @@ type CrawledPage = {
   links: string[]
 }
 
-const SITE_CRAWL_MAX_PAGES = 18
-const SITE_CRAWL_MAX_MS = 12000
-const SITE_CRAWL_MAX_CHARS = 28000
+const SITE_CRAWL_MAX_PAGES = 28
+const SITE_CRAWL_MAX_MS = 20000
+const SITE_CRAWL_MAX_CHARS = 52000
 
 function stripHtml(value: string): string {
   return value
@@ -132,17 +132,36 @@ function normalizeInternalUrl(url: URL): string {
   return `${url.origin}${url.pathname.replace(/\/$/, '') || '/'}`
 }
 
-function linkScore(url: URL, label: string, base: URL): number {
+function isTargetOrOfferQuery(query: string): boolean {
+  const text = normalizeSearchText(query)
+  return /\b(cible|client|clients|clientele|utilisateur|utilisateurs|public|publics|segment|segments|offre|offres|pricing|tarif|tarifs|marche|market|startup|produit|product|usage|use case|cas usage)\b/.test(text)
+}
+
+function evidencePageScore(haystack: string): number {
+  let score = 0
+  if (/\b(offer|offering|pricing|price|plans?|tarif|tarifs|abonnement|subscription|packages?|services?)\b/.test(haystack)) score += 12
+  if (/\b(product|produit|platform|plateforme|solution|solutions|features?|fonctionnalites?|fonctionnalités?)\b/.test(haystack)) score += 10
+  if (/\b(use-?cases?|cas-?usage|applications?|examples?|exemples?|stories?|success|case-?stud(?:y|ies)|etudes?-?cas)\b/.test(haystack)) score += 10
+  if (/\b(customers?|clients?|users?|utilisateurs?|audiences?|publics?|segments?|personas?|teams?|equipes?|professionnels?|organisations?|enterprise|entreprises?)\b/.test(haystack)) score += 10
+  if (/\b(testimonials?|temoignages?|témoignages?|partners?|partenaires?|integrations?|references?|preuves?|proof|traction)\b/.test(haystack)) score += 8
+  if (/\b(docs?|documentation|api|developers?|guides?|resources?|ressources?)\b/.test(haystack)) score += 4
+  return score
+}
+
+function linkScore(url: URL, label: string, base: URL, query = ''): number {
   const haystack = normalizeSearchText(`${url.pathname} ${label}`)
+  const targetOrOffer = isTargetOrOfferQuery(query)
   let score = 1
-  if (/\b(modele|model|business|economic|application|app|case|cas|etudes|study|pricing|tarif|faq|question|about|pour-vous|services|conseil|solution|offre|platform|plateforme|talent|freelance|client|contact)\b/i.test(haystack)) score += 8
+  if (/\b(modele|model|business|economic|application|app|case|cas|etudes|study|pricing|tarif|faq|question|pour-vous|services|conseil|solution|offre|platform|plateforme|talent|freelance|client)\b/i.test(haystack)) score += 6
+  if (targetOrOffer) score += evidencePageScore(haystack)
+  if (targetOrOffer && /\b(about|a-propos|a propos|contact|connexion|login)\b/i.test(haystack)) score -= 7
   if (url.pathname.includes('/fr')) score += 3
   if (url.pathname === base.pathname.replace(/\/$/, '')) score -= 10
   if (isNoisePath(url.pathname)) score -= 20
   return score
 }
 
-function extractInternalLinks(html: string, baseUrl: string): string[] {
+function extractInternalLinks(html: string, baseUrl: string, query = ''): string[] {
   let base: URL
   try {
     base = new URL(baseUrl)
@@ -165,7 +184,7 @@ function extractInternalLinks(html: string, baseUrl: string): string[] {
     if (parsed.hostname.replace(/^www\./, '') !== base.hostname.replace(/^www\./, '')) continue
     if (/\.(pdf|png|jpe?g|webp|gif|svg|zip|docx?|xlsx?)$/i.test(parsed.pathname)) continue
 
-    const score = linkScore(parsed, linkLabel(html, href), base)
+    const score = linkScore(parsed, linkLabel(html, href), base, query)
     if (score > 0) candidates.push({ url: normalizeInternalUrl(parsed), score })
   }
 
@@ -217,7 +236,7 @@ function summarizeCrawl(pages: CrawledPage[], requestedUrl: string): ResourceIte
   }
 }
 
-async function crawlRequestedSite(startUrl: string): Promise<ResourceItem[]> {
+async function crawlRequestedSite(startUrl: string, query: string): Promise<ResourceItem[]> {
   const start = Date.now()
   const queue = [startUrl]
   const seen = new Set<string>()
@@ -244,7 +263,7 @@ async function crawlRequestedSite(startUrl: string): Promise<ResourceItem[]> {
     const text = htmlBodyText(html, 2200)
     if (!text || text.length < 80) continue
     const title = htmlTitle(html) || normalized
-    const links = extractInternalLinks(html, page.url)
+    const links = extractInternalLinks(html, page.url, query)
     pages.push({ title, url: normalized, text, links })
     charBudget += text.length
 
@@ -255,7 +274,7 @@ async function crawlRequestedSite(startUrl: string): Promise<ResourceItem[]> {
     queue.sort((a, b) => {
       try {
         const base = new URL(startUrl)
-        return linkScore(new URL(b), '', base) - linkScore(new URL(a), '', base)
+        return linkScore(new URL(b), '', base, query) - linkScore(new URL(a), '', base, query)
       } catch {
         return 0
       }
@@ -271,7 +290,7 @@ async function crawlRequestedSite(startUrl: string): Promise<ResourceItem[]> {
     reliability: index === 0 ? 'direct-site:homepage+crawl' : 'direct-site:crawled',
   } satisfies ResourceItem))
   const summary = summarizeCrawl(pages, startUrl)
-  return sanitizeResources(summary ? [summary, ...pageResources] : pageResources)
+  return sanitizeResources(summary ? [summary, ...pageResources] : pageResources, 20)
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 2200) {
@@ -293,11 +312,11 @@ async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs =
 async function fetchRequestedUrlResources(query: string): Promise<ResourceItem[]> {
   const urls = extractRequestedUrls(query).slice(0, 2)
   const [directResults, tavilyExtracted] = await Promise.all([
-    Promise.all(urls.map((url) => crawlRequestedSite(url))),
+    Promise.all(urls.map((url) => crawlRequestedSite(url, query))),
     fetchTavilyExtractUrls(urls),
   ])
 
-  return sanitizeResources([...directResults.flat(), ...tavilyExtracted].filter(Boolean) as ResourceItem[])
+  return sanitizeResources([...directResults.flat(), ...tavilyExtracted].filter(Boolean) as ResourceItem[], 20)
 }
 
 function hostname(value: string): string {
