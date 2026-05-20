@@ -58,7 +58,7 @@ import type {
   ConversationContract,
   ConcreteTheatre,
 } from '@/lib/resources/resourceContract'
-import type { AstrolabeBranchV2, RadarScoreV2, ResourceContract, ScoringContract, SourceChannel, WritingContract } from '@/lib/contracts'
+import type { AstrolabeBranchV2, RadarScoreV2, ResourceContract, ScoringContract, SourceChannel, TreatmentInstruction, TreatmentPlanContract, WritingContract } from '@/lib/contracts'
 
 function hasExplicitUrl(value: string): boolean {
   return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
@@ -148,6 +148,70 @@ function canonicalQuestionForUserMaterialRole(
       : withoutScaffolding
 
   return normalizeSubmittedSituation(publicQuestion || withoutScaffolding || value)
+}
+
+function uniqueTreatmentStrings(items: string[]): string[] {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = item.trim()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function appendTreatmentInstructions(
+  base: TreatmentInstruction[],
+  additions: TreatmentInstruction[]
+): TreatmentInstruction[] {
+  const keys = new Set(base.map((item) => `${item.layer}:${item.instruction_fr}`))
+  const merged = [...base]
+  for (const instruction of additions) {
+    const key = `${instruction.layer}:${instruction.instruction_fr}`
+    if (keys.has(key)) continue
+    keys.add(key)
+    merged.push(instruction)
+  }
+  return merged
+}
+
+function reconcileTargetChoiceTreatmentPlanAfterResources(
+  plan: TreatmentPlanContract | undefined
+): TreatmentPlanContract {
+  const baseInstructions = plan?.instructions ?? []
+  return {
+    mode: 'direct_sc',
+    source_status: 'provided',
+    can_generate: true,
+    can_generate_exploratory: plan?.can_generate_exploratory ?? true,
+    missing_material_fr: [],
+    must_not_reinterpret_fr: uniqueTreatmentStrings([
+      ...(plan?.must_not_reinterpret_fr ?? []),
+      'ne pas remplacer le choix de cible par une analyse generale de marche',
+      'ne pas transformer la ressource fournie en objet principal si elle sert de contexte produit',
+      'ne pas utiliser des categories de cible generiques si la ressource permet de nommer des segments visibles',
+    ]),
+    instructions: appendTreatmentInstructions(baseInstructions, [
+      {
+        layer: 'resources',
+        instruction_fr: 'Extraire de la ressource fournie les cibles, publics, offres, usages ou segments visibles sans inventer de traction.',
+      },
+      {
+        layer: 'writing',
+        instruction_fr: 'Comparer les segments visibles comme options de cible et les juger par preuve d usage observable, pas par volume abstrait.',
+      },
+      {
+        layer: 'quality',
+        instruction_fr: 'Bloquer ou marquer partiel si la sortie reste sur des formules generiques alors que la ressource contient des segments exploitables.',
+      },
+    ]),
+    trace_notes: uniqueTreatmentStrings([
+      ...(plan?.trace_notes ?? []),
+      'treatment_plan=reconciled_after_resource_fetch',
+      'target_choice_with_material',
+      'source_status=provided',
+    ]),
+  }
 }
 
 function dialogueText(value: unknown): string {
@@ -4270,7 +4334,7 @@ export async function POST(req: NextRequest) {
             : intentContext.interpreted_request,
         } as IntentContext
       : intentContext
-    const generationInterpretation = exploratoryWithoutMaterial
+    let generationInterpretation = exploratoryWithoutMaterial
       ? {
           ...canonicalInterpretation,
           raw_input: generationAnalysisText,
@@ -4359,6 +4423,44 @@ export async function POST(req: NextRequest) {
       intentContext: generationIntentContext,
       allowModel: !isPublicFast,
     })
+    const shouldReconcileTargetChoicePlan =
+      !exploratoryWithoutMaterial &&
+      resources.length > 0 &&
+      canonicalWritingFamilyFromIntentContext(generationIntentContext, generationAnalysisText) === 'target_choice' &&
+      (
+        hasUrlInFlow ||
+        providedResources.length > 0 ||
+        rawFetchedResources.length > 0
+      )
+    if (shouldReconcileTargetChoicePlan) {
+      generationInterpretation = {
+        ...generationInterpretation,
+        treatment_plan: reconcileTargetChoiceTreatmentPlanAfterResources(generationInterpretation.treatment_plan),
+        trace: {
+          ...generationInterpretation.trace,
+          notes: [
+            ...(generationInterpretation.trace.notes ?? []),
+            'treatment_plan_reconciled_after_resource_fetch',
+          ],
+        },
+      }
+      recordGenerationTrace({
+        status: 'ok',
+        gate: 'GENERATE',
+        route: '/api/generate',
+        canonicalLayer: 'interpretation',
+        pipelineStep: 'TreatmentPlanResourceReconciliation',
+        diagnostic: 'target_choice_with_material',
+        durationMs: 0,
+        inputChars: generationAnalysisText.length,
+        domain: generationInterpretation.domain,
+        intentType: generationIntentContext.interpreted_request?.intent_type,
+        questionType: generationIntentContext.interpreted_request?.question_type,
+        resourcesStatus: 'available',
+        resourcesCount: resources.length,
+        modelPath: 'local',
+      })
+    }
     let canonicalResourcePlan = planResources({
       interpretation: generationInterpretation,
       patterns: humanCollectivePatterns,
