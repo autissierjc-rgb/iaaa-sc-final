@@ -1088,10 +1088,20 @@ function shouldPreferCompletedCardAfterWriting(card: SituationCard): boolean {
   return domain === 'management'
 }
 
+function isTargetChoiceMaterialWriting(writing: WritingContract): boolean {
+  return (writing.trace.notes ?? []).some((note) => note === 'target_choice_with_material')
+}
+
+function contractPublicText(value: unknown, fallback = ''): string {
+  const text = typeof value === 'string' ? cleanPublicText(value) : ''
+  return text || fallback
+}
+
 function applyWritingContractToCard(card: SituationCard, writing: WritingContract | null, situation: string): SituationCard {
   if (!writing || writing.trace.status === 'error') return card
 
   const sc = writing.situation_card
+  const forceWritingContract = isTargetChoiceMaterialWriting(writing)
   const preferCompletedCard = shouldPreferCompletedCardAfterWriting(card)
   const vulnerabilityFrCandidates = preferCompletedCard
     ? [card.main_vulnerability_fr, sc.main_vulnerability_fr]
@@ -1110,6 +1120,28 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
     writing.approfondir.analysis_fr,
     approfondirSections,
   ].filter(Boolean).join('\n\n')
+
+  if (forceWritingContract) {
+    return {
+      ...card,
+      title_fr: contractPublicText(sc.title_fr, card.title_fr ?? ''),
+      title_en: firstSafeText([sc.title_en, card.title_en], situation, card.title_en ?? card.title_fr ?? ''),
+      insight_fr: contractPublicText(sc.insight_fr, card.insight_fr ?? ''),
+      insight_en: firstSafeText([sc.insight_en, card.insight_en], situation, card.insight_en ?? card.insight_fr ?? ''),
+      main_vulnerability_fr: contractPublicText(sc.main_vulnerability_fr, card.main_vulnerability_fr ?? ''),
+      main_vulnerability_en: firstSafeText([sc.main_vulnerability_en, card.main_vulnerability_en], situation, card.main_vulnerability_en ?? card.main_vulnerability_fr ?? ''),
+      asymmetry_fr: contractPublicText(sc.asymmetry_fr, card.asymmetry_fr ?? ''),
+      asymmetry_en: firstSafeText([sc.asymmetry_en, card.asymmetry_en], situation, card.asymmetry_en ?? card.asymmetry_fr ?? ''),
+      key_signal_fr: contractPublicText(sc.key_signal_fr, card.key_signal_fr ?? ''),
+      key_signal_en: firstSafeText([sc.key_signal_en, card.key_signal_en], situation, card.key_signal_en ?? card.key_signal_fr ?? ''),
+      trajectories: writing.trajectories.length > 0 ? writing.trajectories : card.trajectories,
+      lecture_systeme_fr: contractPublicText(writing.lecture.text_fr, card.lecture_systeme_fr ?? ''),
+      lecture_systeme_en: firstSafeText([writing.lecture.text_en, card.lecture_systeme_en], situation, card.lecture_systeme_en ?? card.lecture_systeme_fr ?? ''),
+      approfondir_fr: contractPublicText(approfondirFr, String(card.approfondir_fr ?? '')),
+      approfondir_en: firstSafeText([writing.approfondir.analysis_en, card.approfondir_en], situation, String(card.approfondir_en ?? card.approfondir_fr ?? '')),
+      writing_contract: writing,
+    }
+  }
 
   return {
     ...card,
