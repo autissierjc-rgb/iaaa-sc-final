@@ -178,6 +178,42 @@ export function buildTreatmentPlan({
     }
   }
 
+  if (targetChoice && hasMaterial) {
+    return {
+      mode: 'direct_sc',
+      source_status: 'provided',
+      can_generate: true,
+      can_generate_exploratory: true,
+      missing_material_fr: [],
+      must_not_reinterpret_fr: [
+        'ne pas remplacer le choix de cible par une analyse generale de marche',
+        'ne pas transformer la ressource fournie en objet principal si elle sert de contexte produit',
+        'ne pas utiliser des categories de cible generiques si la ressource permet de nommer des segments visibles',
+      ],
+      instructions: [
+        ...instructions,
+        {
+          layer: 'resources',
+          instruction_fr: 'Extraire de la ressource fournie les cibles, publics, offres, usages ou segments visibles sans inventer de traction.',
+        },
+        {
+          layer: 'writing',
+          instruction_fr: 'Comparer les segments visibles comme options de cible et les juger par preuve d usage observable, pas par volume abstrait.',
+        },
+        {
+          layer: 'quality',
+          instruction_fr: 'Marquer la sortie partielle si elle reste sur des formules generiques alors que la ressource contient des segments exploitables.',
+        },
+      ],
+      trace_notes: [
+        'treatment_plan=direct_sc',
+        'target_choice_with_material',
+        'source_status=provided',
+        `domain=${domain}`,
+      ],
+    }
+  }
+
   if (optionsMissing && !hasMaterial) {
     return {
       mode: 'collaborative_clarification',
