@@ -220,6 +220,241 @@ function resourceProofLabel(resources?: ResourceServiceContract): string | undef
     : `${source.title} (${source.source})`
 }
 
+function isTargetChoiceWithMaterial(input: WritingEngineInput): boolean {
+  const notes = input.interpretation.treatment_plan?.trace_notes ?? []
+  return input.interpretation.treatment_plan?.mode === 'direct_sc' &&
+    input.interpretation.treatment_plan.source_status === 'provided' &&
+    notes.some((note) => note === 'target_choice_with_material')
+}
+
+function cleanAudienceCandidate(value: string): string {
+  return cleanModelText(value)
+    .replace(/^(?:utilisateurs?|clients?|publics?|cibles?|segments?)\s*(?:vis[ée]s?)?\s*:\s*/i, '')
+    .replace(/\b(non [ée]tabli|non disponible|indisponible|à qualifier|a qualifier)\b.*$/i, '')
+    .replace(/\s+/g, ' ')
+    .replace(/[.;:,/|–—-]+\s*$/g, '')
+    .trim()
+}
+
+function normalizedAudience(value: string): string {
+  return cleanAudienceCandidate(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function isNavigationAudienceCandidate(value: string): boolean {
+  const text = normalizedAudience(value)
+  if (!text) return true
+  if (/^[a-z0-9-]+\.(?:com|fr|io|ai|org|net)$/.test(text)) return true
+  if (/^(?:iaaa|iaaa\+|about|offres?|offers?|pricing|accueil|home|contact|connexion|login|langue|language|menu|dashboard|privacy|mentions|legal|terms)$/.test(text)) {
+    return true
+  }
+  return /\b(?:synthese|summary|crawl|fiche site|site understanding|navigation|navbar|footer)\b/.test(text)
+}
+
+function splitAudienceLine(value: string): string[] {
+  return value
+    .split(/\s+(?:\/|;|\||•)\s+|,(?=\s+(?:[A-ZÉÈÀÂÊÎÔÛÇ]|[a-z]{3,}\s+(?:et|ou)\s+))/)
+    .map(cleanAudienceCandidate)
+    .filter((item) => item && !isNavigationAudienceCandidate(item))
+}
+
+function lineAfterAnyLabel(text: string, labels: string[]): string[] {
+  const found: string[] = []
+  for (const label of labels) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const match = text.match(new RegExp(`${escaped}\\s*:\\s*([^\\n]+)`, 'i'))
+    if (match?.[1]) found.push(...splitAudienceLine(match[1]))
+  }
+  return found
+}
+
+function inferAudienceFromResourceText(value: string): string[] {
+  const text = normalizedAudience(value)
+  const audiences: string[] = []
+
+  if (/\b(personnel|personnelle|relationnel|relationnelle|particulier|individuel|individuelle|clarifier pour soi)\b/.test(text)) {
+    audiences.push('particuliers qui veulent clarifier une situation personnelle ou professionnelle')
+  }
+  if (/\b(professionnel|professionnels|manager|managers|management|rh|equipe|equipes|consultant|consultants|analyse|analystes|journaliste|journalistes|chercheur|chercheurs|brief|decision strategique|decisions strategiques)\b/.test(text)) {
+    audiences.push('professionnels qui doivent structurer, partager ou expliquer une situation complexe')
+  }
+  if (/\b(organisation|organisations|institution|institutions|gouvernance|direction|comite|comité|collectif|equipe dirigeante|roles et permissions|traçabilite|tracabilite|api|connecteur|connecteurs)\b/.test(text)) {
+    audiences.push('organisations qui ont besoin de gouvernance, traçabilité et suivi collectif')
+  }
+  if (/\b(document|documents|source|sources|rapport|article|pdf|note|briefing|veille)\b/.test(text)) {
+    audiences.push('équipes qui transforment documents et sources en lecture partageable')
+  }
+
+  return audiences
+}
+
+function targetAudiencesFromResourceContract(resources?: ResourceServiceContract): string[] {
+  if (!resources) return []
+  const seen = new Set<string>()
+  const candidates: string[] = []
+  const sourceItems = [...resources.public_sources, ...resources.resources]
+
+  for (const source of sourceItems) {
+    const body = `${source.title ?? ''}\n${source.excerpt ?? ''}`
+    candidates.push(...lineAfterAnyLabel(body, [
+      'Utilisateurs ou clients visés',
+      'Utilisateurs ou clients vises',
+      'Publics visés',
+      'Publics vises',
+      'Cibles visibles',
+      'Segments visibles',
+    ]))
+    const useCases = lineAfterAnyLabel(body, [
+      'Cas d’usage visibles',
+      'Cas d usage visibles',
+      'Faits extraits du site',
+    ])
+    for (const useCase of useCases) candidates.push(...inferAudienceFromResourceText(useCase))
+    if (candidates.length < 2) candidates.push(...inferAudienceFromResourceText(body))
+  }
+
+  return candidates
+    .map(cleanAudienceCandidate)
+    .filter((item) => item && !isNavigationAudienceCandidate(item))
+    .filter((item) => {
+      const key = normalizedAudience(item)
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, 4)
+}
+
+function composeTargetChoiceWriting(input: WritingEngineInput, started: number): WritingContract {
+  const subject = input.interpretation.situation_soumise || input.interpretation.object_of_analysis || 'le choix de cible utilisateur'
+  const segments = targetAudiencesFromResourceContract(input.resources)
+  const hasSegments = segments.length >= 2
+  const segmentList = segments.join(' ; ')
+  const decisionProof = 'usage répété, retour qualifié, recommandation, partage, demande d’intégration ou paiement'
+  const title = input.interpretation.header_subject || 'choix de première cible'
+  const insight = hasSegments
+    ? `${subject} doit être lu comme un arbitrage entre segments visibles dans la matière fournie : ${segmentList}. La priorité doit aller au public qui produit le signal d’usage le plus net, pas au public seulement le plus large.`
+    : `${subject} doit rester une carte provisoire : la matière fournie indique une décision de cible, mais ne nomme pas encore assez de segments exploitables pour trancher proprement.`
+  const vulnerability = hasSegments
+    ? `Le point fragile est l’arbitrage entre ${segmentList} : choisir trop large dilue le signal, choisir trop étroit peut empêcher l’élan.`
+    : 'Le point fragile est le manque de segments vérifiables dans la matière exploitée : sans publics nommés, la décision risque de redevenir une intuition générale.'
+  const asymmetry = hasSegments
+    ? `Tous les segments peuvent comprendre une promesse, mais seul celui qui produit ${decisionProof} doit devenir prioritaire.`
+    : 'La ressource peut donner une promesse lisible, mais la carte ne doit pas inventer les publics qui ne sont pas encore établis.'
+  const keySignal = hasSegments
+    ? `Signal clé : parmi ${segmentList}, repérer le premier public qui passe de l’intérêt à ${decisionProof}.`
+    : 'Signal clé : obtenir une liste explicite de publics, d’usages ou d’offres, puis observer lequel produit un premier usage répété.'
+  const lecture = hasSegments
+    ? `${subject} ne demande pas de décrire le site ni de juger une entreprise en général. La question utile est de comparer les publics visibles dans la matière fournie : ${segmentList}.\n\nLe premier public à viser est celui qui réduit le plus vite l’incertitude sur l’usage réel. Il doit permettre de mesurer ${decisionProof}. Sans ce signal, la visibilité reste une audience ; avec lui, elle devient une preuve de marché.`
+    : `${subject} ne doit pas être remplacé par une analyse générale de site. La bonne sortie est provisoire : la matière fournie ne nomme pas encore assez de publics exploitables pour comparer des options réelles.\n\nLa prochaine preuve utile est simple : publics visés, cas d’usage, offre associée et signal attendu pour chaque public. Une fois ces éléments présents, SC peut arbitrer sans inventer les segments.`
+  const approfondir = hasSegments
+    ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${segmentList} ne donnent pas la même preuve : certains peuvent créer de l’attention, d’autres de l’usage répété, d’autres encore une crédibilité institutionnelle ou commerciale. La bonne cible initiale est celle qui rend la promesse vérifiable par un comportement observable.`
+    : 'Le fond de la situation tient à une absence de matière qualifiée. La ressource doit être relue non comme une vitrine, mais comme un inventaire de publics, usages, offres et preuves. Tant que ces éléments restent implicites, la carte doit afficher sa prudence plutôt que trancher par formule.'
+  const diamond = hasSegments
+    ? `La première cible n’est pas celle qui écoute le mieux la promesse ; c’est celle qui transforme le plus vite cette promesse en usage vérifiable.`
+    : 'Une cible non nommée ne se choisit pas : elle se fait d’abord apparaître par les usages, les offres et les preuves disponibles.'
+  const probability = probabilityFromResources(input.resources) ?? probabilityFromTheatre(input.theatre)
+
+  return {
+    substance_form: {
+      substance_fr: ['segments visibles', 'preuve d usage', 'arbitrage de lancement', 'limites de la ressource'],
+      form_fr: ['carte courte', 'comparaison', 'prudence explicite', 'signal observable'],
+      diamond_sentence: {
+        text_fr: diamond,
+        role: 'thesis',
+        style: 'diamant_tranchant',
+        must_be_public: true,
+      },
+    },
+    diamond_sentences: [
+      {
+        text_fr: diamond,
+        role: 'thesis',
+        style: 'diamant_tranchant',
+        must_be_public: true,
+      },
+      {
+        text_fr: vulnerability,
+        role: 'vulnerability',
+        style: 'diamond',
+        must_be_public: true,
+      },
+    ],
+    probability_assessments: [probability],
+    situation_card: {
+      title_fr: title,
+      submitted_situation_fr: input.interpretation.situation_soumise,
+      insight_fr: insight,
+      main_vulnerability_fr: vulnerability,
+      asymmetry_fr: asymmetry,
+      key_signal_fr: keySignal,
+    },
+    trajectories: [
+      {
+        type: 'stabilization',
+        title_fr: 'Cible qualifiée',
+        description_fr: hasSegments
+          ? `La situation se clarifie si un segment parmi ${segmentList} produit un usage répété et des retours précis.`
+          : 'La situation se clarifie si la matière nomme les publics, usages et offres à comparer.',
+        signal_fr: 'Un public formule le cas d’usage avec ses mots et revient sans relance.',
+      },
+      {
+        type: 'escalation',
+        title_fr: 'Audience sans traction',
+        description_fr: 'La visibilité augmente, mais le signal reste faible si les retours ne deviennent pas usage, partage ou demande concrète.',
+        signal_fr: 'Beaucoup d’intérêt poli, peu de réutilisation ou de demande d’intégration.',
+      },
+      {
+        type: 'regime_shift',
+        title_fr: 'Preuve de marché',
+        description_fr: 'La logique change si un public transforme la promesse en comportement mesurable.',
+        signal_fr: `Un segment accepte ${decisionProof}.`,
+      },
+    ],
+    lecture: {
+      text_fr: lecture,
+      word_count_fr: countWords(lecture),
+    },
+    approfondir: {
+      analysis_fr: approfondir,
+      sections_fr: [
+        {
+          id: 'segments',
+          title: 'Segments',
+          body: hasSegments
+            ? `Segments exploitables dans la matière fournie : ${segmentList}.`
+            : 'Segments insuffisamment établis dans la matière fournie.',
+        },
+        {
+          id: 'preuve',
+          title: 'Preuve',
+          body: `La preuve utile est observable : ${decisionProof}.`,
+        },
+        {
+          id: 'limite',
+          title: 'Limite',
+          body: hasSegments
+            ? 'Ces segments restent à tester : la carte ne transforme pas une promesse en traction acquise.'
+            : 'La carte ne doit pas inventer les publics absents de la ressource.',
+        },
+      ],
+    },
+    public_warnings: hasSegments ? [] : ['Carte provisoire : les segments de cible ne sont pas encore assez établis dans la matière fournie.'],
+    trace: {
+      service: 'WritingEngine',
+      version: 'v2-foundation',
+      duration_ms: Date.now() - started,
+      status: hasSegments ? 'ok' : 'partial',
+      notes: [
+        'target_choice_with_material',
+        hasSegments ? 'resource_segments_used' : 'resource_segments_insufficient',
+      ],
+    },
+  }
+}
+
 function extractOpenAIText(data: Record<string, unknown>): string {
   const output = Array.isArray(data.output) ? data.output : []
   return output
@@ -374,6 +609,10 @@ function writingGrammar(input: WritingEngineInput) {
 
 export function composeDiamondWriting(input: WritingEngineInput): WritingContract {
   const started = Date.now()
+  if (isTargetChoiceWithMaterial(input)) {
+    return composeTargetChoiceWriting(input, started)
+  }
+
   const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
   const title = input.interpretation.header_subject
   const grammar = writingGrammar(input)

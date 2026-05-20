@@ -97,6 +97,14 @@ const MECHANICAL_WRITING_PATTERNS = [
   /fait opposable/i,
 ]
 
+const TARGET_CHOICE_GENERIC_PATTERNS = [
+  /segment tres qualifie/i,
+  /communaute plus large/i,
+  /relais prescripteur/i,
+  /une communaute donne de la surface/i,
+  /startup a besoin d.?un signal plus dur que l.?attention/i,
+]
+
 function hasSharpDiamond(writing: WritingContract): boolean {
   return writing.diamond_sentences.some((sentence) => sentence.style === 'diamant_tranchant' && sentence.must_be_public)
 }
@@ -118,6 +126,13 @@ function host(value: string): string {
 
 function hasResourceRoleSignal(input: QualityGateInput, role: string): boolean {
   return input.interpretation.signals.some((signal) => signal === `resource_role:${role}`)
+}
+
+function isTargetChoiceWithMaterial(input: QualityGateInput): boolean {
+  const plan = input.interpretation.treatment_plan
+  return plan?.mode === 'direct_sc' &&
+    plan.source_status === 'provided' &&
+    (plan.trace_notes ?? []).some((note) => note === 'target_choice_with_material')
 }
 
 function normalize(value: string): string {
@@ -179,6 +194,28 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
         'warning',
         'RESOURCE_CONTEXT_WRITING_DRIFT',
         `Writing sounds as if the contextual resource became the object of analysis: ${driftPhrase}.`,
+        'writing',
+      ))
+    }
+  }
+
+  if (isTargetChoiceWithMaterial(input)) {
+    const genericTargetChoice = TARGET_CHOICE_GENERIC_PATTERNS.find((pattern) => pattern.test(normalizedText))
+    if (genericTargetChoice) {
+      issues.push(issue(
+        'error',
+        'TARGET_CHOICE_RESOURCE_BYPASSED',
+        `Target-choice writing fell back to a generic formula despite provided material: ${genericTargetChoice.source}.`,
+        'writing',
+      ))
+    }
+
+    const driftPhrase = RESOURCE_AS_OBJECT_PHRASES.find((phrase) => normalizedText.includes(phrase))
+    if (driftPhrase) {
+      issues.push(issue(
+        'error',
+        'TARGET_CHOICE_RESOURCE_AS_OBJECT',
+        `Provided material replaced the target-choice question as an object of analysis: ${driftPhrase}.`,
         'writing',
       ))
     }
