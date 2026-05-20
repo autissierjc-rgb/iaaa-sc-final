@@ -3677,7 +3677,9 @@ export async function POST(req: NextRequest) {
       original_situation.trim() &&
       normalizeSubmittedSituation(text) !== rawDisplayText
     const answeredClarification = Boolean(refine_acknowledged) || hasAnsweredClarification(dialogue_events)
-    const canonicalDialogue = isPublicFast && !answeredClarification
+    const dialogueEventCount = Array.isArray(dialogue_events) ? dialogue_events.length : 0
+    const hasDialogueContext = dialogueEventCount > 1
+    const canonicalDialogue = isPublicFast && !answeredClarification && !hasDialogueContext
       ? null
       : await buildCanonicalSituationFromDialogue({
           rawSituation: text,
