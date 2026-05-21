@@ -60,9 +60,11 @@ function buildWorkingContext(request: RenChatRequest): RenWorkingContext {
   const message = request.message.trim()
   const contextText = [previous.situation_hint, message].filter(Boolean).join('\n')
   const materialPointer = pointsToMissingMaterial(message)
+  const explicitUrl = hasExplicitUrl(message)
   const materialSources = unique([
     ...(previous.material_sources ?? []),
     ...(request.material_sources ?? []),
+    explicitUrl ? 'url' : '',
   ]) as UserMaterialSourceType[]
   const actors = inferActors(contextText, previous.actors ?? [])
   const constraints = inferConstraints(contextText, previous.constraints ?? [])
@@ -70,13 +72,16 @@ function buildWorkingContext(request: RenChatRequest): RenWorkingContext {
     ...(previous.hypotheses ?? []),
     contextText.length > 40 ? 'la situation peut etre lue comme un rapport entre acteur, contrainte et seuil observable' : '',
   ])
+  const previousMissingContext = explicitUrl
+    ? (previous.missing_context ?? []).filter((item) => !item.startsWith('source exploitable'))
+    : previous.missing_context ?? []
   const missing_context = unique([
-    ...(materialPointer ? ['source exploitable : URL, document, extrait ou plug autorise'] : previous.missing_context ?? []),
+    ...(materialPointer ? ['source exploitable : URL, document, extrait ou plug autorise'] : previousMissingContext),
     actors.length === 0 ? 'acteur principal' : '',
     constraints.length === 0 ? 'contrainte decisive' : '',
     !materialPointer && !/\b(preuve|source|document|fait|date|decision|décision|message|acte)\b/i.test(contextText) ? 'trace observable' : '',
   ]).slice(0, 3)
-  const ready_for_card = !materialPointer && contextText.length > 70 && actors.length > 0 && constraints.length > 0
+  const ready_for_card = explicitUrl || (!materialPointer && contextText.length > 70 && actors.length > 0 && constraints.length > 0)
 
   return {
     situation_hint: materialPointer
@@ -101,9 +106,10 @@ function modeFor(text: string, context: RenWorkingContext, guarded: boolean): Re
   return 'explore'
 }
 
-function modeFromTreatmentPlan(plan: TreatmentPlanContract | undefined, fallback: RenChatMode): RenChatMode {
+function modeFromTreatmentPlan(plan: TreatmentPlanContract | undefined, fallback: RenChatMode, context: RenWorkingContext): RenChatMode {
   if (!plan) return fallback
   if (plan.mode === 'safety_first') return 'guarded'
+  if (plan.mode === 'resource_first' && plan.source_status === 'missing' && context.material_sources.length > 0) return 'ready_for_card'
   if (plan.mode === 'resource_first' && plan.source_status === 'missing') return 'clarify'
   if (plan.mode === 'collaborative_clarification' && !plan.can_generate) return 'clarify'
   if (plan.can_generate) return 'ready_for_card'
@@ -121,8 +127,10 @@ function nextActionFor(mode: RenChatMode, context: RenWorkingContext): RenSugges
 function nextActionFromTreatmentPlan(
   plan: TreatmentPlanContract | undefined,
   fallback: RenSuggestedNextAction,
+  context: RenWorkingContext,
 ): RenSuggestedNextAction {
   if (!plan) return fallback
+  if (plan.mode === 'resource_first' && plan.source_status === 'missing' && context.material_sources.length > 0) return 'click_compass_generate_card'
   if (plan.mode === 'resource_first' && plan.source_status === 'missing') return 'attach_material'
   if (plan.mode === 'collaborative_clarification' && !plan.can_generate) return 'ask_one_precision'
   if (plan.can_generate) return 'click_compass_generate_card'
@@ -250,9 +258,9 @@ export function runRenChatOrchestrator(request: RenChatRequest): RenChatResponse
   })
   const guarded = safety.domain_risk !== 'normal' || security.risk_level === 'block'
   const fallbackMode = modeFor(message, workingContext, guarded)
-  const renMode = modeFromTreatmentPlan(request.treatment_plan, fallbackMode)
+  const renMode = modeFromTreatmentPlan(request.treatment_plan, fallbackMode, workingContext)
   const fallbackNextAction = nextActionFor(renMode, workingContext)
-  const nextAction = nextActionFromTreatmentPlan(request.treatment_plan, fallbackNextAction)
+  const nextAction = nextActionFromTreatmentPlan(request.treatment_plan, fallbackNextAction, workingContext)
 
   return {
     answer: language === 'en'

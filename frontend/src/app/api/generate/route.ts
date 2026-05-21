@@ -5160,9 +5160,11 @@ export async function POST(req: NextRequest) {
     }
     const canReleaseQualityPartial =
       !diamondValidation.ok &&
-      resourcesStatus === 'available' &&
-      resources.length > 0 &&
-      hasUrlInFlow
+      (
+        answeredClarification ||
+        hasUrlInFlow ||
+        resources.length > 0
+      )
 
     if (!diamondValidation.ok && !explicitPrudentGeneration && !canReleaseQualityPartial) {
       recordGenerationTrace({

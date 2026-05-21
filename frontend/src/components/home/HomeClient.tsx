@@ -1799,6 +1799,17 @@ function mergeDialogueEvents(...groups: DialogueEvent[][]): DialogueEvent[] {
   return merged.slice(0, 12)
 }
 
+function buildMaterialAwareGenerationSituation(base: string, material: string[]): string {
+  const cleanBase = base.trim()
+  const uniqueMaterial = Array.from(new Set(
+    material
+      .map(item => item.trim())
+      .filter(item => item && item.toLowerCase() !== cleanBase.toLowerCase())
+  ))
+  if (uniqueMaterial.length === 0) return cleanBase
+  return `${cleanBase}\n\nMatière utilisateur fournie : ${uniqueMaterial.join('\n')}`
+}
+
 function canonicalSituationFromResponse(data: any, fallback: string): string {
   const canonical = String(
     data?.submitted_situation_fr ??
@@ -2014,8 +2025,8 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       ? baseSituation
       : typedText
     const isFreshSituation = !waitingForAnswers && !refiningOptional && Boolean(typedText) && typedText !== baseSituation
-    const generationSituation = text
     const exploratoryGeneration = forceExploratoryGeneration
+    const materialForGeneration: string[] = []
     const branchDialogueEvents: DialogueEvent[] = []
     if (waitingForAnswers && lastMsg?.kind === 'clarify') {
       const directAnswer = typedText && typedText !== text
@@ -2035,12 +2046,16 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
             : 'user_correction',
           text: answerText,
         })
+        materialForGeneration.push(answerText)
       }
       const qa = [
         ...directAnswer,
         ...lastMsg.questions.map((_q, i) => answers[i]?.trim() ?? '').filter(Boolean),
       ].join('\n\n')
-      if (qa) branchDialogueEvents.push({ type: 'user_extra_context', text: qa })
+      if (qa) {
+        materialForGeneration.push(qa)
+        branchDialogueEvents.push({ type: 'user_extra_context', text: qa })
+      }
     } else if (refiningOptional && typedText) {
       branchDialogueEvents.push({ type: 'user_initial_question', text })
       if (lastMsg?.kind === 'refine') {
@@ -2048,22 +2063,27 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           branchDialogueEvents.push({ type: 'system_clarification_question', text: question })
         })
       }
+      materialForGeneration.push(typedText)
       branchDialogueEvents.push({ type: 'user_extra_context', text: typedText })
       dialogueNotes.filter(Boolean).forEach(note => {
+        materialForGeneration.push(note)
         branchDialogueEvents.push({ type: 'user_extra_context', text: note })
       })
     } else if (!scData && dialogueNotes.length > 0) {
       branchDialogueEvents.push({ type: 'user_initial_question', text })
       dialogueNotes.filter(Boolean).forEach(note => {
+        materialForGeneration.push(note)
         branchDialogueEvents.push({ type: 'user_extra_context', text: note })
       })
     } else if (scData && !isFreshSituation && (typedText || dialogueNotes.length > 0)) {
       const notes = [...dialogueNotes, typedText && typedText !== text ? typedText : ''].filter(Boolean)
       branchDialogueEvents.push({ type: 'user_initial_question', text })
       notes.forEach(note => {
+        materialForGeneration.push(note)
         branchDialogueEvents.push({ type: 'user_extra_context', text: note })
       })
     }
+    const generationSituation = buildMaterialAwareGenerationSituation(text, materialForGeneration)
     const dialogueEvents = mergeDialogueEvents(
       buildVisibleDialogueEvents({ initialText: text, typedText, chatMsgs, dialogueNotes }),
       branchDialogueEvents,
