@@ -927,6 +927,13 @@ function SituationCardPanel({ sc, lang, onExpand }: {
   const pdfDeepReading = lang === 'FR'
     ? String(deepReading?.approfondir_fr ?? sc.approfondir_fr ?? '').trim()
     : String(deepReading?.approfondir_en ?? deepReading?.approfondir_fr ?? sc.approfondir_en ?? sc.approfondir_fr ?? '').trim()
+  const embeddedDeepReading = lang === 'FR'
+    ? String(sc.approfondir_fr ?? '').trim()
+    : String(sc.approfondir_en ?? sc.approfondir_fr ?? '').trim()
+  const panelDeepReading = lang === 'FR'
+    ? String(deepReading?.approfondir_fr ?? embeddedDeepReading).trim()
+    : String(deepReading?.approfondir_en ?? deepReading?.approfondir_fr ?? embeddedDeepReading).trim()
+  const hasEmbeddedDeepReading = embeddedDeepReading.length > 80
   const pdfSources = sourceItems ?? sources
 
   const TABS = [
@@ -1052,10 +1059,28 @@ function SituationCardPanel({ sc, lang, onExpand }: {
           'What could produce a shift',
           'What to watch now',
         ]
+    const canonicalSectionHeadings = [
+      'Familles d’usage',
+      'Segments',
+      'Preuve',
+      'Probabilité',
+      'Probabilites',
+      'Trajectoire de stabilisation',
+      'Trajectoire d’escalade',
+      'Trajectoire de bascule',
+      'Limite',
+      'Fond',
+      'Forme',
+      'Incertitudes / angles morts',
+    ]
+    const allHeadings = [...headings, ...canonicalSectionHeadings]
     const normalizedText = headings.reduce((acc, heading) => {
       const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       return acc.replace(new RegExp(`\\s*(${escaped})\\s*`, 'gi'), '\n\n$1\n\n')
-    }, cleanUiText(text).replace(/\s+([?!.])/g, '$1').replace(/\?\s+[”"]/g, '?”'))
+    }, canonicalSectionHeadings.reduce((acc, heading) => {
+      const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      return acc.replace(new RegExp(`\\s*(${escaped})\\s*`, 'gi'), '\n\n$1\n\n')
+    }, cleanUiText(text).replace(/\s+([?!.])/g, '$1').replace(/\?\s+[”"]/g, '?”')))
 
     const paragraphs = normalizedText
       .split(/\n{2,}|\r?\n/)
@@ -1063,7 +1088,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
       .filter(Boolean)
     if (paragraphs.length === 0) return []
 
-    const normalizedHeadings = headings.map((heading) => heading.toLowerCase())
+    const normalizedHeadings = allHeadings.map((heading) => heading.toLowerCase())
     const parsedSections: Array<{ heading: string; body: string }> = []
     let current: { heading: string; body: string[] } | null = null
 
@@ -1073,7 +1098,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
         if (current && current.body.length > 0) {
           parsedSections.push({ heading: current.heading, body: current.body.join('\n\n') })
         }
-        current = { heading: headings[headingIndex], body: [] }
+        current = { heading: allHeadings[headingIndex], body: [] }
         continue
       }
       if (current) {
@@ -1096,6 +1121,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
   async function fetchApprofondirData() {
     if (isGenerationDegraded) return
     if (deepReading || deepLoading) return
+    if (hasEmbeddedDeepReading) return
 
     setDeepLoading(true)
     setDeepError('')
@@ -1115,7 +1141,12 @@ function SituationCardPanel({ sc, lang, onExpand }: {
         }),
       })
       const data = await res.json()
-      setDeepReading(data)
+      const candidate = lang === 'FR'
+        ? String(data?.approfondir_fr ?? '').trim()
+        : String(data?.approfondir_en ?? data?.approfondir_fr ?? '').trim()
+      if (!hasEmbeddedDeepReading || candidate.length > embeddedDeepReading.length + 120) {
+        setDeepReading(data)
+      }
     } catch (error) {
       console.error(error)
       setDeepError(lang === 'FR' ? 'Approfondir indisponible.' : 'Deep reading unavailable.')
@@ -1585,19 +1616,15 @@ function SituationCardPanel({ sc, lang, onExpand }: {
                   {lang === 'FR' ? 'Ressources' : 'Resources'}
                 </button>
               </div>
-              {deepLoading ? (
+              {deepLoading && !panelDeepReading ? (
                 <div style={{ fontSize: 11, color: TXT3, fontStyle: 'italic' }}>
                   {lang === 'FR' ? 'Analyse en cours...' : 'Analysing...'}
                 </div>
-              ) : deepError ? (
+              ) : deepError && !panelDeepReading ? (
                 <div style={{ fontSize: 11, color: '#A32D2D' }}>{deepError}</div>
               ) : (
                 <>
-                  {getDeepSections(
-                    lang === 'FR'
-                      ? (deepReading?.approfondir_fr ?? '')
-                      : (deepReading?.approfondir_en ?? deepReading?.approfondir_fr ?? '')
-                  ).map((section) => (
+                  {getDeepSections(panelDeepReading).map((section) => (
                     <div key={section.heading} style={{ marginBottom: 12 }}>
                       <div style={{ fontSize: 14, color: GOLD, letterSpacing: '.04em', fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, marginBottom: 5 }}>
                         {section.heading}
