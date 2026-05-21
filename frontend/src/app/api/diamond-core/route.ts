@@ -146,6 +146,7 @@ export async function POST(request: NextRequest) {
           model: writer.model,
           duration_ms: writer.duration_ms,
           errors: writer.errors,
+          raw_text_preview: writer.status === 'ok' ? undefined : writer.raw_text?.slice(0, 2400),
           quality: writer.quality
             ? {
                 ok: writer.quality.ok,

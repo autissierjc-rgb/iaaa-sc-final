@@ -1,7 +1,13 @@
 import 'server-only'
 
 import { parseModelJSON } from '../ai/json'
-import type { QualityGateContract, TraceMeta, WritingContract } from '../contracts'
+import type {
+  DiamondSentence,
+  QualityGateContract,
+  SubstanceFormContract,
+  TraceMeta,
+  WritingContract,
+} from '../contracts'
 import { runQualityGate } from '../quality'
 import type { DiamondDossier } from './DiamondDossier'
 import { buildSCGrammarPrompt, type SCGrammarPrompt } from './SCGrammarPrompt'
@@ -56,23 +62,119 @@ function asString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function hasRequiredWritingShape(value: Record<string, unknown>): boolean {
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    const candidate = asString(value)
+    if (candidate) return candidate
+  }
+  return ''
+}
+
+function normalizeDiamondSentence(value: unknown, fallbackText: string, fallbackRole: DiamondSentence['role']): DiamondSentence {
+  const record = asRecord(value)
+  const role = asString(record.role)
+  const allowedRoles: DiamondSentence['role'][] = ['thesis', 'vulnerability', 'tipping_point', 'key_signal']
+  return {
+    text_fr: firstString(record.text_fr, record.text, record.sentence_fr, fallbackText),
+    role: allowedRoles.includes(role as DiamondSentence['role']) ? role as DiamondSentence['role'] : fallbackRole,
+    style: record.style === 'diamant_tranchant' ? 'diamant_tranchant' : 'diamond',
+    must_be_public: typeof record.must_be_public === 'boolean' ? record.must_be_public : true,
+  }
+}
+
+function normalizeDiamondSentences(value: unknown, situationCard: Record<string, unknown>, substanceForm: Record<string, unknown>): DiamondSentence[] {
+  const rawItems = Array.isArray(value)
+    ? value
+    : isRecord(value)
+      ? Object.values(value)
+      : []
+  const fromItems = rawItems
+    .map((item, index) => normalizeDiamondSentence(
+      item,
+      '',
+      index === 1 ? 'vulnerability' : index === 2 ? 'tipping_point' : index === 3 ? 'key_signal' : 'thesis',
+    ))
+    .filter((item) => item.text_fr)
+
+  if (fromItems.length > 0) return fromItems
+
+  const fromSubstance = normalizeDiamondSentence(
+    substanceForm.diamond_sentence,
+    '',
+    'thesis',
+  )
+  if (fromSubstance.text_fr) return [fromSubstance]
+
+  return [
+    normalizeDiamondSentence({}, firstString(situationCard.insight_fr), 'thesis'),
+    normalizeDiamondSentence({}, firstString(situationCard.main_vulnerability_fr), 'vulnerability'),
+    normalizeDiamondSentence({}, firstString(situationCard.key_signal_fr), 'key_signal'),
+  ].filter((item) => item.text_fr)
+}
+
+function normalizeStringArray(value: unknown, fallback: string[]): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => asString(item)).filter(Boolean)
+  }
+  const single = asString(value)
+  return single ? [single] : fallback
+}
+
+function normalizeSubstanceForm(
+  value: unknown,
+  diamondSentences: DiamondSentence[],
+  situationCard: Record<string, unknown>,
+): SubstanceFormContract {
+  const record = asRecord(value)
+  const diamondSentence = normalizeDiamondSentence(
+    record.diamond_sentence,
+    diamondSentences[0]?.text_fr || firstString(situationCard.insight_fr),
+    diamondSentences[0]?.role || 'thesis',
+  )
+  return {
+    substance_fr: normalizeStringArray(record.substance_fr, [
+      firstString(situationCard.insight_fr),
+      firstString(situationCard.main_vulnerability_fr),
+    ].filter(Boolean)),
+    form_fr: normalizeStringArray(record.form_fr, [
+      'Lecture courte, située et orientée vers le signal observable.',
+    ]),
+    diamond_sentence: diamondSentence,
+  }
+}
+
+function coerceWritingContractShape(value: Record<string, unknown>): Record<string, unknown> {
+  const situationCard = asRecord(value.situation_card)
+  const substanceForm = asRecord(value.substance_form)
+  const diamondSentences = normalizeDiamondSentences(value.diamond_sentences, situationCard, substanceForm)
+  const normalizedSubstanceForm = normalizeSubstanceForm(value.substance_form, diamondSentences, situationCard)
+
+  return {
+    ...value,
+    substance_form: normalizedSubstanceForm,
+    diamond_sentences: diamondSentences,
+  }
+}
+
+function writingShapeIssues(value: Record<string, unknown>): string[] {
+  const issues: string[] = []
   const situationCard = asRecord(value.situation_card)
   const lecture = asRecord(value.lecture)
   const approfondir = asRecord(value.approfondir)
-  return Boolean(
-    isRecord(value.substance_form) &&
-      asArray(value.diamond_sentences).length > 0 &&
-      isRecord(value.situation_card) &&
-      asString(situationCard.insight_fr) &&
-      asString(situationCard.main_vulnerability_fr) &&
-      asString(situationCard.key_signal_fr) &&
-      asArray(value.trajectories).length >= 3 &&
-      isRecord(value.lecture) &&
-      asString(lecture.text_fr) &&
-      isRecord(value.approfondir) &&
-      asArray(approfondir.sections_fr).length > 0
-  )
+
+  if (!isRecord(value.substance_form)) issues.push('substance_form')
+  if (asArray(value.diamond_sentences).length === 0) issues.push('diamond_sentences')
+  if (!isRecord(value.situation_card)) issues.push('situation_card')
+  if (!asString(situationCard.insight_fr)) issues.push('situation_card.insight_fr')
+  if (!asString(situationCard.main_vulnerability_fr)) issues.push('situation_card.main_vulnerability_fr')
+  if (!asString(situationCard.key_signal_fr)) issues.push('situation_card.key_signal_fr')
+  if (asArray(value.trajectories).length < 3) issues.push('trajectories')
+  if (!isRecord(value.lecture)) issues.push('lecture')
+  if (!asString(lecture.text_fr)) issues.push('lecture.text_fr')
+  if (!isRecord(value.approfondir)) issues.push('approfondir')
+  if (asArray(approfondir.sections_fr).length === 0) issues.push('approfondir.sections_fr')
+
+  return issues
 }
 
 function traceFor({
@@ -217,7 +319,9 @@ export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise
     }
   }
 
-  if (!hasRequiredWritingShape(parsed)) {
+  parsed = coerceWritingContractShape(parsed)
+  const shapeIssues = writingShapeIssues(parsed)
+  if (shapeIssues.length > 0) {
     return {
       status: 'parse_failed',
       prompt,
@@ -226,7 +330,10 @@ export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise
       raw_text: rawText,
       model,
       duration_ms: Date.now() - started,
-      errors: ['Model JSON does not match required WritingContract shape.'],
+      errors: [
+        `Model JSON does not match required WritingContract shape: ${shapeIssues.join(', ')}`,
+        `Top-level keys: ${Object.keys(parsed).join(', ') || 'none'}`,
+      ],
     }
   }
 
