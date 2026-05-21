@@ -11,6 +11,7 @@ import type {
 import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { cleanModelText, parseModelJSON } from '../ai/json'
 import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
+import { publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
 
 export type WritingEngineInput = {
@@ -181,17 +182,16 @@ function probabilityFromResources(resources?: ResourceServiceContract): Probabil
   if (!resources || resources.public_sources.length === 0) return null
 
   const proof = resourceProofLabel(resources)
+  const publicEvidence = publicProbativeEvidence(resources)
   return {
     claim_fr: 'Les sources rapides donnent un premier appui factuel, mais leur portee doit rester qualifiee tant qu elles ne sont pas confrontees par Recherche+.',
     status: 'plausible',
     probability_label_fr: ASSERTION_LABELS_FR.plausible,
     confidence: resources.public_sources.length >= 2 ? 0.66 : 0.58,
-    examples: resources.public_sources.slice(0, 3).map((source) => ({
-      text_fr: source.excerpt
-        ? `${source.title} : ${source.excerpt}`
-        : `${source.title} (${source.source})`,
-      status: source.reliability === 'primary' ? 'established' : 'plausible',
-      source_ids: [source.id],
+    examples: publicEvidence.map((evidence) => ({
+      text_fr: evidence.public_label_fr,
+      status: evidence.status === 'usable' ? 'plausible' : 'hypothesis',
+      source_ids: evidence.source_id ? [evidence.source_id] : [],
     })),
     missing_proof_fr: proof
       ? `Preuve decisive encore a confronter : ${proof}.`
@@ -213,12 +213,7 @@ function resourceEvidenceSentence(resources?: ResourceServiceContract): string |
 }
 
 function resourceProofLabel(resources?: ResourceServiceContract): string | undefined {
-  const source = resources?.public_sources[0]
-  if (!source) return undefined
-
-  return source.excerpt
-    ? `${source.title} : ${source.excerpt}`
-    : `${source.title} (${source.source})`
+  return publicProbativeEvidence(resources, 1)[0]?.public_label_fr
 }
 
 function isTargetChoiceWithMaterial(input: WritingEngineInput): boolean {

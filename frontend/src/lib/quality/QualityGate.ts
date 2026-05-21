@@ -119,6 +119,17 @@ const TARGET_CHOICE_RAW_AUDIENCE_PATTERNS = [
   /organisations?\s+et\s+institutions?\s*;\s*particuliers?/i,
 ]
 
+const PUBLIC_RESOURCE_NOISE_PATTERNS = [
+  /!\[[^\]]*]\(https?:\/\//i,
+  /\[[^\]]+]\(https?:\/\//i,
+  /(?:^|\s)(?:image|img)\s*\d{1,4}\b/i,
+  /\.(?:avif|png|jpe?g|gif|webp|svg)(?:\)|\s|$)/i,
+]
+
+function countPublicUrls(value: string): number {
+  return value.match(/https?:\/\//gi)?.length ?? 0
+}
+
 function hasSharpDiamond(writing: WritingContract): boolean {
   return writing.diamond_sentences.some((sentence) => sentence.style === 'diamant_tranchant' && sentence.must_be_public)
 }
@@ -222,6 +233,25 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     .toLowerCase()
   const theatreAnchors = meaningfulTheatreAnchors(input.theatre)
   const theatreAnchorsUsed = countAnchorsUsed(theatreAnchors, normalizedText)
+  const noisyResourcePattern = PUBLIC_RESOURCE_NOISE_PATTERNS.find((pattern) => pattern.test(text))
+
+  if (noisyResourcePattern) {
+    issues.push(issue(
+      'error',
+      'PUBLIC_PROBATIVE_EVIDENCE_NOISE',
+      `Public writing contains raw resource noise instead of qualified evidence: ${noisyResourcePattern.source}.`,
+      'writing',
+    ))
+  }
+
+  if (countPublicUrls(text) > 1) {
+    issues.push(issue(
+      'error',
+      'PUBLIC_URL_AVALANCHE',
+      'Public writing contains too many raw URLs; resources must be condensed into qualified evidence labels.',
+      'writing',
+    ))
+  }
 
   if (hasResourceRoleSignal(input, 'context_for_question') && input.interpretation.question_type === 'site_analysis') {
     issues.push(issue(
