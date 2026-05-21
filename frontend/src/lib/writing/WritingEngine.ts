@@ -342,6 +342,39 @@ function targetAudienceFamiliesFromResourceContract(resources?: ResourceServiceC
     }))
 }
 
+function trajectorySpine(trajectories: WritingContract['trajectories']): string {
+  const stabilization = trajectories.find((trajectory) => trajectory.type === 'stabilization')
+  const escalation = trajectories.find((trajectory) => trajectory.type === 'escalation')
+  const regimeShift = trajectories.find((trajectory) => trajectory.type === 'regime_shift')
+
+  return [
+    stabilization ? `Stabilisation : ${stabilization.description_fr} Signal : ${stabilization.signal_fr}` : '',
+    escalation ? `Escalade : ${escalation.description_fr} Signal : ${escalation.signal_fr}` : '',
+    regimeShift ? `Bascule : ${regimeShift.description_fr} Signal : ${regimeShift.signal_fr}` : '',
+  ].filter(Boolean).join(' ')
+}
+
+function probabilitySpine(probability: ProbabilityAssessment): string {
+  const missing = probability.missing_proof_fr
+    ? `Ce qui ferait changer le statut : ${probability.missing_proof_fr}`
+    : 'Ce statut doit rester révisable si une preuve directe ou une contre-preuve apparaît.'
+  return `${probability.probability_label_fr} : ${probability.claim_fr} ${missing}`
+}
+
+function trajectorySections(trajectories: WritingContract['trajectories']): Array<{ id: string; title: string; body: string }> {
+  const labels: Record<WritingContract['trajectories'][number]['type'], { id: string; title: string }> = {
+    stabilization: { id: 'trajectoire-stabilisation', title: 'Trajectoire de stabilisation' },
+    escalation: { id: 'trajectoire-escalade', title: 'Trajectoire d’escalade' },
+    regime_shift: { id: 'trajectoire-bascule', title: 'Trajectoire de bascule' },
+  }
+
+  return trajectories.map((trajectory) => ({
+    id: labels[trajectory.type].id,
+    title: labels[trajectory.type].title,
+    body: `${trajectory.title_fr} : ${trajectory.description_fr} Signal à surveiller : ${trajectory.signal_fr}`,
+  }))
+}
+
 function composeTargetChoiceWriting(input: WritingEngineInput, started: number): WritingContract {
   const subject = input.interpretation.situation_soumise || input.interpretation.object_of_analysis || 'le choix de cible utilisateur'
   const audienceFamilies = targetAudienceFamiliesFromResourceContract(input.resources)
@@ -378,6 +411,30 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
     ? `La première cible n’est pas celle qui écoute le mieux la promesse ; c’est celle qui transforme le plus vite cette promesse en usage vérifiable.`
     : 'Une cible non nommée ne se choisit pas : elle se fait d’abord apparaître par les usages, les offres et les preuves disponibles.'
   const probability = probabilityFromResources(input.resources) ?? probabilityFromTheatre(input.theatre)
+  const trajectories: WritingContract['trajectories'] = [
+    {
+      type: 'stabilization',
+      title_fr: 'Cible qualifiée',
+      description_fr: hasSegments
+        ? `La situation se clarifie si une famille parmi ${compactSegmentList} produit un usage répété et des retours précis.`
+        : 'La situation se clarifie si la matière nomme les publics, usages et offres à comparer.',
+      signal_fr: 'Un public formule le cas d’usage avec ses mots et revient sans relance.',
+    },
+    {
+      type: 'escalation',
+      title_fr: 'Audience sans traction',
+      description_fr: 'La visibilité augmente, mais le signal reste faible si les retours ne deviennent pas usage, partage ou demande concrète.',
+      signal_fr: 'Beaucoup d’intérêt poli, peu de réutilisation ou de demande d’intégration.',
+    },
+    {
+      type: 'regime_shift',
+      title_fr: 'Preuve de marché',
+      description_fr: 'La logique change si un public transforme la promesse en comportement mesurable.',
+      signal_fr: `Un segment accepte ${decisionProof}.`,
+    },
+  ]
+  const trajectoryText = trajectorySpine(trajectories)
+  const probabilityText = probabilitySpine(probability)
 
   return {
     substance_form: {
@@ -413,34 +470,13 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       asymmetry_fr: asymmetry,
       key_signal_fr: keySignal,
     },
-    trajectories: [
-      {
-        type: 'stabilization',
-        title_fr: 'Cible qualifiée',
-        description_fr: hasSegments
-          ? `La situation se clarifie si une famille parmi ${compactSegmentList} produit un usage répété et des retours précis.`
-          : 'La situation se clarifie si la matière nomme les publics, usages et offres à comparer.',
-        signal_fr: 'Un public formule le cas d’usage avec ses mots et revient sans relance.',
-      },
-      {
-        type: 'escalation',
-        title_fr: 'Audience sans traction',
-        description_fr: 'La visibilité augmente, mais le signal reste faible si les retours ne deviennent pas usage, partage ou demande concrète.',
-        signal_fr: 'Beaucoup d’intérêt poli, peu de réutilisation ou de demande d’intégration.',
-      },
-      {
-        type: 'regime_shift',
-        title_fr: 'Preuve de marché',
-        description_fr: 'La logique change si un public transforme la promesse en comportement mesurable.',
-        signal_fr: `Un segment accepte ${decisionProof}.`,
-      },
-    ],
+    trajectories,
     lecture: {
-      text_fr: lecture,
-      word_count_fr: countWords(lecture),
+      text_fr: `${lecture}\n\n${trajectoryText}\n\n${probabilityText}`,
+      word_count_fr: countWords(`${lecture}\n\n${trajectoryText}\n\n${probabilityText}`),
     },
     approfondir: {
-      analysis_fr: approfondir,
+      analysis_fr: `${approfondir} ${trajectoryText} ${probabilityText}`,
       sections_fr: [
         {
           id: 'segments',
@@ -453,6 +489,12 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
           id: 'preuve',
           title: 'Preuve',
           body: `La preuve utile est observable : ${decisionProof}.`,
+        },
+        ...trajectorySections(trajectories),
+        {
+          id: 'probabilites',
+          title: 'Probabilité',
+          body: probabilityText,
         },
         {
           id: 'limite',
@@ -668,12 +710,36 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const vulnerability = compactSentence(grammar.vulnerability(blindSpot), 320)
   const asymmetry = compactSentence(grammar.asymmetry(actors, institutions))
   const keySignal = compactSentence(grammar.keySignal(firstEvidence))
+  const trajectories: WritingContract['trajectories'] = [
+    {
+      type: 'stabilization',
+      title_fr: 'Clarification',
+      description_fr: 'La situation se clarifie si un acteur habilite confirme publiquement son role ou ses limites.',
+      signal_fr: `Un element verifiable apparait : ${firstEvidence}.`,
+    },
+    {
+      type: 'escalation',
+      title_fr: 'Tension accrue',
+      description_fr: 'La pression augmente si la contestation trouve un relais capable de ralentir ou delegitimer la procedure.',
+      signal_fr: `Le manque critique reste : ${blindSpot}.`,
+    },
+    {
+      type: 'regime_shift',
+      title_fr: 'Bascule',
+      description_fr: 'La logique change quand une preuve, une regle ou un acteur transforme l hypothese en fait opposable.',
+      signal_fr: 'Une decision, un document, une action ou un seuil rend la lecture non reversible.',
+    },
+  ]
+  const trajectoryText = trajectorySpine(trajectories)
+  const probabilityText = probabilitySpine(probability)
   const lecture = [
     grammar.lectureEntry(subject, institutions),
     `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
     resourcesSentence,
     vulnerability,
     keySignal,
+    trajectoryText,
+    probabilityText,
   ].filter(Boolean).join(' ')
   const approfondirAnalysis = [
     grammar.approfondirEntry,
@@ -681,7 +747,8 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     `Ce qu il faut etablir n est pas seulement l intention, mais le lien entre ${firstProcedure}, ${evidence} et ${blindSpot}.`,
     resourcesSentence,
     resourcesWarning ? resourcesWarning : '',
-    `La lecture reste donc prudente : ${probability.probability_label_fr.toLowerCase()}, tant que la preuve decisive manque.`,
+    trajectoryText,
+    probabilityText,
   ].filter(Boolean).join(' ')
 
   return {
@@ -728,26 +795,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       asymmetry_fr: asymmetry,
       key_signal_fr: keySignal,
     },
-    trajectories: [
-      {
-        type: 'stabilization',
-        title_fr: 'Clarification',
-        description_fr: 'La situation se clarifie si un acteur habilite confirme publiquement son role ou ses limites.',
-        signal_fr: `Un element verifiable apparait : ${firstEvidence}.`,
-      },
-      {
-        type: 'escalation',
-        title_fr: 'Tension accrue',
-        description_fr: 'La pression augmente si la contestation trouve un relais capable de ralentir ou delegitimer la procedure.',
-        signal_fr: `Le manque critique reste : ${blindSpot}.`,
-      },
-      {
-        type: 'regime_shift',
-        title_fr: 'Bascule',
-        description_fr: 'La logique change quand une preuve, une regle ou un acteur transforme l hypothese en fait opposable.',
-        signal_fr: 'Une decision, un document, une action ou un seuil rend la lecture non reversible.',
-      },
-    ],
+    trajectories,
     lecture: {
       text_fr: lecture,
       word_count_fr: countWords(lecture),
@@ -768,8 +816,9 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
         {
           id: 'probabilites',
           title: 'Probabilites',
-          body: `${probability.probability_label_fr} : ${probability.claim_fr} La preuve qui ferait changer le statut est ${firstEvidence}.`,
+          body: probabilityText,
         },
+        ...trajectorySections(trajectories),
         {
           id: 'angles-morts',
           title: 'Incertitudes / angles morts',

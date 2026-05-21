@@ -31,6 +31,14 @@ function publicText(writing: WritingContract): string {
   ].join(' ')
 }
 
+function lectureAndApprofondirText(writing: WritingContract): string {
+  return [
+    writing.lecture.text_fr,
+    writing.approfondir.analysis_fr,
+    ...writing.approfondir.sections_fr.map((section) => `${section.title} ${section.body}`),
+  ].join(' ')
+}
+
 function issue(level: QualityIssue['level'], code: string, message: string, field?: string): QualityIssue {
   return { level, code, message, field }
 }
@@ -167,6 +175,35 @@ function countAnchorsUsed(anchors: string[], normalizedText: string): number {
   )).length
 }
 
+function trajectoryVisibilityCount(input: QualityGateInput, normalizedPublicText: string): number {
+  if (input.writing.trajectories.length === 0) return 0
+  const byType = [
+    normalizedPublicText.includes('stabilisation') || normalizedPublicText.includes('clarification'),
+    normalizedPublicText.includes('escalade') || normalizedPublicText.includes('tension accrue'),
+    normalizedPublicText.includes('bascule') || normalizedPublicText.includes('regime shift') || normalizedPublicText.includes('rupture'),
+  ].filter(Boolean).length
+  const byTitle = input.writing.trajectories.filter((trajectory) => {
+    const title = normalize(trajectory.title_fr)
+    return title && normalizedPublicText.includes(title)
+  }).length
+  return Math.max(byType, byTitle)
+}
+
+function probabilityVisible(input: QualityGateInput, normalizedPublicText: string): boolean {
+  const probability = input.writing.probability_assessments[0]
+  if (!probability) return false
+  const label = normalize(probability.probability_label_fr)
+  return Boolean(
+    (label && normalizedPublicText.includes(label)) ||
+      normalizedPublicText.includes('probable') ||
+      normalizedPublicText.includes('plausible') ||
+      normalizedPublicText.includes('hypothese') ||
+      normalizedPublicText.includes('hypothèse') ||
+      normalizedPublicText.includes('etabli') ||
+      normalizedPublicText.includes('établi')
+  )
+}
+
 export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const started = Date.now()
   const issues: QualityIssue[] = []
@@ -176,6 +213,8 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
   const forbidden = containsForbiddenPublicPhrase(text)
+  const narrativeText = lectureAndApprofondirText(input.writing)
+  const normalizedNarrativeText = normalize(narrativeText)
   const publicDiamond = diamondText(input.writing)
   const normalizedDiamond = publicDiamond
     .normalize('NFD')
@@ -299,6 +338,27 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
 
   if (input.writing.probability_assessments.length === 0) {
     issues.push(issue('warning', 'MISSING_PROBABILITY', 'Writing should state assertion status when evidence is incomplete.', 'writing.probability_assessments'))
+  }
+
+  if (input.writing.trajectories.length >= 3) {
+    const visibleTrajectories = trajectoryVisibilityCount(input, normalizedNarrativeText)
+    if (visibleTrajectories < 3) {
+      issues.push(issue(
+        'warning',
+        'TRAJECTORIES_UNDERUSED_IN_NARRATIVE',
+        'Trajectories exist in the contract but are not sufficiently visible in Lecture/Approfondir.',
+        'writing.trajectories',
+      ))
+    }
+  }
+
+  if (input.writing.probability_assessments.length > 0 && !probabilityVisible(input, normalizedNarrativeText)) {
+    issues.push(issue(
+      'warning',
+      'PROBABILITY_UNDERUSED_IN_NARRATIVE',
+      'Probability assessment exists in the contract but is not visible enough in Lecture/Approfondir.',
+      'writing.probability_assessments',
+    ))
   }
 
   if (input.resources?.needs_web && input.resources.public_sources.length === 0) {
