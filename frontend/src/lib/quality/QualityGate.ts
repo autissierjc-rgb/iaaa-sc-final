@@ -130,6 +130,24 @@ function countPublicUrls(value: string): number {
   return value.match(/https?:\/\//gi)?.length ?? 0
 }
 
+function normalizedSentenceKey(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, 'url')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function hasRepeatedSubmittedSentence(value: string): boolean {
+  const parts = value
+    .split(/(?<=[.?!])\s+/)
+    .map((part) => normalizedSentenceKey(part))
+    .filter((part) => part.length >= 18)
+  return parts.some((part, index) => parts.indexOf(part) !== index)
+}
+
 function hasSharpDiamond(writing: WritingContract): boolean {
   return writing.diamond_sentences.some((sentence) => sentence.style === 'diamant_tranchant' && sentence.must_be_public)
 }
@@ -234,6 +252,15 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const theatreAnchors = meaningfulTheatreAnchors(input.theatre)
   const theatreAnchorsUsed = countAnchorsUsed(theatreAnchors, normalizedText)
   const noisyResourcePattern = PUBLIC_RESOURCE_NOISE_PATTERNS.find((pattern) => pattern.test(text))
+
+  if (hasRepeatedSubmittedSentence(input.writing.situation_card.submitted_situation_fr)) {
+    issues.push(issue(
+      'error',
+      'REPEATED_SUBMITTED_SITUATION',
+      'Submitted situation repeats the same question; canonical dialogue must produce one clean public situation.',
+      'writing.situation_card.submitted_situation_fr',
+    ))
+  }
 
   if (noisyResourcePattern) {
     issues.push(issue(

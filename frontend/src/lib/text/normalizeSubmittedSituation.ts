@@ -6,8 +6,40 @@ function softenVulgarity(text: string): string {
     .replace(/\bputain\b/gi, '')
 }
 
+function normalizeForDedup(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, 'url')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function collapseRepeatedSentences(text: string): string {
+  const parts = text
+    .split(/(?<=[.?!])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  if (parts.length <= 1) return text
+
+  const kept: string[] = []
+  const seen = new Set<string>()
+
+  for (const part of parts) {
+    const key = normalizeForDedup(part)
+    if (!key) continue
+    if (seen.has(key)) continue
+    seen.add(key)
+    kept.push(part)
+  }
+
+  return kept.join(' ')
+}
+
 export function normalizeSubmittedSituation(input: string): string {
-  const cleaned = softenVulgarity(input)
+  const cleaned = collapseRepeatedSentences(softenVulgarity(input)
     .replace(/\s+/g, ' ')
     .replace(/\s+([,.!?;:])/g, '$1')
     .replace(/\bapres\b/gi, 'après')
@@ -34,7 +66,7 @@ export function normalizeSubmittedSituation(input: string): string {
     .replace(/\bquels est\b/gi, 'quels sont')
     .replace(/\bl'([aeiouéèêà])/gi, 'l’$1')
     .replace(/\s*\?/g, ' ?')
-    .trim()
+    .trim())
 
   if (!cleaned) return ''
   if (/^https?:\/\//i.test(cleaned)) {
