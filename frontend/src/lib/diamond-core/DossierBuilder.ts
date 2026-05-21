@@ -74,6 +74,40 @@ function uniqueText(items: string[]): string[] {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)))
 }
 
+function significantHeaderWords(value: string): string[] {
+  const stopWords = new Set([
+    'a',
+    'au',
+    'aux',
+    'de',
+    'des',
+    'du',
+    'en',
+    'et',
+    'la',
+    'le',
+    'les',
+    'pour',
+    'que',
+    'qui',
+    'sur',
+    'un',
+    'une',
+  ])
+  return value
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.replace(/[^\p{L}\p{N}-]/gu, '').toLowerCase())
+    .filter((word) => word.length > 1 && !stopWords.has(word))
+}
+
+function betterHeaderSubject(current: string, candidate?: string): string {
+  const cleanCandidate = candidate?.trim()
+  if (!cleanCandidate) return current
+  if (significantHeaderWords(cleanCandidate).length >= 3) return cleanCandidate
+  return current
+}
+
 function noopFastRunner(timeoutMs: number): FastResourceRunnerResult {
   return {
     resources: [],
@@ -293,8 +327,13 @@ export async function buildDiamondDossier(input: DiamondDossierInput): Promise<D
     urls,
     userMaterialRole: userMaterial.role,
   })
+  const canonicalHeaderSubject = betterHeaderSubject(
+    interpretation.header_subject,
+    modelCanonical?.header_subject,
+  )
   const interpretationWithMaterialSignals: InterpretationContract = {
     ...interpretation,
+    header_subject: canonicalHeaderSubject,
     signals: Array.from(new Set([
       ...(interpretation.signals ?? []),
       `resource_role:${userMaterial.role}`,
@@ -399,7 +438,7 @@ export async function buildDiamondDossier(input: DiamondDossierInput): Promise<D
     canonical_situation: canonicalSituation,
     header: {
       domain_fr: interpretationWithMaterialSignals.header_domain,
-      subject_fr: modelCanonical?.header_subject || interpretationWithMaterialSignals.header_subject,
+      subject_fr: interpretationWithMaterialSignals.header_subject,
     },
     interpretation: interpretationWithMaterialSignals,
     treatment_plan: interpretationWithMaterialSignals.treatment_plan,
