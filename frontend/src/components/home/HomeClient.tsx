@@ -1062,25 +1062,21 @@ function SituationCardPanel({ sc, lang, onExpand }: {
     const canonicalSectionHeadings = [
       'Familles d’usage',
       'Segments',
-      'Preuve',
-      'Probabilité',
-      'Probabilites',
+      'Preuve d’usage',
+      'Statut de preuve',
       'Trajectoire de stabilisation',
       'Trajectoire d’escalade',
       'Trajectoire de bascule',
       'Limite',
-      'Fond',
-      'Forme',
+      'Lecture structurelle',
+      'Phrase diamant',
       'Incertitudes / angles morts',
     ]
     const allHeadings = [...headings, ...canonicalSectionHeadings]
-    const normalizedText = headings.reduce((acc, heading) => {
+    const normalizedText = allHeadings.reduce((acc, heading) => {
       const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      return acc.replace(new RegExp(`\\s*(${escaped})\\s*`, 'gi'), '\n\n$1\n\n')
-    }, canonicalSectionHeadings.reduce((acc, heading) => {
-      const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      return acc.replace(new RegExp(`\\s*(${escaped})\\s*`, 'gi'), '\n\n$1\n\n')
-    }, cleanUiText(text).replace(/\s+([?!.])/g, '$1').replace(/\?\s+[”"]/g, '?”')))
+      return acc.replace(new RegExp(`(^|\\r?\\n)\\s*(${escaped})\\s*(?=\\r?\\n|:|$)`, 'gi'), '\n\n$2\n\n')
+    }, cleanUiText(text).replace(/\s+([?!.])/g, '$1').replace(/\?\s+[”"]/g, '?”'))
 
     const paragraphs = normalizedText
       .split(/\n{2,}|\r?\n/)

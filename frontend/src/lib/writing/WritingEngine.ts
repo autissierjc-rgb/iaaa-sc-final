@@ -482,13 +482,13 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
         },
         {
           id: 'preuve',
-          title: 'Preuve',
+          title: 'Preuve d’usage',
           body: `La preuve utile est observable : ${decisionProof}.`,
         },
         ...trajectorySections(trajectories),
         {
           id: 'probabilites',
-          title: 'Probabilité',
+          title: 'Statut de preuve',
           body: probabilityText,
         },
         {
@@ -800,17 +800,17 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       sections_fr: [
         {
           id: 'fond',
-          title: 'Fond',
+          title: 'Lecture structurelle',
           body: `La question porte sur une transformation : ce qui est dit ou redoute peut-il devenir une action reconnue par ${institutions} ? Les acteurs a suivre sont ${actors}.`,
         },
         {
           id: 'forme',
-          title: 'Forme',
+          title: 'Phrase diamant',
           body: diamondText,
         },
         {
           id: 'probabilites',
-          title: 'Probabilites',
+          title: 'Statut de preuve',
           body: probabilityText,
         },
         ...trajectorySections(trajectories),
@@ -980,9 +980,9 @@ async function composeWithOpenAI(input: WritingEngineInput, local: WritingContra
       approfondir: {
         analysis_fr: approfondirText,
         sections_fr: [
-          { id: 'fond', title: 'Fond', body: stringField(parsed.fond_fr, local.approfondir.sections_fr[0]?.body ?? '') },
-          { id: 'forme', title: 'Forme', body: stringField(parsed.forme_fr, diamondText) },
-          { id: 'probabilites', title: 'Probabilites', body: stringField(parsed.probabilites_fr, local.approfondir.sections_fr[2]?.body ?? '') },
+          { id: 'fond', title: 'Lecture structurelle', body: stringField(parsed.fond_fr, local.approfondir.sections_fr[0]?.body ?? '') },
+          { id: 'forme', title: 'Phrase diamant', body: stringField(parsed.forme_fr, diamondText) },
+          { id: 'probabilites', title: 'Statut de preuve', body: stringField(parsed.probabilites_fr, local.approfondir.sections_fr[2]?.body ?? '') },
           { id: 'angles-morts', title: 'Incertitudes / angles morts', body: stringField(parsed.angles_morts_fr, local.approfondir.sections_fr[3]?.body ?? '') },
           ...local.approfondir.sections_fr.filter((section) => section.id === 'sources-rapides'),
         ],
