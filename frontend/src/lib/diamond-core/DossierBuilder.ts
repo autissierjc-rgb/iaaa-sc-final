@@ -7,6 +7,8 @@ import type {
   QualityGateContract,
   RadarScoreV2,
   ResourceContract,
+  TreatmentInstruction,
+  TreatmentPlanContract,
 } from '../contracts'
 import { runDialogueGate } from '../dialogue'
 import { routeExpertisesMetiers } from '../expertisesMetiers'
@@ -66,6 +68,10 @@ function extractUrls(value: string): string[] {
 function normalizeUrl(url: string): string {
   if (/^https?:\/\//i.test(url)) return url
   return `https://${url.replace(/^www\./i, '')}`
+}
+
+function uniqueText(items: string[]): string[] {
+  return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)))
 }
 
 function noopFastRunner(timeoutMs: number): FastResourceRunnerResult {
@@ -128,6 +134,69 @@ function statusFor(input: {
   if (!input.dialogueCanGenerate) return 'needs_clarification'
   if (!input.qualityOk || input.qualityIssueCount > 0) return 'partial'
   return 'ready'
+}
+
+function reconcileTreatmentPlanWithProvidedMaterial({
+  interpretation,
+  urls,
+  userMaterialRole,
+}: {
+  interpretation: InterpretationContract
+  urls: string[]
+  userMaterialRole: string
+}): InterpretationContract {
+  const plan = interpretation.treatment_plan
+  if (!plan || urls.length === 0 || plan.source_status !== 'missing') {
+    return interpretation
+  }
+
+  const extraInstructions: TreatmentInstruction[] = [
+    {
+      layer: 'resources',
+      instruction_fr:
+        'La matiere indiquee est fournie dans le flux utilisateur ; l exploiter selon son role sans la transformer en objet principal.',
+    },
+    {
+      layer: 'quality',
+      instruction_fr:
+        'Signaler une derive si la sortie pretend encore que la source manque alors qu une URL, un document ou un plug a ete fourni.',
+    },
+  ]
+  const reconciledPlan: TreatmentPlanContract = {
+    ...plan,
+    mode: plan.mode === 'resource_first' ? 'direct_sc' : plan.mode,
+    source_status: 'provided',
+    can_generate: true,
+    can_generate_exploratory: true,
+    missing_material_fr: [],
+    must_not_reinterpret_fr: uniqueText([
+      ...plan.must_not_reinterpret_fr,
+      'ne pas redemander une source deja fournie dans le flux utilisateur',
+      userMaterialRole === 'context_for_question'
+        ? 'ne pas transformer la ressource de contexte en objet principal'
+        : '',
+    ]),
+    instructions: [...plan.instructions, ...extraInstructions],
+    trace_notes: uniqueText([
+      ...plan.trace_notes,
+      'diamond_dossier_material_reconciled',
+      `provided_material_urls=${urls.length}`,
+      `resource_role=${userMaterialRole}`,
+    ]),
+  }
+
+  return {
+    ...interpretation,
+    treatment_plan: reconciledPlan,
+    needs_clarification: plan.can_generate ? interpretation.needs_clarification : false,
+    trace: {
+      ...interpretation.trace,
+      notes: [
+        ...(interpretation.trace.notes ?? []),
+        'DiamondDossier reconciled TreatmentPlanContract after material role classification.',
+      ],
+    },
+  }
 }
 
 function buildGrammar(input: {
@@ -215,9 +284,14 @@ export async function buildDiamondDossier(input: DiamondDossierInput): Promise<D
       : 'none'
   const userMaterial = classifyUserMaterialResourceRole(materialText)
   const urls = extractUrls(materialText).map(normalizeUrl)
-  const interpretation = await interpretSituation({
+  const baseInterpretation = await interpretSituation({
     raw_input: canonicalSituation,
     mode: input.interpretation_mode ?? 'referent_llm',
+  })
+  const interpretation = reconcileTreatmentPlanWithProvidedMaterial({
+    interpretation: baseInterpretation,
+    urls,
+    userMaterialRole: userMaterial.role,
   })
   const interpretationWithMaterialSignals: InterpretationContract = {
     ...interpretation,
