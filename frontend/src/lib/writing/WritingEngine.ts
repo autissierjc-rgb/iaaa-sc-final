@@ -26,6 +26,15 @@ export type WritingEngineInput = {
 
 export type WritingEngineMode = 'local_contract' | 'referent_llm'
 
+const APPROFONDIR_CANONICAL_TITLES_FR = {
+  really: 'Ce que la situation est réellement',
+  holds: 'Ce qui tient le système',
+  weakens: 'Ce qui l’affaiblit',
+  escalates: 'Ce qui pourrait déclencher une escalade',
+  shifts: 'Ce qui pourrait produire une bascule',
+  watch: 'Ce qu’il faut surveiller maintenant',
+} as const
+
 function joinVisible(items: string[], fallback: string): string {
   return items.length > 0 ? items.slice(0, 4).join(', ') : fallback
 }
@@ -370,6 +379,24 @@ function trajectorySections(trajectories: WritingContract['trajectories']): Arra
   }))
 }
 
+function canonicalApprofondirSections(input: {
+  really: string
+  holds: string
+  weakens: string
+  escalates: string
+  shifts: string
+  watch: string
+}): WritingContract['approfondir']['sections_fr'] {
+  return [
+    { id: 'situation-reelle', title: APPROFONDIR_CANONICAL_TITLES_FR.really, body: input.really },
+    { id: 'systeme-tient', title: APPROFONDIR_CANONICAL_TITLES_FR.holds, body: input.holds },
+    { id: 'systeme-affaiblit', title: APPROFONDIR_CANONICAL_TITLES_FR.weakens, body: input.weakens },
+    { id: 'escalade', title: APPROFONDIR_CANONICAL_TITLES_FR.escalates, body: input.escalates },
+    { id: 'bascule', title: APPROFONDIR_CANONICAL_TITLES_FR.shifts, body: input.shifts },
+    { id: 'surveiller', title: APPROFONDIR_CANONICAL_TITLES_FR.watch, body: input.watch },
+  ]
+}
+
 function composeTargetChoiceWriting(input: WritingEngineInput, started: number): WritingContract {
   const subject = input.interpretation.situation_soumise || input.interpretation.object_of_analysis || 'le choix de cible utilisateur'
   const audienceFamilies = targetAudienceFamiliesFromResourceContract(input.resources)
@@ -471,34 +498,21 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       word_count_fr: countWords(`${lecture}\n\n${trajectoryText}\n\n${probabilityText}`),
     },
     approfondir: {
-      analysis_fr: `${approfondir} ${trajectoryText} ${probabilityText}`,
-      sections_fr: [
-        {
-          id: 'segments',
-          title: audienceFamilies.length >= 2 ? 'Familles d’usage' : 'Segments',
-          body: hasSegments
-            ? `${audienceFamilies.length >= 2 ? 'Familles normalisées' : 'Segments exploitables'} dans la matière fournie : ${segmentList}.`
-            : 'Segments insuffisamment établis dans la matière fournie.',
-        },
-        {
-          id: 'preuve',
-          title: 'Preuve d’usage',
-          body: `La preuve utile est observable : ${decisionProof}.`,
-        },
-        ...trajectorySections(trajectories),
-        {
-          id: 'probabilites',
-          title: 'Statut de preuve',
-          body: probabilityText,
-        },
-        {
-          id: 'limite',
-          title: 'Limite',
-          body: hasSegments
-            ? 'Ces segments restent à tester : la carte ne transforme pas une promesse en traction acquise.'
-            : 'La carte ne doit pas inventer les publics absents de la ressource.',
-        },
-      ],
+      analysis_fr: '',
+      sections_fr: canonicalApprofondirSections({
+        really: hasSegments
+          ? `${approfondir} La comparaison doit donc porter sur ${segmentList}, non sur une taille d’audience abstraite.`
+          : `${approfondir} La décision reste utile, mais elle doit d’abord faire apparaître des publics, des usages et des preuves vérifiables.`,
+        holds: hasSegments
+          ? `Ce qui tient encore le système, c’est la promesse commune : transformer une situation complexe en carte lisible, partageable et exploitable. Cette promesse peut parler à ${compactSegmentList}, mais chaque famille ne donne pas la même preuve.`
+          : 'Ce qui tient encore, c’est la possibilité de transformer la vitrine produit en hypothèses de marché testables : public visé, cas d’usage, offre associée et signal attendu.',
+        weakens: hasSegments
+          ? `Ce qui l’affaiblit, c’est la confusion possible entre intérêt et traction. Une famille peut comprendre la promesse sans revenir, sans partager, sans payer et sans intégrer la carte dans un vrai flux de décision.`
+          : 'Ce qui l’affaiblit, c’est l’absence de segments suffisamment établis : sans public nommé et sans preuve attendue, le choix risque de redevenir une préférence intuitive.',
+        escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Le signal d’alerte serait ${trajectories[1].signal_fr}`,
+        shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} La bascule devient crédible si ${trajectories[2].signal_fr}`,
+        watch: `${keySignal} ${probabilityText}`,
+      }),
     },
     public_warnings: hasSegments ? [] : ['Carte provisoire : les segments de cible ne sont pas encore assez établis dans la matière fournie.'],
     trace: {
@@ -798,27 +812,14 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     approfondir: {
       analysis_fr: approfondirAnalysis,
       sections_fr: [
-        {
-          id: 'fond',
-          title: 'Lecture structurelle',
-          body: `La question porte sur une transformation : ce qui est dit ou redoute peut-il devenir une action reconnue par ${institutions} ? Les acteurs a suivre sont ${actors}.`,
-        },
-        {
-          id: 'forme',
-          title: 'Phrase diamant',
-          body: diamondText,
-        },
-        {
-          id: 'probabilites',
-          title: 'Statut de preuve',
-          body: probabilityText,
-        },
-        ...trajectorySections(trajectories),
-        {
-          id: 'angles-morts',
-          title: 'Incertitudes / angles morts',
-          body: `A verifier : ${blindSpot}. Ces points doivent etre relies a ${evidence}, sans quoi ils restent des hypotheses.`,
-        },
+        ...canonicalApprofondirSections({
+          really: `La question porte sur une transformation : ce qui est dit ou redoute peut-il devenir une action reconnue par ${institutions} ? Les acteurs a suivre sont ${actors}.`,
+          holds: grammar.supportSentence(actors, institutions),
+          weakens: `Ce qui affaiblit la situation, c’est le point aveugle ${blindSpot} : tant qu’il n’est pas relié à ${evidence}, la lecture reste vulnérable.`,
+          escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr}`,
+          shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr}`,
+          watch: `${keySignal} ${probabilityText} A verifier : ${blindSpot}.`,
+        }),
         resourcesSection,
       ].filter((section): section is { id: string; title: string; body: string } => Boolean(section)),
     },
@@ -980,10 +981,12 @@ async function composeWithOpenAI(input: WritingEngineInput, local: WritingContra
       approfondir: {
         analysis_fr: approfondirText,
         sections_fr: [
-          { id: 'fond', title: 'Lecture structurelle', body: stringField(parsed.fond_fr, local.approfondir.sections_fr[0]?.body ?? '') },
-          { id: 'forme', title: 'Phrase diamant', body: stringField(parsed.forme_fr, diamondText) },
-          { id: 'probabilites', title: 'Statut de preuve', body: stringField(parsed.probabilites_fr, local.approfondir.sections_fr[2]?.body ?? '') },
-          { id: 'angles-morts', title: 'Incertitudes / angles morts', body: stringField(parsed.angles_morts_fr, local.approfondir.sections_fr[3]?.body ?? '') },
+          { id: 'situation-reelle', title: APPROFONDIR_CANONICAL_TITLES_FR.really, body: stringField(parsed.fond_fr, local.approfondir.sections_fr[0]?.body ?? '') },
+          { id: 'systeme-tient', title: APPROFONDIR_CANONICAL_TITLES_FR.holds, body: local.approfondir.sections_fr[1]?.body ?? diamondText },
+          { id: 'systeme-affaiblit', title: APPROFONDIR_CANONICAL_TITLES_FR.weakens, body: stringField(parsed.angles_morts_fr, local.approfondir.sections_fr[2]?.body ?? '') },
+          { id: 'escalade', title: APPROFONDIR_CANONICAL_TITLES_FR.escalates, body: local.approfondir.sections_fr[3]?.body ?? '' },
+          { id: 'bascule', title: APPROFONDIR_CANONICAL_TITLES_FR.shifts, body: local.approfondir.sections_fr[4]?.body ?? stringField(parsed.forme_fr, diamondText) },
+          { id: 'surveiller', title: APPROFONDIR_CANONICAL_TITLES_FR.watch, body: stringField(parsed.probabilites_fr, local.approfondir.sections_fr[5]?.body ?? '') },
           ...local.approfondir.sections_fr.filter((section) => section.id === 'sources-rapides'),
         ],
       },
