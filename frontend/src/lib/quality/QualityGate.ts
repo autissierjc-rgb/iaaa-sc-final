@@ -105,6 +105,12 @@ const TARGET_CHOICE_GENERIC_PATTERNS = [
   /startup a besoin d.?un signal plus dur que l.?attention/i,
 ]
 
+const TARGET_CHOICE_RAW_AUDIENCE_PATTERNS = [
+  /particuliers?,\s*professionnels?,\s*analystes?/i,
+  /professionnels?,\s*analystes?,\s*consultants?/i,
+  /organisations?\s+et\s+institutions?\s*;\s*particuliers?/i,
+]
+
 function hasSharpDiamond(writing: WritingContract): boolean {
   return writing.diamond_sentences.some((sentence) => sentence.style === 'diamant_tranchant' && sentence.must_be_public)
 }
@@ -206,6 +212,20 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
         'error',
         'TARGET_CHOICE_RESOURCE_BYPASSED',
         `Target-choice writing fell back to a generic formula despite provided material: ${genericTargetChoice.source}.`,
+        'writing',
+      ))
+    }
+
+    const rawAudienceList = TARGET_CHOICE_RAW_AUDIENCE_PATTERNS.find((pattern) => pattern.test(text))
+    const hasFunctionalFamilies =
+      normalizedText.includes('usage individuel') &&
+      normalizedText.includes('usage professionnel') &&
+      normalizedText.includes('usage organisationnel')
+    if (rawAudienceList && !hasFunctionalFamilies) {
+      issues.push(issue(
+        'error',
+        'TARGET_CHOICE_RAW_AUDIENCE_LIST',
+        `Target-choice writing copied raw resource audiences instead of normalizing functional families: ${rawAudienceList.source}.`,
         'writing',
       ))
     }

@@ -1,5 +1,9 @@
 import type { DumezilFunction } from '../patterns/humanCollective'
-import type { ResourceItem } from './resourceContract'
+type QualifiableResourceItem = {
+  title?: string
+  excerpt?: string
+  type?: string
+}
 
 export type QualifiedResourceKind =
   | 'audience'
@@ -17,6 +21,19 @@ export type QualifiedResourceFact = {
   dumezil_function: DumezilFunction
   usable_for_target_choice: boolean
   source_title?: string
+}
+
+export type TargetAudienceFamilyId =
+  | 'individual_clarity'
+  | 'professional_sis'
+  | 'organization_governance'
+
+export type TargetAudienceFamily = {
+  id: TargetAudienceFamilyId
+  label_fr: string
+  offer_hint_fr: string
+  audience_fr: string
+  source_terms_fr: string[]
 }
 
 type ResourceLineMode = 'audience' | 'use_case' | 'offer' | 'proof' | 'generic'
@@ -59,7 +76,7 @@ function splitCandidateLine(value: string): string[] {
     .filter(Boolean)
 }
 
-function isNavigationOrTechnicalLabel(value: string, resource?: ResourceItem): boolean {
+function isNavigationOrTechnicalLabel(value: string, resource?: QualifiableResourceItem): boolean {
   const text = normalize(value)
   if (!text) return true
   if (resource?.type === 'site-crawl-summary') return true
@@ -96,7 +113,62 @@ function targetAudiencesFromUseCase(value: string): string[] {
   return audiences
 }
 
-function classifyCandidate(value: string, mode: ResourceLineMode, resource?: ResourceItem): QualifiedResourceFact[] {
+function sourceTerm(value: string): string {
+  return cleanCandidate(value)
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function addFamily(
+  families: Map<TargetAudienceFamilyId, TargetAudienceFamily>,
+  id: TargetAudienceFamilyId,
+  term: string,
+) {
+  const presets: Record<TargetAudienceFamilyId, Omit<TargetAudienceFamily, 'id' | 'source_terms_fr'>> = {
+    individual_clarity: {
+      label_fr: 'Usage individuel',
+      offer_hint_fr: 'CLARITY',
+      audience_fr: 'particuliers et personnes qui veulent clarifier une situation personnelle, relationnelle ou professionnelle',
+    },
+    professional_sis: {
+      label_fr: 'Usage professionnel',
+      offer_hint_fr: 'SIS',
+      audience_fr: 'professionnels, managers, analystes, consultants, journalistes, chercheurs et équipes qui doivent structurer ou partager une lecture',
+    },
+    organization_governance: {
+      label_fr: 'Usage organisationnel',
+      offer_hint_fr: 'IAAA+ Governance',
+      audience_fr: 'organisations, institutions, directions, comités ou équipes de gouvernance qui ont besoin de suivi, traçabilité ou intégration',
+    },
+  }
+  const clean = sourceTerm(term)
+  const current = families.get(id) ?? {
+    id,
+    ...presets[id],
+    source_terms_fr: [],
+  }
+  if (clean && !current.source_terms_fr.some((item) => normalize(item) === normalize(clean))) {
+    current.source_terms_fr.push(clean)
+  }
+  families.set(id, current)
+}
+
+function classifyAudienceFamiliesFromText(value: string, families: Map<TargetAudienceFamilyId, TargetAudienceFamily>) {
+  const text = normalize(value)
+  if (!text) return
+
+  if (/\b(clarity|clarte|clart[eé]|personnel|personnelle|relationnel|relationnelle|intime|particulier|particuliers|individuel|individuelle|pour soi|usage individuel)\b/.test(text)) {
+    addFamily(families, 'individual_clarity', value)
+  }
+  if (/\b(sis|professionnel|professionnels|manager|managers|management|rh|equipe|equipes|consultant|consultants|analyste|analystes|journaliste|journalistes|chercheur|chercheurs|brief|briefing|decision strategique|decisions strategiques|veille|conseil|usage professionnel)\b/.test(text)) {
+    addFamily(families, 'professional_sis', value)
+  }
+  if (/\b(iaaa\+ governance|governance|gouvernance|enterprise|organisation|organisations|institution|institutions|direction|directions|comite|comit[eé]|collectif|roles et permissions|tracabilite|traçabilite|api|connecteur|connecteurs|integration|int[eé]gration|usage organisationnel)\b/.test(text)) {
+    addFamily(families, 'organization_governance', value)
+  }
+}
+
+function classifyCandidate(value: string, mode: ResourceLineMode, resource?: QualifiableResourceItem): QualifiedResourceFact[] {
   const text = cleanCandidate(value)
   if (!text || isNavigationOrTechnicalLabel(text, resource)) {
     return [{
@@ -163,7 +235,7 @@ function classifyCandidate(value: string, mode: ResourceLineMode, resource?: Res
   }]
 }
 
-export function qualifyResourceFacts(resources: ResourceItem[]): QualifiedResourceFact[] {
+export function qualifyResourceFacts(resources: QualifiableResourceItem[]): QualifiedResourceFact[] {
   const facts: QualifiedResourceFact[] = []
 
   for (const resource of resources) {
@@ -186,7 +258,7 @@ export function qualifyResourceFacts(resources: ResourceItem[]): QualifiedResour
   return facts
 }
 
-export function extractTargetAudiencesFromResources(resources: ResourceItem[]): string[] {
+export function extractTargetAudiencesFromResources(resources: QualifiableResourceItem[]): string[] {
   const seen = new Set<string>()
 
   return qualifyResourceFacts(resources)
@@ -199,4 +271,24 @@ export function extractTargetAudiencesFromResources(resources: ResourceItem[]): 
       return true
     })
     .slice(0, 4)
+}
+
+export function extractTargetAudienceFamiliesFromResources(resources: QualifiableResourceItem[]): TargetAudienceFamily[] {
+  const families = new Map<TargetAudienceFamilyId, TargetAudienceFamily>()
+  const facts = qualifyResourceFacts(resources)
+
+  for (const fact of facts) {
+    if (fact.kind === 'navigation_label' || fact.kind === 'source_title') continue
+    classifyAudienceFamiliesFromText(fact.text, families)
+  }
+
+  for (const resource of resources) {
+    classifyAudienceFamiliesFromText(`${resource.title ?? ''}\n${resource.excerpt ?? ''}`, families)
+  }
+
+  return [
+    families.get('individual_clarity'),
+    families.get('professional_sis'),
+    families.get('organization_governance'),
+  ].filter((item): item is TargetAudienceFamily => Boolean(item))
 }

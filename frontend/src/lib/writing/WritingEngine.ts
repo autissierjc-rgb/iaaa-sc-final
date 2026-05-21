@@ -10,6 +10,7 @@ import type {
 } from '../contracts'
 import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { cleanModelText, parseModelJSON } from '../ai/json'
+import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
 
 export type WritingEngineInput = {
@@ -327,30 +328,51 @@ function targetAudiencesFromResourceContract(resources?: ResourceServiceContract
     .slice(0, 4)
 }
 
+function targetAudienceFamiliesFromResourceContract(resources?: ResourceServiceContract): {
+  label: string
+  compact: string
+  detail: string
+}[] {
+  if (!resources) return []
+  return extractTargetAudienceFamiliesFromResources([...resources.public_sources, ...resources.resources])
+    .map((family) => ({
+      label: `${family.label_fr} / ${family.offer_hint_fr}`,
+      compact: family.label_fr,
+      detail: `${family.label_fr} / ${family.offer_hint_fr} : ${family.audience_fr}`,
+    }))
+}
+
 function composeTargetChoiceWriting(input: WritingEngineInput, started: number): WritingContract {
   const subject = input.interpretation.situation_soumise || input.interpretation.object_of_analysis || 'le choix de cible utilisateur'
-  const segments = targetAudiencesFromResourceContract(input.resources)
+  const audienceFamilies = targetAudienceFamiliesFromResourceContract(input.resources)
+  const rawSegments = targetAudiencesFromResourceContract(input.resources)
+  const segments = audienceFamilies.length >= 2
+    ? audienceFamilies.map((family) => family.detail)
+    : rawSegments
   const hasSegments = segments.length >= 2
   const segmentList = segments.join(' ; ')
+  const compactSegmentList = audienceFamilies.length >= 2
+    ? audienceFamilies.map((family) => family.label).join(' ; ')
+    : segmentList
   const decisionProof = 'usage répété, retour qualifié, recommandation, partage, demande d’intégration ou paiement'
   const title = input.interpretation.header_subject || 'choix de première cible'
   const insight = hasSegments
-    ? `${subject} doit être lu comme un arbitrage entre segments visibles dans la matière fournie : ${segmentList}. La priorité doit aller au public qui produit le signal d’usage le plus net, pas au public seulement le plus large.`
+    ? `${subject} doit être lu comme un arbitrage entre familles d’usage visibles dans la matière fournie : ${compactSegmentList}. La priorité doit aller au public qui produit le signal d’usage le plus net, pas au public seulement le plus large.`
     : `${subject} doit rester une carte provisoire : la matière fournie indique une décision de cible, mais ne nomme pas encore assez de segments exploitables pour trancher proprement.`
   const vulnerability = hasSegments
-    ? `Le point fragile est l’arbitrage entre ${segmentList} : choisir trop large dilue le signal, choisir trop étroit peut empêcher l’élan.`
+    ? `Le point fragile est l’arbitrage entre ${compactSegmentList} : choisir trop large dilue le signal, choisir trop étroit peut empêcher l’élan.`
     : 'Le point fragile est le manque de segments vérifiables dans la matière exploitée : sans publics nommés, la décision risque de redevenir une intuition générale.'
   const asymmetry = hasSegments
     ? `Tous les segments peuvent comprendre une promesse, mais seul celui qui produit ${decisionProof} doit devenir prioritaire.`
     : 'La ressource peut donner une promesse lisible, mais la carte ne doit pas inventer les publics qui ne sont pas encore établis.'
   const keySignal = hasSegments
-    ? `Signal clé : parmi ${segmentList}, repérer le premier public qui passe de l’intérêt à ${decisionProof}.`
+    ? `Signal clé : parmi ${compactSegmentList}, repérer le premier public qui passe de l’intérêt à ${decisionProof}.`
     : 'Signal clé : obtenir une liste explicite de publics, d’usages ou d’offres, puis observer lequel produit un premier usage répété.'
   const lecture = hasSegments
-    ? `${subject} ne demande pas de décrire le site ni de juger une entreprise en général. La question utile est de comparer les publics visibles dans la matière fournie : ${segmentList}.\n\nLe premier public à viser est celui qui réduit le plus vite l’incertitude sur l’usage réel. Il doit permettre de mesurer ${decisionProof}. Sans ce signal, la visibilité reste une audience ; avec lui, elle devient une preuve de marché.`
+    ? `${subject} ne demande pas de décrire le site ni de juger une entreprise en général. La question utile est de comparer les familles d’usage visibles dans la matière fournie : ${segmentList}.\n\nLe premier public à viser est celui qui réduit le plus vite l’incertitude sur l’usage réel. Il doit permettre de mesurer ${decisionProof}. Sans ce signal, la visibilité reste une audience ; avec lui, elle devient une preuve de marché.`
     : `${subject} ne doit pas être remplacé par une analyse générale de site. La bonne sortie est provisoire : la matière fournie ne nomme pas encore assez de publics exploitables pour comparer des options réelles.\n\nLa prochaine preuve utile est simple : publics visés, cas d’usage, offre associée et signal attendu pour chaque public. Une fois ces éléments présents, SC peut arbitrer sans inventer les segments.`
   const approfondir = hasSegments
-    ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${segmentList} ne donnent pas la même preuve : certains peuvent créer de l’attention, d’autres de l’usage répété, d’autres encore une crédibilité institutionnelle ou commerciale. La bonne cible initiale est celle qui rend la promesse vérifiable par un comportement observable.`
+    ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${compactSegmentList} ne donnent pas la même preuve : certains peuvent créer de l’attention, d’autres de l’usage répété, d’autres encore une crédibilité institutionnelle ou commerciale. La bonne cible initiale est celle qui rend la promesse vérifiable par un comportement observable.`
     : 'Le fond de la situation tient à une absence de matière qualifiée. La ressource doit être relue non comme une vitrine, mais comme un inventaire de publics, usages, offres et preuves. Tant que ces éléments restent implicites, la carte doit afficher sa prudence plutôt que trancher par formule.'
   const diamond = hasSegments
     ? `La première cible n’est pas celle qui écoute le mieux la promesse ; c’est celle qui transforme le plus vite cette promesse en usage vérifiable.`
@@ -396,7 +418,7 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
         type: 'stabilization',
         title_fr: 'Cible qualifiée',
         description_fr: hasSegments
-          ? `La situation se clarifie si un segment parmi ${segmentList} produit un usage répété et des retours précis.`
+          ? `La situation se clarifie si une famille parmi ${compactSegmentList} produit un usage répété et des retours précis.`
           : 'La situation se clarifie si la matière nomme les publics, usages et offres à comparer.',
         signal_fr: 'Un public formule le cas d’usage avec ses mots et revient sans relance.',
       },
@@ -422,9 +444,9 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       sections_fr: [
         {
           id: 'segments',
-          title: 'Segments',
+          title: audienceFamilies.length >= 2 ? 'Familles d’usage' : 'Segments',
           body: hasSegments
-            ? `Segments exploitables dans la matière fournie : ${segmentList}.`
+            ? `${audienceFamilies.length >= 2 ? 'Familles normalisées' : 'Segments exploitables'} dans la matière fournie : ${segmentList}.`
             : 'Segments insuffisamment établis dans la matière fournie.',
         },
         {
@@ -450,6 +472,7 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       notes: [
         'target_choice_with_material',
         hasSegments ? 'resource_segments_used' : 'resource_segments_insufficient',
+        audienceFamilies.length >= 2 ? 'resource_audiences_normalized_as_functional_families' : 'resource_audiences_raw_fallback',
       ],
     },
   }
