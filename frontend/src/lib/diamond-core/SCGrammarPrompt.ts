@@ -132,17 +132,22 @@ function responseShape(): SCGrammarPrompt['required_json_shape'] {
 }
 
 function qualityTargets(dossier: DiamondDossier): string[] {
+  const hasExtractedOptions = (dossier.resources.plan.extracted_options ?? []).length >= 2
   return [
     'Insight: faire voir la structure cachee, pas seulement reformuler la question.',
     'Main Vulnerability: nommer le point de rupture precis, testable et non banal.',
     'Trajectories: produire stabilisation, escalade et changement de regime comme trois logiques distinctes.',
     'Key Signal: donner un signal concret que l utilisateur peut surveiller.',
     'Global Usefulness: aider a comprendre, decider ou agir sans surpromettre.',
+    ...(hasExtractedOptions
+      ? ['Target choice: si la question demande une meilleure option ou cible, classer les options qualifiees en cible prioritaire, secondaire et a differer avec justification et test de validation.']
+      : []),
     ...dossier.grammar.required_public_moves_fr,
   ]
 }
 
 export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
+  const hasExtractedOptions = (dossier.resources.plan.extracted_options ?? []).length >= 2
   const system = [
     'You are the Situation Card Diamond Writer.',
     'You do not reinterpret the user request. The canonical interpretation is already decided.',
@@ -204,6 +209,12 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       'situation_card.main_vulnerability_fr must be specific, structural and testable.',
       'situation_card.asymmetry_fr must name the asymmetry of power, proof, role, timing or adoption.',
       'situation_card.key_signal_fr must say what to watch next.',
+      ...(hasExtractedOptions
+        ? [
+            'When the user asks for best target/options and Resources.extracted_options has at least two options, you must rank them explicitly: cible prioritaire probable, cible secondaire, cible a differer.',
+            'The ranking must appear in situation_card.insight_fr or lecture.text_fr, with a reason and one observable validation test for the priority.',
+          ]
+        : []),
       'trajectories must include exactly one stabilization, one escalation and one regime_shift.',
       'lecture.text_fr should be substantial enough to stand alone.',
       'approfondir.sections_fr must explain what holds, weakens, escalates, shifts and what to watch.',

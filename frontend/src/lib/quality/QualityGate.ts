@@ -178,6 +178,32 @@ function isTargetChoiceWithMaterial(input: QualityGateInput): boolean {
     (plan.trace_notes ?? []).some((note) => note === 'target_choice_with_material')
 }
 
+function hasRankableExtractedOptions(input: QualityGateInput): boolean {
+  return (input.resources?.extracted_options ?? []).filter((option) =>
+    option.kind === 'audience_family' ||
+    option.kind === 'user_segment' ||
+    option.kind === 'strategic_option' ||
+    option.kind === 'offer' ||
+    option.kind === 'use_case',
+  ).length >= 2
+}
+
+function hasExplicitTargetRanking(normalizedPublicText: string): boolean {
+  const hasPriority =
+    normalizedPublicText.includes('cible prioritaire') ||
+    normalizedPublicText.includes('prioritaire probable') ||
+    normalizedPublicText.includes('classement provisoire')
+  const hasSecond =
+    normalizedPublicText.includes('cible secondaire') ||
+    normalizedPublicText.includes('secondaire') ||
+    normalizedPublicText.includes('canal d apprentissage')
+  const hasDeferred =
+    normalizedPublicText.includes('cible a differer') ||
+    normalizedPublicText.includes('a differer') ||
+    normalizedPublicText.includes('preuve longue')
+  return hasPriority && hasSecond && hasDeferred
+}
+
 function normalize(value: string): string {
   return value
     .normalize('NFD')
@@ -302,6 +328,15 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   }
 
   if (isTargetChoiceWithMaterial(input)) {
+    if (hasRankableExtractedOptions(input) && !hasExplicitTargetRanking(normalizedText)) {
+      issues.push(issue(
+        'error',
+        'TARGET_CHOICE_OPTIONS_NOT_RANKED',
+        'Target-choice writing has extracted options but does not rank them as priority, secondary and deferred.',
+        'writing',
+      ))
+    }
+
     const genericTargetChoice = TARGET_CHOICE_GENERIC_PATTERNS.find((pattern) => pattern.test(normalizedText))
     if (genericTargetChoice) {
       issues.push(issue(

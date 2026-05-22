@@ -251,7 +251,7 @@ function buildGrammar(input: {
   const treatmentPlan = input.interpretation.treatment_plan
   const targetChoice = treatmentPlan?.trace_notes?.includes('target_choice_with_material')
   const optionLine = input.extractedOptions.length > 0
-    ? `Comparer les options qualifiees extraites des ressources : ${input.extractedOptions.join(' ; ')}. Ne pas dire que les options, publics ou segments manquent tant que cette liste existe ; qualifier seulement leur statut de preuve.`
+    ? `Comparer les options qualifiees extraites des ressources : ${input.extractedOptions.join(' ; ')}. Produire un classement explicite : cible prioritaire probable, cible secondaire, cible a differer, raison de chaque rang et test qui ferait changer le classement. Ne pas dire que les options, publics ou segments manquent tant que cette liste existe ; qualifier seulement leur statut de preuve.`
     : input.audienceFamilies.length > 0
       ? `Comparer les familles visibles comme options reelles : ${input.audienceFamilies.join(' ; ')}.`
       : 'Si les options ne sont pas etablies, le dire sans inventer de segments.'
@@ -272,7 +272,10 @@ function buildGrammar(input: {
       'Ne pas afficher les grilles internes, auteurs, labels de pattern ou explications de methode.',
       'Ne pas produire une notice defensive a la place d une lecture diamant.',
       ...(input.extractedOptions.length > 0
-        ? ['Ne pas dire que les options, publics ou segments manquent quand resources.extracted_options contient des options qualifiees.']
+        ? [
+            'Ne pas dire que les options, publics ou segments manquent quand resources.extracted_options contient des options qualifiees.',
+            'Ne pas rester dans une simple methode de comparaison si l utilisateur demande les meilleures options : classer et assumer une recommandation provisoire.',
+          ]
         : []),
       ...(treatmentPlan?.must_not_reinterpret_fr ?? []),
     ],

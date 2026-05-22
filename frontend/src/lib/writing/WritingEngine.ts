@@ -376,6 +376,88 @@ function targetOptionsFromResourceContract(resources?: ResourceServiceContract):
     .slice(0, 6)
 }
 
+type RankedTargetOption = {
+  rank: number
+  label: string
+  detail: string
+  role_fr: string
+  reason_fr: string
+  test_fr: string
+}
+
+function targetOptionScore(option: { label: string; detail: string }, index: number): number {
+  const text = normalizeAnchor(`${option.label} ${option.detail}`)
+  let score = 70 - index
+  if (/\b(sis|professionnel|professionnels|manager|managers|consultant|consultants|analyste|analystes|journaliste|journalistes|chercheur|chercheurs|equipe|equipes|decision|brief|veille)\b/.test(text)) {
+    score += 24
+  }
+  if (/\b(clarity|usage individuel|individuel|particulier|particuliers|personnel|personnelle|relationnel|relationnelle)\b/.test(text)) {
+    score += 8
+  }
+  if (/\b(governance|gouvernance|organisation|organisations|institution|institutions|direction|comite|comite|api|integration|tracabilite|traçabilite)\b/.test(text)) {
+    score -= 6
+  }
+  if (/\b(paiement|abonnement|usage repete|usage repetee|retention|workflow|processus)\b/.test(text)) {
+    score += 10
+  }
+  return score
+}
+
+function roleForRank(rank: number): string {
+  if (rank === 1) return 'cible prioritaire'
+  if (rank === 2) return 'cible secondaire / canal d’apprentissage'
+  return 'cible à différer ou à tester en preuve longue'
+}
+
+function reasonForRank(option: { label: string; detail: string }, rank: number): string {
+  const text = normalizeAnchor(`${option.label} ${option.detail}`)
+  if (rank === 1 && /\b(sis|professionnel|professionnels|manager|managers|consultant|consultants|analyste|analystes|journaliste|journalistes|chercheur|chercheurs|equipe|equipes)\b/.test(text)) {
+    return 'meilleur compromis entre besoin répété, contexte de décision, partage naturel et disposition à payer'
+  }
+  if (/\b(clarity|usage individuel|individuel|particulier|particuliers|personnel|personnelle)\b/.test(text)) {
+    return 'bon terrain d’activation et de langage utilisateur, mais preuve de marché plus fragile si l’usage reste ponctuel'
+  }
+  if (/\b(governance|gouvernance|organisation|organisations|institution|institutions|direction|comite|api|integration|tracabilite|traçabilite)\b/.test(text)) {
+    return 'valeur potentielle élevée, mais cycle de vente, intégration et preuve de confiance plus longs'
+  }
+  return rank === 1
+    ? 'meilleur signal initial si l’usage devient régulier et partageable'
+    : 'utile comme comparaison, mais moins décisif tant que la preuve d’usage reste indirecte'
+}
+
+function testForRank(option: { label: string; detail: string }, rank: number): string {
+  const text = normalizeAnchor(`${option.label} ${option.detail}`)
+  if (rank === 1) return '10 à 20 utilisateurs du segment doivent refaire une carte sans relance, la partager ou demander une suite concrète'
+  if (/\b(governance|gouvernance|organisation|organisations|institution|institutions|direction|comite|api|integration)\b/.test(text)) {
+    return 'obtenir une demande pilote, un cas d’intégration ou une réunion avec décideur identifié'
+  }
+  return 'mesurer activation, retour qualifié et réutilisation avant d’en faire le moteur commercial'
+}
+
+function rankTargetOptions(options: Array<{ label: string; compact: string; detail: string }>): RankedTargetOption[] {
+  return options
+    .map((option, index) => ({
+      option,
+      score: targetOptionScore(option, index),
+    }))
+    .sort((left, right) => right.score - left.score)
+    .map(({ option }, index) => ({
+      rank: index + 1,
+      label: option.compact || option.label,
+      detail: option.detail,
+      role_fr: roleForRank(index + 1),
+      reason_fr: reasonForRank(option, index + 1),
+      test_fr: testForRank(option, index + 1),
+    }))
+}
+
+function rankingSentence(ranked: RankedTargetOption[]): string {
+  return ranked
+    .slice(0, 3)
+    .map((item) => `${item.rank}. ${item.label} — ${item.role_fr} : ${item.reason_fr}`)
+    .join(' ; ')
+}
+
 function trajectorySpine(trajectories: WritingContract['trajectories']): string {
   const stabilization = trajectories.find((trajectory) => trajectory.type === 'stabilization')
   const escalation = trajectories.find((trajectory) => trajectory.type === 'escalation')
@@ -437,6 +519,22 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
     : extractedOptions.length >= 2
       ? extractedOptions.map((option) => option.detail)
     : rawSegments
+  const rankableOptions = audienceFamilies.length >= 2
+    ? audienceFamilies
+    : extractedOptions.length >= 2
+      ? extractedOptions
+      : rawSegments.map((segment) => ({ label: segment, compact: segment, detail: segment }))
+  const rankedOptions = rankTargetOptions(rankableOptions)
+  const priority = rankedOptions[0] ?? {
+    rank: 1,
+    label: 'le premier public vérifiable',
+    detail: 'le premier public vérifiable',
+    role_fr: 'cible prioritaire',
+    reason_fr: 'meilleur signal initial si l’usage devient régulier et partageable',
+    test_fr: 'un public formule le cas d’usage avec ses mots et revient sans relance',
+  }
+  const secondary = rankedOptions[1]
+  const deferred = rankedOptions[2]
   const hasSegments = segments.length >= 2
   const segmentList = segments.join(' ; ')
   const compactSegmentList = audienceFamilies.length >= 2
@@ -447,25 +545,25 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
   const decisionProof = 'usage répété, retour qualifié, recommandation, partage, demande d’intégration ou paiement'
   const title = input.interpretation.header_subject || 'choix de première cible'
   const insight = hasSegments
-    ? `${subject} doit être lu comme un arbitrage entre familles d’usage visibles dans la matière fournie : ${compactSegmentList}. La priorité doit aller au public qui produit le signal d’usage le plus net, pas au public seulement le plus large.`
+    ? `${subject} doit produire un classement, pas seulement une comparaison. À ce stade, la cible prioritaire probable est ${priority.label} : ${priority.reason_fr}. ${secondary ? `${secondary.label} sert plutôt de ${secondary.role_fr}.` : ''} ${deferred ? `${deferred.label} doit rester en preuve longue avant de devenir le coeur du lancement.` : ''}`.trim()
     : `${subject} doit rester une carte provisoire : la matière fournie indique une décision de cible, mais ne nomme pas encore assez de segments exploitables pour trancher proprement.`
   const vulnerability = hasSegments
-    ? `Le point fragile est l’arbitrage entre ${compactSegmentList} : choisir trop large dilue le signal, choisir trop étroit peut empêcher l’élan.`
+    ? `Le point fragile est de confondre visibilité, apprentissage et marché : ${priority.label} doit prouver l’usage, tandis que ${secondary?.label ?? 'les autres segments'} ne doivent pas masquer un signal commercial plus faible.`
     : 'Le point fragile est le manque de segments vérifiables dans la matière exploitée : sans publics nommés, la décision risque de redevenir une intuition générale.'
   const asymmetry = hasSegments
-    ? `Tous les segments peuvent comprendre une promesse, mais seul celui qui produit ${decisionProof} doit devenir prioritaire.`
+    ? `Tous les segments peuvent comprendre la promesse, mais ils ne valent pas la même chose au lancement : ${priority.label} peut donner une preuve plus dure, ${secondary?.label ?? 'un autre segment'} peut surtout donner de l’apprentissage, et ${deferred?.label ?? 'un segment plus institutionnel'} peut demander plus de temps.`
     : 'La ressource peut donner une promesse lisible, mais la carte ne doit pas inventer les publics qui ne sont pas encore établis.'
   const keySignal = hasSegments
-    ? `Signal clé : parmi ${compactSegmentList}, repérer le premier public qui passe de l’intérêt à ${decisionProof}.`
+    ? `Signal clé : vérifier si ${priority.label} passe en moins de quelques cycles de l’intérêt à ${decisionProof}.`
     : 'Signal clé : obtenir une liste explicite de publics, d’usages ou d’offres, puis observer lequel produit un premier usage répété.'
   const lecture = hasSegments
-    ? `${subject} ne demande pas de décrire le site ni de juger une entreprise en général. La question utile est de comparer les familles d’usage visibles dans la matière fournie : ${segmentList}.\n\nLe premier public à viser est celui qui réduit le plus vite l’incertitude sur l’usage réel. Il doit permettre de mesurer ${decisionProof}. Sans ce signal, la visibilité reste une audience ; avec lui, elle devient une preuve de marché.`
+    ? `${subject} ne demande pas de décrire le site ni de juger une entreprise en général. La question utile est de classer les familles d’usage visibles dans la matière fournie : ${segmentList}.\n\nClassement provisoire : ${rankingSentence(rankedOptions)}.\n\nLa recommandation est donc de partir par ${priority.label}, non parce que cette cible serait définitivement la plus grande, mais parce qu’elle peut produire le signal le plus net : ${priority.test_fr}. ${secondary ? `${secondary.label} reste utile pour apprendre le vocabulaire, tester l’activation ou nourrir la distribution.` : ''} ${deferred ? `${deferred.label} devient intéressante quand une preuve de confiance, d’intégration ou de paiement existe déjà.` : ''}`
     : `${subject} ne doit pas être remplacé par une analyse générale de site. La bonne sortie est provisoire : la matière fournie ne nomme pas encore assez de publics exploitables pour comparer des options réelles.\n\nLa prochaine preuve utile est simple : publics visés, cas d’usage, offre associée et signal attendu pour chaque public. Une fois ces éléments présents, SC peut arbitrer sans inventer les segments.`
   const approfondir = hasSegments
-    ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${compactSegmentList} ne donnent pas la même preuve : certains peuvent créer de l’attention, d’autres de l’usage répété, d’autres encore une crédibilité institutionnelle ou commerciale. La bonne cible initiale est celle qui rend la promesse vérifiable par un comportement observable.`
+    ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${compactSegmentList} ne donnent pas la même preuve : ${priority.label} doit prouver l’usage et la valeur, ${secondary?.label ?? 'la cible suivante'} peut élargir l’apprentissage, et ${deferred?.label ?? 'la dernière cible'} ne doit monter que si le coût de vente ou d’intégration devient justifié.`
     : 'Le fond de la situation tient à une absence de matière qualifiée. La ressource doit être relue non comme une vitrine, mais comme un inventaire de publics, usages, offres et preuves. Tant que ces éléments restent implicites, la carte doit afficher sa prudence plutôt que trancher par formule.'
   const diamond = hasSegments
-    ? `La première cible n’est pas celle qui écoute le mieux la promesse ; c’est celle qui transforme le plus vite cette promesse en usage vérifiable.`
+    ? `La bonne première cible n’est pas celle qui admire le mieux la promesse ; c’est ${priority.label}, si elle transforme la carte en geste répété avant que les autres segments ne transforment l’intérêt en lenteur.`
     : 'Une cible non nommée ne se choisit pas : elle se fait d’abord apparaître par les usages, les offres et les preuves disponibles.'
   const probability = probabilityFromResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const trajectories: WritingContract['trajectories'] = [
@@ -473,9 +571,9 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       type: 'stabilization',
       title_fr: 'Cible qualifiée',
       description_fr: hasSegments
-        ? `La situation se clarifie si une famille parmi ${compactSegmentList} produit un usage répété et des retours précis.`
+        ? `La situation se clarifie si ${priority.label} confirme son rang par un usage répété et des retours précis.`
         : 'La situation se clarifie si la matière nomme les publics, usages et offres à comparer.',
-      signal_fr: 'Un public formule le cas d’usage avec ses mots et revient sans relance.',
+      signal_fr: hasSegments ? priority.test_fr : 'Un public formule le cas d’usage avec ses mots et revient sans relance.',
     },
     {
       type: 'escalation',
@@ -536,13 +634,13 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       analysis_fr: '',
       sections_fr: canonicalApprofondirSections({
         really: hasSegments
-          ? `${approfondir} La comparaison doit donc porter sur ${segmentList}, non sur une taille d’audience abstraite.`
+          ? `${approfondir} Le classement de départ est : ${rankingSentence(rankedOptions)}. Ce classement reste provisoire, mais il donne un ordre d’action au lieu d’une simple typologie.`
           : `${approfondir} La décision reste utile, mais elle doit d’abord faire apparaître des publics, des usages et des preuves vérifiables.`,
         holds: hasSegments
-          ? `Ce qui tient encore le système, c’est la promesse commune : transformer une situation complexe en carte lisible, partageable et exploitable. Cette promesse peut parler à ${compactSegmentList}, mais chaque famille ne donne pas la même preuve.`
+          ? `Ce qui tient encore le système, c’est que la même promesse peut être testée à trois vitesses. ${priority.label} doit produire la preuve d’usage, ${secondary?.label ?? 'la seconde cible'} peut produire le vocabulaire et la distribution, ${deferred?.label ?? 'la troisième'} peut produire de la crédibilité plus tard.`
           : 'Ce qui tient encore, c’est la possibilité de transformer la vitrine produit en hypothèses de marché testables : public visé, cas d’usage, offre associée et signal attendu.',
         weakens: hasSegments
-          ? `Ce qui l’affaiblit, c’est la confusion possible entre intérêt et traction. Une famille peut comprendre la promesse sans revenir, sans partager, sans payer et sans intégrer la carte dans un vrai flux de décision.`
+          ? `Ce qui l’affaiblit, c’est une mauvaise séquence : viser trop vite ${deferred?.label ?? 'la cible la plus lourde'} peut allonger le cycle, viser seulement ${secondary?.label ?? 'une cible d’apprentissage'} peut donner de l’attention sans traction, et ne pas tester ${priority.label} peut retarder la preuve commerciale.`
           : 'Ce qui l’affaiblit, c’est l’absence de segments suffisamment établis : sans public nommé et sans preuve attendue, le choix risque de redevenir une préférence intuitive.',
         escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Le signal d’alerte serait ${trajectories[1].signal_fr}`,
         shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} La bascule devient crédible si ${trajectories[2].signal_fr}`,
