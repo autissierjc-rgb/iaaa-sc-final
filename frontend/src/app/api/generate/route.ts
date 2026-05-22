@@ -1157,6 +1157,10 @@ function isTargetChoiceMaterialWriting(writing: WritingContract): boolean {
   return (writing.trace.notes ?? []).some((note) => note === 'target_choice_with_material')
 }
 
+function isDominantArchitectWriting(writing: WritingContract): boolean {
+  return (writing.trace.notes ?? []).some((note) => note === 'diamond_architect_writer=dominant_generate_full')
+}
+
 function contractPublicText(value: unknown, fallback = ''): string {
   const text = typeof value === 'string' ? cleanPublicText(value) : ''
   return text || fallback
@@ -1166,7 +1170,7 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
   if (!writing || writing.trace.status === 'error') return card
 
   const sc = writing.situation_card
-  const forceWritingContract = isTargetChoiceMaterialWriting(writing)
+  const forceWritingContract = isTargetChoiceMaterialWriting(writing) || isDominantArchitectWriting(writing)
   const preferCompletedCard = shouldPreferCompletedCardAfterWriting(card)
   const vulnerabilityFrCandidates = preferCompletedCard
     ? [card.main_vulnerability_fr, sc.main_vulnerability_fr]
@@ -4784,7 +4788,7 @@ export async function POST(req: NextRequest) {
         })
         diamondArchitectWriter = {
           status: diamondWriter.status,
-          accepted: diamondWriter.status === 'ok' && Boolean(diamondWriter.writing),
+          accepted: Boolean(diamondWriter.writing),
           model: diamondWriter.model,
           duration_ms: diamondWriter.duration_ms,
           errors: diamondWriter.errors,
@@ -4805,14 +4809,16 @@ export async function POST(req: NextRequest) {
           resourcesCount: canonicalResourcePlan.resources.length,
           modelPath: 'openai',
         })
-        if (diamondWriter.status === 'ok' && diamondWriter.writing) {
+        if (diamondWriter.writing) {
           writingContract = {
             ...diamondWriter.writing,
             trace: {
               ...diamondWriter.writing.trace,
+              status: diamondWriter.status === 'ok' ? diamondWriter.writing.trace.status : 'partial',
               notes: [
                 ...(diamondWriter.writing.trace.notes ?? []),
-                'diamond_architect_writer=accepted_in_generate_full',
+                'diamond_architect_writer=dominant_generate_full',
+                `diamond_architect_writer_status=${diamondWriter.status}`,
               ],
             },
           }
@@ -4910,7 +4916,7 @@ export async function POST(req: NextRequest) {
         modelPath: 'local',
       })
     }
-    if (qualityHasError) {
+    if (qualityHasError && !diamondArchitectWriter?.accepted) {
       return NextResponse.json({
         gate: 'CLARIFY',
         questions: [
