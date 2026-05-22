@@ -2148,7 +2148,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           return sameRefine ? normalized : [...normalized, { kind: 'refine', questions: theatreQuestions }]
         })
         const fullController = new AbortController()
-        const fullTimeout = window.setTimeout(() => fullController.abort(), 30000)
+        const fullTimeout = window.setTimeout(() => fullController.abort(), 65000)
         fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

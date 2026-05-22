@@ -4760,6 +4760,9 @@ export async function POST(req: NextRequest) {
       mode === 'generate_full' &&
       canonicalScoringForWriting &&
       process.env.SC_DISABLE_DIAMOND_ARCHITECT_WRITER !== '1'
+    let diamondArchitectWriter:
+      | { status: string; accepted: boolean; model?: string; duration_ms?: number; errors?: string[] }
+      | null = null
     if (shouldTryDiamondArchitectWriter) {
       try {
         const diamondDossier = await buildDiamondDossier({
@@ -4771,6 +4774,7 @@ export async function POST(req: NextRequest) {
           canonicalize_with_model: false,
           fetch_fast_resources: false,
           fast_resource_timeout_ms: 0,
+          supplied_resources: canonicalResourcePlan.resources,
         })
         const diamondWriter = await runLLMDiamondWriter({
           dossier: diamondDossier.dossier,
@@ -4778,6 +4782,13 @@ export async function POST(req: NextRequest) {
           temperature: 0.2,
           max_tokens: 4200,
         })
+        diamondArchitectWriter = {
+          status: diamondWriter.status,
+          accepted: diamondWriter.status === 'ok' && Boolean(diamondWriter.writing),
+          model: diamondWriter.model,
+          duration_ms: diamondWriter.duration_ms,
+          errors: diamondWriter.errors,
+        }
         recordGenerationTrace({
           status: diamondWriter.status === 'ok' ? 'ok' : 'partial',
           gate: 'GENERATE',
@@ -4807,6 +4818,11 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch (error) {
+        diamondArchitectWriter = {
+          status: 'request_failed',
+          accepted: false,
+          errors: [error instanceof Error ? error.message : String(error)],
+        }
         recordGenerationTrace({
           status: 'partial',
           gate: 'GENERATE',
@@ -5100,6 +5116,7 @@ export async function POST(req: NextRequest) {
         contract_quality: contractQuality,
         writing_quality: writingQuality,
       },
+      diamond_architect_writer: diamondArchitectWriter,
       generation_archive: generationArchive,
       share_contract: shareContract,
       language_contract: languageContract,

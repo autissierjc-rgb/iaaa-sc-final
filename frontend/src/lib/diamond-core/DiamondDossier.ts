@@ -7,6 +7,7 @@ import type {
   LanguageCode,
   QualityGateContract,
   RadarScoreV2,
+  ResourceContract,
   ResourceServiceContract,
   RiskAdviceGuardContract,
   ScoringContract,
@@ -37,6 +38,7 @@ export type DiamondDossierInput = {
   fetch_fast_resources?: boolean
   fast_resource_timeout_ms?: number
   max_fast_sources?: number
+  supplied_resources?: ResourceContract[]
 }
 
 export type DiamondDossierResourceView = {

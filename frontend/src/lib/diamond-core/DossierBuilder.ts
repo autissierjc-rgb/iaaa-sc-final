@@ -74,6 +74,16 @@ function uniqueText(items: string[]): string[] {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)))
 }
 
+function uniqueResources(resources: ResourceContract[]): ResourceContract[] {
+  const seen = new Set<string>()
+  return resources.filter((resource) => {
+    const key = (resource.url || resource.id || resource.title).trim().toLowerCase()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 function significantHeaderWords(value: string): string[] {
   const stopWords = new Set([
     'a',
@@ -357,7 +367,12 @@ export async function buildDiamondDossier(input: DiamondDossierInput): Promise<D
     ...interpretationWithMaterialSignals,
     raw_input: [interpretationWithMaterialSignals.raw_input, ...urls].filter(Boolean).join('\n'),
   }
-  let resources = planResources({ interpretation: resourceInterpretation, patterns })
+  const suppliedResources = input.supplied_resources ?? []
+  let resources = planResources({
+    interpretation: resourceInterpretation,
+    patterns,
+    supplied_resources: suppliedResources,
+  })
   const fastRun = input.fetch_fast_resources
     ? await runFastResourceRunner({
         interpretation: resourceInterpretation,
@@ -366,11 +381,12 @@ export async function buildDiamondDossier(input: DiamondDossierInput): Promise<D
         max_sources: input.max_fast_sources ?? 4,
       })
     : noopFastRunner(input.fast_resource_timeout_ms ?? 0)
-  if (fastRun.resources.length > 0) {
+  const mergedSuppliedResources = uniqueResources([...suppliedResources, ...fastRun.resources])
+  if (mergedSuppliedResources.length > 0) {
     resources = planResources({
       interpretation: resourceInterpretation,
       patterns,
-      supplied_resources: fastRun.resources,
+      supplied_resources: mergedSuppliedResources,
     })
   }
   resources = {
@@ -381,6 +397,7 @@ export async function buildDiamondDossier(input: DiamondDossierInput): Promise<D
       duration_ms: (resources.trace.duration_ms ?? 0) + fastRun.duration_ms,
       notes: [
         ...(resources.trace.notes ?? []),
+        `supplied_resources=${suppliedResources.length}`,
         `diamond_core_fast_run=${fastRun.status}:${fastRun.provider}:${fastRun.resources.length}`,
       ],
     },
