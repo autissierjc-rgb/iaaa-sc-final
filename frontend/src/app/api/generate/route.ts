@@ -42,6 +42,7 @@ import { runContractQualityGate, runQualityGate } from '@/lib/quality'
 import { applyEntityExplanationsToSituationCard } from '@/lib/text/entityExplanations'
 import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
+import { buildDiamondDossier, runLLMDiamondWriter } from '@/lib/diamond-core'
 import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
 import { buildCtoWatchMetricsFromEvents, buildCtoWatchReport, buildGenerationEvent } from '@/lib/archive'
 import { DEFAULT_LANGUAGE_SERVICE_CONTRACT } from '@/lib/contracts/language'
@@ -4741,7 +4742,7 @@ export async function POST(req: NextRequest) {
     }
     baseSc = completeSituationCard(baseSc, generationDisplayText, arbre, resources, branches)
     const canonicalScoringForWriting = scoringContractFromCard(baseSc)
-    const writingContract = canonicalScoringForWriting
+    let writingContract = canonicalScoringForWriting
       ? await composeDiamondWritingWithMode(
           {
             interpretation: generationInterpretation,
@@ -4755,6 +4756,76 @@ export async function POST(req: NextRequest) {
           'local_contract',
         )
       : null
+    const shouldTryDiamondArchitectWriter =
+      mode === 'generate_full' &&
+      canonicalScoringForWriting &&
+      process.env.SC_DISABLE_DIAMOND_ARCHITECT_WRITER !== '1'
+    if (shouldTryDiamondArchitectWriter) {
+      try {
+        const diamondDossier = await buildDiamondDossier({
+          raw_input: generationAnalysisText,
+          original_input: generationDisplayText,
+          dialogue_events,
+          language: 'fr',
+          interpretation_mode: 'local_contract',
+          canonicalize_with_model: false,
+          fetch_fast_resources: false,
+          fast_resource_timeout_ms: 0,
+        })
+        const diamondWriter = await runLLMDiamondWriter({
+          dossier: diamondDossier.dossier,
+          timeout_ms: Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000),
+          temperature: 0.2,
+          max_tokens: 4200,
+        })
+        recordGenerationTrace({
+          status: diamondWriter.status === 'ok' ? 'ok' : 'partial',
+          gate: 'GENERATE',
+          route: '/api/generate',
+          canonicalLayer: 'writing',
+          pipelineStep: 'LLMDiamondWriter',
+          diagnostic: `${diamondWriter.model}:${diamondWriter.status}:${diamondWriter.errors.join(' | ')}`.slice(0, 240),
+          durationMs: diamondWriter.duration_ms,
+          inputChars: generationAnalysisText.length,
+          domain: generationInterpretation.domain,
+          intentType: generationIntentContext.interpreted_request?.intent_type,
+          questionType: generationIntentContext.interpreted_request?.question_type,
+          resourcesStatus: canonicalResourcePlan.status,
+          resourcesCount: canonicalResourcePlan.resources.length,
+          modelPath: 'openai',
+        })
+        if (diamondWriter.status === 'ok' && diamondWriter.writing) {
+          writingContract = {
+            ...diamondWriter.writing,
+            trace: {
+              ...diamondWriter.writing.trace,
+              notes: [
+                ...(diamondWriter.writing.trace.notes ?? []),
+                'diamond_architect_writer=accepted_in_generate_full',
+              ],
+            },
+          }
+        }
+      } catch (error) {
+        recordGenerationTrace({
+          status: 'partial',
+          gate: 'GENERATE',
+          route: '/api/generate',
+          canonicalLayer: 'writing',
+          pipelineStep: 'LLMDiamondWriter',
+          diagnostic: `diamond_architect_writer_unavailable:${error instanceof Error ? error.message : String(error)}`.slice(0, 240),
+          durationMs: 0,
+          inputChars: generationAnalysisText.length,
+          domain: generationInterpretation.domain,
+          intentType: generationIntentContext.interpreted_request?.intent_type,
+          questionType: generationIntentContext.interpreted_request?.question_type,
+          resourcesStatus: canonicalResourcePlan.status,
+          resourcesCount: canonicalResourcePlan.resources.length,
+          modelPath: 'fallback',
+          errorKind: error instanceof Error ? error.name : 'UnknownError',
+        })
+      }
+    }
     if (writingContract) {
       recordGenerationTrace({
         status: writingContract.trace.status === 'partial' ? 'partial' : writingContract.trace.status === 'error' ? 'error' : 'ok',
