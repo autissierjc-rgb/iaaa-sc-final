@@ -246,12 +246,15 @@ function reconcileTreatmentPlanWithProvidedMaterial({
 function buildGrammar(input: {
   interpretation: InterpretationContract
   audienceFamilies: string[]
+  extractedOptions: string[]
 }): DiamondDossierGrammar {
   const treatmentPlan = input.interpretation.treatment_plan
   const targetChoice = treatmentPlan?.trace_notes?.includes('target_choice_with_material')
-  const familyLine = input.audienceFamilies.length > 0
-    ? `Comparer les familles visibles comme options reelles : ${input.audienceFamilies.join(' ; ')}.`
-    : 'Si les options ne sont pas etablies, le dire sans inventer de segments.'
+  const optionLine = input.extractedOptions.length > 0
+    ? `Comparer les options qualifiees extraites des ressources : ${input.extractedOptions.join(' ; ')}. Ne pas dire que les options, publics ou segments manquent tant que cette liste existe ; qualifier seulement leur statut de preuve.`
+    : input.audienceFamilies.length > 0
+      ? `Comparer les familles visibles comme options reelles : ${input.audienceFamilies.join(' ; ')}.`
+      : 'Si les options ne sont pas etablies, le dire sans inventer de segments.'
 
   return {
     required_public_moves_fr: [
@@ -260,7 +263,7 @@ function buildGrammar(input: {
       'Afficher trois trajectoires distinctes : stabilisation, escalade, changement de regime.',
       'Donner un signal cle observable et surveillable.',
       'Rendre visibles les probabilites ou statuts d assertion quand les preuves manquent.',
-      targetChoice ? familyLine : 'Relier la lecture a l intention canonique plutot qu a une categorie generique.',
+      targetChoice ? optionLine : 'Relier la lecture a l intention canonique plutot qu a une categorie generique.',
     ],
     forbidden_drifts_fr: [
       'Ne pas reinterpreter la demande apres InterpretationService.',
@@ -268,6 +271,9 @@ function buildGrammar(input: {
       'Ne pas coller des ressources brutes, liens, images ou listes techniques dans le public.',
       'Ne pas afficher les grilles internes, auteurs, labels de pattern ou explications de methode.',
       'Ne pas produire une notice defensive a la place d une lecture diamant.',
+      ...(input.extractedOptions.length > 0
+        ? ['Ne pas dire que les options, publics ou segments manquent quand resources.extracted_options contient des options qualifiees.']
+        : []),
       ...(treatmentPlan?.must_not_reinterpret_fr ?? []),
     ],
     calibration_questions_fr: [
@@ -440,6 +446,7 @@ export async function buildDiamondDossier(input: DiamondDossierInput): Promise<D
   const grammar = buildGrammar({
     interpretation: interpretationWithMaterialSignals,
     audienceFamilies: audienceFamilies.map((family) => `${family.label_fr} / ${family.offer_hint_fr}`),
+    extractedOptions: (resources.extracted_options ?? []).map((option) => option.label_fr).slice(0, 6),
   })
   const status = statusFor({
     securityRisk: security.risk_level,
@@ -494,6 +501,7 @@ export async function buildDiamondDossier(input: DiamondDossierInput): Promise<D
         `urls=${urls.length}`,
         `fast_resources=${fastRun.resources.length}`,
         `target_audience_families=${audienceFamilies.length}`,
+        `extracted_options=${resources.extracted_options?.length ?? 0}`,
       ],
     },
   }

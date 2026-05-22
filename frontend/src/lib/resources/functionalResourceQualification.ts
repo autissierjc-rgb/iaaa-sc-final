@@ -1,5 +1,12 @@
 import type { DumezilFunction } from '../patterns/humanCollective'
+import type {
+  ExtractedResourceOption,
+  ExtractedResourceOptionKind,
+  ExtractedResourceOptionStatus,
+} from '../contracts/resources'
+
 type QualifiableResourceItem = {
+  id?: string
   title?: string
   excerpt?: string
   type?: string
@@ -291,4 +298,76 @@ export function extractTargetAudienceFamiliesFromResources(resources: Qualifiabl
     families.get('professional_sis'),
     families.get('organization_governance'),
   ].filter((item): item is TargetAudienceFamily => Boolean(item))
+}
+
+function optionKindFromFact(kind: QualifiedResourceKind): ExtractedResourceOptionKind {
+  if (kind === 'audience') return 'user_segment'
+  if (kind === 'use_case') return 'use_case'
+  if (kind === 'offer') return 'offer'
+  if (kind === 'proof') return 'proof_signal'
+  return 'unknown'
+}
+
+function optionStatusFromFact(fact: QualifiedResourceFact): ExtractedResourceOptionStatus {
+  if (fact.usable_for_target_choice && fact.source_title) return 'established'
+  if (fact.source_title) return 'plausible'
+  return 'hypothesis'
+}
+
+function optionId(prefix: string, value: string, index: number): string {
+  const slug = normalize(value)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64)
+  return `${prefix}-${slug || index}`
+}
+
+export function extractQualifiedOptionsFromResources(resources: QualifiableResourceItem[]): ExtractedResourceOption[] {
+  const options: ExtractedResourceOption[] = []
+  const seen = new Set<string>()
+
+  for (const family of extractTargetAudienceFamiliesFromResources(resources)) {
+    const label = `${family.label_fr} / ${family.offer_hint_fr} : ${family.audience_fr}`
+    const key = `audience_family:${normalize(label)}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    options.push({
+      id: family.id,
+      label_fr: label,
+      kind: 'audience_family',
+      status: 'established',
+      source_type: 'resource',
+      source_title: family.source_terms_fr[0],
+      evidence_fr: family.source_terms_fr.slice(0, 4),
+    })
+  }
+
+  const facts = qualifyResourceFacts(resources)
+    .filter((fact) =>
+      fact.kind !== 'navigation_label' &&
+      fact.kind !== 'source_title' &&
+      fact.kind !== 'constraint' &&
+      fact.kind !== 'unknown' &&
+      cleanCandidate(fact.text).length > 0,
+    )
+
+  for (const [index, fact] of facts.entries()) {
+    const kind = optionKindFromFact(fact.kind)
+    if (kind === 'unknown') continue
+    const label = cleanCandidate(fact.text)
+    const key = `${kind}:${normalize(label)}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    options.push({
+      id: optionId(kind, label, index),
+      label_fr: label,
+      kind,
+      status: optionStatusFromFact(fact),
+      source_type: 'resource',
+      source_title: fact.source_title,
+      evidence_fr: fact.source_title ? [fact.source_title] : [],
+    })
+  }
+
+  return options.slice(0, 12)
 }

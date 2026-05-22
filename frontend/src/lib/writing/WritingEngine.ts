@@ -346,6 +346,36 @@ function targetAudienceFamiliesFromResourceContract(resources?: ResourceServiceC
     }))
 }
 
+function targetOptionsFromResourceContract(resources?: ResourceServiceContract): {
+  label: string
+  compact: string
+  detail: string
+}[] {
+  if (!resources) return []
+  return (resources.extracted_options ?? [])
+    .filter((option) =>
+      option.kind === 'audience_family' ||
+      option.kind === 'user_segment' ||
+      option.kind === 'strategic_option' ||
+      option.kind === 'offer' ||
+      option.kind === 'use_case',
+    )
+    .map((option) => {
+      const prefix = option.status === 'established'
+        ? ''
+        : option.status === 'plausible'
+          ? 'à qualifier - '
+          : 'hypothèse - '
+      return {
+        label: option.label_fr,
+        compact: option.label_fr.split(':')[0]?.trim() || option.label_fr,
+        detail: `${prefix}${option.label_fr}`,
+      }
+    })
+    .filter((option) => option.label && !isNavigationAudienceCandidate(option.label))
+    .slice(0, 6)
+}
+
 function trajectorySpine(trajectories: WritingContract['trajectories']): string {
   const stabilization = trajectories.find((trajectory) => trajectory.type === 'stabilization')
   const escalation = trajectories.find((trajectory) => trajectory.type === 'escalation')
@@ -400,14 +430,19 @@ function canonicalApprofondirSections(input: {
 function composeTargetChoiceWriting(input: WritingEngineInput, started: number): WritingContract {
   const subject = input.interpretation.situation_soumise || input.interpretation.object_of_analysis || 'le choix de cible utilisateur'
   const audienceFamilies = targetAudienceFamiliesFromResourceContract(input.resources)
+  const extractedOptions = targetOptionsFromResourceContract(input.resources)
   const rawSegments = targetAudiencesFromResourceContract(input.resources)
   const segments = audienceFamilies.length >= 2
     ? audienceFamilies.map((family) => family.detail)
+    : extractedOptions.length >= 2
+      ? extractedOptions.map((option) => option.detail)
     : rawSegments
   const hasSegments = segments.length >= 2
   const segmentList = segments.join(' ; ')
   const compactSegmentList = audienceFamilies.length >= 2
     ? audienceFamilies.map((family) => family.label).join(' ; ')
+    : extractedOptions.length >= 2
+      ? extractedOptions.map((option) => option.compact).join(' ; ')
     : segmentList
   const decisionProof = 'usage répété, retour qualifié, recommandation, partage, demande d’intégration ou paiement'
   const title = input.interpretation.header_subject || 'choix de première cible'
@@ -523,7 +558,12 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       notes: [
         'target_choice_with_material',
         hasSegments ? 'resource_segments_used' : 'resource_segments_insufficient',
-        audienceFamilies.length >= 2 ? 'resource_audiences_normalized_as_functional_families' : 'resource_audiences_raw_fallback',
+        audienceFamilies.length >= 2
+          ? 'resource_audiences_normalized_as_functional_families'
+          : extractedOptions.length >= 2
+            ? 'resource_extracted_options_used'
+            : 'resource_audiences_raw_fallback',
+        `extracted_options=${input.resources?.extracted_options?.length ?? 0}`,
       ],
     },
   }

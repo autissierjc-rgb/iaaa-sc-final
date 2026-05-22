@@ -47,6 +47,15 @@ function resourceSummary(dossier: DiamondDossier) {
       audience_fr: family.audience_fr,
       source_terms_fr: list(family.source_terms_fr, 5),
     })),
+    extracted_options: (dossier.resources.plan.extracted_options ?? []).slice(0, 10).map((option) => ({
+      id: option.id,
+      label_fr: option.label_fr,
+      kind: option.kind,
+      status: option.status,
+      source_type: option.source_type,
+      source_title: option.source_title,
+      evidence_fr: list(option.evidence_fr, 4),
+    })),
     public_evidence: dossier.resources.public_evidence.map((evidence) => ({
       status: evidence.status,
       public_label_fr: evidence.public_label_fr,

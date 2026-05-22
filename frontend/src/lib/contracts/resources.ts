@@ -49,6 +49,35 @@ export type ResourceContract = {
   reliability?: 'primary' | 'secondary' | 'signal' | 'unknown'
 }
 
+export type ExtractedResourceOptionKind =
+  | 'audience_family'
+  | 'user_segment'
+  | 'strategic_option'
+  | 'offer'
+  | 'use_case'
+  | 'proof_signal'
+  | 'unknown'
+
+export type ExtractedResourceOptionStatus = 'established' | 'plausible' | 'hypothesis'
+
+export type ExtractedResourceOptionSourceType =
+  | 'url'
+  | 'document'
+  | 'private_plug'
+  | 'manual_text'
+  | 'resource'
+
+export type ExtractedResourceOption = {
+  id: string
+  label_fr: string
+  kind: ExtractedResourceOptionKind
+  status: ExtractedResourceOptionStatus
+  source_type: ExtractedResourceOptionSourceType
+  source_id?: string
+  source_title?: string
+  evidence_fr: string[]
+}
+
 export type ResourceServiceContract = {
   status: ResourceStatus
   policy: FastResourcePolicy
@@ -60,6 +89,7 @@ export type ResourceServiceContract = {
   fallback_searches: string[]
   resources: ResourceContract[]
   public_sources: ResourceContract[]
+  extracted_options: ExtractedResourceOption[]
   internal_notes: string[]
   trace: TraceMeta
 }

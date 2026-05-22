@@ -9,6 +9,7 @@ import type {
 } from '../contracts'
 import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { routeSourcesForDomain } from './SourceRouter'
+import { extractQualifiedOptionsFromResources } from './functionalResourceQualification'
 
 export type ResourceServiceInput = {
   interpretation: InterpretationContract
@@ -274,6 +275,9 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
   const fallbackSearches = urls.length > extractedUrls.length || decision.needs_web
     ? route.suggested_queries.slice(0, 4)
     : []
+  const publicSources = suppliedResources.filter((resource) => resource.reliability !== 'unknown')
+  const optionSources = publicSources.length > 0 ? publicSources : suppliedResources
+  const extractedOptions = extractQualifiedOptionsFromResources(optionSources)
 
   return {
     status: statusFor(urls, suppliedResources, decision),
@@ -285,7 +289,8 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
     extracted_urls: extractedUrls,
     fallback_searches: fallbackSearches,
     resources: suppliedResources,
-    public_sources: suppliedResources.filter((resource) => resource.reliability !== 'unknown'),
+    public_sources: publicSources,
+    extracted_options: extractedOptions,
     internal_notes: [
       ...route.notes,
       urls.length > 0
@@ -295,6 +300,7 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
           : 'No URL detected: internal context is acceptable for fast SC.',
       `resource_policy=${decision.policy}`,
       `source_channels=${route.channels.join(',')}`,
+      `extracted_options=${extractedOptions.length}`,
     ],
     trace: {
       service: 'ResourceService',
@@ -304,6 +310,7 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
       notes: [
         `requested_urls=${urls.length}`,
         `resources=${suppliedResources.length}`,
+        `extracted_options=${extractedOptions.length}`,
         `fallback_searches=${fallbackSearches.length}`,
         `needs_web=${decision.needs_web}`,
       ],

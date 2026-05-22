@@ -4054,6 +4054,7 @@ export async function POST(req: NextRequest) {
         extracted_urls: initialResourcePlan.extracted_urls,
         fallback_searches: initialResourcePlan.fallback_searches,
         public_sources_count: initialResourcePlan.public_sources.length,
+        extracted_options_count: initialResourcePlan.extracted_options.length,
       },
     }
     const clarifyQuestions = selectClarifyingQuestions({
@@ -4481,6 +4482,7 @@ export async function POST(req: NextRequest) {
         fallback_searches: [],
         resources: [],
         public_sources: [],
+        extracted_options: [],
         policy_reason_fr:
           'Carte exploratoire demandee sans matiere source : SC ne lance pas de recherche rapide et ne transforme pas une source absente en preuve.',
         internal_notes: [
