@@ -535,14 +535,27 @@ function canonicalApprofondirSections(input: {
   shifts: string
   watch: string
 }): WritingContract['approfondir']['sections_fr'] {
+  const section = (id: string, title: string, body: string) => ({
+    id,
+    title,
+    body: stripRepeatedSectionTitle(title, body),
+  })
   return [
-    { id: 'situation-reelle', title: APPROFONDIR_CANONICAL_TITLES_FR.really, body: input.really },
-    { id: 'systeme-tient', title: APPROFONDIR_CANONICAL_TITLES_FR.holds, body: input.holds },
-    { id: 'systeme-affaiblit', title: APPROFONDIR_CANONICAL_TITLES_FR.weakens, body: input.weakens },
-    { id: 'escalade', title: APPROFONDIR_CANONICAL_TITLES_FR.escalates, body: input.escalates },
-    { id: 'bascule', title: APPROFONDIR_CANONICAL_TITLES_FR.shifts, body: input.shifts },
-    { id: 'surveiller', title: APPROFONDIR_CANONICAL_TITLES_FR.watch, body: input.watch },
+    section('situation-reelle', APPROFONDIR_CANONICAL_TITLES_FR.really, input.really),
+    section('systeme-tient', APPROFONDIR_CANONICAL_TITLES_FR.holds, input.holds),
+    section('systeme-affaiblit', APPROFONDIR_CANONICAL_TITLES_FR.weakens, input.weakens),
+    section('escalade', APPROFONDIR_CANONICAL_TITLES_FR.escalates, input.escalates),
+    section('bascule', APPROFONDIR_CANONICAL_TITLES_FR.shifts, input.shifts),
+    section('surveiller', APPROFONDIR_CANONICAL_TITLES_FR.watch, input.watch),
   ]
+}
+
+function stripRepeatedSectionTitle(title: string, body: string): string {
+  const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return body
+    .replace(new RegExp(`^\\s*${escaped}\\s*[:\\-.–—]?\\s*`, 'i'), '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function composeTargetChoiceWriting(input: WritingEngineInput, started: number): WritingContract {
@@ -593,7 +606,7 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
     ? `Signal clé : vérifier si ${priority.label} passe en moins de quelques cycles de l’intérêt à ${decisionProof}.`
     : 'Signal clé : obtenir une liste explicite de publics, d’usages ou d’offres, puis observer lequel produit un premier usage répété.'
   const lecture = hasSegments
-    ? `${subject} ne demande pas de décrire le site ni de juger une entreprise en général. La question utile est de classer les familles d’usage visibles dans la matière fournie : ${segmentList}.\n\nClassement provisoire : ${rankingSentence(rankedOptions)}.\n\nLa recommandation est donc de partir par ${priority.label}, non parce que cette cible serait définitivement la plus grande, mais parce qu’elle peut produire le signal le plus net : ${priority.test_fr}. ${secondary ? `${secondary.label} sert ensuite à tester l’activation, le langage utilisateur et la distribution.` : ''} ${deferred ? `${deferred.label} doit attendre une preuve de confiance, d’intégration ou de paiement avant de devenir le coeur du lancement.` : ''}`
+    ? `Le choix se joue entre trois familles d’usage visibles dans la matière fournie : ${segmentList}.\n\nClassement provisoire : ${rankingSentence(rankedOptions)}.\n\nLa recommandation est donc de partir par ${priority.label}, non parce que cette cible serait définitivement la plus grande, mais parce qu’elle peut produire le signal le plus net : ${priority.test_fr}. ${secondary ? `${secondary.label} sert ensuite à tester l’activation, le langage utilisateur et la distribution.` : ''} ${deferred ? `${deferred.label} doit attendre une preuve de confiance, d’intégration ou de paiement avant de devenir le coeur du lancement.` : ''}`
     : `${subject} ne doit pas être remplacé par une analyse générale de site. La bonne sortie est provisoire : la matière fournie ne nomme pas encore assez de publics exploitables pour comparer des options réelles.\n\nLa prochaine preuve utile est simple : publics visés, cas d’usage, offre associée et signal attendu pour chaque public. Une fois ces éléments présents, SC peut arbitrer sans inventer les segments.`
   const approfondir = hasSegments
     ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${compactSegmentList} ne donnent pas la même preuve : ${priority.label} doit prouver l’usage et la valeur, ${secondary?.label ?? 'la cible suivante'} peut élargir l’apprentissage, et ${deferred?.label ?? 'la dernière cible'} ne doit monter que si le coût de vente ou d’intégration devient justifié.`
@@ -1155,12 +1168,12 @@ async function composeWithOpenAI(input: WritingEngineInput, local: WritingContra
       approfondir: {
         analysis_fr: approfondirText,
         sections_fr: [
-          { id: 'situation-reelle', title: APPROFONDIR_CANONICAL_TITLES_FR.really, body: stringField(parsed.fond_fr, local.approfondir.sections_fr[0]?.body ?? '') },
-          { id: 'systeme-tient', title: APPROFONDIR_CANONICAL_TITLES_FR.holds, body: local.approfondir.sections_fr[1]?.body ?? diamondText },
-          { id: 'systeme-affaiblit', title: APPROFONDIR_CANONICAL_TITLES_FR.weakens, body: stringField(parsed.angles_morts_fr, local.approfondir.sections_fr[2]?.body ?? '') },
-          { id: 'escalade', title: APPROFONDIR_CANONICAL_TITLES_FR.escalates, body: local.approfondir.sections_fr[3]?.body ?? '' },
-          { id: 'bascule', title: APPROFONDIR_CANONICAL_TITLES_FR.shifts, body: local.approfondir.sections_fr[4]?.body ?? stringField(parsed.forme_fr, diamondText) },
-          { id: 'surveiller', title: APPROFONDIR_CANONICAL_TITLES_FR.watch, body: stringField(parsed.probabilites_fr, local.approfondir.sections_fr[5]?.body ?? '') },
+          { id: 'situation-reelle', title: APPROFONDIR_CANONICAL_TITLES_FR.really, body: stripRepeatedSectionTitle(APPROFONDIR_CANONICAL_TITLES_FR.really, stringField(parsed.fond_fr, local.approfondir.sections_fr[0]?.body ?? '')) },
+          { id: 'systeme-tient', title: APPROFONDIR_CANONICAL_TITLES_FR.holds, body: stripRepeatedSectionTitle(APPROFONDIR_CANONICAL_TITLES_FR.holds, local.approfondir.sections_fr[1]?.body ?? diamondText) },
+          { id: 'systeme-affaiblit', title: APPROFONDIR_CANONICAL_TITLES_FR.weakens, body: stripRepeatedSectionTitle(APPROFONDIR_CANONICAL_TITLES_FR.weakens, stringField(parsed.angles_morts_fr, local.approfondir.sections_fr[2]?.body ?? '')) },
+          { id: 'escalade', title: APPROFONDIR_CANONICAL_TITLES_FR.escalates, body: stripRepeatedSectionTitle(APPROFONDIR_CANONICAL_TITLES_FR.escalates, local.approfondir.sections_fr[3]?.body ?? '') },
+          { id: 'bascule', title: APPROFONDIR_CANONICAL_TITLES_FR.shifts, body: stripRepeatedSectionTitle(APPROFONDIR_CANONICAL_TITLES_FR.shifts, local.approfondir.sections_fr[4]?.body ?? stringField(parsed.forme_fr, diamondText)) },
+          { id: 'surveiller', title: APPROFONDIR_CANONICAL_TITLES_FR.watch, body: stripRepeatedSectionTitle(APPROFONDIR_CANONICAL_TITLES_FR.watch, stringField(parsed.probabilites_fr, local.approfondir.sections_fr[5]?.body ?? '')) },
           ...local.approfondir.sections_fr.filter((section) => section.id === 'sources-rapides'),
         ],
       },

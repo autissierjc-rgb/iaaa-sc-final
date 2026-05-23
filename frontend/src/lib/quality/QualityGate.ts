@@ -139,6 +139,14 @@ const GLUED_TRAJECTORY_PATTERNS = [
   /Signal\s*:\s*[^.?!\n]{20,}\s+Bascule\s*:/i,
 ]
 
+const DEFENSIVE_PUBLIC_OPENING_PATTERNS = [
+  /\bne demande pas de\b/i,
+  /\bla question utile est\b/i,
+  /\bil ne s['’]agit pas de\b/i,
+  /\bla bonne sortie est\b/i,
+  /\bne doit pas être remplacé par\b/i,
+]
+
 function countPublicUrls(value: string): number {
   return value.match(/https?:\/\//gi)?.length ?? 0
 }
@@ -224,6 +232,12 @@ function normalize(value: string): string {
     .toLowerCase()
 }
 
+function bodyRepeatsTitle(title: string, body: string): boolean {
+  const titleKey = normalize(title).replace(/[^a-z0-9]+/g, ' ').trim()
+  const bodyStart = normalize(body).replace(/[^a-z0-9]+/g, ' ').trim().slice(0, titleKey.length + 8)
+  return Boolean(titleKey && bodyStart.startsWith(titleKey))
+}
+
 function meaningfulTheatreAnchors(theatre: ConcreteTheatreContract): string[] {
   return Array.from(new Set([
     ...(theatre.named_actors ?? []),
@@ -293,6 +307,13 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const noisyResourcePattern = PUBLIC_RESOURCE_NOISE_PATTERNS.find((pattern) => pattern.test(text))
   const internalWritingPattern = PUBLIC_INTERNAL_WRITING_PATTERNS.find((pattern) => pattern.test(text))
   const gluedTrajectoryPattern = GLUED_TRAJECTORY_PATTERNS.find((pattern) => pattern.test(text))
+  const defensiveOpeningPattern = DEFENSIVE_PUBLIC_OPENING_PATTERNS.find((pattern) =>
+    pattern.test(input.writing.lecture.text_fr.slice(0, 320)) ||
+    pattern.test(input.writing.situation_card.insight_fr.slice(0, 320)),
+  )
+  const repeatedSection = input.writing.approfondir.sections_fr.find((section) =>
+    bodyRepeatsTitle(section.title, section.body),
+  )
 
   if (hasRepeatedSubmittedSentence(input.writing.situation_card.submitted_situation_fr)) {
     issues.push(issue(
@@ -327,6 +348,24 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       'PUBLIC_TRAJECTORIES_GLUED',
       `Trajectory signals are glued together in public narrative: ${gluedTrajectoryPattern.source}.`,
       'writing.trajectories',
+    ))
+  }
+
+  if (defensiveOpeningPattern) {
+    issues.push(issue(
+      'error',
+      'DEFENSIVE_PUBLIC_OPENING',
+      `Public writing starts by explaining what it is not doing instead of entering the situation: ${defensiveOpeningPattern.source}.`,
+      'writing.lecture',
+    ))
+  }
+
+  if (repeatedSection) {
+    issues.push(issue(
+      'error',
+      'APPROFONDIR_SECTION_REPEATS_TITLE',
+      `Approfondir section body repeats its title: ${repeatedSection.title}.`,
+      'writing.approfondir.sections_fr',
     ))
   }
 
