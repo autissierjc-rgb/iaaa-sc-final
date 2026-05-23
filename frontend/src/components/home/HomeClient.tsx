@@ -24,6 +24,11 @@ const IAAA_LOGO_SRC = '/pictos/logo-iaaa.jpg'
 const LAST_SC_STORAGE_KEY = 'iaaa:last-situation-card:v1'
 const LAST_SC_STORAGE_VERSION = 8
 
+type DeepSection = {
+  heading: string
+  body: string
+}
+
 function isPersistableSituationCard(sc: Record<string, any> | null | undefined): sc is Record<string, any> {
   if (!sc || typeof sc !== 'object') return false
   const status = String(sc.generation_status ?? 'ok')
@@ -1041,8 +1046,8 @@ function SituationCardPanel({ sc, lang, onExpand }: {
     )
   }
 
-  function getDeepSections(text: string) {
-    const headings = lang === 'FR'
+  function deepHeadings() {
+    return lang === 'FR'
       ? [
           'Ce que la situation est réellement',
           'Ce qui tient le système',
@@ -1059,6 +1064,67 @@ function SituationCardPanel({ sc, lang, onExpand }: {
           'What could produce a shift',
           'What to watch now',
         ]
+  }
+
+  function stripSectionHeadingFromBody(heading: string, body: string) {
+    const normalizedHeading = heading
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[’']/g, "'")
+      .toLowerCase()
+      .trim()
+    let cleaned = body.trim()
+    for (let i = 0; i < 2; i += 1) {
+      const normalizedBodyStart = cleaned
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[’']/g, "'")
+        .toLowerCase()
+        .trimStart()
+      if (!normalizedBodyStart.startsWith(normalizedHeading)) break
+      cleaned = cleaned.slice(cleaned.trimStart().slice(0, heading.length).length).replace(/^\s*[:.\-–—]?\s*/u, '').trim()
+    }
+    return cleaned
+  }
+
+  function cleanDeepSection(section: { heading?: unknown; title?: unknown; body?: unknown }): DeepSection | null {
+    const heading = String(section.heading ?? section.title ?? '').trim()
+    const body = String(section.body ?? '').trim()
+    if (!heading || !body) return null
+    return {
+      heading,
+      body: stripSectionHeadingFromBody(heading, cleanUiText(body)),
+    }
+  }
+
+  function structuredDeepSections(): DeepSection[] {
+    const contractSections: Array<{ heading?: unknown; title?: unknown; body?: unknown }> = Array.isArray(sc.writing_contract?.approfondir?.sections_fr)
+      ? sc.writing_contract.approfondir.sections_fr
+      : []
+    return contractSections
+      .map(cleanDeepSection)
+      .filter((section: DeepSection | null): section is DeepSection => Boolean(section?.body))
+  }
+
+  function deepSectionParagraphs(body: string): string[] {
+    const sentenceSpaced = body
+      .replace(/\s+(Stabilisation|Escalade|Bascule|Hypothèse à tester|Statut de preuve)\s*:/g, '\n\n$1 :')
+      .replace(/\s+(Signal(?: clé| à surveiller)?|La lecture changerait)\s*:/g, '\n\n$1 :')
+    return sentenceSpaced
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean)
+  }
+
+  function getPanelDeepSections(): DeepSection[] {
+    const structured = structuredDeepSections()
+    if (structured.length > 0 && !deepReading) return structured
+    if (structured.length > 0 && panelDeepReading === embeddedDeepReading) return structured
+    return getDeepSections(panelDeepReading)
+  }
+
+  function getDeepSections(text: string): DeepSection[] {
+    const headings = deepHeadings()
     const canonicalSectionHeadings = [
       'Familles d’usage',
       'Segments',
@@ -1085,7 +1151,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
     if (paragraphs.length === 0) return []
 
     const normalizedHeadings = allHeadings.map((heading) => heading.toLowerCase())
-    const parsedSections: Array<{ heading: string; body: string }> = []
+    const parsedSections: DeepSection[] = []
     let current: { heading: string; body: string[] } | null = null
 
     for (const paragraph of paragraphs) {
@@ -1620,13 +1686,17 @@ function SituationCardPanel({ sc, lang, onExpand }: {
                 <div style={{ fontSize: 11, color: '#A32D2D' }}>{deepError}</div>
               ) : (
                 <>
-                  {getDeepSections(panelDeepReading).map((section) => (
+                  {getPanelDeepSections().map((section) => (
                     <div key={section.heading} style={{ marginBottom: 12 }}>
                       <div style={{ fontSize: 14, color: GOLD, letterSpacing: '.04em', fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, marginBottom: 5 }}>
                         {section.heading}
                       </div>
-                      <div style={{ fontSize: 16, color: TXT, fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.75, whiteSpace: 'pre-line' }}>
-                        {section.body}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 9, fontSize: 16, color: TXT, fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.75 }}>
+                        {deepSectionParagraphs(section.body).map((paragraph, index) => (
+                          <p key={index} style={{ margin: 0 }}>
+                            {paragraph}
+                          </p>
+                        ))}
                       </div>
                     </div>
                   ))}
