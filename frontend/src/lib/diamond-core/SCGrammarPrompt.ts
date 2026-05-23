@@ -224,8 +224,10 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
         : []),
       'trajectories must include exactly one stabilization, one escalation and one regime_shift.',
       'lecture.text_fr should be substantial enough to stand alone.',
-      'approfondir.sections_fr must explain what holds, weakens, escalates, shifts and what to watch.',
-      'probability_assessments must separate established/probable/plausible/hypothesis/unknown.',
+      'approfondir.sections_fr must be the long form that demonstrates: what is established, what is probable, what remains plausible, what is only a hypothesis, and what is unknown.',
+      'approfondir.sections_fr must explain what holds, weakens, escalates, shifts and what to watch without starting a section body by repeating its title.',
+      'probability_assessments must separate established/probable/plausible/hypothesis/unknown and name the proof that would change the status.',
+      'The probability status must shape Approfondir trajectories and watch signals; do not append it as a defensive final disclaimer.',
       'trace.service must be LLMDiamondWriter and trace.status must be ok or partial.',
     ]),
   ].join('\n\n')

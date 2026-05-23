@@ -472,6 +472,11 @@ function trajectorySpine(trajectories: WritingContract['trajectories']): string 
 }
 
 function probabilitySpine(probability: ProbabilityAssessment): string {
+  const label = probabilityLabelFr(probability)
+  return `${label} : ${polishPublicProofText(probability.claim_fr)} ${probabilityChangeSentence(probability)}`
+}
+
+function probabilityLabelFr(probability: ProbabilityAssessment): string {
   const labelByStatus: Record<ProbabilityAssessment['status'], string> = {
     established: 'Établi',
     probable: 'Probable',
@@ -479,11 +484,17 @@ function probabilitySpine(probability: ProbabilityAssessment): string {
     hypothesis: 'Hypothèse à tester',
     unknown: 'Inconnu',
   }
-  const label = labelByStatus[probability.status] ?? probability.probability_label_fr
-  const missing = probability.missing_proof_fr
+  return labelByStatus[probability.status] ?? probability.probability_label_fr
+}
+
+function probabilityChangeSentence(probability: ProbabilityAssessment): string {
+  return probability.missing_proof_fr
     ? `La lecture changerait si l’on observe ${formatMissingProofForPublic(probability.missing_proof_fr)}.`
     : 'Ce statut doit rester révisable si une preuve directe ou une contre-preuve apparaît.'
-  return `${label} : ${polishPublicProofText(probability.claim_fr)} ${missing}`
+}
+
+function probabilityDemonstrationSentence(probability: ProbabilityAssessment): string {
+  return `Statut de preuve : ${probabilityLabelFr(probability).toLowerCase()}. ${polishPublicProofText(probability.claim_fr)} ${probabilityChangeSentence(probability)}`
 }
 
 function formatMissingProofForPublic(value: string): string {
@@ -639,6 +650,8 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
   ]
   const trajectoryText = trajectorySpine(trajectories)
   const probabilityText = probabilitySpine(probability)
+  const probabilityDemonstration = probabilityDemonstrationSentence(probability)
+  const probabilityChange = probabilityChangeSentence(probability)
 
   return {
     substance_form: {
@@ -683,17 +696,17 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       analysis_fr: '',
       sections_fr: canonicalApprofondirSections({
         really: hasSegments
-          ? `${approfondir} Le classement de départ est : ${rankingSentence(rankedOptions)}. Ce classement reste provisoire, mais il donne un ordre d’action au lieu d’une simple typologie.`
+          ? `${approfondir} ${probabilityDemonstration} Le classement de départ est : ${rankingSentence(rankedOptions)}. Ce classement reste provisoire, mais il donne un ordre d’action au lieu d’une simple typologie.`
           : `${approfondir} La décision reste utile, mais elle doit d’abord faire apparaître des publics, des usages et des preuves vérifiables.`,
         holds: hasSegments
-          ? `Ce qui tient encore le système, c’est que la même promesse peut être testée à trois vitesses. ${priority.label} doit produire la preuve d’usage, ${secondary?.label ?? 'la seconde cible'} peut produire le vocabulaire et la distribution, ${deferred?.label ?? 'la troisième'} peut produire de la crédibilité plus tard.`
+          ? `La solidité actuelle vient du fait que la même promesse peut être testée à trois vitesses. ${priority.label} doit produire la preuve d’usage, ${secondary?.label ?? 'la seconde cible'} peut produire le vocabulaire et la distribution, ${deferred?.label ?? 'la troisième'} peut produire de la crédibilité plus tard.`
           : 'Ce qui tient encore, c’est la possibilité de transformer la vitrine produit en hypothèses de marché testables : public visé, cas d’usage, offre associée et signal attendu.',
         weakens: hasSegments
-          ? `Ce qui l’affaiblit, c’est une mauvaise séquence : viser trop vite ${deferred?.label ?? 'la cible la plus lourde'} peut allonger le cycle, viser seulement ${secondary?.label ?? 'une cible d’apprentissage'} peut donner de l’attention sans traction, et ne pas tester ${priority.label} peut retarder la preuve commerciale.`
+          ? `La fragilité vient d’une mauvaise séquence : viser trop vite ${deferred?.label ?? 'la cible la plus lourde'} peut allonger le cycle, viser seulement ${secondary?.label ?? 'une cible d’apprentissage'} peut donner de l’attention sans traction, et ne pas tester ${priority.label} peut retarder la preuve commerciale.`
           : 'Ce qui l’affaiblit, c’est l’absence de segments suffisamment établis : sans public nommé et sans preuve attendue, le choix risque de redevenir une préférence intuitive.',
-        escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Le signal d’alerte serait ${trajectories[1].signal_fr}`,
-        shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} La bascule devient crédible si ${trajectories[2].signal_fr}`,
-        watch: `${keySignal} ${probabilityText}`,
+        escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Le signal d’alerte serait ${trajectories[1].signal_fr} Dans ce scénario, le classement reste seulement ${probabilityLabelFr(probability).toLowerCase()} si aucun usage mesurable ne durcit la preuve.`,
+        shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} La bascule devient crédible si ${trajectories[2].signal_fr} ${probabilityChange}`,
+        watch: `${keySignal} ${probabilityChange}`,
       }),
     },
     public_warnings: hasSegments ? [] : ['Carte provisoire : les segments de cible ne sont pas encore assez établis dans la matière fournie.'],
@@ -928,6 +941,8 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   ]
   const trajectoryText = trajectorySpine(trajectories)
   const probabilityText = probabilitySpine(probability)
+  const probabilityDemonstration = probabilityDemonstrationSentence(probability)
+  const probabilityChange = probabilityChangeSentence(probability)
   const lecture = [
     grammar.lectureEntry(subject, institutions),
     `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
@@ -1000,12 +1015,12 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       analysis_fr: approfondirAnalysis,
       sections_fr: [
         ...canonicalApprofondirSections({
-          really: `La question porte sur une transformation : ce qui est dit ou redoute peut-il devenir une action reconnue par ${institutions} ? Les acteurs a suivre sont ${actors}.`,
+          really: `La question porte sur une transformation : ce qui est dit ou redoute peut-il devenir une action reconnue par ${institutions} ? Les acteurs a suivre sont ${actors}. ${probabilityDemonstration}`,
           holds: grammar.supportSentence(actors, institutions),
           weakens: `Ce qui affaiblit la situation, c’est le point aveugle ${blindSpot} : tant qu’il n’est pas relié à ${evidence}, la lecture reste vulnérable.`,
-          escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr}`,
-          shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr}`,
-          watch: `${keySignal} ${probabilityText} A verifier : ${blindSpot}.`,
+          escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
+          shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr} ${probabilityChange}`,
+          watch: `${keySignal} ${probabilityChange} A verifier : ${blindSpot}.`,
         }),
         resourcesSection,
       ].filter((section): section is { id: string; title: string; body: string } => Boolean(section)),
@@ -1031,6 +1046,8 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
     '- produire un essai court, net, sans notice, sans logico visible, sans jargon interne ;',
     '- separer Situation Card courte, Lecture et Approfondir ;',
     '- nommer la vulnerabilite centrale, le signal observable, les probabilites si la preuve manque ;',
+    '- dans Approfondir, utiliser le statut probabiliste comme structure de demonstration : ce qui est etabli, probable, plausible, hypothese ou inconnu, puis la preuve qui ferait changer le statut ;',
+    '- ne pas ajouter les probabilites comme appendice defensif : elles doivent modifier la lecture des trajectoires, de la bascule et du signal a surveiller ;',
     '- ne jamais transformer une hypothese en certitude.',
     '- ne pas recopier le brouillon local : il sert seulement de garde-fou contractuel, pas de style public.',
     '- pour les situations humaines, collectives et organisationnelles, utiliser les patterns comme lentilles, jamais comme conclusions ;',
