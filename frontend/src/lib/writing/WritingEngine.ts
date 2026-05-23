@@ -146,8 +146,8 @@ function probabilityFromTheatre(theatre: ConcreteTheatreContract): ProbabilityAs
 
   return {
     claim_fr: hasEvidence
-      ? 'La lecture dispose de premiers appuis, mais leur portee doit rester qualifiee.'
-      : 'La lecture reste une hypothese de travail tant que les preuves centrales manquent.',
+      ? 'La lecture dispose de premiers appuis, mais leur portée doit rester qualifiée.'
+      : 'La lecture reste une hypothèse de travail tant que les preuves centrales manquent.',
     status,
     probability_label_fr: ASSERTION_LABELS_FR[status],
     confidence: hasEvidence ? 0.62 : 0.42,
@@ -157,7 +157,7 @@ function probabilityFromTheatre(theatre: ConcreteTheatreContract): ProbabilityAs
       source_ids: item.source_ids,
     })),
     missing_proof_fr: hasMissing
-      ? `Preuve ou ancre manquante : ${theatre.missing_anchors.slice(0, 3).join(', ')}.`
+      ? theatre.missing_anchors.slice(0, 3).join(', ')
       : undefined,
   }
 }
@@ -193,7 +193,7 @@ function probabilityFromResources(resources?: ResourceServiceContract): Probabil
   const proof = resourceProofLabel(resources)
   const publicEvidence = publicProbativeEvidence(resources)
   return {
-    claim_fr: 'Les sources rapides donnent un premier appui factuel, mais leur portee doit rester qualifiee tant qu elles ne sont pas confrontees par Recherche+.',
+    claim_fr: 'Les sources rapides donnent un premier appui factuel, mais leur portée doit rester qualifiée tant qu’elles ne sont pas confrontées par Recherche+.',
     status: 'plausible',
     probability_label_fr: ASSERTION_LABELS_FR.plausible,
     confidence: resources.public_sources.length >= 2 ? 0.66 : 0.58,
@@ -203,8 +203,8 @@ function probabilityFromResources(resources?: ResourceServiceContract): Probabil
       source_ids: evidence.source_id ? [evidence.source_id] : [],
     })),
     missing_proof_fr: proof
-      ? `Preuve decisive encore a confronter : ${proof}.`
-      : 'Preuve decisive encore a confronter par Recherche+.',
+      ? `preuve décisive encore à confronter : ${proof}.`
+      : 'preuve décisive encore à confronter par Recherche+.',
   }
 }
 
@@ -462,12 +462,13 @@ function trajectorySpine(trajectories: WritingContract['trajectories']): string 
   const stabilization = trajectories.find((trajectory) => trajectory.type === 'stabilization')
   const escalation = trajectories.find((trajectory) => trajectory.type === 'escalation')
   const regimeShift = trajectories.find((trajectory) => trajectory.type === 'regime_shift')
+  const sentence = (value: string): string => /[.!?]$/.test(value.trim()) ? value.trim() : `${value.trim()}.`
 
   return [
-    stabilization ? `Stabilisation : ${stabilization.description_fr} Signal : ${stabilization.signal_fr}` : '',
-    escalation ? `Escalade : ${escalation.description_fr} Signal : ${escalation.signal_fr}` : '',
-    regimeShift ? `Bascule : ${regimeShift.description_fr} Signal : ${regimeShift.signal_fr}` : '',
-  ].filter(Boolean).join(' ')
+    stabilization ? sentence(`Stabilisation : ${stabilization.description_fr} Signal : ${stabilization.signal_fr}`) : '',
+    escalation ? sentence(`Escalade : ${escalation.description_fr} Signal : ${escalation.signal_fr}`) : '',
+    regimeShift ? sentence(`Bascule : ${regimeShift.description_fr} Signal : ${regimeShift.signal_fr}`) : '',
+  ].filter(Boolean).join('\n')
 }
 
 function probabilitySpine(probability: ProbabilityAssessment): string {
@@ -480,16 +481,31 @@ function probabilitySpine(probability: ProbabilityAssessment): string {
   }
   const label = labelByStatus[probability.status] ?? probability.probability_label_fr
   const missing = probability.missing_proof_fr
-    ? `Ce qui ferait évoluer la lecture : ${polishPublicProofText(probability.missing_proof_fr)}`
+    ? `La lecture changerait si l’on observe ${formatMissingProofForPublic(probability.missing_proof_fr)}.`
     : 'Ce statut doit rester révisable si une preuve directe ou une contre-preuve apparaît.'
   return `${label} : ${polishPublicProofText(probability.claim_fr)} ${missing}`
+}
+
+function formatMissingProofForPublic(value: string): string {
+  return polishPublicProofText(value)
+    .replace(/^preuve ou ancre manquante\s*:\s*/i, '')
+    .replace(/^preuve décisive encore à confronter\s*:\s*/i, '')
+    .replace(/^preuve decisive encore a confronter\s*:\s*/i, '')
+    .replace(/^preuve décisive encore à confronter par Recherche\+\.$/i, 'une vérification Recherche+ ou une source contradictoire')
+    .replace(/^preuve decisive encore a confronter par Recherche\+\.$/i, 'une vérification Recherche+ ou une source contradictoire')
+    .replace(/\.$/, '')
+    .trim()
 }
 
 function polishPublicProofText(value: string): string {
   return value
     .replace(/\bHypothese\b/g, 'Hypothèse')
+    .replace(/\bhypothese\b/g, 'hypothèse')
     .replace(/\bportee\b/g, 'portée')
     .replace(/\bqualifiee\b/g, 'qualifiée')
+    .replace(/\bdecisive\b/g, 'décisive')
+    .replace(/\ba confronter\b/g, 'à confronter')
+    .replace(/\btant qu elles\b/g, 'tant qu’elles')
     .replace(/\betabli\b/g, 'établi')
     .replace(/\bvolonte\b/g, 'volonté')
     .replace(/\bdependance\b/g, 'dépendance')

@@ -126,6 +126,19 @@ const PUBLIC_RESOURCE_NOISE_PATTERNS = [
   /\.(?:avif|png|jpe?g|gif|webp|svg)(?:\)|\s|$)/i,
 ]
 
+const PUBLIC_INTERNAL_WRITING_PATTERNS = [
+  /preuve ou ancre manquante/i,
+  /ce qui ferait changer le statut/i,
+  /\bhypothese\b/i,
+  /\bportee doit rester qualifiee\b/i,
+  /\bpreuve decisive encore a confronter\b/i,
+]
+
+const GLUED_TRAJECTORY_PATTERNS = [
+  /Signal\s*:\s*[^.?!\n]{20,}\s+Escalade\s*:/i,
+  /Signal\s*:\s*[^.?!\n]{20,}\s+Bascule\s*:/i,
+]
+
 function countPublicUrls(value: string): number {
   return value.match(/https?:\/\//gi)?.length ?? 0
 }
@@ -278,6 +291,8 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const theatreAnchors = meaningfulTheatreAnchors(input.theatre)
   const theatreAnchorsUsed = countAnchorsUsed(theatreAnchors, normalizedText)
   const noisyResourcePattern = PUBLIC_RESOURCE_NOISE_PATTERNS.find((pattern) => pattern.test(text))
+  const internalWritingPattern = PUBLIC_INTERNAL_WRITING_PATTERNS.find((pattern) => pattern.test(text))
+  const gluedTrajectoryPattern = GLUED_TRAJECTORY_PATTERNS.find((pattern) => pattern.test(text))
 
   if (hasRepeatedSubmittedSentence(input.writing.situation_card.submitted_situation_fr)) {
     issues.push(issue(
@@ -294,6 +309,24 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       'PUBLIC_PROBATIVE_EVIDENCE_NOISE',
       `Public writing contains raw resource noise instead of qualified evidence: ${noisyResourcePattern.source}.`,
       'writing',
+    ))
+  }
+
+  if (internalWritingPattern) {
+    issues.push(issue(
+      'error',
+      'PUBLIC_INTERNAL_WRITING_LEAK',
+      `Public writing still exposes internal proof/status wording: ${internalWritingPattern.source}.`,
+      'writing',
+    ))
+  }
+
+  if (gluedTrajectoryPattern) {
+    issues.push(issue(
+      'warning',
+      'PUBLIC_TRAJECTORIES_GLUED',
+      `Trajectory signals are glued together in public narrative: ${gluedTrajectoryPattern.source}.`,
+      'writing.trajectories',
     ))
   }
 
