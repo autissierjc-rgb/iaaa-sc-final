@@ -620,7 +620,7 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
     ? `Signal clé : vérifier si ${priority.label} passe en moins de quelques cycles de l’intérêt à ${decisionProof}.`
     : 'Signal clé : obtenir une liste explicite de publics, d’usages ou d’offres, puis observer lequel produit un premier usage répété.'
   const lecture = hasSegments
-    ? `Le vrai arbitrage n’est pas entre trois publics, mais entre trois types de preuve. ${segmentList}. ${secondary?.label ?? 'Une cible d’activation'} peut montrer que la promesse parle ; ${priority.label} doit montrer qu’elle sert assez souvent pour devenir une habitude ; ${deferred?.label ?? 'une cible organisationnelle'} ne devient décisive que si la confiance et l’intégration suivent.\n\nClassement provisoire : ${rankingSentence(rankedOptions)}.\n\nLa recommandation est donc de partir par ${priority.label}, non parce que cette cible serait définitivement la plus grande, mais parce qu’elle peut produire le signal le plus net : ${priority.test_fr}. ${secondary ? `${secondary.label} sert ensuite à tester l’activation, le langage utilisateur et la distribution.` : ''} ${deferred ? `${deferred.label} doit attendre une preuve de confiance, d’intégration ou de paiement avant de devenir le coeur du lancement.` : ''}`
+    ? `Le vrai arbitrage n’est pas entre trois publics, mais entre trois types de preuve : ${compactSegmentList}. ${priority.label} ressort comme cible prioritaire probable, parce qu’elle peut tester plus vite si la promesse devient un usage répété.\n\nLa séquence recommandée est claire : commencer par ${priority.label}, utiliser ${secondary?.label ?? 'la cible secondaire'} comme laboratoire d’activation et différer ${deferred?.label ?? 'la cible la plus lourde'} tant que la confiance, l’intégration ou le paiement ne sont pas prouvés.\n\nLe test décisif est simple : ${priority.test_fr}. Si ce signal n’apparaît pas, le classement doit être révisé.`
     : `Le choix de cible reste à ouvrir comme une décision de lancement : la matière disponible indique qu’il faut comparer des publics, mais elle ne donne pas encore assez de segments exploitables pour établir un rang robuste.\n\nLa prochaine preuve utile tient en quatre éléments : publics visés, cas d’usage, offre associée et signal attendu pour chaque public. Dès que ces éléments apparaissent dans la ressource, SC peut classer les options sans les inventer.`
   const approfondir = hasSegments
     ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${compactSegmentList} ne donnent pas la même preuve : ${priority.label} doit prouver l’usage et la valeur, ${secondary?.label ?? 'la cible suivante'} peut élargir l’apprentissage, et ${deferred?.label ?? 'la dernière cible'} ne doit monter que si le coût de vente ou d’intégration devient justifié. Le pari implicite est clair : mieux vaut une petite preuve de workflow qu’une grande preuve d’intérêt.`
@@ -648,8 +648,6 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       signal_fr: `Un segment accepte ${decisionProof}.`,
     },
   ]
-  const trajectoryText = trajectorySpine(trajectories)
-  const probabilityText = probabilitySpine(probability)
   const probabilityDemonstration = probabilityDemonstrationSentence(probability)
   const probabilityChange = probabilityChangeSentence(probability)
 
@@ -689,8 +687,8 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
     },
     trajectories,
     lecture: {
-      text_fr: `${lecture}\n\n${trajectoryText}\n\n${probabilityText}`,
-      word_count_fr: countWords(`${lecture}\n\n${trajectoryText}\n\n${probabilityText}`),
+      text_fr: lecture,
+      word_count_fr: countWords(lecture),
     },
     approfondir: {
       analysis_fr: '',
@@ -1045,6 +1043,8 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
     '- utiliser uniquement les contrats fournis : interpretation, theatre reel, expertises, scoring ;',
     '- produire un essai court, net, sans notice, sans logico visible, sans jargon interne ;',
     '- separer Situation Card courte, Lecture et Approfondir ;',
+    '- Lecture repond a ce qu il faut retenir en 2 paragraphes courts ; Approfondir demontre les trajectoires, probabilites, limites et preuves ;',
+    '- ne pas remplir Lecture avec le classement complet, toutes les trajectoires et le statut probabiliste detaille si Approfondir les porte deja ;',
     '- nommer la vulnerabilite centrale, le signal observable, les probabilites si la preuve manque ;',
     '- dans Approfondir, utiliser le statut probabiliste comme structure de demonstration : ce qui est etabli, probable, plausible, hypothese ou inconnu, puis la preuve qui ferait changer le statut ;',
     '- ne pas ajouter les probabilites comme appendice defensif : elles doivent modifier la lecture des trajectoires, de la bascule et du signal a surveiller ;',
@@ -1059,7 +1059,7 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
     '',
     'Longueurs indicatives :',
     '- insight_fr : 2 phrases maximum ;',
-    '- lecture_fr : 2 paragraphes courts maximum ;',
+    '- lecture_fr : 2 paragraphes courts maximum, pas un mini-Approfondir ;',
     '- approfondir_analysis_fr : 4 a 6 phrases ;',
     '- diamond_sentence_fr : diamant tranchant, une phrase courte, dense et partageable qui nomme la contradiction centrale sans prudence molle ni accusation gratuite.',
     '',

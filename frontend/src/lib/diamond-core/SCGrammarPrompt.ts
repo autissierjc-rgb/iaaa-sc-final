@@ -216,14 +216,15 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       ...(hasExtractedOptions
         ? [
             'When the user asks for best target/options and Resources.extracted_options has at least two options, you must rank them explicitly: cible prioritaire probable, cible secondaire, cible a differer.',
-            'The ranking must appear in situation_card.insight_fr or lecture.text_fr, with a reason and one observable validation test for the priority.',
+            'A compact ranking must appear in situation_card.insight_fr or lecture.text_fr, with the priority reason and one observable validation test.',
             'If the options are individual use, professional use and organizational/governance use, and no direct traction proof contradicts it, prefer professional repeated-use first, individual activation/language second, organizational/governance third because sales and integration cycles are longer.',
             'For target choice, situation_card.insight_fr and the first paragraph of lecture.text_fr must reveal the deeper wager: not biggest audience, but the first public that turns the promise into repeated behavior, workflow, payment or integration.',
             'For target choice, situation_card.main_vulnerability_fr must name the launch sequence risk, not a generic risk of choosing too broadly.',
           ]
         : []),
       'trajectories must include exactly one stabilization, one escalation and one regime_shift.',
-      'lecture.text_fr should be substantial enough to stand alone.',
+      'lecture.text_fr must be a short summary: 2 short paragraphs maximum, not a mini-Approfondir.',
+      'lecture.text_fr must not carry the full trajectory spine or the detailed probability demonstration when approfondir.sections_fr carries them.',
       'approfondir.sections_fr must be the long form that demonstrates: what is established, what is probable, what remains plausible, what is only a hypothesis, and what is unknown.',
       'approfondir.sections_fr must explain what holds, weakens, escalates, shifts and what to watch without starting a section body by repeating its title.',
       'probability_assessments must separate established/probable/plausible/hypothesis/unknown and name the proof that would change the status.',
