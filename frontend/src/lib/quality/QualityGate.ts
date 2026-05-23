@@ -353,7 +353,7 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
 
   if (defensiveOpeningPattern) {
     issues.push(issue(
-      'error',
+      'warning',
       'DEFENSIVE_PUBLIC_OPENING',
       `Public writing starts by explaining what it is not doing instead of entering the situation: ${defensiveOpeningPattern.source}.`,
       'writing.lecture',
@@ -362,7 +362,7 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
 
   if (repeatedSection) {
     issues.push(issue(
-      'error',
+      'warning',
       'APPROFONDIR_SECTION_REPEATS_TITLE',
       `Approfondir section body repeats its title: ${repeatedSection.title}.`,
       'writing.approfondir.sections_fr',
