@@ -1408,12 +1408,16 @@ function listFromAxis(value: unknown, fallback: string[], situation = ''): strin
     : []
   return uniqueCleanList([...list, ...fallback])
     .map(cleanPublicText)
-    .filter((item) => Boolean(item) && !rejectsDiamondGuardText(item) && (!situation || !looksLikeUnprocessedInput(item, situation)))
+    .filter((item) => Boolean(item) && !rejectsDiamondGuardText(item) && !rejectsPublicCapText(item) && (!situation || !looksLikeUnprocessedInput(item, situation)))
     .slice(0, 4)
 }
 
 function rejectsDiamondGuardText(text: string): boolean {
-  return /la situation ne se joue pas seulement|distribution des leviers r[eé]els|qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer|la fa[cç]ade peut encore fonctionner|ce qui para[iî]t stable d[eé]pend d[’']un levier discret|ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible|ne se tranche pas par une formule g[eé]n[eé]rale|la lecture doit partir des acteurs et passages oblig[eé]s|acteurs visibles,\s*contraintes mat[eé]rielles,\s*r[eè]gles et institutions,\s*r[eé]cit dominant|tant que ce point n[’']est pas reli[eé] [aà] une trace v[eé]rifiable|hypoth[eè]se de travail, pas une conclusion ferm[eé]e|passer d[’']une impression g[eé]n[eé]rale|un fait, une d[eé]cision, un document ou un changement de calendrier v[eé]rifiable|rythmes,\s*d[eé]lais,\s*fen[eê]tres d[’']action et risque de retard|plusieurs options restent ouvertes,\s*mais elles ne prot[eè]gent pas les m[eê]mes risques|fa[cç]ade de contr[oô]le|structural reading from available signals/i.test(text)
+  return /la situation ne se joue pas seulement|distribution des leviers r[eé]els|qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer|la fa[cç]ade peut encore fonctionner|ce qui para[iî]t stable d[eé]pend d[’']un levier discret|ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible|ne se tranche pas par une formule g[eé]n[eé]rale|la lecture doit partir des acteurs et passages oblig[eé]s|acteurs visibles,\s*contraintes mat[eé]rielles,\s*r[eè]gles et institutions,\s*r[eé]cit dominant|tant que ce point n[’']est pas reli[eé] [aà] une trace v[eé]rifiable|hypoth[eè]se de travail, pas une conclusion ferm[eé]e|passer d[’']une impression g[eé]n[eé]rale|un fait, une d[eé]cision, un document ou un changement de calendrier v[eé]rifiable|rythmes,\s*d[eé]lais,\s*fen[eê]tres d[’']action et risque de retard|plusieurs options restent ouvertes,\s*mais elles ne prot[eè]gent pas les m[eê]mes risques|fa[cç]ade de contr[oô]le|structural reading from available signals|choose_action/i.test(text)
+}
+
+function rejectsPublicCapText(text: string): boolean {
+  return /choose_action|sans donn[eé]es sur produit|stade de lev[eé]e|lecture investisseur|relations longues|r[eé]seaux d[’']influence|rôle de l[’']?[eé]tat|normes sociales|infrastructures|co[uû]ts cach[eé]s|hypoth[eè]ses implicites|v[eé]rifier l[’']?icp|willingness to pay|cycle de vente|moat|d[eé]monstration trop narrative|moment o[uù] la tension devient visible dans le lien|marges d[’']action limit[eé]es par le temps, les ressources et les d[eé]pendances/i.test(text)
 }
 
 function sourceChannelFromResourceType(value: string): SourceChannel {
@@ -2823,6 +2827,38 @@ function completeSituationCard(
     ...(arbre.incertitudes ?? []),
     'Seuil exact à partir duquel la tension devient visible pour tous les acteurs.',
   ], situation)
+  const startupTargetConstraintsFr = targetSegments.length >= 2
+    ? [
+        'La cible prioritaire doit être choisie avant d’avoir une preuve complète de traction.',
+        'Chaque famille d’usage demande un cycle de validation différent.',
+        'Une cible organisationnelle choisie trop tôt peut ralentir l’apprentissage produit.',
+      ]
+    : [
+        'La première cible doit être testée avant que le marché soit pleinement prouvé.',
+        'Le signal utile doit venir d’un usage répété, pas seulement d’une réaction positive.',
+        'Une cible trop large peut donner de l’audience sans clarifier la traction.',
+      ]
+  const startupTargetConstraintsEn = [
+    'The priority target must be chosen before traction is fully proven.',
+    'Each usage family requires a different validation cycle.',
+    'An organizational target chosen too early can slow product learning.',
+  ]
+  const startupTargetUncertaintiesFr = targetSegments.length >= 2
+    ? [
+        'Usage professionnel produit-il assez de récurrence pour devenir la cible prioritaire ?',
+        'Usage individuel donne-t-il seulement de l’attention ou aussi de la rétention ?',
+        'Usage organisationnel peut-il payer sans imposer un cycle de vente trop long ?',
+      ]
+    : [
+        'Quel public revient sans relance après une première carte ?',
+        'Quel usage déclenche partage, recommandation ou demande d’intégration ?',
+        'Quel segment accepte de payer avant que la promesse soit institutionnalisée ?',
+      ]
+  const startupTargetUncertaintiesEn = [
+    'Does professional use create enough recurrence to become the priority target?',
+    'Does individual use create only attention or also retention?',
+    'Can organizational use pay without imposing too long a sales cycle?',
+  ]
   const understandingConstraintsFr = [
     'Distinguer crainte exprimée, capacité réelle d’action, relais institutionnels et preuve observable.',
     'Identifier les acteurs capables de transformer la tension en décision, blocage, procédure ou récit public.',
@@ -2961,6 +2997,41 @@ function completeSituationCard(
               explanation_en: 'The reading remains reversible until no verifiable act closes the counter-hypotheses.',
             },
           ]
+        : isStartupTargetChoice
+        ? [
+            {
+              axis: 'impact',
+              label_fr: 'Impact',
+              label_en: 'Impact',
+              score: 2,
+              explanation_fr: 'L’impact dépend du segment qui transforme la promesse en usage répété, partage ou paiement.',
+              explanation_en: 'Impact depends on the segment that turns the promise into repeated use, sharing, or payment.',
+            },
+            {
+              axis: 'urgency',
+              label_fr: 'Urgence',
+              label_en: 'Urgency',
+              score: 2,
+              explanation_fr: 'L’urgence vient de la séquence de lancement : tester vite sans figer trop tôt le marché.',
+              explanation_en: 'Urgency comes from launch sequencing: test quickly without freezing the market too early.',
+            },
+            {
+              axis: 'uncertainty',
+              label_fr: 'Incertitudes',
+              label_en: 'Uncertainties',
+              score: 2,
+              explanation_fr: 'L’incertitude porte sur la preuve de traction : réutilisation, recommandation, intégration ou paiement.',
+              explanation_en: 'Uncertainty concerns traction proof: reuse, recommendation, integration, or payment.',
+            },
+            {
+              axis: 'reversibility',
+              label_fr: 'Réversibilité',
+              label_en: 'Reversibility',
+              score: 2,
+              explanation_fr: 'La décision reste réversible si elle est traitée comme un test court, mesuré par un signal d’usage.',
+              explanation_en: 'The decision remains reversible if treated as a short test measured by a usage signal.',
+            },
+          ]
         : isPersonalRelationship
         ? personalRelationshipRadarDetails()
         : Array.isArray(sc.radar_details) && sc.radar_details.length > 0 && !radarDetailsLookInternal(sc.radar_details)
@@ -2976,6 +3047,8 @@ function completeSituationCard(
         'Distinguer histoire passée, chaleur du message, disponibilité réelle et rencontre concrète.',
         'Répondre de façon accueillante sans forcer l’autre à clarifier plus vite que le lien ne le permet.',
       ]
+      : isStartupTargetChoice
+      ? startupTargetConstraintsFr
       : constraintsFr,
     constraints_en: understands
       ? [
@@ -2983,6 +3056,8 @@ function completeSituationCard(
         'Distinguish direct technical proof from the trust needed to decide.',
         'Observe who still requires this format, and for what function: filtering, framing, reputation, or commitment.',
       ]
+      : isStartupTargetChoice
+      ? startupTargetConstraintsEn
       : listFromAxis(sc.constraints_en, constraintsFr, situation),
     uncertainties_fr: understands
       ? ensureContextualBlindSpotFr(understandingUncertaintiesFr, sc.intent_context)
@@ -2992,6 +3067,8 @@ function completeSituationCard(
         'Qui prend l’initiative concrète : proposer un rendez-vous, maintenir le rythme des messages, clarifier le ton ?',
         'Quelle part vient de l’histoire passée, de la distance, de la projection ou du moment présent ?',
       ])
+      : isStartupTargetChoice
+      ? startupTargetUncertaintiesFr
       : ensureContextualBlindSpotFr(uncertaintiesFr, sc.intent_context),
     uncertainties_en: understands
       ? ensureContextualBlindSpotEn([
@@ -2999,6 +3076,8 @@ function completeSituationCard(
         'Which actors still give it authority, and why?',
         'When does the format stop clarifying the decision and become only a ritual?',
       ])
+      : isStartupTargetChoice
+      ? startupTargetUncertaintiesEn
       : ensureContextualBlindSpotEn(listFromAxis(sc.uncertainties_en, uncertaintiesFr, situation), sc.intent_context),
     movements_fr: understands
       ? understandingMovementsFr
