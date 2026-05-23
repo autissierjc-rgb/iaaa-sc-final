@@ -167,7 +167,7 @@ export function situationReadinessGate({
     asksTargetChoiceWithoutMaterial(situation, intentContext, resources)
   ) {
     const question =
-      'Pour choisir une cible client ou utilisateur, il manque la matière produit. Donnez-moi l’URL du site, une page de présentation, un document ou un plug autorisé ; sinon je peux générer une carte exploratoire clairement provisoire.'
+      'Pour choisir une cible client ou utilisateur, il manque encore des informations produit exploitables. Donnez-moi l’URL du site, une page de présentation, un document ou un plug autorisé ; sinon je peux générer une carte exploratoire clairement provisoire.'
 
     return {
       status: forceGenerate ? 'generate_prudently' : 'ask_user',
@@ -176,7 +176,7 @@ export function situationReadinessGate({
       can_generate_prudently: true,
       prudent_generation_label_fr: 'Générer une carte exploratoire',
       message_fr: question,
-      warning_fr: 'Choix de cible sans matière produit/source : SC doit collaborer avant de conclure.',
+      warning_fr: 'Choix de cible sans informations produit ou source exploitable : SC doit collaborer avant de conclure.',
       needs: ['URL, document ou plug autorisé', 'segments envisagés', 'critère de priorité'],
       doctrine: `${SC_NON_COMPLETION_PRINCIPLE}\n\n${SC_COLLABORATION_RULE}`,
     }

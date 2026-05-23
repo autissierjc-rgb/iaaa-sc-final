@@ -609,10 +609,10 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
     : 'Une cible non nommée ne se choisit pas : elle se fait d’abord apparaître par les usages, les offres et les preuves disponibles.'
   const insight = hasSegments
     ? `${diamond} À ce stade, la cible prioritaire probable est ${priority.label} : ${priority.reason_fr}.`
-    : `${subject} doit rester une carte provisoire : la matière fournie indique une décision de cible, mais ne nomme pas encore assez de segments exploitables pour trancher proprement.`
+    : `${subject} doit rester une carte provisoire : les éléments fournis indiquent une décision de cible, mais ne nomment pas encore assez de segments exploitables pour trancher proprement.`
   const vulnerability = hasSegments
     ? `Le point fragile est la séquence de lancement : choisir le public qui comprend le mieux la promesse peut retarder celui qui prouve qu’elle devient un workflow.`
-    : 'Le point fragile est le manque de segments vérifiables dans la matière exploitée : sans publics nommés, la décision risque de redevenir une intuition générale.'
+    : 'Le point fragile est le manque de segments vérifiables dans les éléments exploités : sans publics nommés, la décision risque de redevenir une intuition générale.'
   const asymmetry = hasSegments
     ? `Tous les segments peuvent comprendre la promesse, mais ils ne rendent pas la même preuve : ${secondary?.label ?? 'un segment d’activation'} peut donner du langage et du volume, ${priority.label} peut donner une habitude de travail, et ${deferred?.label ?? 'un segment organisationnel'} peut donner de la crédibilité au prix d’un cycle plus long.`
     : 'La ressource peut donner une promesse lisible, mais la carte ne doit pas inventer les publics qui ne sont pas encore établis.'
@@ -621,10 +621,10 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
     : 'Signal clé : obtenir une liste explicite de publics, d’usages ou d’offres, puis observer lequel produit un premier usage répété.'
   const lecture = hasSegments
     ? `Le vrai arbitrage n’est pas entre trois publics, mais entre trois types de preuve : ${compactSegmentList}. ${priority.label} ressort comme cible prioritaire probable, parce qu’elle peut tester plus vite si la promesse devient un usage répété.\n\nLa séquence recommandée est claire : commencer par ${priority.label}, utiliser ${secondary?.label ?? 'la cible secondaire'} comme laboratoire d’activation et différer ${deferred?.label ?? 'la cible la plus lourde'} tant que la confiance, l’intégration ou le paiement ne sont pas prouvés.\n\nLe test décisif est simple : ${priority.test_fr}. Si ce signal n’apparaît pas, le classement doit être révisé.`
-    : `Le choix de cible reste à ouvrir comme une décision de lancement : la matière disponible indique qu’il faut comparer des publics, mais elle ne donne pas encore assez de segments exploitables pour établir un rang robuste.\n\nLa prochaine preuve utile tient en quatre éléments : publics visés, cas d’usage, offre associée et signal attendu pour chaque public. Dès que ces éléments apparaissent dans la ressource, SC peut classer les options sans les inventer.`
+    : `Le choix de cible reste à ouvrir comme une décision de lancement : les informations disponibles indiquent qu’il faut comparer des publics, mais elles ne donnent pas encore assez de segments exploitables pour établir un rang robuste.\n\nLa prochaine preuve utile tient en quatre éléments : publics visés, cas d’usage, offre associée et signal attendu pour chaque public. Dès que ces éléments apparaissent dans la ressource, SC peut classer les options sans les inventer.`
   const approfondir = hasSegments
     ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${compactSegmentList} ne donnent pas la même preuve : ${priority.label} doit prouver l’usage et la valeur, ${secondary?.label ?? 'la cible suivante'} peut élargir l’apprentissage, et ${deferred?.label ?? 'la dernière cible'} ne doit monter que si le coût de vente ou d’intégration devient justifié. Le pari implicite est clair : mieux vaut une petite preuve de workflow qu’une grande preuve d’intérêt.`
-    : 'Le fond de la situation tient à une absence de matière qualifiée. La ressource doit être relue non comme une vitrine, mais comme un inventaire de publics, usages, offres et preuves. Tant que ces éléments restent implicites, la carte doit afficher sa prudence plutôt que trancher par formule.'
+    : 'Le fond de la situation tient à une absence d’informations qualifiées. La ressource doit être relue non comme une vitrine, mais comme un inventaire de publics, usages, offres et preuves. Tant que ces éléments restent implicites, la carte doit afficher sa prudence plutôt que trancher par formule.'
   const probability = probabilityFromResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const trajectories: WritingContract['trajectories'] = [
     {
@@ -632,7 +632,7 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       title_fr: 'Cible qualifiée',
       description_fr: hasSegments
         ? `La situation se clarifie si ${priority.label} confirme son rang par un usage répété et des retours précis.`
-        : 'La situation se clarifie si la matière nomme les publics, usages et offres à comparer.',
+        : 'La situation se clarifie si la ressource nomme les publics, usages et offres à comparer.',
       signal_fr: hasSegments ? priority.test_fr : 'Un public formule le cas d’usage avec ses mots et revient sans relance.',
     },
     {
@@ -709,7 +709,7 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
         watch: `${keySignal} ${publicProofChange}`,
       }),
     },
-    public_warnings: hasSegments ? [] : ['Carte provisoire : les segments de cible ne sont pas encore assez établis dans la matière fournie.'],
+    public_warnings: hasSegments ? [] : ['Carte provisoire : les segments de cible ne sont pas encore assez établis dans les éléments fournis.'],
     trace: {
       service: 'WritingEngine',
       version: 'v2-foundation',

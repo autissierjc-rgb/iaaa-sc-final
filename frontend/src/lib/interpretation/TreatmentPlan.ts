@@ -131,7 +131,7 @@ export function buildTreatmentPlan({
         },
       ],
       public_clarification_fr:
-        'Je comprends que la matiere existe. Donnez l URL exacte, collez l extrait utile, ajoutez le document ou utilisez Plug ; sinon je peux produire une carte exploratoire clairement provisoire.',
+        'Je comprends que les éléments existent. Donnez l URL exacte, collez l extrait utile, ajoutez le document ou utilisez Plug ; sinon je peux produire une carte exploratoire clairement provisoire.',
       trace_notes: ['treatment_plan=resource_first', 'missing_material_answer', `domain=${domain}`],
     }
   }
@@ -172,7 +172,7 @@ export function buildTreatmentPlan({
       ],
       instructions,
       public_clarification_fr:
-        'Pour choisir une cible, il manque la matiere produit ou les segments a comparer.',
+        'Pour choisir une cible, il manque encore les informations produit ou les segments à comparer.',
       trace_notes: ['treatment_plan=resource_first', 'target_choice_without_material', `domain=${domain}`],
     }
   }

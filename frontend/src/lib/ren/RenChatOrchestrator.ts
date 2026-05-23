@@ -162,7 +162,7 @@ function answerFr(mode: RenChatMode, context: RenWorkingContext): string {
   if (mode === 'clarify') {
     const missing = context.missing_context[0] ?? 'le point concret a verifier'
     if (missing.startsWith('source exploitable')) {
-      return `Je comprends : la matiere existe, mais elle n est pas encore exploitable ici. Donnez l URL exacte, collez l extrait utile, ajoutez un document ou utilisez Plug. Sinon, cliquez la boussole pour produire une carte exploratoire clairement provisoire.`
+      return `Je comprends : les éléments existent, mais ils ne sont pas encore exploitables ici. Donnez l URL exacte, collez l extrait utile, ajoutez un document ou utilisez Plug. Sinon, cliquez la boussole pour produire une carte exploratoire clairement provisoire.`
     }
     return `Je peux explorer avec vous. Le point le plus utile a preciser maintenant est : ${missing}. Ensuite la boussole pourra cristalliser la carte.`
   }
@@ -194,7 +194,7 @@ function answerEn(mode: RenChatMode, context: RenWorkingContext): string {
   if (mode === 'clarify') {
     const missing = context.missing_context[0] ?? 'the concrete point to verify'
     if (missing.startsWith('source exploitable')) {
-      return 'I understand: the material exists, but it is not usable here yet. Provide the exact URL, paste the useful excerpt, add a document, or use Plug. Otherwise, click the compass to generate a clearly provisional exploratory card.'
+      return 'I understand: the information exists, but it is not usable here yet. Provide the exact URL, paste the useful excerpt, add a document, or use Plug. Otherwise, click the compass to generate a clearly provisional exploratory card.'
     }
     return `I can explore this with you. The most useful point to clarify now is: ${missing}. Then the compass can crystallize the card.`
   }

@@ -89,7 +89,7 @@ const TX = {
     mic_title: 'Dicter un message',
     left_help:
       'Télécharger ajoute un fichier, une image ou un document. Plug connecte une source privée sans déplacer inutilement vos documents. Agrandir ouvre un espace plus confortable. Micro permet de dicter. Refresh réinitialise l’échange courant. La flèche permet de discuter dans le chat du raisonnement système, sans générer la carte. La boussole génère la Situation Card. Le chat explore le raisonnement système ; la boussole cristallise la carte.',
-    material_added: 'Matière ajoutée',
+    material_added: 'Élément ajouté',
     plug_soon:
       'Plug privé : connectez une source autorisée. Disponible bientôt pour IAAA+ ; les documents peuvent rester dans votre environnement.',
     no_saved: 'Aucune carte enregistrée.',
@@ -139,7 +139,7 @@ const TX = {
     mic_title: 'Dictate a message',
     left_help:
       'Upload adds a file, image or document. Plug connects a private source without unnecessarily moving your documents. Expand opens a more comfortable writing space. Microphone lets you dictate. Refresh resets the current exchange. The arrow lets you discuss the system reasoning in the chat, without generating the card. The compass generates the Situation Card. The chat explores system reasoning; the compass crystallizes the card.',
-    material_added: 'Material added',
+    material_added: 'Input added',
     plug_soon:
       'Private Plug: connect an authorized source. Coming soon for IAAA+; documents can remain in your environment.',
     no_saved: 'No saved cards yet.',
@@ -189,7 +189,7 @@ const TX = {
     mic_title: 'Dictar un mensaje',
     left_help:
       'Subir añade un archivo, una imagen o un documento. Plug conecta una fuente privada sin mover innecesariamente sus documentos. Ampliar abre un espacio más cómodo. Micrófono permite dictar. Refresh reinicia el intercambio actual. La flecha permite discutir el razonamiento del sistema en el chat, sin generar la carta. La brújula genera la Situation Card. El chat explora el razonamiento del sistema; la brújula cristaliza la carta.',
-    material_added: 'Materia añadida',
+    material_added: 'Elemento añadido',
     plug_soon:
       'Plug privado: conecte una fuente autorizada. Próximamente para IAAA+; los documentos pueden permanecer en su entorno.',
     no_saved: 'Aún no hay tarjetas guardadas.',
@@ -239,7 +239,7 @@ const TX = {
     mic_title: 'Nachricht diktieren',
     left_help:
       'Hochladen fügt eine Datei, ein Bild oder ein Dokument hinzu. Plug verbindet eine private Quelle, ohne Ihre Dokumente unnötig zu verschieben. Erweitern öffnet einen komfortableren Schreibraum. Mikrofon erlaubt Diktat. Refresh setzt den aktuellen Austausch zurück. Der Pfeil erlaubt, im Chat über das Systemdenken zu sprechen, ohne die Karte zu generieren. Der Kompass generiert die Situation Card. Der Chat erkundet das Systemdenken; der Kompass kristallisiert die Karte.',
-    material_added: 'Material hinzugefügt',
+    material_added: 'Element hinzugefügt',
     plug_soon:
       'Privater Plug: Verbinden Sie eine autorisierte Quelle. Bald für IAAA+; Dokumente können in Ihrer Umgebung bleiben.',
     no_saved: 'Noch keine Karten gespeichert.',
@@ -289,7 +289,7 @@ const TX = {
     mic_title: 'Detta un messaggio',
     left_help:
       'Carica aggiunge un file, un’immagine o un documento. Plug collega una fonte privata senza spostare inutilmente i tuoi documenti. Espandi apre uno spazio più comodo. Microfono permette di dettare. Refresh reinizializza lo scambio corrente. La freccia permette di discutere nella chat il ragionamento di sistema, senza generare la carta. La bussola genera la Situation Card. La chat esplora il ragionamento di sistema; la bussola cristallizza la carta.',
-    material_added: 'Materiale aggiunto',
+    material_added: 'Elemento aggiunto',
     plug_soon:
       'Plug privato: collega una fonte autorizzata. Prossimamente per IAAA+; i documenti possono restare nel tuo ambiente.',
     no_saved: 'Nessuna carta salvata.',
@@ -339,7 +339,7 @@ const TX = {
     mic_title: 'Ditar uma mensagem',
     left_help:
       'Carregar adiciona um ficheiro, uma imagem ou um documento. Plug liga uma fonte privada sem mover desnecessariamente os seus documentos. Expandir abre um espaço mais confortável. Microfone permite ditar. Refresh reinicia a troca atual. A seta permite discutir no chat o raciocínio do sistema, sem gerar o cartão. A bússola gera a Situation Card. O chat explora o raciocínio do sistema; a bússola cristaliza o cartão.',
-    material_added: 'Material adicionado',
+    material_added: 'Elemento adicionado',
     plug_soon:
       'Plug privado: ligue uma fonte autorizada. Em breve para IAAA+; os documentos podem permanecer no seu ambiente.',
     no_saved: 'Ainda não há cartões guardados.',
@@ -1877,7 +1877,7 @@ function buildMaterialAwareGenerationSituation(base: string, material: string[])
       .filter(item => item && item.toLowerCase() !== cleanBase.toLowerCase())
   ))
   if (uniqueMaterial.length === 0) return cleanBase
-  return `${cleanBase}\n\nMatière utilisateur fournie : ${uniqueMaterial.join('\n')}`
+  return `${cleanBase}\n\nÉléments utilisateur fournis : ${uniqueMaterial.join('\n')}`
 }
 
 function canonicalSituationFromResponse(data: any, fallback: string): string {

@@ -434,7 +434,7 @@ function buildCausalAttributionDeepFallback({
   return {
     approfondir_fr: polishDiamondText(
       `${DIAMOND_DEEP_HEADINGS_FR[0]}\n\n` +
-      `La situation se joue dans une hypothèse précise : ${matter.hypothesis}. Les matières concrètes sont ${anchors || `${matter.sourceActor}, ${matter.targetActor} et ${matter.event}`}. La question n’est pas seulement de savoir si ${matter.sourceActor} et ${matter.targetActor} sont proches, alignés ou hostiles ; elle est de savoir si un canal réel a transformé une influence en décision sur ${matter.event}.\n\n` +
+      `La situation se joue dans une hypothèse précise : ${matter.hypothesis}. Les éléments concrets sont ${anchors || `${matter.sourceActor}, ${matter.targetActor} et ${matter.event}`}. La question n’est pas seulement de savoir si ${matter.sourceActor} et ${matter.targetActor} sont proches, alignés ou hostiles ; elle est de savoir si un canal réel a transformé une influence en décision sur ${matter.event}.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[1]}\n\n` +
       `Ce qui tient encore, c’est la séparation entre influence et décision. ${matter.causalChannels[0]}. ${matter.causalChannels[2]}. Tant que ces canaux ne sont pas reliés à un arbitrage observable de ${matter.targetActor}, l’influence peut être forte sans devenir une preuve d’entraînement.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[2]}\n\n` +
@@ -663,7 +663,7 @@ function buildSiteDeepFallback({
         `${DIAMOND_DEEP_HEADINGS_FR[1]}\n\n` +
         `Ce qui tient encore, c’est la demande claire : comprendre l’activité, la cible, les usages, les conditions de collaboration et les preuves avant d’envisager de rejoindre ${company} avec une startup. Cette prudence protège la décision au lieu de combler le vide.\n\n` +
         `${DIAMOND_DEEP_HEADINGS_FR[2]}\n\n` +
-        `Ce qui l’affaiblit, c’est l’absence de matière vérifiable : URL officielle, pages produit, démonstration, clients, partenaires, prix, cadre juridique, statut social ou conditions d’entrée. Sans ces éléments, le risque est de produire un avis fluide mais non situé.\n\n` +
+        `Ce qui l’affaiblit, c’est l’absence d’informations vérifiables : URL officielle, pages produit, démonstration, clients, partenaires, prix, cadre juridique, statut social ou conditions d’entrée. Sans ces éléments, le risque est de produire un avis fluide mais non situé.\n\n` +
         `${DIAMOND_DEEP_HEADINGS_FR[3]}\n\n` +
         `L’escalade serait de décider trop vite : juger ${company} attractive ou risquée sans savoir ce qu’elle propose réellement, comment elle travaille avec d’autres startups, et quelles obligations elle crée.\n\n` +
         `${DIAMOND_DEEP_HEADINGS_FR[4]}\n\n` +

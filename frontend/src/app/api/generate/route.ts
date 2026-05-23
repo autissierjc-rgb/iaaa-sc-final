@@ -2035,7 +2035,7 @@ function siteAnalysisFallbackCard({
             `Le point de bascule ne sera pas une meilleure formulation du site, mais une preuve observable. ${proofSentence} Si ces signaux deviennent vérifiables, l’analyse peut passer d’un avis sur le positionnement à une vraie lecture de potentiel. Sinon, la carte doit rester prudente.`
           : `SC n’a pas encore une compréhension suffisante du contenu utile de ${company}. La carte ne doit donc pas inventer une activité, une cible ou un segment à partir d’un nom seul.\n\n` +
             (hasExplicitUrlSignal
-              ? `L’URL a bien été fournie, mais l’extraction directe et la recherche serveur n’ont pas encore donné assez de matière publique exploitable. La bonne lecture consiste donc à dire précisément ce manque, pas à conclure sur ${market}.\n\n`
+              ? `L’URL a bien été fournie, mais l’extraction directe et la recherche serveur n’ont pas encore donné assez d’informations publiques exploitables. La bonne lecture consiste donc à dire précisément ce manque, pas à conclure sur ${market}.\n\n`
               : `La bonne lecture est une suspension prudente : il faut d’abord obtenir un contenu exploitable, puis seulement séparer produit, cible, usage, preuves visibles et angles morts.\n\n`) +
             `Le prochain signal utile n’est pas une conclusion sur ${market}, mais une source exploitable : description claire, éléments de preuve, clients, cas d’usage ou tarification visible.`,
       lecture_systeme_en:
@@ -4663,7 +4663,7 @@ export async function POST(req: NextRequest) {
         public_sources: [],
         extracted_options: [],
         policy_reason_fr:
-          'Carte exploratoire demandee sans matiere source : SC ne lance pas de recherche rapide et ne transforme pas une source absente en preuve.',
+          'Carte exploratoire demandee sans source exploitable : SC ne lance pas de recherche rapide et ne transforme pas une source absente en preuve.',
         internal_notes: [
           ...canonicalResourcePlan.internal_notes,
           'TreatmentPlanContract applied: resource_first/missing + exploratory generation => no fast resource lookup.',
