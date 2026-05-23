@@ -648,8 +648,10 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       signal_fr: `Un segment accepte ${decisionProof}.`,
     },
   ]
-  const probabilityDemonstration = probabilityDemonstrationSentence(probability)
-  const probabilityChange = probabilityChangeSentence(probability)
+  const ranking = rankingSentence(rankedOptions)
+  const publicProofChange = probability.missing_proof_fr
+    ? `Le classement doit bouger si ${formatMissingProofForPublic(probability.missing_proof_fr)} apparaît.`
+    : 'Le classement doit rester révisable dès qu’une preuve directe ou une contre-preuve apparaît.'
 
   return {
     substance_form: {
@@ -694,17 +696,17 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
       analysis_fr: '',
       sections_fr: canonicalApprofondirSections({
         really: hasSegments
-          ? `${approfondir} ${probabilityDemonstration} Le classement de départ est : ${rankingSentence(rankedOptions)}. Ce classement reste provisoire, mais il donne un ordre d’action au lieu d’une simple typologie.`
+          ? `${approfondir} Le classement de départ est : ${ranking}. Statut de preuve : ${probabilityLabelFr(probability).toLowerCase()}. ${polishPublicProofText(probability.claim_fr)} Ce classement donne un ordre d’action, pas une vérité de marché.`
           : `${approfondir} La décision reste utile, mais elle doit d’abord faire apparaître des publics, des usages et des preuves vérifiables.`,
         holds: hasSegments
-          ? `La solidité actuelle vient du fait que la même promesse peut être testée à trois vitesses. ${priority.label} doit produire la preuve d’usage, ${secondary?.label ?? 'la seconde cible'} peut produire le vocabulaire et la distribution, ${deferred?.label ?? 'la troisième'} peut produire de la crédibilité plus tard.`
+          ? `La même promesse peut être testée à trois vitesses. ${priority.label} sert à vérifier la répétition d’usage et la valeur de travail ; ${secondary?.label ?? 'la seconde cible'} sert à apprendre le langage, l’activation et la distribution ; ${deferred?.label ?? 'la troisième'} sert plutôt à construire la crédibilité quand la preuve d’usage existe déjà.`
           : 'Ce qui tient encore, c’est la possibilité de transformer la vitrine produit en hypothèses de marché testables : public visé, cas d’usage, offre associée et signal attendu.',
         weakens: hasSegments
-          ? `La fragilité vient d’une mauvaise séquence : viser trop vite ${deferred?.label ?? 'la cible la plus lourde'} peut allonger le cycle, viser seulement ${secondary?.label ?? 'une cible d’apprentissage'} peut donner de l’attention sans traction, et ne pas tester ${priority.label} peut retarder la preuve commerciale.`
+          ? `La fragilité vient d’une mauvaise séquence. Si ${deferred?.label ?? 'la cible la plus lourde'} arrive trop tôt, le cycle de vente et la confiance absorbent l’énergie. Si ${secondary?.label ?? 'une cible d’apprentissage'} devient le seul terrain, l’équipe peut confondre intérêt et traction. Si ${priority.label} n’est pas testé vite, la preuve commerciale reste abstraite.`
           : 'Ce qui l’affaiblit, c’est l’absence de segments suffisamment établis : sans public nommé et sans preuve attendue, le choix risque de redevenir une préférence intuitive.',
-        escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Le signal d’alerte serait ${trajectories[1].signal_fr} Dans ce scénario, le classement reste seulement ${probabilityLabelFr(probability).toLowerCase()} si aucun usage mesurable ne durcit la preuve.`,
-        shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} La bascule devient crédible si ${trajectories[2].signal_fr} ${probabilityChange}`,
-        watch: `${keySignal} ${probabilityChange}`,
+        escalates: `Le mauvais scénario n’est pas l’absence d’intérêt, mais l’intérêt sans comportement. La visibilité peut monter pendant que la preuve reste faible : ${trajectories[1].signal_fr} Dans ce cas, la carte doit rétrograder la cible prioritaire au rang d’hypothèse non validée.`,
+        shifts: `La bascule commence quand un public transforme la promesse en routine observable. Elle devient crédible si ${trajectories[2].signal_fr} À ce moment-là, SC ne lit plus seulement une préférence de lancement, mais un début de preuve de marché.`,
+        watch: `${keySignal} ${publicProofChange}`,
       }),
     },
     public_warnings: hasSegments ? [] : ['Carte provisoire : les segments de cible ne sont pas encore assez établis dans la matière fournie.'],
