@@ -11,8 +11,7 @@ function normalize(value: string): string {
 }
 
 function hasExplicitMaterialUrl(value: string): boolean {
-  return /\b(?:https?:\/\/|www\.)[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value) ||
-    /\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]+)\b/i.test(value)
+  return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
 }
 
 function pointsToExternalMaterial(text: string): boolean {

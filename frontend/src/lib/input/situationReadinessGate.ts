@@ -19,11 +19,6 @@ function hasExplicitUrl(value: string): boolean {
   return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
 }
 
-function hasExplicitMaterialUrl(value: string): boolean {
-  return /\b(?:https?:\/\/|www\.)[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value) ||
-    /\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]+)\b/i.test(value)
-}
-
 function normalize(value: string): string {
   return value
     .normalize('NFD')
@@ -97,7 +92,7 @@ function asksToCompareUnspecifiedOptions(situation: string, intentContext: Inten
 }
 
 function hasSuppliedMaterial(situation: string, resources: ResourceItem[]): boolean {
-  if (hasExplicitMaterialUrl(situation)) return true
+  if (hasExplicitUrl(situation)) return true
   return resources.some((resource) => {
     const text = [resource.title, resource.url, resource.excerpt, resource.source, resource.type]
       .filter(Boolean)
