@@ -137,11 +137,35 @@ function firstUseful(items: string[], fallback: string): string {
   return items.find((item) => item.length > 0 && !/^acteurs?$/i.test(item)) ?? fallback
 }
 
+function hasExtractedComparisonOptions(resources?: ResourceServiceContract): boolean {
+  const comparableKinds = new Set(['audience_family', 'user_segment', 'strategic_option', 'offer', 'use_case'])
+  return (resources?.extracted_options ?? [])
+    .filter((option) => comparableKinds.has(option.kind))
+    .length >= 2
+}
+
+function asksComparisonOrTargetChoice(text: string): boolean {
+  const normalized = text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+
+  const asksOptions =
+    /\b(option|options|scenario|scenarios|strategie|strategies|choix|arbitrage|comparer|classer|prioriser)\b/.test(normalized)
+  const asksTargets =
+    /\b(cible|cibles|client|clients|utilisateur|utilisateurs|public|publics|segment|segments|audience|persona|icp)\b/.test(normalized)
+  const asksDecision =
+    /\b(decision|decider|choisir|developper|lancer|premier|premiere|meilleur|meilleure|prioritaire)\b/.test(normalized)
+
+  return asksOptions || (asksTargets && asksDecision)
+}
+
 function collaborationQuestions(
   input: ConcreteTheatreBuilderInput,
   namedActors: string[],
   roleAnchors: string[],
   missing: string[],
+  resourceOptionsAlreadyExtracted: boolean,
 ): string[] {
   const domain = input.interpretation.domain
   const subject = shortSubject(input)
@@ -155,6 +179,8 @@ function collaborationQuestions(
     input.interpretation.user_need,
     input.interpretation.primary_hypothesis ?? '',
   ].join(' ')
+
+  if (resourceOptionsAlreadyExtracted) return []
 
   if (domain === 'management') {
     if (/\b(conflit|tension|desaccord|désaccord|reorganisation|réorganisation|equipe|équipe)\b/i.test(text)) {
@@ -213,6 +239,7 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
     interpretation.situation_soumise,
     interpretation.object_of_analysis,
     interpretation.angle,
+    interpretation.user_need,
     interpretation.primary_hypothesis ?? '',
   ].join(' ')
 
@@ -253,7 +280,8 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
   ]
 
   const missing = expectedMissingAnchors(input, present)
-  const questions = collaborationQuestions(input, namedActors, roleAnchors, missing)
+  const resourceOptionsAlreadyExtracted = hasExtractedComparisonOptions(input.resources) && asksComparisonOrTargetChoice(text)
+  const questions = collaborationQuestions(input, namedActors, roleAnchors, missing, resourceOptionsAlreadyExtracted)
 
   return {
     domain: interpretation.domain,
@@ -294,6 +322,9 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
         `named_actors=${namedActors.length}`,
         `role_anchors=${roleAnchors.length}`,
         `collaboration_questions=${questions.length}`,
+        resourceOptionsAlreadyExtracted
+          ? 'collaboration_questions_suppressed_by_extracted_options'
+          : 'collaboration_questions_resource_options_not_settled',
         `evidence=${evidence.length}`,
         `resource_anchors=${resourceAnchors.actors.length + resourceAnchors.visibleActions.length + resourceAnchors.constraints.length}`,
         `missing_anchors=${missing.length}`,
