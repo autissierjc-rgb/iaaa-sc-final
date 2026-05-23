@@ -1143,6 +1143,86 @@ function targetSegmentsPhrase(segments: string[]): string {
   return `${segments.slice(0, -1).join(', ')} et ${segments[segments.length - 1]}`
 }
 
+function lowerFirst(value: string): string {
+  const clean = value.trim()
+  return clean ? `${clean.charAt(0).toLowerCase()}${clean.slice(1)}` : clean
+}
+
+function strategicOptionByPattern(options: string[], patterns: RegExp[], fallback: string): string {
+  return options.find((option) => patterns.some((pattern) => pattern.test(option))) ?? fallback
+}
+
+function isStrategicDecisionWithOptions(
+  intentContext: IntentContext | undefined,
+  situation: string,
+  writingFamily: CanonicalWritingFamily,
+): boolean {
+  if (writingFamily === 'target_choice') return true
+  const interpreted = intentContext?.interpreted_request
+  const text = [
+    situation,
+    interpreted?.user_question,
+    interpreted?.object_of_analysis,
+    intentContext?.dominant_frame,
+    intentContext?.decision_type,
+    ...(intentContext?.signals ?? []),
+    ...(interpreted?.signals ?? []),
+  ].filter(Boolean).join(' ').toLowerCase()
+  return (
+    interpreted?.intent_type === 'decide' ||
+    interpreted?.intent_type === 'compare' ||
+    interpreted?.question_type === 'decision' ||
+    interpreted?.question_type === 'comparison' ||
+    intentContext?.decision_type === 'choose_action' ||
+    /\b(?:d[eé]cision|arbitrage|choisir|prioriser|options?|sc[eé]narios?|strat[eé]gique)\b/i.test(text)
+  )
+}
+
+function rankedStrategicOptions(options: string[]): string[] {
+  const uniqueOptions = uniqueCleanList(options)
+  if (uniqueOptions.length < 2) return uniqueOptions
+  const priority = strategicOptionByPattern(uniqueOptions, [/professionnel/i, /\bSIS\b/i, /analyst|consult|journal|chercheur|manager/i], uniqueOptions[0])
+  const secondary = strategicOptionByPattern(uniqueOptions.filter((option) => option !== priority), [/individuel/i, /\bCLARITY\b/i, /particulier/i], uniqueOptions.find((option) => option !== priority) ?? 'option secondaire')
+  const deferred = strategicOptionByPattern(uniqueOptions.filter((option) => option !== priority && option !== secondary), [/organisation/i, /governance/i, /institution/i, /gouvernance/i], uniqueOptions.find((option) => option !== priority && option !== secondary) ?? 'option à différer')
+  return uniqueCleanList([priority, secondary, deferred])
+}
+
+function strategicMovementsFr(options: string[], keySignal: string): string[] {
+  const ranked = rankedStrategicOptions(options)
+  const signal = keySignal ? lowerFirst(sentenceFragment(keySignal)) : 'le signal observable défini avant l’action'
+  if (ranked.length >= 2) {
+    const [priority, secondary, deferred] = ranked
+    return [
+      `Tester ${priority} comme option prioritaire sur un cycle court et réversible.`,
+      `Définir avant le test le signal de validation : ${signal}.`,
+      `Comparer ${secondary}${deferred ? ` et ${deferred}` : ''} seulement après ce test, puis réviser l’ordre si le signal n’apparaît pas.`,
+    ]
+  }
+  return [
+    'Choisir une option prioritaire à tester maintenant, au lieu de maintenir toutes les options ouvertes.',
+    `Limiter le test à un périmètre court et réversible, avec un signal observable : ${signal}.`,
+    'Réviser le choix si le signal n’apparaît pas, plutôt que prolonger une option par inertie.',
+  ]
+}
+
+function strategicMovementsEn(options: string[], keySignal: string): string[] {
+  const ranked = rankedStrategicOptions(options)
+  const signal = keySignal ? lowerFirst(sentenceFragment(keySignal)) : 'the observable signal defined before action'
+  if (ranked.length >= 2) {
+    const [priority, secondary, deferred] = ranked
+    return [
+      `Test ${priority} as the priority option over a short reversible cycle.`,
+      `Define the validation signal before the test: ${signal}.`,
+      `Compare ${secondary}${deferred ? ` and ${deferred}` : ''} only after that test, then revise the order if the signal does not appear.`,
+    ]
+  }
+  return [
+    'Choose one priority option to test now instead of keeping every option open.',
+    `Keep the test short and reversible, with one observable signal: ${signal}.`,
+    'Revise the choice if the signal does not appear instead of extending an option by inertia.',
+  ]
+}
+
 function shouldPreferCompletedCardAfterWriting(card: SituationCard): boolean {
   const frame = card.intent_context?.dominant_frame
   const domain =
@@ -2660,9 +2740,10 @@ function completeSituationCard(
     sc.intent_context?.interpreted_request?.domain === 'management' ||
     sc.coverage_check?.domain === 'management'
   const writingFamily = canonicalWritingFamilyFromIntentContext(sc.intent_context, situation)
-  const isStartupTargetChoice =
+  const isTargetChoice =
     writingFamily === 'target_choice'
-  const targetSegments = isStartupTargetChoice ? targetSegmentsFromResources(resources) : []
+  const isStrategicDecision = isStrategicDecisionWithOptions(sc.intent_context, situation, writingFamily) && !isPersonalRelationship
+  const targetSegments = isTargetChoice ? targetSegmentsFromResources(resources) : []
   const targetSegmentsLabel = targetSegmentsPhrase(targetSegments)
   const radar = sc.radar && typeof sc.radar === 'object'
     ? sc.radar
@@ -2711,7 +2792,7 @@ function completeSituationCard(
           signal_en: 'A boundary is set and turns diffuse conflict into an organizational decision.',
         },
       ]
-    : isStartupTargetChoice
+    : isTargetChoice
     ? [
         {
           type: 'stabilization',
@@ -2785,7 +2866,7 @@ function completeSituationCard(
         watch_fr: 'Surveiller qui porte la charge réelle, qui peut arbitrer, et quelle limite devient explicite.',
         watch_en: 'Watch who carries the real load, who can arbitrate, and which boundary becomes explicit.',
       }
-    : isStartupTargetChoice
+    : isTargetChoice
     ? {
         hook_fr: targetSegments.length >= 2
           ? `La bonne cible initiale se joue entre ${targetSegmentsLabel} : celle qui prouve le plus vite l’usage doit passer devant.`
@@ -2827,7 +2908,7 @@ function completeSituationCard(
     ...(arbre.incertitudes ?? []),
     'Seuil exact à partir duquel la tension devient visible pour tous les acteurs.',
   ], situation)
-  const startupTargetConstraintsFr = targetSegments.length >= 2
+  const targetChoiceConstraintsFr = targetSegments.length >= 2
     ? [
         'La cible prioritaire doit être choisie avant d’avoir une preuve complète de traction.',
         'Chaque famille d’usage demande un cycle de validation différent.',
@@ -2838,12 +2919,12 @@ function completeSituationCard(
         'Le signal utile doit venir d’un usage répété, pas seulement d’une réaction positive.',
         'Une cible trop large peut donner de l’audience sans clarifier la traction.',
       ]
-  const startupTargetConstraintsEn = [
+  const targetChoiceConstraintsEn = [
     'The priority target must be chosen before traction is fully proven.',
     'Each usage family requires a different validation cycle.',
     'An organizational target chosen too early can slow product learning.',
   ]
-  const startupTargetUncertaintiesFr = targetSegments.length >= 2
+  const targetChoiceUncertaintiesFr = targetSegments.length >= 2
     ? [
         'Usage professionnel produit-il assez de récurrence pour devenir la cible prioritaire ?',
         'Usage individuel donne-t-il seulement de l’attention ou aussi de la rétention ?',
@@ -2854,11 +2935,26 @@ function completeSituationCard(
         'Quel usage déclenche partage, recommandation ou demande d’intégration ?',
         'Quel segment accepte de payer avant que la promesse soit institutionnalisée ?',
       ]
-  const startupTargetUncertaintiesEn = [
+  const targetChoiceUncertaintiesEn = [
     'Does professional use create enough recurrence to become the priority target?',
     'Does individual use create only attention or also retention?',
     'Can organizational use pay without imposing too long a sales cycle?',
   ]
+  const strategicMovementOptions = isTargetChoice ? targetSegments : []
+  const strategicMovementSignalFr = isTargetChoice
+    ? 'réutilisation, partage, demande de suite ou paiement du segment prioritaire'
+    : firstSafeText(
+        [sc.key_signal_fr, sc.key_signal, arbre.temps?.[0], arbre.temporalites?.[0]],
+        situation,
+        'un signal observable défini avant l’action'
+      )
+  const strategicMovementSignalEn = isTargetChoice
+    ? 'reuse, sharing, follow-up request, or payment from the priority segment'
+    : firstSafeText(
+        [sc.key_signal_en, sc.key_signal, arbre.temps?.[0], arbre.temporalites?.[0]],
+        situation,
+        'an observable signal defined before action'
+      )
   const understandingConstraintsFr = [
     'Distinguer crainte exprimée, capacité réelle d’action, relais institutionnels et preuve observable.',
     'Identifier les acteurs capables de transformer la tension en décision, blocage, procédure ou récit public.',
@@ -2887,7 +2983,7 @@ function completeSituationCard(
       ? 'La situation se lit par la reprise concrète du lien : signe affectif, histoire passée, distance, rythme des messages et possibilité réelle d’une rencontre.'
       : isManagementContext
       ? `${objectSentence} doit être lu comme une tension d’organisation : ce qui change officiellement, ce que l’équipe comprend, et ce que chacun doit porter concrètement.`
-      : isStartupTargetChoice
+      : isTargetChoice
       ? targetSegments.length >= 2
         ? `${objectSentence} ne se joue pas d’abord comme une question de volume. La ressource fait apparaître des segments possibles : ${targetSegmentsLabel}. La décision utile est de choisir celui qui comprend la promesse, l’utilise souvent, en parle et produit les preuves les plus visibles.`
         : `${objectSentence} ne se joue pas d’abord comme une question de volume. La décision utile est de choisir le premier groupe capable de comprendre la promesse, de l’utiliser souvent, d’en parler et de produire des preuves visibles.`
@@ -2907,7 +3003,7 @@ function completeSituationCard(
       ? 'Le point fragile est le risque de transformer un signe affectif en certitude avant que les actes aient clarifié l’intention.'
       : isManagementContext
       ? 'Le point fragile est l’écart entre l’organisation annoncée, les rôles réellement tenus et la charge que chacun porte ou refuse de porter.'
-      : isStartupTargetChoice
+      : isTargetChoice
       ? targetSegments.length >= 2
         ? `Le point fragile est l’arbitrage entre ${targetSegmentsLabel} : choisir trop large crée du bruit, choisir trop étroit peut manquer d’élan.`
         : 'Le point fragile est le choix du premier segment : une communauté trop large crée du bruit, une cible trop étroite peut manquer d’élan.'
@@ -2927,7 +3023,7 @@ function completeSituationCard(
       ? 'Un message peut réchauffer un lien ancien, mais seule la suite des échanges montre s’il ouvre une rencontre, une clarification ou seulement une chaleur prudente.'
       : isManagementContext
       ? 'La réorganisation promet un cadre plus lisible, mais l’équipe peut vivre surtout une redistribution de charge, de pouvoir et de reconnaissance.'
-      : isStartupTargetChoice
+      : isTargetChoice
       ? targetSegments.length >= 2
         ? `Les segments visibles peuvent tous donner de l’intérêt, mais seul celui qui produit usage répété, retours qualifiés et preuve de traction doit devenir prioritaire.`
         : 'Une communauté peut donner de la visibilité, mais seule une cible assez précise produit de l’usage répété, des retours qualifiés et une preuve de traction.'
@@ -2947,7 +3043,7 @@ function completeSituationCard(
       ? 'Le signal clé est une cohérence entre le signe affectif et les actes : rendez-vous proposé, disponibilité, parole plus claire ou rythme régulier.'
       : isManagementContext
       ? 'Le signal clé est le moment où la charge réelle devient visible : refus, surcharge, arbitrage demandé, rôle clarifié ou limite explicitement posée.'
-      : isStartupTargetChoice
+      : isTargetChoice
       ? targetSegments.length >= 2
         ? `Le signal clé est le segment, parmi ${targetSegmentsLabel}, qui passe le plus vite de l’intérêt à l’usage répété : retours qualifiés, réutilisation, partage ou demande d’intégration.`
         : 'Le signal clé est le passage de l’intérêt à l’usage répété : retours qualifiés, partages spontanés, réutilisation, invitation d’autres utilisateurs ou demande d’intégration.'
@@ -2997,7 +3093,7 @@ function completeSituationCard(
               explanation_en: 'The reading remains reversible until no verifiable act closes the counter-hypotheses.',
             },
           ]
-        : isStartupTargetChoice
+        : isTargetChoice
         ? [
             {
               axis: 'impact',
@@ -3047,8 +3143,8 @@ function completeSituationCard(
         'Distinguer histoire passée, chaleur du message, disponibilité réelle et rencontre concrète.',
         'Répondre de façon accueillante sans forcer l’autre à clarifier plus vite que le lien ne le permet.',
       ]
-      : isStartupTargetChoice
-      ? startupTargetConstraintsFr
+      : isTargetChoice
+      ? targetChoiceConstraintsFr
       : constraintsFr,
     constraints_en: understands
       ? [
@@ -3056,8 +3152,8 @@ function completeSituationCard(
         'Distinguish direct technical proof from the trust needed to decide.',
         'Observe who still requires this format, and for what function: filtering, framing, reputation, or commitment.',
       ]
-      : isStartupTargetChoice
-      ? startupTargetConstraintsEn
+      : isTargetChoice
+      ? targetChoiceConstraintsEn
       : listFromAxis(sc.constraints_en, constraintsFr, situation),
     uncertainties_fr: understands
       ? ensureContextualBlindSpotFr(understandingUncertaintiesFr, sc.intent_context)
@@ -3067,8 +3163,8 @@ function completeSituationCard(
         'Qui prend l’initiative concrète : proposer un rendez-vous, maintenir le rythme des messages, clarifier le ton ?',
         'Quelle part vient de l’histoire passée, de la distance, de la projection ou du moment présent ?',
       ])
-      : isStartupTargetChoice
-      ? startupTargetUncertaintiesFr
+      : isTargetChoice
+      ? targetChoiceUncertaintiesFr
       : ensureContextualBlindSpotFr(uncertaintiesFr, sc.intent_context),
     uncertainties_en: understands
       ? ensureContextualBlindSpotEn([
@@ -3076,8 +3172,8 @@ function completeSituationCard(
         'Which actors still give it authority, and why?',
         'When does the format stop clarifying the decision and become only a ritual?',
       ])
-      : isStartupTargetChoice
-      ? startupTargetUncertaintiesEn
+      : isTargetChoice
+      ? targetChoiceUncertaintiesEn
       : ensureContextualBlindSpotEn(listFromAxis(sc.uncertainties_en, uncertaintiesFr, situation), sc.intent_context),
     movements_fr: understands
       ? understandingMovementsFr
@@ -3087,6 +3183,8 @@ function completeSituationCard(
         'Proposer un cadre simple de rencontre ou d’échange, puis observer la réponse réelle.',
         'Laisser VI enquêter sur le rythme, les actes et les mots exacts plutôt que remplir l’ambiguïté.',
       ]
+      : isStrategicDecision
+      ? strategicMovementsFr(strategicMovementOptions, strategicMovementSignalFr)
       : cleanList(ensureList(sc.movements_fr, [
       'Identifier les forces qui agissent, bloquent ou supportent la situation.',
       'Transformer VI en enquête : quel angle absent peut renverser la lecture ?',
@@ -3098,6 +3196,8 @@ function completeSituationCard(
         'Compare that function with the more direct proofs already available.',
         'Spot the signal showing authority moving from narrative to usage.',
       ]
+      : isStrategicDecision
+      ? strategicMovementsEn(strategicMovementOptions, strategicMovementSignalEn)
       : cleanList(ensureList(sc.movements_en, [
       'Identify the forces acting, blocking, or carrying the situation.',
       'Turn VI into inquiry: which absent angle could reverse the reading?',
