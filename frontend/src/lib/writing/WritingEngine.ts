@@ -593,27 +593,27 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
     : segmentList
   const decisionProof = 'usage répété, retour qualifié, recommandation, partage, demande d’intégration ou paiement'
   const title = input.interpretation.header_subject || 'choix de première cible'
+  const diamond = hasSegments
+    ? `La bonne première cible n’est pas le plus grand public ; c’est celui pour qui la promesse devient un geste répété, partageable et monétisable.`
+    : 'Une cible non nommée ne se choisit pas : elle se fait d’abord apparaître par les usages, les offres et les preuves disponibles.'
   const insight = hasSegments
-    ? `${subject} doit produire un classement, pas seulement une comparaison. À ce stade, la cible prioritaire probable est ${priority.label} : ${priority.reason_fr}. ${secondary ? `${secondary.label} sert plutôt de ${secondary.role_fr}.` : ''} ${deferred ? `${deferred.label} doit rester en preuve longue avant de devenir le coeur du lancement.` : ''}`.trim()
+    ? `${diamond} À ce stade, la cible prioritaire probable est ${priority.label} : ${priority.reason_fr}.`
     : `${subject} doit rester une carte provisoire : la matière fournie indique une décision de cible, mais ne nomme pas encore assez de segments exploitables pour trancher proprement.`
   const vulnerability = hasSegments
-    ? `Le point fragile est de confondre visibilité, apprentissage et marché : ${priority.label} doit prouver l’usage, tandis que les autres segments ne doivent pas masquer un signal commercial plus faible.`
+    ? `Le point fragile est la séquence de lancement : choisir le public qui comprend le mieux la promesse peut retarder celui qui prouve qu’elle devient un workflow.`
     : 'Le point fragile est le manque de segments vérifiables dans la matière exploitée : sans publics nommés, la décision risque de redevenir une intuition générale.'
   const asymmetry = hasSegments
-    ? `Tous les segments peuvent comprendre la promesse, mais ils ne valent pas la même chose au lancement : ${priority.label} peut donner une preuve plus dure, ${secondary?.label ?? 'un autre segment'} peut surtout donner de l’apprentissage, et ${deferred?.label ?? 'un segment plus institutionnel'} peut demander plus de temps.`
+    ? `Tous les segments peuvent comprendre la promesse, mais ils ne rendent pas la même preuve : ${secondary?.label ?? 'un segment d’activation'} peut donner du langage et du volume, ${priority.label} peut donner une habitude de travail, et ${deferred?.label ?? 'un segment organisationnel'} peut donner de la crédibilité au prix d’un cycle plus long.`
     : 'La ressource peut donner une promesse lisible, mais la carte ne doit pas inventer les publics qui ne sont pas encore établis.'
   const keySignal = hasSegments
     ? `Signal clé : vérifier si ${priority.label} passe en moins de quelques cycles de l’intérêt à ${decisionProof}.`
     : 'Signal clé : obtenir une liste explicite de publics, d’usages ou d’offres, puis observer lequel produit un premier usage répété.'
   const lecture = hasSegments
-    ? `Le choix se joue entre trois familles d’usage visibles dans la matière fournie : ${segmentList}.\n\nClassement provisoire : ${rankingSentence(rankedOptions)}.\n\nLa recommandation est donc de partir par ${priority.label}, non parce que cette cible serait définitivement la plus grande, mais parce qu’elle peut produire le signal le plus net : ${priority.test_fr}. ${secondary ? `${secondary.label} sert ensuite à tester l’activation, le langage utilisateur et la distribution.` : ''} ${deferred ? `${deferred.label} doit attendre une preuve de confiance, d’intégration ou de paiement avant de devenir le coeur du lancement.` : ''}`
+    ? `Le vrai arbitrage n’est pas entre trois publics, mais entre trois types de preuve. ${segmentList}. ${secondary?.label ?? 'Une cible d’activation'} peut montrer que la promesse parle ; ${priority.label} doit montrer qu’elle sert assez souvent pour devenir une habitude ; ${deferred?.label ?? 'une cible organisationnelle'} ne devient décisive que si la confiance et l’intégration suivent.\n\nClassement provisoire : ${rankingSentence(rankedOptions)}.\n\nLa recommandation est donc de partir par ${priority.label}, non parce que cette cible serait définitivement la plus grande, mais parce qu’elle peut produire le signal le plus net : ${priority.test_fr}. ${secondary ? `${secondary.label} sert ensuite à tester l’activation, le langage utilisateur et la distribution.` : ''} ${deferred ? `${deferred.label} doit attendre une preuve de confiance, d’intégration ou de paiement avant de devenir le coeur du lancement.` : ''}`
     : `Le choix de cible reste à ouvrir comme une décision de lancement : la matière disponible indique qu’il faut comparer des publics, mais elle ne donne pas encore assez de segments exploitables pour établir un rang robuste.\n\nLa prochaine preuve utile tient en quatre éléments : publics visés, cas d’usage, offre associée et signal attendu pour chaque public. Dès que ces éléments apparaissent dans la ressource, SC peut classer les options sans les inventer.`
   const approfondir = hasSegments
-    ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${compactSegmentList} ne donnent pas la même preuve : ${priority.label} doit prouver l’usage et la valeur, ${secondary?.label ?? 'la cible suivante'} peut élargir l’apprentissage, et ${deferred?.label ?? 'la dernière cible'} ne doit monter que si le coût de vente ou d’intégration devient justifié.`
+    ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${compactSegmentList} ne donnent pas la même preuve : ${priority.label} doit prouver l’usage et la valeur, ${secondary?.label ?? 'la cible suivante'} peut élargir l’apprentissage, et ${deferred?.label ?? 'la dernière cible'} ne doit monter que si le coût de vente ou d’intégration devient justifié. Le pari implicite est clair : mieux vaut une petite preuve de workflow qu’une grande preuve d’intérêt.`
     : 'Le fond de la situation tient à une absence de matière qualifiée. La ressource doit être relue non comme une vitrine, mais comme un inventaire de publics, usages, offres et preuves. Tant que ces éléments restent implicites, la carte doit afficher sa prudence plutôt que trancher par formule.'
-  const diamond = hasSegments
-    ? `La bonne première cible n’est pas celle qui admire le mieux la promesse ; c’est ${priority.label}, si elle transforme la carte en geste répété avant que les autres segments ne transforment l’intérêt en lenteur.`
-    : 'Une cible non nommée ne se choisit pas : elle se fait d’abord apparaître par les usages, les offres et les preuves disponibles.'
   const probability = probabilityFromResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const trajectories: WritingContract['trajectories'] = [
     {

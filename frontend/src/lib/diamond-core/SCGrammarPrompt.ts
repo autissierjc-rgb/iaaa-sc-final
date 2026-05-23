@@ -140,7 +140,11 @@ function qualityTargets(dossier: DiamondDossier): string[] {
     'Key Signal: donner un signal concret que l utilisateur peut surveiller.',
     'Global Usefulness: aider a comprendre, decider ou agir sans surpromettre.',
     ...(hasExtractedOptions
-      ? ['Target choice: si la question demande une meilleure option ou cible, classer les options qualifiees en cible prioritaire, secondaire et a differer avec justification et test de validation. Sans preuve de traction contraire, privilegier le segment a usage repete et paiement rapide, garder l activation individuelle en second terrain, et differer les cycles organisationnels longs.']
+      ? [
+          'Target choice: si la question demande une meilleure option ou cible, classer les options qualifiees en cible prioritaire, secondaire et a differer avec justification et test de validation.',
+          'Target choice diamond: ne pas seulement classer ; reveler le pari structurel du lancement, c est-a-dire quel segment transforme la promesse en preuve dure et ce que les autres segments ne prouvent pas encore.',
+          'Sans preuve de traction contraire, privilegier le segment a usage repete et paiement rapide, garder l activation individuelle en second terrain, et differer les cycles organisationnels longs.',
+        ]
       : []),
     ...dossier.grammar.required_public_moves_fr,
   ]
@@ -214,6 +218,8 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
             'When the user asks for best target/options and Resources.extracted_options has at least two options, you must rank them explicitly: cible prioritaire probable, cible secondaire, cible a differer.',
             'The ranking must appear in situation_card.insight_fr or lecture.text_fr, with a reason and one observable validation test for the priority.',
             'If the options are individual use, professional use and organizational/governance use, and no direct traction proof contradicts it, prefer professional repeated-use first, individual activation/language second, organizational/governance third because sales and integration cycles are longer.',
+            'For target choice, situation_card.insight_fr and the first paragraph of lecture.text_fr must reveal the deeper wager: not biggest audience, but the first public that turns the promise into repeated behavior, workflow, payment or integration.',
+            'For target choice, situation_card.main_vulnerability_fr must name the launch sequence risk, not a generic risk of choosing too broadly.',
           ]
         : []),
       'trajectories must include exactly one stabilization, one escalation and one regime_shift.',
