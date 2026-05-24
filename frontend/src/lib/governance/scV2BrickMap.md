@@ -120,6 +120,8 @@ src/lib/
     scCalibrationBenchmark.md
     diamondValidation.ts
     scV2BrickMap.md
+    anemosNavigationFragments.md
+    scProtocolRoadmap.md
 
   archive/
     GenerationEventBuilder
@@ -195,6 +197,8 @@ src/app/sis-system/v2/
 | PDF export | share / PDF | branche cockpit | `src/lib/share/PdfSnapshotRenderer.ts`, `src/app/api/pdf-v2` | PDF depuis snapshot, sans regeneration sauvage. |
 | CTO Watch | admin / performance | branche cockpit | `src/lib/archive/CtoWatch.ts`, `src/app/api/cto-watch` | Veille seuils critiques : latence, cout, fallback, erreurs. |
 | Codex session protocol | governance / admin-cockpit | branche | `src/lib/governance/codexSessionProtocol.md` | Regles de branche, build, commit, anti-patch. |
+| Anemos Navigation Fragments | governance / dialogue / resources | branche documentaire | `src/lib/governance/anemosNavigationFragments.md` | Cadre le geste "deposer les fragments", Anemos comme CCO et Navigation future sans creer de route parallele. |
+| SC Protocol Roadmap | governance / admin-cockpit | branche documentaire | `src/lib/governance/scProtocolRoadmap.md` | Programme les chantiers Anemos, fragments, ResonanceTrace, benchmarks, Navigation et licence institutionnelle sans reconstruire SC. |
 
 ## 4. Mapping symptome -> brique a verifier
 
