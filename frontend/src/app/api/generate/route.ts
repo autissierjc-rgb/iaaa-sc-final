@@ -5080,7 +5080,7 @@ export async function POST(req: NextRequest) {
     if (contractQuality || writingQuality) {
       recordGenerationTrace({
         status: qualityHasError ? 'error' : qualityActionableIssues.length > 0 ? 'partial' : 'ok',
-        gate: qualityHasError ? 'CLARIFY' : 'GENERATE',
+        gate: 'GENERATE',
         route: '/api/generate',
         canonicalLayer: 'quality',
         pipelineStep: 'QualityGate',
@@ -5098,22 +5098,10 @@ export async function POST(req: NextRequest) {
       })
     }
     if (qualityHasError && !diamondArchitectWriter?.accepted) {
-      return NextResponse.json({
-        gate: 'CLARIFY',
-        questions: [
-          'La carte ne respecte pas encore le contrat canonique. Quel élément faut-il préciser pour corriger la couche signalée : acteur, preuve, source, option, contrainte ou décision à prendre ?',
-        ],
-        quality_issues: qualityIssues,
-        coverage_check: {
-          ...effectiveCoverageForGeneration,
-          quality: {
-            status: qualityStatus,
-            contract_quality: contractQuality,
-            writing_quality: writingQuality,
-          },
-        },
-        resources_status: resourcesStatus,
-      })
+      baseSc = {
+        ...baseSc,
+        generation_status: 'partial',
+      }
     }
     const generationArchive = canonicalQuality
       ? buildGenerationEvent({
