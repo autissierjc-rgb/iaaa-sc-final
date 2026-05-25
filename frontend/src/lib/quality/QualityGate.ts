@@ -40,6 +40,17 @@ function lectureAndApprofondirText(writing: WritingContract): string {
   ].join(' ')
 }
 
+function canonicalQuestionText(interpretation: InterpretationContract): string {
+  return [
+    interpretation.raw_input,
+    interpretation.situation_soumise,
+    interpretation.object_of_analysis,
+    interpretation.header_subject,
+    interpretation.angle,
+    interpretation.user_need,
+  ].join(' ')
+}
+
 function issue(level: QualityIssue['level'], code: string, message: string, field?: string): QualityIssue {
   return { level, code, message, field }
 }
@@ -542,7 +553,11 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     )
     const sourcesWithExcerpt = input.resources.public_sources.filter((source) => Boolean(source.excerpt)).length
     const regimeSignals = buildResourceRegimeSignals(input.resources, 4)
-    const regimeSignalsUsed = countRegimeSignalsUsed(regimeSignals, lectureAndApprofondirText(input.writing))
+    const regimeSignalsUsed = countRegimeSignalsUsed(
+      regimeSignals,
+      lectureAndApprofondirText(input.writing),
+      canonicalQuestionText(input.interpretation),
+    )
 
     if (!hasReliableSource) {
       issues.push(issue(

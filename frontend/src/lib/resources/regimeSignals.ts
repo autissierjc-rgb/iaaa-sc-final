@@ -7,6 +7,7 @@ export type ResourceRegimeSignal = {
   source_title: string
   source_name: string
   reliability: string
+  discriminant_terms: string[]
   source_id?: string
 }
 
@@ -24,6 +25,28 @@ function normalize(value: string): string {
     .toLowerCase()
 }
 
+function words(value: string): string[] {
+  return normalize(value)
+    .split(/[^a-z0-9]+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+}
+
+function discriminantTermsFrom(value: string, baseline: string): string[] {
+  const baselineWords = new Set(words(baseline))
+  const seen = new Set<string>()
+
+  return words(value)
+    .filter((part) => part.length >= 6)
+    .filter((part) => !baselineWords.has(part))
+    .filter((part) => {
+      if (seen.has(part)) return false
+      seen.add(part)
+      return true
+    })
+    .slice(0, 12)
+}
+
 function signalFromSource(source: ResourceServiceContract['public_sources'][number]): ResourceRegimeSignal | null {
   const evidence = sanitizeResourceAsProbativeEvidence(source)
   if (!evidence.can_be_public) return null
@@ -39,6 +62,7 @@ function signalFromSource(source: ResourceServiceContract['public_sources'][numb
     source_title: sourceTitle,
     source_name: sourceName,
     reliability: source.reliability ?? 'unknown',
+    discriminant_terms: discriminantTermsFrom(`${signal} ${sourceTitle}`, ''),
     source_id: source.id,
   }
 }
@@ -62,16 +86,14 @@ export function buildResourceRegimeSignals(
     .slice(0, max)
 }
 
-export function countRegimeSignalsUsed(signals: ResourceRegimeSignal[], publicText: string): number {
+export function countRegimeSignalsUsed(
+  signals: ResourceRegimeSignal[],
+  publicText: string,
+  baselineText = '',
+): number {
   const normalizedText = normalize(publicText)
   return signals.filter((signal) => {
-    const candidates = [
-      signal.source_title,
-      signal.source_name,
-      signal.signal_fr,
-    ]
-      .flatMap((value) => normalize(value).split(/[^a-z0-9]+/))
-      .filter((part) => part.length >= 6)
+    const candidates = discriminantTermsFrom(`${signal.signal_fr} ${signal.source_title}`, baselineText)
 
     return candidates.some((part) => normalizedText.includes(part))
   }).length

@@ -72,6 +72,7 @@ function resourceSummary(dossier: DiamondDossier) {
       source_title: signal.source_title,
       source_name: signal.source_name,
       reliability: signal.reliability,
+      discriminant_terms: signal.discriminant_terms,
     })),
     functional_needs: dossier.resources.plan.functional_needs.map((need) => ({
       family: need.family,
