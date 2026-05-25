@@ -3,11 +3,13 @@ import type {
   InterpretationContract,
   QualityGateContract,
   QualityIssue,
+  ResonanceTraceContract,
   ResourceServiceContract,
   ScoringContract,
   WritingContract,
 } from '../contracts'
 import { buildResourceRegimeSignals, countRegimeSignalsUsed } from '../resources/regimeSignals'
+import { buildResonanceTrace } from '../resonance'
 import { containsForbiddenPublicPhrase } from '../writing/diamondRules'
 
 export type QualityGateInput = {
@@ -16,6 +18,7 @@ export type QualityGateInput = {
   scoring: ScoringContract
   writing: WritingContract
   resources?: ResourceServiceContract
+  resonance?: ResonanceTraceContract
 }
 
 function publicText(writing: WritingContract): string {
@@ -263,6 +266,18 @@ function meaningfulTheatreAnchors(theatre: ConcreteTheatreContract): string[] {
     .slice(0, 20)
 }
 
+function meaningfulResonanceAnchors(resonance: ResonanceTraceContract): string[] {
+  return Array.from(new Set([
+    ...resonance.real_actors,
+    ...resonance.institutions,
+    resonance.structural_gap_fr,
+    resonance.transition_signal_fr,
+    ...resonance.source_signals.map((signal) => signal.signal_fr),
+  ].map((item) => item.trim()).filter((item) => item.length >= 4)))
+    .filter((item) => !/^(acteurs?|institutions?|contraintes?|preuves?|sources?|trace verifiable|fait observable)$/i.test(normalize(item)))
+    .slice(0, 20)
+}
+
 function countAnchorsUsed(anchors: string[], normalizedText: string): number {
   return anchors.filter((anchor) => normalize(anchor).split(/\s+/).some((part) =>
     part.length >= 5 && normalizedText.includes(part),
@@ -314,8 +329,15 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+  const resonance = input.resonance ?? buildResonanceTrace({
+    interpretation: input.interpretation,
+    theatre: input.theatre,
+    resources: input.resources,
+  })
   const theatreAnchors = meaningfulTheatreAnchors(input.theatre)
-  const theatreAnchorsUsed = countAnchorsUsed(theatreAnchors, normalizedText)
+  const resonanceAnchors = meaningfulResonanceAnchors(resonance)
+  const publicAnchorContract = resonanceAnchors.length > 0 ? resonanceAnchors : theatreAnchors
+  const theatreAnchorsUsed = countAnchorsUsed(publicAnchorContract, normalizedText)
   const noisyResourcePattern = PUBLIC_RESOURCE_NOISE_PATTERNS.find((pattern) => pattern.test(text))
   const internalWritingPattern = PUBLIC_INTERNAL_WRITING_PATTERNS.find((pattern) => pattern.test(text))
   const gluedTrajectoryPattern = GLUED_TRAJECTORY_PATTERNS.find((pattern) => pattern.test(text))
