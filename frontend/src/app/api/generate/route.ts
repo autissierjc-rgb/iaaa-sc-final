@@ -39,6 +39,7 @@ import { detectScopeContext } from '@/lib/scope/scopeContext'
 import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWritingWithMode } from '@/lib/writing'
 import { runContractQualityGate, runQualityGate } from '@/lib/quality'
+import { buildResonanceTrace } from '@/lib/resonance'
 import { applyEntityExplanationsToSituationCard } from '@/lib/text/entityExplanations'
 import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
@@ -4927,6 +4928,11 @@ export async function POST(req: NextRequest) {
     }
     baseSc = completeSituationCard(baseSc, generationDisplayText, arbre, resources, branches)
     const canonicalScoringForWriting = scoringContractFromCard(baseSc)
+    const resonanceTrace = buildResonanceTrace({
+      interpretation: generationInterpretation,
+      theatre: canonicalTheatre,
+      resources: canonicalResourcePlan,
+    })
     let writingContract = canonicalScoringForWriting
       ? await composeDiamondWritingWithMode(
           {
@@ -4937,6 +4943,7 @@ export async function POST(req: NextRequest) {
             scoring: canonicalScoringForWriting,
             resources: canonicalResourcePlan,
             patterns: humanCollectivePatterns,
+            resonance: resonanceTrace,
           },
           'local_contract',
         )
@@ -5081,6 +5088,7 @@ export async function POST(req: NextRequest) {
           scoring: canonicalScoringForWriting,
           writing: writingContract,
           resources: canonicalResourcePlan,
+          resonance: resonanceTrace,
         })
       : null
     const qualityIssues = [
