@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { POST as generatePublicCard } from '@/app/api/generate/route'
 import { DIAMOND_REGRESSION_CASES } from '@/lib/governance/diamondRegressionCases'
 import { validateRegressionCase } from '@/lib/governance/diamondRegressionRunner'
+import { runReadinessRegressionCases } from '@/lib/governance/readinessRegressionCases'
 import type { SituationCard } from '@/lib/resources/resourceContract'
 
 export const dynamic = 'force-dynamic'
@@ -129,19 +130,24 @@ export async function POST(req: NextRequest) {
   }
 
   const failed = results.filter((result) => !result.ok)
+  const readinessResults = runReadinessRegressionCases()
+  const readinessFailed = readinessResults.filter((result) => !result.ok)
   const warnings = results.reduce(
     (total, result) => total + result.issues.filter((issue) => issue.level === 'warning').length,
     0,
   )
 
   return NextResponse.json({
-    ok: failed.length === 0,
-    status: failed.length > 0 ? 'failed' : warnings > 0 ? 'warning' : 'ok',
+    ok: failed.length === 0 && readinessFailed.length === 0,
+    status: failed.length > 0 || readinessFailed.length > 0 ? 'failed' : warnings > 0 ? 'warning' : 'ok',
     total_cases: results.length,
     failed_cases: failed.length,
+    readiness_total_cases: readinessResults.length,
+    readiness_failed_cases: readinessFailed.length,
     warning_count: warnings,
     duration_ms: Date.now() - started,
     route_under_test: '/api/generate',
+    readiness_results: readinessResults,
     results,
   })
 }
