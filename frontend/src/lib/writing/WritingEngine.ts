@@ -54,6 +54,8 @@ function unique(items: string[]): string[] {
 
 function isPublicPlaceholder(item: string): boolean {
   const normalized = normalizeAnchor(item)
+  if (/^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i.test(item.trim())) return true
+
   if ([
     'acteurs directs',
     'acteurs visibles',

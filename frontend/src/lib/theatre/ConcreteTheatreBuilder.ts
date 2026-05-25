@@ -100,11 +100,10 @@ function resourceHost(url: string): string {
 function resourceTheatreAnchors(resources?: ResourceServiceContract) {
   const publicSources = resources?.public_sources ?? []
   const siteBriefs = publicSources.filter((resource) => resource.title.toLowerCase().startsWith('fiche site'))
-  const sourceNames = unique(publicSources.map((resource) => resource.source || resourceHost(resource.url)))
   const siteNames = unique(siteBriefs.map((resource) =>
     resource.title.replace(/^Fiche site\s*-\s*/i, '').trim()
   ))
-  const officialHosts = unique(publicSources
+  const siteHosts = unique(siteBriefs
     .map((resource) => resourceHost(resource.url))
     .filter(Boolean))
 
@@ -129,8 +128,8 @@ function resourceTheatreAnchors(resources?: ResourceServiceContract) {
   })).slice(0, 8)
 
   return {
-    actors: unique([...siteNames, ...sourceNames]).slice(0, 10),
-    institutions: officialHosts.slice(0, 10),
+    actors: siteNames.slice(0, 10),
+    institutions: siteHosts.slice(0, 10),
     visibleActions,
     constraints,
     unknowns: constraints,
