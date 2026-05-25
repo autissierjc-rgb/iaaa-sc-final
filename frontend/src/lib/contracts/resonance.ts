@@ -14,6 +14,9 @@ export type ResonanceTraceContract = {
   real_actors: string[]
   institutions: string[]
   structural_gap_fr: string
+  structural_contradiction_fr: string
+  structural_vulnerability_fr: string
+  diamond_thesis_fr: string
   regime_hypothesis_fr: string
   transition_signal_fr: string
   forbidden_public_confusions: string[]

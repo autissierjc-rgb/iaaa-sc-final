@@ -978,7 +978,9 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const resourcesSection = resourceEvidenceSection(input.resources)
   const resourcesSentence = resourceEvidenceSentence(input.resources)
   const resourceSignalOpening = resourceRegimeSignalSentence(input.resources, resonance)
-  const diamondText = compactSentence(grammar.diamond(tension, institutions, firstProcedure))
+  const diamondText = compactSentence(
+    resonance.diamond_thesis_fr || grammar.diamond(tension, institutions, firstProcedure),
+  )
 
   const publicWarnings = [
     input.safety.required_disclaimer_fr,
@@ -990,7 +992,10 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     grammar.insight(subject, tension, firstProcedure, institutions),
     360,
   )
-  const vulnerability = compactSentence(grammar.vulnerability(blindSpot), 320)
+  const vulnerability = compactSentence(
+    resonance.structural_vulnerability_fr || grammar.vulnerability(blindSpot),
+    320,
+  )
   const asymmetry = compactSentence(grammar.asymmetry(actors, institutions))
   const keySignal = compactSentence(grammar.keySignal(firstEvidence))
   const trajectories: WritingContract['trajectories'] = [
@@ -1019,8 +1024,9 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const probabilityChange = probabilityChangeSentence(probability)
   const lecture = [
     resourceSignalOpening,
+    diamondText,
     grammar.lectureEntry(subject, institutions),
-    `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
+    resonance.structural_contradiction_fr || `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
     resourcesSentence,
     vulnerability,
     keySignal,
@@ -1029,8 +1035,9 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   ].filter(Boolean).join(' ')
   const approfondirAnalysis = [
     resourceSignalOpening,
+    diamondText,
     grammar.approfondirEntry,
-    grammar.supportSentence(actors, institutions),
+    resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
     `Ce qu il faut etablir n est pas seulement l intention, mais le lien entre ${firstProcedure}, ${evidence} et ${blindSpot}.`,
     resourcesSentence,
     resourcesWarning ? resourcesWarning : '',
@@ -1091,8 +1098,8 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       analysis_fr: approfondirAnalysis,
       sections_fr: [
         ...canonicalApprofondirSections({
-          really: `${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}La question porte sur une transformation : ce qui est dit ou redoute peut-il devenir une action reconnue par ${institutions} ? Les acteurs a suivre sont ${actors}. ${probabilityDemonstration}`,
-          holds: grammar.supportSentence(actors, institutions),
+          really: `${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste a situer qui porte le cout, qui garde la marge d arbitrage, et quelle preuve ferait changer le regime de la situation. ${probabilityDemonstration}`,
+          holds: resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
           weakens: `Ce qui affaiblit la situation, c’est le point aveugle ${blindSpot} : tant qu’il n’est pas relié à ${evidence}, la lecture reste vulnérable.`,
           escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
           shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr} ${probabilityChange}`,

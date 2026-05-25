@@ -87,6 +87,25 @@ function firstUseful(items: string[], fallback: string): string {
   return items.find((item) => item.trim().length > 0) ?? fallback
 }
 
+function visibleList(items: string[], fallback: string): string {
+  return items.length > 0 ? items.slice(0, 4).join(', ') : fallback
+}
+
+function buildStructuralContradiction(actors: string[], institutions: string[]): string {
+  const actorLine = visibleList(actors, 'les acteurs directement concernes')
+  const institutionLine = visibleList(institutions, 'les instances capables de cadrer ou bloquer la suite')
+  return `${actorLine} rendent la situation visible, mais ${institutionLine} decident si cette tension devient une contrainte, un arbitrage ou un changement de regime.`
+}
+
+function buildStructuralVulnerability(structuralGap: string, transitionSignal: string): string {
+  return `La vulnerabilite centrale est ${structuralGap} : tant que ce point n est pas relie a ${transitionSignal}, la situation peut rester lisible sans devenir decidable.`
+}
+
+function buildDiamondThesis(actors: string[], structuralGap: string, transitionSignal: string): string {
+  const actorLine = visibleList(actors, 'les acteurs concernes')
+  return `La situation tient tant que ${actorLine} peuvent absorber l ecart entre recit, cout et decision ; elle bascule quand ${transitionSignal} rend ${structuralGap} impossible a contourner.`
+}
+
 function corpusText(input: ResonanceTraceInput): string {
   return [
     input.interpretation.raw_input,
@@ -181,8 +200,11 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       ...input.theatre.visible_actions,
       ...sourceSignals.map((signal) => signal.signal_fr),
     ]).filter((item) => publicAnchor(item, sourceHosts)),
-    'un signal observable reliant acteur, decision et consequence',
+    'un acte, une preuve ou un seuil observable qui modifie les marges d action',
   )
+  const structuralContradiction = buildStructuralContradiction(realActors, institutions)
+  const structuralVulnerability = buildStructuralVulnerability(structuralGap, transitionSignal)
+  const diamondThesis = buildDiamondThesis(realActors, structuralGap, transitionSignal)
   const forbidden = unique([
     ...sourceHosts.filter((sourceHost) =>
       input.theatre.actors.includes(sourceHost) || input.theatre.institutions.includes(sourceHost),
@@ -196,6 +218,9 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     real_actors: realActors,
     institutions,
     structural_gap_fr: structuralGap,
+    structural_contradiction_fr: structuralContradiction,
+    structural_vulnerability_fr: structuralVulnerability,
+    diamond_thesis_fr: diamondThesis,
     regime_hypothesis_fr: sourceSignals.length >= 2
       ? 'Les sources rapides doivent preceder la lecture de regime : elles fixent ce qui est observable avant l interpretation.'
       : 'Le regime reste une hypothese structurelle tant que les signaux observables sont incomplets.',

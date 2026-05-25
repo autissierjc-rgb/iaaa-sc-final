@@ -228,9 +228,11 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
     section('Output Rules', [
       'situation_card.submitted_situation_fr must equal the canonical situation or its polished faithful French form.',
       'situation_card.insight_fr must contain the core reading, not a disclaimer.',
+      'situation_card.insight_fr must open a diamond reading: a central contradiction carried by actors, constraints and proof, not an administrative summary.',
       'situation_card.main_vulnerability_fr must be specific, structural and testable.',
       'situation_card.asymmetry_fr must name the asymmetry of power, proof, role, timing or adoption.',
-      'situation_card.key_signal_fr must say what to watch next.',
+      'situation_card.key_signal_fr must name the observable signal that would change the regime of the situation.',
+      'Every public card must make the user see the system, feel the fragile point, and know what to watch.',
       ...(hasRegimeSignals
         ? [
             'Resources.regime_signals are mandatory anchors, not optional background.',

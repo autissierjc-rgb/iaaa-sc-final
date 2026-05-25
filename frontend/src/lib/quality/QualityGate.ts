@@ -275,6 +275,9 @@ function meaningfulResonanceAnchors(resonance: ResonanceTraceContract): string[]
     ...resonance.real_actors,
     ...resonance.institutions,
     resonance.structural_gap_fr,
+    resonance.structural_contradiction_fr,
+    resonance.structural_vulnerability_fr,
+    resonance.diamond_thesis_fr,
     resonance.transition_signal_fr,
     ...resonance.source_signals.map((signal) => signal.signal_fr),
   ].map((item) => item.trim()).filter((item) => item.length >= 4)))
