@@ -1242,6 +1242,24 @@ function isDominantArchitectWriting(writing: WritingContract): boolean {
   return (writing.trace.notes ?? []).some((note) => note === 'diamond_architect_writer=dominant_generate_full')
 }
 
+function hasResonanceDiamondSpine(writing: WritingContract): boolean {
+  const notes = (writing.trace.notes ?? []).join(' ')
+  const text = [
+    writing.substance_form?.diamond_sentence?.text_fr,
+    ...writing.diamond_sentences.map((sentence) => sentence.text_fr),
+    writing.situation_card.insight_fr,
+    writing.situation_card.main_vulnerability_fr,
+    writing.lecture.text_fr,
+    writing.approfondir.analysis_fr,
+    ...writing.approfondir.sections_fr.map((section) => section.body),
+  ].filter(Boolean).join(' ')
+
+  return (
+    /resonance|diamond|WritingEngine|Deterministic writing contract/i.test(notes) ||
+    /\b(?:contradiction|vulnerabilit[ée]|bascule|r[ée]gime|cout|co[ûu]t|preuve|seuil|arbitrage)\b/i.test(text)
+  )
+}
+
 function contractPublicText(value: unknown, fallback = ''): string {
   const text = typeof value === 'string' ? cleanPublicText(value) : ''
   return text || fallback
@@ -1251,7 +1269,7 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
   if (!writing || writing.trace.status === 'error') return card
 
   const sc = writing.situation_card
-  const forceWritingContract = isTargetChoiceMaterialWriting(writing) || isDominantArchitectWriting(writing)
+  const forceWritingContract = isTargetChoiceMaterialWriting(writing) || isDominantArchitectWriting(writing) || hasResonanceDiamondSpine(writing)
   const preferCompletedCard = shouldPreferCompletedCardAfterWriting(card)
   const vulnerabilityFrCandidates = preferCompletedCard
     ? [card.main_vulnerability_fr, sc.main_vulnerability_fr]
