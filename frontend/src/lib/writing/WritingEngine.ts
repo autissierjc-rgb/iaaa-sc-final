@@ -73,8 +73,20 @@ function isPublicPlaceholder(item: string): boolean {
     'general_analysis',
     'understand situation',
     'understand_situation',
+    'acteurs influents',
+    'acteurs capables de bloquer',
+    'acteurs capables d accelerer',
+    'acteurs capables d accélérer',
+    'institutions concernees',
+    'institutions concernées',
+    'acteur absent',
+    'contrainte cachee',
+    'contrainte cachée',
+    'preuve manquante',
+    'dirigeants',
   ].includes(normalized)) return true
 
+  if (/^acteur absent,\s*contrainte cach[ée]e,\s*preuve manquante/i.test(item)) return true
   return /^(acteurs?|institutions?|contraintes?|preuves?|sources?|signal|fait observable|trace verifiable|une trace verifiable|preuve publique)$/i.test(normalized)
 }
 
@@ -824,6 +836,10 @@ function isBusinessWritingDomain(domain: string) {
   return ['startup_market', 'business_strategy', 'product_platform', 'professional'].includes(domain)
 }
 
+function isGeopoliticalWritingDomain(domain: string) {
+  return ['geopolitics', 'geopolitique', 'war_security', 'security', 'guerre_securite', 'crisis_institutional'].includes(domain)
+}
+
 function writingGrammar(input: WritingEngineInput) {
   if (input.expertises_metiers.domain_playbook.domain === 'management') {
     return {
@@ -874,6 +890,32 @@ function writingGrammar(input: WritingEngineInput) {
         `${actors} rendent l opportunite visible, mais ${institutions} decident si elle devient adoption, dependance ou levier reel.`,
       keySignal: (evidence: string) =>
         `Signal cle : ${evidence} reliant offre, utilisateur, decision d achat et consequence observable.`,
+    }
+  }
+
+  if (isGeopoliticalWritingDomain(input.expertises_metiers.domain_playbook.domain)) {
+    return {
+      actorsFallback: 'les Etats et forces engagees',
+      institutionsFallback: 'les gouvernements, canaux diplomatiques et commandements militaires concernes',
+      actionFallback: 'une decision militaire, diplomatique ou economique verifiable',
+      evidenceFallback: 'une annonce officielle, une violation documentee, une sanction, une frappe ou un cessez-le-feu confirme',
+      tensionNoun: 'la sequence militaire et diplomatique',
+      diamond: (tension: string, institutions: string, action: string) =>
+        `Le risque ne tient pas seulement a ${tension} ; il commence quand ${institutions} transforment ${action} en seuil public difficile a reprendre.`,
+      insight: (subject: string, tension: string, action: string, institutions: string) =>
+        `${subject} se lit dans le passage entre ${tension}, ${action} et la capacite de ${institutions} a contenir ou formaliser l escalade.`,
+      lectureEntry: (subject: string, institutions: string) =>
+        `${subject} se joue dans l ecart entre pression militaire, cout politique et capacite de ${institutions} a maintenir un cadre de sortie.`,
+      approfondirEntry:
+        'Le fond de la situation tient a la transformation possible d une pression militaire ou diplomatique en seuil public, cout durable ou obligation de riposte.',
+      supportSentence: (actors: string, institutions: string) =>
+        `Les acteurs visibles sont ${actors}, mais la dynamique depend de ${institutions}.`,
+      vulnerability: (blindSpot: string) =>
+        `La vulnerabilite centrale est ${blindSpot} : tant que ce point reste non verifie, la crise peut paraitre contenue alors que ses seuils reels se deplacent.`,
+      asymmetry: (actors: string, institutions: string) =>
+        `${actors} exposent la tension, mais ${institutions} decident si elle reste contenue, negociee ou convertie en nouveau seuil de conflit.`,
+      keySignal: (evidence: string) =>
+        `Signal cle : ${evidence} qui modifie les marges militaires, diplomatiques ou economiques des acteurs engages.`,
     }
   }
 

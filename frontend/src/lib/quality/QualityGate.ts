@@ -147,6 +147,10 @@ const PUBLIC_INTERNAL_WRITING_PATTERNS = [
   /\bhypothese\b/i,
   /\bportee doit rester qualifiee\b/i,
   /\bpreuve decisive encore a confronter\b/i,
+  /acteur absent,\s*contrainte cach[ée]e,\s*preuve manquante/i,
+  /signal observable reliant acteur,\s*decision et consequence/i,
+  /institutions? concern[ée]es?/i,
+  /acteurs? influents?,\s*acteurs? capables? de bloquer/i,
 ]
 
 const GLUED_TRAJECTORY_PATTERNS = [
