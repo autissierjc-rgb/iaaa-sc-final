@@ -88,7 +88,7 @@ function channelFromItem(item: ResourceItem): SourceChannel {
 
 function reliabilityFromItem(item: ResourceItem): ResourceContract['reliability'] {
   const reliability = `${item.reliability ?? ''} ${item.source}`.toLowerCase()
-  if (/direct-site|official|tavily:extract/.test(reliability)) return 'primary'
+  if (/direct-site|internal-site-brief|site understanding|official|tavily:extract/.test(reliability)) return 'primary'
   if (/reuters|ap|afp|brave|openai-web-search|tavily|web-search/.test(reliability)) return 'secondary'
   if (/social|forum|reddit|x\.com|twitter/.test(reliability)) return 'signal'
   return 'unknown'

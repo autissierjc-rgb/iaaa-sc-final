@@ -1534,6 +1534,15 @@ function sourceChannelFromResourceType(value: string): SourceChannel {
   return 'other'
 }
 
+function reliabilityFromResourceItem(item: ResourceItem): ResourceContract['reliability'] {
+  const source = `${item.reliability ?? ''} ${item.source}`.toLowerCase()
+  if (item.type === 'site-brief' || /internal-site-brief|site understanding/.test(source)) return 'primary'
+  if (item.reliability === 'primary' || item.reliability === 'secondary' || item.reliability === 'signal') {
+    return item.reliability
+  }
+  return 'unknown'
+}
+
 function resourceContractsFromItems(items: ResourceItem[]): ResourceContract[] {
   const now = new Date().toISOString()
   return items.map((item, index) => ({
@@ -1546,10 +1555,7 @@ function resourceContractsFromItems(items: ResourceItem[]): ResourceContract[] {
     excerpt: item.excerpt,
     published_at: item.date,
     retrieved_at: now,
-    reliability:
-      item.reliability === 'primary' || item.reliability === 'secondary' || item.reliability === 'signal'
-        ? item.reliability
-        : 'unknown',
+    reliability: reliabilityFromResourceItem(item),
     }))
 }
 
