@@ -929,15 +929,19 @@ function SituationCardPanel({ sc, lang, onExpand }: {
   const publicGenerationMessage = lang === 'FR'
     ? String(sc.generation_error_public ?? sc.avertissement_fr ?? '').trim()
     : String(sc.generation_error_public ?? sc.avertissement_en ?? sc.generation_error_public ?? '').trim()
-  const pdfDeepReading = lang === 'FR'
-    ? String(deepReading?.approfondir_fr ?? sc.approfondir_fr ?? '').trim()
-    : String(deepReading?.approfondir_en ?? deepReading?.approfondir_fr ?? sc.approfondir_en ?? sc.approfondir_fr ?? '').trim()
+  const hasContractDeepReading = Array.isArray(sc.writing_contract?.approfondir?.sections_fr) &&
+    sc.writing_contract.approfondir.sections_fr.some((section: any) => String(section?.body ?? '').trim().length > 40)
   const embeddedDeepReading = lang === 'FR'
     ? String(sc.approfondir_fr ?? '').trim()
     : String(sc.approfondir_en ?? sc.approfondir_fr ?? '').trim()
+  const pdfDeepReading = hasContractDeepReading
+    ? embeddedDeepReading
+    : lang === 'FR'
+      ? String(deepReading?.approfondir_fr ?? sc.approfondir_fr ?? '').trim()
+      : String(deepReading?.approfondir_en ?? deepReading?.approfondir_fr ?? sc.approfondir_en ?? sc.approfondir_fr ?? '').trim()
   const panelDeepReading = lang === 'FR'
-    ? String(deepReading?.approfondir_fr ?? embeddedDeepReading).trim()
-    : String(deepReading?.approfondir_en ?? deepReading?.approfondir_fr ?? embeddedDeepReading).trim()
+    ? String(hasContractDeepReading ? embeddedDeepReading : deepReading?.approfondir_fr ?? embeddedDeepReading).trim()
+    : String(hasContractDeepReading ? embeddedDeepReading : deepReading?.approfondir_en ?? deepReading?.approfondir_fr ?? embeddedDeepReading).trim()
   const hasEmbeddedDeepReading = embeddedDeepReading.length > 80
   const pdfSources = sourceItems ?? sources
 
@@ -1182,6 +1186,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
 
   async function fetchApprofondirData() {
     if (isGenerationDegraded) return
+    if (hasContractDeepReading) return
     if (deepReading || deepLoading) return
     if (hasEmbeddedDeepReading) return
 

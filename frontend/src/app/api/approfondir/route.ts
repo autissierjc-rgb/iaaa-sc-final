@@ -13,6 +13,31 @@ import { shouldUseWeb } from '@/lib/resources/shouldUseWeb'
 import { detectScopeContext } from '@/lib/scope/scopeContext'
 import type { ArbreACamesAnalysis, ConversationContract, SituationCard } from '@/lib/resources/resourceContract'
 
+function contractApprofondirResponse(sc: unknown): { approfondir_fr: string; approfondir_en: string; sources: unknown[] } | null {
+  const card = sc as { writing_contract?: { approfondir?: { analysis_fr?: unknown; analysis_en?: unknown; sections_fr?: unknown } }; resources?: unknown[] } | undefined
+  const approfondir = card?.writing_contract?.approfondir
+  const sections = Array.isArray(approfondir?.sections_fr) ? approfondir.sections_fr : []
+  const sectionText = sections
+    .map((section) => {
+      const item = section as { title?: unknown; body?: unknown }
+      const title = String(item.title ?? '').trim()
+      const body = String(item.body ?? '').trim()
+      return [title, body].filter(Boolean).join('\n')
+    })
+    .filter(Boolean)
+    .join('\n\n')
+  const analysisFr = String(approfondir?.analysis_fr ?? '').trim()
+  const approfondirFr = [analysisFr, sectionText].filter(Boolean).join('\n\n').trim()
+  if (approfondirFr.length < 120) return null
+
+  const analysisEn = String(approfondir?.analysis_en ?? '').trim()
+  return {
+    approfondir_fr: approfondirFr,
+    approfondir_en: analysisEn || approfondirFr,
+    sources: Array.isArray(card?.resources) ? card.resources : [],
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { situation, sc, lecture, lectures, resources: rawResources, conversation_contract } = await req.json()
@@ -25,6 +50,11 @@ export async function POST(req: NextRequest) {
 
     if (!text) {
       return NextResponse.json({ error: 'No situation' }, { status: 400 })
+    }
+
+    const canonicalApprofondir = contractApprofondirResponse(sc)
+    if (canonicalApprofondir) {
+      return NextResponse.json(canonicalApprofondir)
     }
 
     const provided = sanitizeResources(rawResources ?? sc?.resources)
