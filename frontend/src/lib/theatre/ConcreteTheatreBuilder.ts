@@ -38,7 +38,35 @@ function extractDates(text: string): string[] {
 }
 
 function extractNamedAnchors(text: string): string[] {
-  const blocked = new Set(['Que', 'Quel', 'Quelle', 'Quels', 'Quelles', 'Quoi', 'Comment', 'Pourquoi', 'Quand', 'Ou', 'Où'])
+  const blocked = new Set([
+    'Analyse',
+    'Analyser',
+    'Cap',
+    'Carte',
+    'Chat',
+    'Cliquez',
+    'Comment',
+    'Force',
+    'Générer',
+    'Ou',
+    'Où',
+    'Partager',
+    'Plug',
+    'Pourquoi',
+    'Quand',
+    'Que',
+    'Quel',
+    'Quelle',
+    'Quels',
+    'Quelles',
+    'Quoi',
+    'Répondez',
+    'Répondre',
+    'Restreint',
+    'Situation',
+    'Télécharger',
+    'Unis',
+  ])
   return unique(text.match(CAPITALIZED_PATTERN) ?? [])
     .filter((item) => item.length > 2)
     .filter((item) => !blocked.has(item))
