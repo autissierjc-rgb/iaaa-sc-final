@@ -1,5 +1,6 @@
 import { SC_COLLABORATION_RULE, SC_NON_COMPLETION_PRINCIPLE } from '../governance/scDoctrine'
 import type { IntentContext, ResourceItem } from '../resources/resourceContract'
+import type { ResourceServiceContract } from '../contracts'
 
 export type ReadinessStatus = 'ready' | 'ask_user' | 'generate_prudently'
 
@@ -102,6 +103,13 @@ function hasSuppliedMaterial(situation: string, resources: ResourceItem[]): bool
   })
 }
 
+function hasComparableResourceOptions(resourcePlan?: ResourceServiceContract): boolean {
+  const comparableKinds = new Set(['audience_family', 'user_segment', 'strategic_option', 'offer', 'use_case'])
+  return (resourcePlan?.extracted_options ?? [])
+    .filter((option) => comparableKinds.has(option.kind))
+    .length >= 2
+}
+
 function asksTargetChoiceWithoutMaterial(situation: string, intentContext: IntentContext, resources: ResourceItem[]): boolean {
   if (hasSuppliedMaterial(situation, resources)) return false
 
@@ -152,19 +160,25 @@ export function situationReadinessGate({
   situation,
   intentContext,
   resources = [],
+  resourcePlan,
   forceGenerate = false,
 }: {
   situation: string
   intentContext: IntentContext
   resources?: ResourceItem[]
+  resourcePlan?: ResourceServiceContract
   forceGenerate?: boolean
 }): SituationReadinessGate {
   const frame = intentContext.dominant_frame
   const decision = intentContext.decision_type
+  const resourceOptionsAvailable = hasComparableResourceOptions(resourcePlan)
 
   if (
-    pointsToMissingMaterialSource(situation, intentContext, resources) ||
-    asksTargetChoiceWithoutMaterial(situation, intentContext, resources)
+    !resourceOptionsAvailable &&
+    (
+      pointsToMissingMaterialSource(situation, intentContext, resources) ||
+      asksTargetChoiceWithoutMaterial(situation, intentContext, resources)
+    )
   ) {
     const question =
       'Pour choisir une cible client ou utilisateur, il manque encore des informations produit exploitables. Donnez-moi l’URL du site, une page de présentation, un document ou un plug autorisé ; sinon je peux générer une carte exploratoire clairement provisoire.'
@@ -182,7 +196,12 @@ export function situationReadinessGate({
     }
   }
 
-  if (!forceGenerate && !hasSuppliedMaterial(situation, resources) && asksToCompareUnspecifiedOptions(situation, intentContext)) {
+  if (
+    !forceGenerate &&
+    !resourceOptionsAvailable &&
+    !hasSuppliedMaterial(situation, resources) &&
+    asksToCompareUnspecifiedOptions(situation, intentContext)
+  ) {
     const question =
       'Vous évoquez plusieurs options, mais elles ne sont pas encore nommées. Quelles sont les 2 ou 3 options à comparer, ou dois-je d’abord proposer une carte exploratoire pour les faire émerger ?'
 

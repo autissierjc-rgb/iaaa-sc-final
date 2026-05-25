@@ -4377,6 +4377,7 @@ export async function POST(req: NextRequest) {
       situation: readinessAnalysisText,
       intentContext,
       resources: sanitizeResources(rawResources),
+      resourcePlan: initialResourcePlan,
       forceGenerate: readinessForceGenerate,
     })
 
@@ -4733,6 +4734,7 @@ export async function POST(req: NextRequest) {
       situation: exploratoryWithoutMaterial ? generationAnalysisText : readinessAnalysisText,
       intentContext: generationIntentContext,
       resources,
+      resourcePlan: canonicalResourcePlan,
       forceGenerate: readinessForceGenerate,
     })
     const resourcesStatus =
