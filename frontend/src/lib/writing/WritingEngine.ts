@@ -3,6 +3,7 @@ import type {
   ExpertisesMetiersContract,
   InterpretationContract,
   ProbabilityAssessment,
+  ResonanceTraceContract,
   ResourceServiceContract,
   RiskAdviceGuardContract,
   ScoringContract,
@@ -13,6 +14,7 @@ import { cleanModelText, parseModelJSON } from '../ai/json'
 import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
 import { publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 import { buildResourceRegimeSignals } from '../resources/regimeSignals'
+import { buildResonanceTrace } from '../resonance'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
 
 export type WritingEngineInput = {
@@ -23,6 +25,7 @@ export type WritingEngineInput = {
   scoring: ScoringContract
   resources?: ResourceServiceContract
   patterns?: HumanCollectivePatternContext
+  resonance?: ResonanceTraceContract
 }
 
 export type WritingEngineMode = 'local_contract' | 'referent_llm'
@@ -224,8 +227,11 @@ function resourceEvidenceSentence(resources?: ResourceServiceContract): string |
   return `Les sources rapides attachées (${sources}) cadrent la lecture : elles donnent un premier appui vérifiable, mais ne remplacent pas Recherche+ ni une vérification de contradiction.`
 }
 
-function resourceRegimeSignalSentence(resources?: ResourceServiceContract): string | undefined {
-  const signals = buildResourceRegimeSignals(resources, 3)
+function resourceRegimeSignalSentence(
+  resources?: ResourceServiceContract,
+  resonance?: ResonanceTraceContract,
+): string | undefined {
+  const signals = (resonance?.source_signals ?? buildResourceRegimeSignals(resources, 3))
     .filter((signal) => signal.discriminant_terms.length > 0)
     .map((signal) => compactSentence(signal.signal_fr, 190))
     .filter(Boolean)
@@ -901,14 +907,25 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     return composeTargetChoiceWriting(input, started)
   }
 
+  const resonance = input.resonance ?? buildResonanceTrace({
+    interpretation: input.interpretation,
+    theatre: input.theatre,
+    resources: input.resources,
+  })
   const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
   const title = input.interpretation.header_subject
   const grammar = writingGrammar(input)
-  const actors = publicAnchors(input.theatre.actors, grammar.actorsFallback)
-  const institutions = publicAnchors(input.theatre.institutions, grammar.institutionsFallback)
+  const actors = publicAnchors(resonance.real_actors, grammar.actorsFallback)
+  const institutions = publicAnchors(resonance.institutions, grammar.institutionsFallback)
   const actionAnchors = theatreActionAnchors(input.theatre)
-  const proofAnchors = theatreProofAnchors(input.theatre, input.expertises_metiers)
-  const fragilityAnchors = theatreFragilityAnchors(input.theatre, input.expertises_metiers)
+  const proofAnchors = unique([
+    resonance.transition_signal_fr,
+    ...theatreProofAnchors(input.theatre, input.expertises_metiers),
+  ])
+  const fragilityAnchors = unique([
+    resonance.structural_gap_fr,
+    ...theatreFragilityAnchors(input.theatre, input.expertises_metiers),
+  ])
   const evidence = publicAnchors(proofAnchors, 'une trace verifiable')
   const blindSpot = publicAnchors(fragilityAnchors, 'le point qui ferait changer la lecture')
   const firstProcedure = namedAction(actionAnchors, grammar.actionFallback)
@@ -918,7 +935,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const resourcesWarning = resourceWarning(input.resources)
   const resourcesSection = resourceEvidenceSection(input.resources)
   const resourcesSentence = resourceEvidenceSentence(input.resources)
-  const resourceSignalOpening = resourceRegimeSignalSentence(input.resources)
+  const resourceSignalOpening = resourceRegimeSignalSentence(input.resources, resonance)
   const diamondText = compactSentence(grammar.diamond(tension, institutions, firstProcedure))
 
   const publicWarnings = [
