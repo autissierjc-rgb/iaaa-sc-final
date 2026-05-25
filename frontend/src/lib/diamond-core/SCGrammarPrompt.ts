@@ -1,4 +1,5 @@
 import type { WritingContract } from '../contracts'
+import { buildResourceRegimeSignals } from '../resources/regimeSignals'
 import type { DiamondDossier } from './DiamondDossier'
 
 export type SCGrammarPromptMessage = {
@@ -33,6 +34,8 @@ function section(title: string, body: unknown): string {
 }
 
 function resourceSummary(dossier: DiamondDossier) {
+  const regimeSignals = buildResourceRegimeSignals(dossier.resources.plan, 4)
+
   return {
     role: dossier.resources.user_material.role,
     role_reason_fr: dossier.resources.user_material.reason_fr,
@@ -63,6 +66,12 @@ function resourceSummary(dossier: DiamondDossier) {
       reason: evidence.reason,
       can_be_public: evidence.can_be_public,
       can_drive_probability: evidence.can_drive_probability,
+    })),
+    regime_signals: regimeSignals.map((signal) => ({
+      signal_fr: signal.signal_fr,
+      source_title: signal.source_title,
+      source_name: signal.source_name,
+      reliability: signal.reliability,
     })),
     functional_needs: dossier.resources.plan.functional_needs.map((need) => ({
       family: need.family,
@@ -133,6 +142,7 @@ function responseShape(): SCGrammarPrompt['required_json_shape'] {
 
 function qualityTargets(dossier: DiamondDossier): string[] {
   const hasExtractedOptions = (dossier.resources.plan.extracted_options ?? []).length >= 2
+  const hasRegimeSignals = buildResourceRegimeSignals(dossier.resources.plan, 2).length >= 2
   return [
     'Insight: faire voir la structure cachee, pas seulement reformuler la question.',
     'Main Vulnerability: nommer le point de rupture precis, testable et non banal.',
@@ -146,12 +156,19 @@ function qualityTargets(dossier: DiamondDossier): string[] {
           'Sans preuve de traction contraire, privilegier le segment a usage repete et paiement rapide, garder l activation individuelle en second terrain, et differer les cycles organisationnels longs.',
         ]
       : []),
+    ...(hasRegimeSignals
+      ? [
+          'Sources rapides: quand Resources.regime_signals contient des signaux, lecture.text_fr doit ouvrir sur au moins deux faits ou signaux sourcables avant la lecture structurelle.',
+          'Regime reading: utiliser les signaux de ressources pour nommer le regime actuel de la situation : escalade, treve fragile, verrouillage diplomatique, saturation, transition ou bascule.',
+        ]
+      : []),
     ...dossier.grammar.required_public_moves_fr,
   ]
 }
 
 export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
   const hasExtractedOptions = (dossier.resources.plan.extracted_options ?? []).length >= 2
+  const hasRegimeSignals = buildResourceRegimeSignals(dossier.resources.plan, 2).length >= 2
   const system = [
     'You are the Situation Card Diamond Writer.',
     'You do not reinterpret the user request. The canonical interpretation is already decided.',
@@ -213,6 +230,14 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       'situation_card.main_vulnerability_fr must be specific, structural and testable.',
       'situation_card.asymmetry_fr must name the asymmetry of power, proof, role, timing or adoption.',
       'situation_card.key_signal_fr must say what to watch next.',
+      ...(hasRegimeSignals
+        ? [
+            'Resources.regime_signals are mandatory anchors, not optional background.',
+            'For a dated/current geopolitical, market, crisis or public event question with regime_signals, lecture.text_fr must begin from at least two concrete source-derived signals, then infer the structural regime.',
+            'Do not write a generic institutional reading if regime_signals exist. Name the factual signals first, then compress them into the regime diagnosis.',
+            'situation_card.insight_fr must include at least one resource-derived regime signal or its direct consequence.',
+          ]
+        : []),
       ...(hasExtractedOptions
         ? [
             'When the user asks for best target/options and Resources.extracted_options has at least two options, you must rank them explicitly: cible prioritaire probable, cible secondaire, cible a differer.',

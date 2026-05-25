@@ -7,6 +7,7 @@ import type {
   ScoringContract,
   WritingContract,
 } from '../contracts'
+import { buildResourceRegimeSignals, countRegimeSignalsUsed } from '../resources/regimeSignals'
 import { containsForbiddenPublicPhrase } from '../writing/diamondRules'
 
 export type QualityGateInput = {
@@ -540,6 +541,8 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       source.reliability === 'primary' || source.reliability === 'secondary',
     )
     const sourcesWithExcerpt = input.resources.public_sources.filter((source) => Boolean(source.excerpt)).length
+    const regimeSignals = buildResourceRegimeSignals(input.resources, 4)
+    const regimeSignalsUsed = countRegimeSignalsUsed(regimeSignals, lectureAndApprofondirText(input.writing))
 
     if (!hasReliableSource) {
       issues.push(issue(
@@ -566,6 +569,22 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
         'FAST_SOURCES_WITHOUT_EXCERPTS',
         'Fast sources have no excerpts, so their probative value remains weak.',
         'resources.public_sources',
+      ))
+    }
+
+    if (regimeSignals.length >= 2 && regimeSignalsUsed === 0) {
+      issues.push(issue(
+        'error',
+        'RESOURCE_REGIME_SIGNALS_UNDERUSED',
+        'Fast sources produced regime signals, but public writing stays abstract instead of using source-derived facts or signals.',
+        'writing.lecture',
+      ))
+    } else if (regimeSignals.length >= 3 && regimeSignalsUsed < 2) {
+      issues.push(issue(
+        'warning',
+        'RESOURCE_REGIME_SIGNALS_TOO_WEAK',
+        'Fast sources produced several regime signals, but public writing uses too few of them.',
+        'writing.lecture',
       ))
     }
   }

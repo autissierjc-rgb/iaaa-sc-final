@@ -4967,9 +4967,10 @@ export async function POST(req: NextRequest) {
           temperature: 0.2,
           max_tokens: 4200,
         })
+        const resourceSignalsUnderused = diamondWriter.errors.includes('RESOURCE_REGIME_SIGNALS_UNDERUSED')
         diamondArchitectWriter = {
           status: diamondWriter.status,
-          accepted: Boolean(diamondWriter.writing),
+          accepted: Boolean(diamondWriter.writing) && !resourceSignalsUnderused,
           model: diamondWriter.model,
           duration_ms: diamondWriter.duration_ms,
           errors: diamondWriter.errors,
@@ -4990,7 +4991,7 @@ export async function POST(req: NextRequest) {
           resourcesCount: canonicalResourcePlan.resources.length,
           modelPath: 'openai',
         })
-        if (diamondWriter.writing) {
+        if (diamondWriter.writing && !resourceSignalsUnderused) {
           writingContract = {
             ...diamondWriter.writing,
             trace: {
@@ -5003,6 +5004,23 @@ export async function POST(req: NextRequest) {
               ],
             },
           }
+        } else if (resourceSignalsUnderused) {
+          recordGenerationTrace({
+            status: 'partial',
+            gate: 'GENERATE',
+            route: '/api/generate',
+            canonicalLayer: 'writing',
+            pipelineStep: 'LLMDiamondWriter:fallback',
+            diagnostic: 'resource_regime_signals_underused_keep_local_contract',
+            durationMs: 0,
+            inputChars: generationAnalysisText.length,
+            domain: generationInterpretation.domain,
+            intentType: generationIntentContext.interpreted_request?.intent_type,
+            questionType: generationIntentContext.interpreted_request?.question_type,
+            resourcesStatus: canonicalResourcePlan.status,
+            resourcesCount: canonicalResourcePlan.resources.length,
+            modelPath: 'local',
+          })
         }
       } catch (error) {
         diamondArchitectWriter = {
