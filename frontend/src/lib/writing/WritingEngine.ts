@@ -12,6 +12,7 @@ import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { cleanModelText, parseModelJSON } from '../ai/json'
 import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
 import { publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
+import { buildResourceRegimeSignals } from '../resources/regimeSignals'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
 
 export type WritingEngineInput = {
@@ -219,6 +220,17 @@ function resourceEvidenceSentence(resources?: ResourceServiceContract): string |
   }).join(' ; ')
 
   return `Les sources rapides attachées (${sources}) cadrent la lecture : elles donnent un premier appui vérifiable, mais ne remplacent pas Recherche+ ni une vérification de contradiction.`
+}
+
+function resourceRegimeSignalSentence(resources?: ResourceServiceContract): string | undefined {
+  const signals = buildResourceRegimeSignals(resources, 3)
+    .filter((signal) => signal.discriminant_terms.length > 0)
+    .map((signal) => compactSentence(signal.signal_fr, 190))
+    .filter(Boolean)
+
+  if (signals.length < 2) return undefined
+
+  return `Les signaux sourcés disponibles déplacent le point de départ : ${signals.join(' ; ')}.`
 }
 
 function resourceProofLabel(resources?: ResourceServiceContract): string | undefined {
@@ -904,6 +916,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const resourcesWarning = resourceWarning(input.resources)
   const resourcesSection = resourceEvidenceSection(input.resources)
   const resourcesSentence = resourceEvidenceSentence(input.resources)
+  const resourceSignalOpening = resourceRegimeSignalSentence(input.resources)
   const diamondText = compactSentence(grammar.diamond(tension, institutions, firstProcedure))
 
   const publicWarnings = [
@@ -944,6 +957,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const probabilityDemonstration = probabilityDemonstrationSentence(probability)
   const probabilityChange = probabilityChangeSentence(probability)
   const lecture = [
+    resourceSignalOpening,
     grammar.lectureEntry(subject, institutions),
     `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
     resourcesSentence,
@@ -953,6 +967,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     probabilityText,
   ].filter(Boolean).join(' ')
   const approfondirAnalysis = [
+    resourceSignalOpening,
     grammar.approfondirEntry,
     grammar.supportSentence(actors, institutions),
     `Ce qu il faut etablir n est pas seulement l intention, mais le lien entre ${firstProcedure}, ${evidence} et ${blindSpot}.`,
@@ -1015,7 +1030,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       analysis_fr: approfondirAnalysis,
       sections_fr: [
         ...canonicalApprofondirSections({
-          really: `La question porte sur une transformation : ce qui est dit ou redoute peut-il devenir une action reconnue par ${institutions} ? Les acteurs a suivre sont ${actors}. ${probabilityDemonstration}`,
+          really: `${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}La question porte sur une transformation : ce qui est dit ou redoute peut-il devenir une action reconnue par ${institutions} ? Les acteurs a suivre sont ${actors}. ${probabilityDemonstration}`,
           holds: grammar.supportSentence(actors, institutions),
           weakens: `Ce qui affaiblit la situation, c’est le point aveugle ${blindSpot} : tant qu’il n’est pas relié à ${evidence}, la lecture reste vulnérable.`,
           escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
