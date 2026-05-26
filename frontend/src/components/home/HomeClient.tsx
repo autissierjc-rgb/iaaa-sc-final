@@ -2247,34 +2247,33 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         })
         const fullController = new AbortController()
         const fullTimeout = window.setTimeout(() => fullController.abort(), 65000)
-        fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: fullController.signal,
-          body: JSON.stringify({
-            situation: generationSituation,
-            original_situation: text,
-            lang: contentLang.toLowerCase(),
-            mode: 'generate_full',
-            generate_prudently: exploratoryGeneration,
-            refine_acknowledged: true,
-            conversation_contract: scData2.sc.conversation_contract ?? scData?.conversation_contract,
-            dialogue_events: dialogueEvents,
-          }),
-        })
-          .then(async response => {
-            window.clearTimeout(fullTimeout)
-            const payload = await response.json()
-            if (payload?.gate === 'GENERATE' && payload.sc) {
-              setScData(payload.sc)
-              setActiveSituation(canonicalSituationFromResponse(payload.sc, canonicalText))
-              setChatMsgs(prev => syncRefineMessages(prev, collaborativeQuestionsFromSc(payload.sc)))
-            }
+        try {
+          const fullResponse = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: fullController.signal,
+            body: JSON.stringify({
+              situation: generationSituation,
+              original_situation: text,
+              lang: contentLang.toLowerCase(),
+              mode: 'generate_full',
+              generate_prudently: exploratoryGeneration,
+              refine_acknowledged: true,
+              conversation_contract: scData2.sc.conversation_contract ?? scData?.conversation_contract,
+              dialogue_events: dialogueEvents,
+            }),
           })
-          .catch(error => {
-            window.clearTimeout(fullTimeout)
-            console.warn('complete generation background failed:', error)
-          })
+          window.clearTimeout(fullTimeout)
+          const payload = await fullResponse.json()
+          if (payload?.gate === 'GENERATE' && payload.sc) {
+            setScData(payload.sc)
+            setActiveSituation(canonicalSituationFromResponse(payload.sc, canonicalText))
+            setChatMsgs(prev => syncRefineMessages(prev, collaborativeQuestionsFromSc(payload.sc)))
+          }
+        } catch (error) {
+          window.clearTimeout(fullTimeout)
+          console.warn('complete generation failed after fast card:', error)
+        }
       }
       setAnswers([])
       setDialogueNotes([])
