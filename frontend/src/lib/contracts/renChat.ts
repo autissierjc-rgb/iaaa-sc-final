@@ -21,6 +21,13 @@ export type RenSuggestedNextAction =
 export type RenWorkingContext = {
   situation_hint?: string
   pending_questions?: string[]
+  post_card_feedback?: {
+    message_hash: string
+    probable_layers: string[]
+    reaction_kind: string
+    relance_phase?: 'pre_generate' | 'post_complete' | 'bridge_to_complete'
+    influences_next_generation: boolean
+  }
   actors: string[]
   constraints: string[]
   hypotheses: string[]

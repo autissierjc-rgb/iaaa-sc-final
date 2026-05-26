@@ -87,6 +87,13 @@ export default function SisSystemV2Page() {
     "Les ressources sont trop pauvres pour ce sujet.",
     "Pourquoi le scoring met 49 alors que la crise est forte ?",
   ].map((message) => buildUserReactionEvent({ message }))
+  const samplePostCardFeedback = buildUserReactionEvent({
+    message: "Usage professionnel semble juste, mais je veux tester d abord les consultants independants.",
+    source: 'post_card_relance',
+    relance_phase: 'post_complete',
+    relance_question_count: 2,
+    influences_next_generation: true,
+  })
   const reactionLayerCounts = sampleReactions.reduce<Record<string, number>>((acc, reaction) => {
     for (const layer of reaction.probable_layers) acc[layer] = (acc[layer] ?? 0) + 1
     return acc
@@ -184,6 +191,7 @@ export default function SisSystemV2Page() {
             <div style={{ color: '#8B8174', fontSize: 12, lineHeight: 1.8 }}>
               <div><strong style={{ color: '#1A2E5A' }}>{sampleReactions.length}</strong> exemples</div>
               <div><strong style={{ color: '#1A2E5A' }}>{Object.keys(reactionLayerCounts).length}</strong> couches touchees</div>
+              <div><strong style={{ color: '#1A2E5A' }}>1</strong> feedback post-carte</div>
             </div>
           </div>
 
@@ -322,6 +330,18 @@ export default function SisSystemV2Page() {
                 </p>
               </div>
             ))}
+          </div>
+
+          <div style={{ border: '1px solid #EAD7A8', borderRadius: 8, padding: 12, background: '#FFF9EA', marginTop: 12 }}>
+            <p style={{ margin: 0, color: '#C8951A', fontFamily: 'monospace', fontSize: 10 }}>
+              post_card_feedback · {samplePostCardFeedback.reaction_kind} · influence prochaine generation
+            </p>
+            <p style={{ margin: '7px 0 0', color: '#1A2E5A', fontSize: 12 }}>
+              couches : {samplePostCardFeedback.probable_layers.join(', ')}
+            </p>
+            <p style={{ margin: '7px 0 0', color: '#8B8174', fontSize: 11, lineHeight: 1.45 }}>
+              CTO tags : {samplePostCardFeedback.cto_watch_tags?.join(', ')}
+            </p>
           </div>
         </section>
 

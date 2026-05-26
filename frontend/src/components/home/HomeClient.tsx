@@ -2288,6 +2288,16 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
   async function sendChatMessage() {
     const text = sanitizeSituationDraft(situation).trim()
     if (!text) return false
+    const relanceFeedback =
+      lastMsg?.kind === 'refine'
+        ? {
+            phase: lastMsg.phase,
+            questionCount: lastMsg.questions.length,
+            generationEventId:
+              (scData as any)?.generation_archive?.event?.id ??
+              (scData as any)?.generation_event_id,
+          }
+        : null
     setChatMsgs(prev => [...prev, { kind: 'user', text }])
     const hasActiveSituation = activeSituation.trim().length > 0
     if (hasActiveSituation) {
@@ -2298,6 +2308,35 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
     setSituation('')
     setRenLoading(true)
     try {
+      let postCardFeedback: any = renWorkingContext?.post_card_feedback
+      if (relanceFeedback) {
+        try {
+          const reactionResponse = await fetch('/api/reactions-v2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: text,
+              generation_event_id: relanceFeedback.generationEventId,
+              source: 'post_card_relance',
+              relance_phase: relanceFeedback.phase,
+              relance_question_count: relanceFeedback.questionCount,
+              influences_next_generation: true,
+            }),
+          })
+          const reactionPayload = await reactionResponse.json()
+          if (reactionPayload?.reaction) {
+            postCardFeedback = {
+              message_hash: reactionPayload.reaction.message_hash,
+              probable_layers: reactionPayload.reaction.probable_layers ?? [],
+              reaction_kind: reactionPayload.reaction.reaction_kind,
+              relance_phase: reactionPayload.reaction.relance_phase,
+              influences_next_generation: Boolean(reactionPayload.reaction.influences_next_generation),
+            }
+          }
+        } catch (reactionError) {
+          console.warn('post-card feedback telemetry failed:', reactionError)
+        }
+      }
       const response = await fetch('/api/ren-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2306,6 +2345,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           language: contentLang.toLowerCase(),
           working_context: {
             ...(renWorkingContext ?? {}),
+            post_card_feedback: postCardFeedback,
             situation_hint: activeSituation || renWorkingContext?.situation_hint,
             pending_questions:
               lastMsg && (lastMsg.kind === 'clarify' || lastMsg.kind === 'refine')

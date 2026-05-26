@@ -6,6 +6,10 @@ type ReactionV2Response = {
   ok?: boolean
   mode?: string
   reaction?: {
+    source?: string
+    relance_phase?: string
+    influences_next_generation?: boolean
+    cto_watch_tags?: string[]
     message_hash: string
     message_chars: number
     probable_layers: string[]
@@ -23,6 +27,7 @@ const REACTION_EXAMPLES = [
   'Waouh, le diamant tranchant touche juste.',
   'Les ressources sont trop pauvres pour ce sujet.',
   'Pourquoi le scoring met 49 alors que la crise est forte ?',
+  'Usage professionnel semble juste, mais je veux tester d abord les consultants indépendants.',
 ]
 
 function miniCardStyle(): React.CSSProperties {
@@ -142,9 +147,13 @@ export default function ReactionV2Tester() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 14 }}>
           {[
             ['type', response.reaction.reaction_kind],
+            ['source', response.reaction.source ?? 'free_chat'],
+            ['relance', response.reaction.relance_phase ?? '-'],
+            ['influence next', response.reaction.influences_next_generation ? 'oui' : 'non'],
             ['intensite', String(response.reaction.intensity)],
             ['couches', response.reaction.probable_layers.join(', ')],
             ['termes', response.reaction.evidence_terms.length > 0 ? response.reaction.evidence_terms.join(', ') : 'aucun terme direct'],
+            ['cto', response.reaction.cto_watch_tags?.join(', ') ?? '-'],
             ['privacy', response.reaction.privacy_mode],
             ['hash', `${response.reaction.message_hash} · ${response.reaction.message_chars} chars`],
           ].map(([label, value]) => (

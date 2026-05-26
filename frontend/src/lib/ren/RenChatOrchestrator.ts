@@ -88,6 +88,7 @@ function buildWorkingContext(request: RenChatRequest): RenWorkingContext {
       ? previous.situation_hint
       : sentenceHint(contextText) || previous.situation_hint,
     pending_questions: previous.pending_questions ?? [],
+    post_card_feedback: previous.post_card_feedback,
     actors,
     constraints,
     hypotheses,

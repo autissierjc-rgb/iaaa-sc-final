@@ -89,6 +89,11 @@ export type UserReactionEvent = {
   generation_event_id?: string
   session_id?: string
   user_id?: string
+  source?: 'free_chat' | 'post_card_relance'
+  relance_phase?: 'pre_generate' | 'post_complete' | 'bridge_to_complete'
+  relance_question_count?: number
+  influences_next_generation?: boolean
+  cto_watch_tags?: string[]
   message_hash: string
   message_chars: number
   probable_layers: UserReactionLayer[]

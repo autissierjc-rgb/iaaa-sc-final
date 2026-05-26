@@ -9,6 +9,10 @@ type ReactionV2Body = {
   session_id?: string
   user_id?: string
   allow_private_learning?: boolean
+  source?: 'free_chat' | 'post_card_relance'
+  relance_phase?: 'pre_generate' | 'post_complete' | 'bridge_to_complete'
+  relance_question_count?: number
+  influences_next_generation?: boolean
 }
 
 async function readBody(request: NextRequest): Promise<ReactionV2Body> {
@@ -40,6 +44,10 @@ export async function POST(request: NextRequest) {
     session_id: body.session_id,
     user_id: body.user_id,
     allow_private_learning: body.allow_private_learning,
+    source: body.source,
+    relance_phase: body.relance_phase,
+    relance_question_count: body.relance_question_count,
+    influences_next_generation: body.influences_next_generation,
   })
 
   return NextResponse.json({

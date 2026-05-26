@@ -11,16 +11,20 @@ export type BuildUserReactionInput = {
   session_id?: string
   user_id?: string
   allow_private_learning?: boolean
+  source?: UserReactionEvent['source']
+  relance_phase?: UserReactionEvent['relance_phase']
+  relance_question_count?: number
+  influences_next_generation?: boolean
 }
 
 const LAYER_TERMS: Array<{
   layer: UserReactionLayer
   terms: string[]
 }> = [
-  { layer: 'interpretation', terms: ['question', 'header', 'titre', 'situation soumise', 'formalisation', 'intention', 'comprehension'] },
+  { layer: 'interpretation', terms: ['question', 'header', 'titre', 'situation soumise', 'formalisation', 'intention', 'comprehension', 'cible', 'segment'] },
   { layer: 'dialogue', terms: ['clarification', 'relance', 'demander', 'interrogatoire', 'oui', 'confirmation'] },
   { layer: 'theatre', terms: ['hors sol', 'concret', 'acteurs', 'institution', 'procedure', 'situé', 'située', 'theatre'] },
-  { layer: 'resources', terms: ['ressource', 'source', 'reuters', 'media', 'url', 'web', 'tavily'] },
+  { layer: 'resources', terms: ['ressource', 'source', 'reuters', 'media', 'url', 'web', 'tavily', 'preuve', 'usage', 'traction', 'retention', 'rétention', 'paiement'] },
   { layer: 'scoring', terms: ['score', 'scoring', 'dominant', 'stable', 'instability', 'radar', 'astrolabe'] },
   { layer: 'writing', terms: ['lecture', 'approfondir', 'diamant', 'style', 'phrase', 'essai', 'audace', 'logico', 'notice'] },
   { layer: 'quality', terms: ['regression', 'bug', 'casse', 'qualite', 'quality'] },
@@ -84,6 +88,8 @@ export function buildUserReactionEvent(input: BuildUserReactionInput): UserReact
   const message = input.message.trim()
   const layers = classifyLayers(message)
   const kind = classifyKind(message)
+  const source = input.source ?? 'free_chat'
+  const influencesNextGeneration = input.influences_next_generation ?? source === 'post_card_relance'
 
   return {
     id: `react_${Date.now()}`,
@@ -91,6 +97,15 @@ export function buildUserReactionEvent(input: BuildUserReactionInput): UserReact
     generation_event_id: input.generation_event_id,
     session_id: input.session_id,
     user_id: input.user_id,
+    source,
+    relance_phase: input.relance_phase,
+    relance_question_count: input.relance_question_count,
+    influences_next_generation: influencesNextGeneration,
+    cto_watch_tags: [
+      source === 'post_card_relance' ? 'post_card_feedback' : 'chat_reaction',
+      influencesNextGeneration ? 'influences_next_generation' : 'metadata_only_signal',
+      ...layers.layers.map((layer) => `layer:${layer}`),
+    ].slice(0, 8),
     message_hash: hashMessage(message),
     message_chars: message.length,
     probable_layers: layers.layers,
