@@ -106,6 +106,14 @@ export const READINESS_REGRESSION_CASES: ReadinessRegressionCase[] = [
       'Le comportement doit valoir pour Plug autant que pour URL : les options extraites remplacent la clarification bloquante.',
   },
   {
+    id: 'target-choice-bare-domain-material',
+    domain: 'startup_vc',
+    situation: 'Décision stratégique avec plusieurs options pour ma start up situationcard.com, quelle est la meilleure cible premiers utilisateurs ?',
+    expectedStatus: 'ready',
+    notes:
+      'Un domaine nu fourni dans la question compte comme matière produit ; la gate ne doit pas redemander une URL.',
+  },
+  {
     id: 'strategic-options-missing-without-resource',
     domain: 'governance',
     situation: 'Décision stratégique avec plusieurs options pour une organisation : quelle option prioriser ?',

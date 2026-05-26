@@ -51,6 +51,13 @@ export const RESOURCE_POLICY_BENCHMARK_CASES: ResourcePolicyBenchmarkCase[] = [
     expected_needs_web: true,
   },
   {
+    id: 'bare-domain-url',
+    label: 'Domaine nu',
+    input: 'Quelle cible de premiers utilisateurs pour ma startup situationcard.com ?',
+    expected_policy: 'url_extract_required',
+    expected_needs_web: true,
+  },
+  {
     id: 'health',
     label: 'Sante',
     input: 'Que penser de ce nouveau traitement medical dont tout le monde parle ?',

@@ -18,7 +18,7 @@ export type ResourceServiceInput = {
   now?: Date
 }
 
-const URL_PATTERN = /\bhttps?:\/\/[^\s<>"')]+|\bwww\.[^\s<>"')]+/gi
+const URL_PATTERN = /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s<>"')]+)?/gi
 
 export function detectUrls(input: string): string[] {
   const matches = input.match(URL_PATTERN) ?? []

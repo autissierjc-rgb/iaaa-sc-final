@@ -4059,7 +4059,7 @@ export async function POST(req: NextRequest) {
         ? `${analysisText}\n${explicitUrls(urlSourceText).join('\n')}`
         : analysisText
     const userMaterialRole = classifyUserMaterialResourceRole(urlAugmentedAnalysisText)
-    const interpretationText = canonicalQuestionForUserMaterialRole(analysisText, userMaterialRole)
+    const interpretationText = canonicalQuestionForUserMaterialRole(urlAugmentedAnalysisText, userMaterialRole)
     const previousContract = conversation_contract && typeof conversation_contract === 'object'
       ? conversation_contract as ConversationContract
       : undefined
