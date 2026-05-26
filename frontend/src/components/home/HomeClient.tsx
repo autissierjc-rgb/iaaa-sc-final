@@ -1951,6 +1951,12 @@ function collaborativeQuestionsFromSc(sc: any): string[] {
   return Array.from(new Set(questions)).slice(0, 2)
 }
 
+function syncRefineMessages(messages: ChatMsg[], questions: string[]): ChatMsg[] {
+  const withoutRefine = messages.filter((msg) => msg.kind !== 'refine')
+  if (questions.length === 0) return withoutRefine
+  return [...withoutRefine, { kind: 'refine', questions }]
+}
+
 type VisibilityState = 'private' | 'public' | 'collab'
 
 type HistoryItem = {
@@ -2237,10 +2243,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                   : msg
               )
             : prev
-          if (theatreQuestions.length === 0) return normalized
-          const last = normalized[normalized.length - 1]
-          const sameRefine = last?.kind === 'refine' && last.questions.join('|') === theatreQuestions.join('|')
-          return sameRefine ? normalized : [...normalized, { kind: 'refine', questions: theatreQuestions }]
+          return syncRefineMessages(normalized, theatreQuestions)
         })
         const fullController = new AbortController()
         const fullTimeout = window.setTimeout(() => fullController.abort(), 65000)
@@ -2265,6 +2268,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
             if (payload?.gate === 'GENERATE' && payload.sc) {
               setScData(payload.sc)
               setActiveSituation(canonicalSituationFromResponse(payload.sc, canonicalText))
+              setChatMsgs(prev => syncRefineMessages(prev, collaborativeQuestionsFromSc(payload.sc)))
             }
           })
           .catch(error => {
