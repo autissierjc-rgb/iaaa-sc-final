@@ -2212,7 +2212,6 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       if (scData2.sc) {
         setScData(scData2.sc)
         const canonicalText = canonicalSituationFromResponse(scData2.sc, text)
-        const theatreQuestions = collaborativeQuestionsFromSc(scData2.sc)
         const canReplaceLastUserMessage = !waitingForAnswers && !refiningOptional && !scData
         setActiveSituation(canonicalText)
         setChatMsgs(prev => {
@@ -2223,7 +2222,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                   : msg
               )
             : prev
-          return syncRefineMessages(normalized, theatreQuestions)
+          return syncRefineMessages(normalized, [])
         })
         const fullController = new AbortController()
         const fullTimeout = window.setTimeout(() => fullController.abort(), 65000)
