@@ -1194,15 +1194,15 @@ function strategicMovementsFr(options: string[], keySignal: string): string[] {
   if (ranked.length >= 2) {
     const [priority, secondary, deferred] = ranked
     return [
-      `Tester ${priority} comme option prioritaire sur un cycle court et réversible.`,
-      `Définir avant le test le signal de validation : ${signal}.`,
-      `Comparer ${secondary}${deferred ? ` et ${deferred}` : ''} seulement après ce test, puis réviser l’ordre si le signal n’apparaît pas.`,
+      `Relance possible : faire de ${priority} la prochaine situation testée sur quelques cas réels.`,
+      `Observer un seul signal de retour : ${signal}.`,
+      `Si le signal reste faible, rejouer la carte avec ${secondary}${deferred ? ` ou ${deferred}` : ''} comme hypothèse de départ.`,
     ]
   }
   return [
-    'Choisir une option prioritaire à tester maintenant, au lieu de maintenir toutes les options ouvertes.',
-    `Limiter le test à un périmètre court et réversible, avec un signal observable : ${signal}.`,
-    'Réviser le choix si le signal n’apparaît pas, plutôt que prolonger une option par inertie.',
+    'Relance possible : transformer l’option la plus crédible en prochaine situation testée.',
+    `Observer un seul signal de retour : ${signal}.`,
+    'Si le signal reste faible, rejouer la carte avec une autre option plutôt que prolonger l’hypothèse par inertie.',
   ]
 }
 
@@ -1212,15 +1212,15 @@ function strategicMovementsEn(options: string[], keySignal: string): string[] {
   if (ranked.length >= 2) {
     const [priority, secondary, deferred] = ranked
     return [
-      `Test ${priority} as the priority option over a short reversible cycle.`,
-      `Define the validation signal before the test: ${signal}.`,
-      `Compare ${secondary}${deferred ? ` and ${deferred}` : ''} only after that test, then revise the order if the signal does not appear.`,
+      `Possible nudge: make ${priority} the next situation tested on a few real cases.`,
+      `Watch one return signal: ${signal}.`,
+      `If the signal stays weak, replay the card with ${secondary}${deferred ? ` or ${deferred}` : ''} as the starting hypothesis.`,
     ]
   }
   return [
-    'Choose one priority option to test now instead of keeping every option open.',
-    `Keep the test short and reversible, with one observable signal: ${signal}.`,
-    'Revise the choice if the signal does not appear instead of extending an option by inertia.',
+    'Possible nudge: turn the most credible option into the next tested situation.',
+    `Watch one return signal: ${signal}.`,
+    'If the signal stays weak, replay the card with another option instead of extending the hypothesis by inertia.',
   ]
 }
 
