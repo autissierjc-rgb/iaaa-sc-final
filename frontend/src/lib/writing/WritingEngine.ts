@@ -192,7 +192,7 @@ function resourceWarning(resources?: ResourceServiceContract): string | undefine
 function hasProductOptionEvidence(resources?: ResourceServiceContract): boolean {
   if (!resources) return false
   const comparableKinds = new Set(['audience_family', 'user_segment', 'strategic_option', 'offer', 'use_case'])
-  const productSourceTypes = new Set(['url', 'document', 'private_plug', 'manual_text'])
+  const productSourceTypes = new Set(['url', 'document', 'private_plug', 'manual_text', 'resource'])
   return resources.extracted_options.filter((option) =>
     comparableKinds.has(option.kind) &&
     productSourceTypes.has(option.source_type),
