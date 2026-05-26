@@ -2730,23 +2730,23 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                       <div key={i} style={{ alignSelf: 'flex-start', padding: '2px 0 4px', maxWidth: '92%' }}>
                         <div style={{ fontSize: 12, color: TXT2, fontStyle: 'italic', lineHeight: 1.65, fontFamily: "'Cormorant Garamond',serif" }}>
                           {msg.kind === 'clarify'
-                            ? t.clarify_intro
+                            ? (lang === 'FR' ? 'Je peux avancer, mais il manque un point d’appui :' : 'I can move forward, but one anchor is still missing:')
                             : lang === 'FR'
-                              ? 'Je peux générer maintenant. Pour affûter la carte :'
-                              : 'I can generate now. To sharpen the card:'}
+                              ? 'Je peux déjà générer. Avant la boussole, une question peut faire gagner en justesse :'
+                              : 'I can generate now. Before the compass, one question may sharpen the reading:'}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 5 }}>
                           {msg.questions.map((q, qi) => (
                             <div key={qi} style={{ display: 'flex', gap: 7, fontSize: 12, color: TXT, lineHeight: 1.55 }}>
-                              <span style={{ color: GOLD, fontFamily: "'Cinzel',serif", fontSize: 10, paddingTop: 1 }}>{qi + 1}.</span>
+                              <span style={{ color: GOLD, fontFamily: "'Cinzel',serif", fontSize: 12, paddingTop: 0 }}>?</span>
                               <span>{q}</span>
                             </div>
                           ))}
                         </div>
                         <div style={{ fontSize: 10, color: TXT3, fontStyle: 'italic', marginTop: 7 }}>
                           {msg.kind === 'clarify'
-                            ? (lang === 'FR' ? 'Répondez librement, ou générez une carte exploratoire.' : 'Reply freely, or generate an exploratory card.')
-                            : (lang === 'FR' ? 'Répondez si vous voulez préciser, ou cliquez la boussole pour générer.' : 'Reply if you want to refine it, or click the compass to generate.')}
+                            ? (lang === 'FR' ? 'Répondez librement, ou laissez la boussole produire une carte exploratoire.' : 'Reply freely, or let the compass produce an exploratory card.')
+                            : (lang === 'FR' ? 'Répondez en une phrase si cela vous aide ; sinon la boussole peut cristalliser.' : 'Reply in one sentence if useful; otherwise the compass can crystallize.')}
                         </div>
                         {msg.kind === 'clarify' && (
                           <button

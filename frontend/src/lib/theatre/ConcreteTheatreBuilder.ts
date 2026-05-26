@@ -212,47 +212,47 @@ function collaborationQuestions(
   if (domain === 'management') {
     if (/\b(conflit|tension|desaccord|désaccord|reorganisation|réorganisation|equipe|équipe)\b/i.test(text)) {
       return [
-        `Dans ${subject}, quels groupes ne lisent pas la réorganisation de la même façon ?`,
-        `Quelle décision, règle ou annonce a rendu le désaccord visible ?`,
+        `Dans ${subject}, qui ne voit pas la même scène que les autres ?`,
+        `Quel geste, règle ou annonce a rendu le désaccord impossible à ignorer ?`,
       ]
     }
 
     return [
-      `Dans ${subject}, quel rôle reste trop flou pour comprendre le blocage ?`,
-      `Quel fait montrerait que ${visibleActor} accepte, ralentit ou conteste la décision ?`,
+      `Dans ${subject}, quel rôle reste assez flou pour entretenir le blocage ?`,
+      `Qu’est-ce qui montrerait que ${visibleActor} accepte, ralentit ou conteste vraiment ?`,
     ]
   }
 
   if (domain === 'professional') {
     return [
-      `Pour ${subject}, quelle décision précise doit sortir de la carte ?`,
-      `Qui peut valider, refuser ou rendre cette décision coûteuse ?`,
+      `Si la carte devait aider à trancher ${subject}, quelle décision devrait devenir plus nette ?`,
+      `Qui peut rendre cette décision possible, coûteuse ou impossible ?`,
     ]
   }
 
   if (domain === 'startup_market' || domain === 'product_platform' || domain === 'business_strategy') {
     return [
-      `Pour ${subject}, quel premier public donnerait le signal le plus net ?`,
-      `Quelle preuve d’usage séparerait l’intérêt poli d’un vrai besoin ?`,
+      `Le premier public utile n’est peut-être pas le plus visible, mais celui qui revient. Lequel donnerait ce signal ?`,
+      `Qu’est-ce qui te ferait dire : ce n’est plus de l’intérêt poli, c’est un vrai besoin ?`,
     ]
   }
 
   if (domain === 'family' || domain === 'couple' || domain === 'school_adolescence') {
     return [
-      `Dans ${subject}, quel lien ou moment concret manque encore pour situer la scène ?`,
-      `Quel geste observable montrerait que la relation change vraiment ?`,
+      `Dans ${subject}, quel moment concret permettrait de voir la scène sans l’expliquer trop vite ?`,
+      `Quel geste montrerait que la relation change vraiment, même un peu ?`,
     ]
   }
 
   if (domain === 'geopolitics' || domain === 'institutional_crisis') {
     return [
-      `Dans ${subject}, quel acteur habilité peut transformer la tension en acte officiel ?`,
-      `Quelle procédure, décision ou date rendrait la lecture vérifiable ?`,
+      `La tension devient décisive quand quelqu’un peut lui donner une forme officielle. Qui a ce pouvoir ici ?`,
+      `Quelle trace rendrait la lecture vérifiable : décision, date, procédure ou déclaration ?`,
     ]
   }
 
   if (missing.length > 0) {
-    return [`Pour ${subject}, quelle précision manque encore sur ${missingAnchor} ?`]
+    return [`Dans ${subject}, qu’est-ce qui manque encore sur ${missingAnchor} pour éviter de conclure trop vite ?`]
   }
 
   return []
