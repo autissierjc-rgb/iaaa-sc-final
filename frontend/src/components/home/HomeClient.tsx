@@ -1917,7 +1917,27 @@ function sanitizeSituationDraft(value: string): string {
     .trimStart()
 }
 
+function hasComparableExtractedOptions(sc: any): boolean {
+  const comparableKinds = new Set(['audience_family', 'user_segment', 'strategic_option', 'offer', 'use_case'])
+  const optionSources = [
+    sc?.coverage_check?.resource_service?.extracted_options,
+    sc?.resource_service?.extracted_options,
+    sc?.resources?.extracted_options,
+  ]
+  const options = optionSources.flatMap((value) => Array.isArray(value) ? value : [])
+  if (options.filter((option) => comparableKinds.has(String(option?.kind ?? ''))).length >= 2) return true
+
+  const counts = [
+    sc?.coverage_check?.resource_service?.extracted_options_count,
+    sc?.resource_service?.extracted_options_count,
+    sc?.resources?.extracted_options_count,
+  ]
+  return counts.some((value) => Number(value ?? 0) >= 2)
+}
+
 function collaborativeQuestionsFromSc(sc: any): string[] {
+  if (hasComparableExtractedOptions(sc)) return []
+
   const candidates = [
     sc?.coverage_check?.concrete_theatre?.collaboration_questions,
     sc?.coverage_check?.theatre?.collaboration_questions,
