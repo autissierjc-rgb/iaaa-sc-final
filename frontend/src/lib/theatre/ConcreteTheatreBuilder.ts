@@ -229,8 +229,8 @@ function collaborationQuestions(
 
   if (domain === 'startup_market' || domain === 'product_platform' || domain === 'business_strategy') {
     return [
-      `Le premier public utile n’est peut-être pas le plus visible, mais celui qui revient. Lequel donnerait ce signal ?`,
-      `Qu’est-ce qui te ferait dire : ce n’est plus de l’intérêt poli, c’est un vrai besoin ?`,
+      `Qui reviendrait sans qu’on le relance ?`,
+      `Quel signe te ferait arrêter de parler d’intérêt poli ?`,
     ]
   }
 

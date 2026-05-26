@@ -2771,16 +2771,16 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                                 : 'The fast card is here. To get a sharper complete card, one clarification may help:')
                               : msg.phase === 'pre_generate'
                                 ? (lang === 'FR'
-                                  ? 'Je peux déjà générer. Avant la boussole, une question peut faire gagner en justesse :'
+                                  ? 'Je peux déjà générer. Une question peut rendre la carte plus juste :'
                                   : 'I can generate now. Before the compass, one question may sharpen the reading:')
                                 : (lang === 'FR'
-                                  ? 'À partir de la carte complète, une relance peut enrichir la prochaine lecture :'
+                                  ? 'Pour la prochaine carte, un détail peut changer la lecture :'
                                   : 'From the complete card, one follow-up can enrich the next reading:')}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 5 }}>
                           {msg.questions.map((q, qi) => (
                             <div key={qi} style={{ display: 'flex', gap: 7, fontSize: 12, color: TXT, lineHeight: 1.55 }}>
-                              <span style={{ color: GOLD, fontFamily: "'Cinzel',serif", fontSize: 12, paddingTop: 0 }}>?</span>
+                              <span style={{ color: GOLD, fontFamily: "'Cinzel',serif", fontSize: 12, paddingTop: 0 }}>·</span>
                               <span>{q}</span>
                             </div>
                           ))}
@@ -2790,7 +2790,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                             ? (lang === 'FR' ? 'Répondez librement, ou laissez la boussole produire une carte exploratoire.' : 'Reply freely, or let the compass produce an exploratory card.')
                             : msg.phase === 'bridge_to_complete'
                               ? (lang === 'FR' ? 'Répondez en une phrase, puis relancez la boussole pour compléter.' : 'Reply in one sentence, then run the compass again to complete it.')
-                              : (lang === 'FR' ? 'Répondez en une phrase si cela vous aide ; SC s’en servira pour la prochaine génération.' : 'Reply in one sentence if useful; SC will use it for the next generation.')}
+                              : (lang === 'FR' ? 'Une phrase suffit.' : 'One sentence is enough.')}
                         </div>
                         {msg.kind === 'clarify' && (
                           <button
