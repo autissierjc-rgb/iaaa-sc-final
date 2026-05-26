@@ -1802,7 +1802,7 @@ type ChatMsg =
   | { kind: 'material'; text: string }
   | { kind: 'flash'; etat: string; lecture: string }
   | { kind: 'clarify'; questions: string[] }
-  | { kind: 'refine'; questions: string[] }
+  | { kind: 'refine'; questions: string[]; phase?: 'pre_generate' | 'post_complete' | 'bridge_to_complete' }
   | { kind: 'block'; reason: string }
 
 type DialogueEvent = {
@@ -1931,10 +1931,14 @@ function collaborativeQuestionsFromSc(sc: any): string[] {
   return Array.from(new Set(questions)).slice(0, 2)
 }
 
-function syncRefineMessages(messages: ChatMsg[], questions: string[]): ChatMsg[] {
+function syncRefineMessages(
+  messages: ChatMsg[],
+  questions: string[],
+  phase: Extract<ChatMsg, { kind: 'refine' }>['phase'] = 'post_complete',
+): ChatMsg[] {
   const withoutRefine = messages.filter((msg) => msg.kind !== 'refine')
   if (questions.length === 0) return withoutRefine
-  return [...withoutRefine, { kind: 'refine', questions }]
+  return [...withoutRefine, { kind: 'refine', questions, phase }]
 }
 
 type VisibilityState = 'private' | 'public' | 'collab'
@@ -2248,20 +2252,20 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           if (payload?.gate === 'GENERATE' && payload.sc) {
             setScData(payload.sc)
             setActiveSituation(canonicalSituationFromResponse(payload.sc, canonicalText))
-            setChatMsgs(prev => syncRefineMessages(prev, collaborativeQuestionsFromSc(payload.sc)))
+            setChatMsgs(prev => syncRefineMessages(prev, collaborativeQuestionsFromSc(payload.sc), 'post_complete'))
           } else if (payload?.gate === 'CLARIFY' || payload?.gate === 'REFINE_OPTIONAL') {
             const bridgeQuestions = Array.isArray(payload.questions) && payload.questions.length > 0
               ? payload.questions
               : fastBridgeQuestions
-            setChatMsgs(prev => syncRefineMessages(prev, bridgeQuestions))
+            setChatMsgs(prev => syncRefineMessages(prev, bridgeQuestions, 'bridge_to_complete'))
           } else if (fastBridgeQuestions.length > 0) {
-            setChatMsgs(prev => syncRefineMessages(prev, fastBridgeQuestions))
+            setChatMsgs(prev => syncRefineMessages(prev, fastBridgeQuestions, 'bridge_to_complete'))
           }
         } catch (error) {
           window.clearTimeout(fullTimeout)
           console.warn('complete generation failed after fast card:', error)
           if (fastBridgeQuestions.length > 0) {
-            setChatMsgs(prev => syncRefineMessages(prev, fastBridgeQuestions))
+            setChatMsgs(prev => syncRefineMessages(prev, fastBridgeQuestions, 'bridge_to_complete'))
           }
         }
       }
@@ -2721,9 +2725,17 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                         <div style={{ fontSize: 12, color: TXT2, fontStyle: 'italic', lineHeight: 1.65, fontFamily: "'Cormorant Garamond',serif" }}>
                           {msg.kind === 'clarify'
                             ? (lang === 'FR' ? 'Je peux avancer, mais il manque un point d’appui :' : 'I can move forward, but one anchor is still missing:')
-                            : lang === 'FR'
-                              ? 'Je peux déjà générer. Avant la boussole, une question peut faire gagner en justesse :'
-                              : 'I can generate now. Before the compass, one question may sharpen the reading:'}
+                            : msg.phase === 'bridge_to_complete'
+                              ? (lang === 'FR'
+                                ? 'La carte rapide est là. Pour obtenir une complète plus juste, une précision peut aider :'
+                                : 'The fast card is here. To get a sharper complete card, one clarification may help:')
+                              : msg.phase === 'pre_generate'
+                                ? (lang === 'FR'
+                                  ? 'Je peux déjà générer. Avant la boussole, une question peut faire gagner en justesse :'
+                                  : 'I can generate now. Before the compass, one question may sharpen the reading:')
+                                : (lang === 'FR'
+                                  ? 'À partir de la carte complète, une relance peut enrichir la prochaine lecture :'
+                                  : 'From the complete card, one follow-up can enrich the next reading:')}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 5 }}>
                           {msg.questions.map((q, qi) => (
@@ -2736,7 +2748,9 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                         <div style={{ fontSize: 10, color: TXT3, fontStyle: 'italic', marginTop: 7 }}>
                           {msg.kind === 'clarify'
                             ? (lang === 'FR' ? 'Répondez librement, ou laissez la boussole produire une carte exploratoire.' : 'Reply freely, or let the compass produce an exploratory card.')
-                            : (lang === 'FR' ? 'Répondez en une phrase si cela vous aide ; sinon la boussole peut cristalliser.' : 'Reply in one sentence if useful; otherwise the compass can crystallize.')}
+                            : msg.phase === 'bridge_to_complete'
+                              ? (lang === 'FR' ? 'Répondez en une phrase, puis relancez la boussole pour compléter.' : 'Reply in one sentence, then run the compass again to complete it.')
+                              : (lang === 'FR' ? 'Répondez en une phrase si cela vous aide ; SC s’en servira pour la prochaine génération.' : 'Reply in one sentence if useful; SC will use it for the next generation.')}
                         </div>
                         {msg.kind === 'clarify' && (
                           <button
