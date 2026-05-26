@@ -189,6 +189,16 @@ function resourceWarning(resources?: ResourceServiceContract): string | undefine
   return 'Des sources rapides sont requises pour ce domaine : l analyse doit distinguer ce qui est structurellement lisible de ce qui reste a verifier.'
 }
 
+function hasProductOptionEvidence(resources?: ResourceServiceContract): boolean {
+  if (!resources) return false
+  const comparableKinds = new Set(['audience_family', 'user_segment', 'strategic_option', 'offer', 'use_case'])
+  const productSourceTypes = new Set(['url', 'document', 'private_plug', 'manual_text'])
+  return resources.extracted_options.filter((option) =>
+    comparableKinds.has(option.kind) &&
+    productSourceTypes.has(option.source_type),
+  ).length >= 2
+}
+
 function resourceEvidenceSection(resources?: ResourceServiceContract): { id: string; title: string; body: string } | null {
   if (!resources || resources.public_sources.length === 0) return null
 
@@ -196,6 +206,15 @@ function resourceEvidenceSection(resources?: ResourceServiceContract): { id: str
     const reliability = source.reliability ? `, ${source.reliability}` : ''
     return `${source.title} (${source.source}${reliability})`
   }).join(' ; ')
+
+  if (hasProductOptionEvidence(resources)) {
+    return {
+      id: 'ressources-produit',
+      title: 'Ressources produit',
+      body:
+        `Ressources exploitees : ${sourceLine}. Elles donnent un contenu produit utilisable pour structurer les options, mais la preuve de marche reste a tester par usage repete, partage, integration ou paiement.`,
+    }
+  }
 
   return {
     id: 'sources-rapides',
@@ -207,6 +226,26 @@ function resourceEvidenceSection(resources?: ResourceServiceContract): { id: str
 
 function probabilityFromResources(resources?: ResourceServiceContract): ProbabilityAssessment | null {
   if (!resources || resources.public_sources.length === 0) return null
+
+  if (hasProductOptionEvidence(resources)) {
+    const examples = resources.extracted_options
+      .filter((option) => ['audience_family', 'user_segment', 'strategic_option', 'offer', 'use_case'].includes(option.kind))
+      .slice(0, 3)
+      .map((option) => ({
+        text_fr: option.label_fr,
+        status: option.status,
+        source_ids: option.source_id ? [option.source_id] : [],
+      }))
+
+    return {
+      claim_fr: 'Les ressources produit structurent une hypothèse exploitable : elles permettent de comparer les options, mais ne prouvent pas encore la traction de marché.',
+      status: 'hypothesis',
+      probability_label_fr: 'Hypothèse produit structurée',
+      confidence: resources.extracted_options.length >= 3 ? 0.6 : 0.52,
+      examples,
+      missing_proof_fr: 'usage répété, rétention, recommandation, intégration ou paiement sur un segment précis.',
+    }
+  }
 
   const proof = resourceProofLabel(resources)
   const publicEvidence = publicProbativeEvidence(resources)
@@ -235,6 +274,10 @@ function resourceEvidenceSentence(resources?: ResourceServiceContract): string |
       : ''
     return `${source.title} (${source.source}${reliability})`
   }).join(' ; ')
+
+  if (hasProductOptionEvidence(resources)) {
+    return `Les ressources produit attachées (${sources}) cadrent la lecture : elles donnent des options exploitables, mais la preuve de marché reste à tester par usage observable.`
+  }
 
   return `Les sources rapides attachées (${sources}) cadrent la lecture : elles donnent un premier appui vérifiable, mais ne remplacent pas Recherche+ ni une vérification de contradiction.`
 }
@@ -509,6 +552,10 @@ function probabilitySpine(probability: ProbabilityAssessment): string {
 }
 
 function probabilityLabelFr(probability: ProbabilityAssessment): string {
+  if (probability.probability_label_fr && probability.probability_label_fr !== ASSERTION_LABELS_FR[probability.status]) {
+    return polishPublicProofText(probability.probability_label_fr)
+  }
+
   const labelByStatus: Record<ProbabilityAssessment['status'], string> = {
     established: 'Établi',
     probable: 'Probable',
