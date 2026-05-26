@@ -1198,15 +1198,15 @@ function strategicMovementsFr(options: string[], keySignal: string): string[] {
   if (ranked.length >= 2) {
     const [priority, secondary, deferred] = ranked
     return [
-      `Relance possible : faire de ${priority} la prochaine situation testée sur quelques cas réels.`,
-      `Observer un seul signal de retour : ${signal}.`,
-      `Si le signal reste faible, rejouer la carte avec ${secondary}${deferred ? ` ou ${deferred}` : ''} comme hypothèse de départ.`,
+      `Mouvement testable : prendre ${priority} comme hypothèse de départ sur un périmètre court, sans verrouiller les autres options.`,
+      `Signal de validation : ${signal}.`,
+      `Condition de révision : si ce signal ne vient pas, rejouer la carte avec ${secondary}${deferred ? ` ou ${deferred}` : ''} plutôt que durcir la conclusion.`,
     ]
   }
   return [
-    'Relance possible : transformer l’option la plus crédible en prochaine situation testée.',
-    `Observer un seul signal de retour : ${signal}.`,
-    'Si le signal reste faible, rejouer la carte avec une autre option plutôt que prolonger l’hypothèse par inertie.',
+    'Mouvement testable : choisir l’hypothèse la plus réversible et la mettre à l’épreuve sur un périmètre court.',
+    `Signal de validation : ${signal}.`,
+    'Condition de révision : si ce signal ne vient pas, changer d’option ou de lecture plutôt que prolonger l’hypothèse par inertie.',
   ]
 }
 
@@ -1216,15 +1216,15 @@ function strategicMovementsEn(options: string[], keySignal: string): string[] {
   if (ranked.length >= 2) {
     const [priority, secondary, deferred] = ranked
     return [
-      `Possible nudge: make ${priority} the next situation tested on a few real cases.`,
-      `Watch one return signal: ${signal}.`,
-      `If the signal stays weak, replay the card with ${secondary}${deferred ? ` or ${deferred}` : ''} as the starting hypothesis.`,
+      `Testable move: use ${priority} as the starting hypothesis on a short scope, without locking the other options.`,
+      `Validation signal: ${signal}.`,
+      `Revision condition: if that signal does not appear, replay the card with ${secondary}${deferred ? ` or ${deferred}` : ''} instead of hardening the conclusion.`,
     ]
   }
   return [
-    'Possible nudge: turn the most credible option into the next tested situation.',
-    `Watch one return signal: ${signal}.`,
-    'If the signal stays weak, replay the card with another option instead of extending the hypothesis by inertia.',
+    'Testable move: choose the most reversible hypothesis and test it on a short scope.',
+    `Validation signal: ${signal}.`,
+    'Revision condition: if that signal does not appear, change option or reading instead of extending the hypothesis by inertia.',
   ]
 }
 

@@ -319,6 +319,49 @@ La ressource peut etre analysee sans devenir l'objet principal.
 
 Exemples :
 
+## 3d. Propositions et conseil experimental
+
+SC peut devenir force de proposition, mais ne doit pas devenir un oracle de
+decision.
+
+Regle canonique :
+
+```txt
+SC ne decide pas a la place de l'utilisateur.
+SC propose le prochain test qui rend la decision plus claire.
+```
+
+Toute proposition actionnable doit donc rester :
+
+- experimentale ;
+- reversible autant que possible ;
+- rattachee a un signal observable ;
+- accompagnee d'une condition de revision.
+
+Formule transversale :
+
+```txt
+Proposition prudente = prochain mouvement testable + signal de validation +
+condition de revision.
+```
+
+Application dans `MOUVEMENTS` :
+
+```txt
+1. Mouvement testable : quoi tester d'abord, sur un perimetre court.
+2. Signal de validation : ce qui rend la lecture plus solide.
+3. Condition de revision : ce qui oblige a changer d'option, de cible ou de
+   lecture.
+```
+
+Interdit :
+
+- "faites X" sans signal ;
+- conclusion definitive avant preuve ;
+- conseil medical, juridique, financier ou securitaire personnalise hors
+  garde-fou safety ;
+- choix irreversibles presentes comme simples mouvements.
+
 - `object_of_analysis` : "analyse ce site", "que fait cette entreprise",
   "que penser de FlexUp" ;
 - `context_for_question` : "pour ma startup situationcard.com", "dans mon
