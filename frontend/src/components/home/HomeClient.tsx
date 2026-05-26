@@ -2212,6 +2212,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       if (scData2.sc) {
         setScData(scData2.sc)
         const canonicalText = canonicalSituationFromResponse(scData2.sc, text)
+        const fastBridgeQuestions = collaborativeQuestionsFromSc(scData2.sc)
         const canReplaceLastUserMessage = !waitingForAnswers && !refiningOptional && !scData
         setActiveSituation(canonicalText)
         setChatMsgs(prev => {
@@ -2248,10 +2249,20 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
             setScData(payload.sc)
             setActiveSituation(canonicalSituationFromResponse(payload.sc, canonicalText))
             setChatMsgs(prev => syncRefineMessages(prev, collaborativeQuestionsFromSc(payload.sc)))
+          } else if (payload?.gate === 'CLARIFY' || payload?.gate === 'REFINE_OPTIONAL') {
+            const bridgeQuestions = Array.isArray(payload.questions) && payload.questions.length > 0
+              ? payload.questions
+              : fastBridgeQuestions
+            setChatMsgs(prev => syncRefineMessages(prev, bridgeQuestions))
+          } else if (fastBridgeQuestions.length > 0) {
+            setChatMsgs(prev => syncRefineMessages(prev, fastBridgeQuestions))
           }
         } catch (error) {
           window.clearTimeout(fullTimeout)
           console.warn('complete generation failed after fast card:', error)
+          if (fastBridgeQuestions.length > 0) {
+            setChatMsgs(prev => syncRefineMessages(prev, fastBridgeQuestions))
+          }
         }
       }
       setAnswers([])
