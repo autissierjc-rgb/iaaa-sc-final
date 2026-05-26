@@ -34,7 +34,7 @@ import { validateDiamondContract } from '@/lib/governance/diamondValidation'
 import { sanitizeResources } from '@/lib/resources/sanitizeResources'
 import { shouldUseWeb } from '@/lib/resources/shouldUseWeb'
 import { enrichResourcesWithSiteUnderstanding } from '@/lib/resources/siteUnderstanding'
-import { extractTargetAudiencesFromResources } from '@/lib/resources/functionalResourceQualification'
+import { extractTargetAudienceFamiliesFromResources, extractTargetAudiencesFromResources } from '@/lib/resources/functionalResourceQualification'
 import { detectScopeContext } from '@/lib/scope/scopeContext'
 import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWritingWithMode } from '@/lib/writing'
@@ -1135,6 +1135,10 @@ function canonicalWritingFamilyFromIntentContext(intentContext: IntentContext | 
 
 function targetSegmentsFromResources(resources: ResourceItem[]): string[] {
   return extractTargetAudiencesFromResources(resources)
+}
+
+function targetFamilyOptionsFromResources(resources: ResourceItem[]): string[] {
+  return extractTargetAudienceFamiliesFromResources(resources).map((family) => family.label_fr)
 }
 
 function targetSegmentsPhrase(segments: string[]): string {
@@ -2965,7 +2969,10 @@ function completeSituationCard(
     'Does individual use create only attention or also retention?',
     'Can organizational use pay without imposing too long a sales cycle?',
   ]
-  const strategicMovementOptions = isTargetChoice ? targetSegments : []
+  const targetFamilyMovementOptions = isTargetChoice ? targetFamilyOptionsFromResources(resources) : []
+  const strategicMovementOptions = isTargetChoice
+    ? (targetFamilyMovementOptions.length >= 2 ? targetFamilyMovementOptions : targetSegments)
+    : []
   const strategicMovementSignalFr = isTargetChoice
     ? 'réutilisation, partage, demande de suite ou paiement du segment prioritaire'
     : firstSafeText(
