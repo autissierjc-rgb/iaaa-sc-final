@@ -192,7 +192,6 @@ function collaborationQuestions(
   namedActors: string[],
   roleAnchors: string[],
   missing: string[],
-  resourceOptionsAlreadyExtracted: boolean,
 ): string[] {
   const domain = input.interpretation.domain
   const subject = shortSubject(input)
@@ -206,8 +205,6 @@ function collaborationQuestions(
     input.interpretation.user_need,
     input.interpretation.primary_hypothesis ?? '',
   ].join(' ')
-
-  if (resourceOptionsAlreadyExtracted) return []
 
   if (domain === 'management') {
     if (/\b(conflit|tension|desaccord|désaccord|reorganisation|réorganisation|equipe|équipe)\b/i.test(text)) {
@@ -308,7 +305,7 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
 
   const missing = expectedMissingAnchors(input, present)
   const resourceOptionsAlreadyExtracted = hasExtractedComparisonOptions(input.resources) && asksComparisonOrTargetChoice(text)
-  const questions = collaborationQuestions(input, namedActors, roleAnchors, missing, resourceOptionsAlreadyExtracted)
+  const questions = collaborationQuestions(input, namedActors, roleAnchors, missing)
 
   return {
     domain: interpretation.domain,
