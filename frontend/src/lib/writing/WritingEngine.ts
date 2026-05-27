@@ -640,6 +640,8 @@ function polishPublicProofText(value: string): string {
     .replace(/\breversible\b/g, 'réversible')
     .replace(/\beconomiques\b/g, 'économiques')
     .replace(/\bcapacite\b/g, 'capacité')
+    .replace(/\bcapacité de autorités\b/g, 'capacité des autorités')
+    .replace(/\ba maintenir\b/g, 'à maintenir')
     .replace(/\bsequence\b/g, 'séquence')
     .replace(/\bescalade\b/g, 'escalade')
     .replace(/\banalyse\b/g, 'analyse')
@@ -1103,6 +1105,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const resourceSignalOpening = resourceRegimeSignalSentence(input.resources, resonance)
   const diamondText = polishPublicProofText(compactSentence(
     resonance.diamond_thesis_fr || grammar.diamond(tension, institutions, firstProcedure),
+    320,
   ))
 
   const publicWarnings = [
@@ -1151,16 +1154,12 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const probabilityDemonstration = probabilityDemonstrationSentence(probability)
   const probabilityChange = probabilityChangeSentence(probability)
   const lecture = [
-    resourceSignalOpening,
     diamondText,
-    grammar.lectureEntry(subject, institutions),
     resonance.structural_contradiction_fr || `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
-    resourcesSentence,
     vulnerability,
     keySignal,
-    trajectoryText,
-    probabilityText,
   ].filter(Boolean).join(' ')
+  const lectureFr = polishPublicProofText(compactSentence(lecture, 820))
   const approfondirAnalysis = [
     resourceSignalOpening,
     diamondText,
@@ -1219,8 +1218,8 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     },
     trajectories,
     lecture: {
-      text_fr: polishPublicProofText(lecture),
-      word_count_fr: countWords(lecture),
+      text_fr: lectureFr,
+      word_count_fr: countWords(lectureFr),
     },
     approfondir: {
       analysis_fr: polishPublicProofText(approfondirAnalysis),

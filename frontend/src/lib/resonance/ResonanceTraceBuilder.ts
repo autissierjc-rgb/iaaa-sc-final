@@ -24,6 +24,30 @@ function unique(items: string[]): string[] {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)))
 }
 
+function words(value: string): string[] {
+  return normalize(value)
+    .split(/[^a-z0-9]+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length >= 4)
+}
+
+const RELEVANCE_STOPWORDS = new Set([
+  'avec',
+  'apres',
+  'après',
+  'dans',
+  'entre',
+  'pour',
+  'quelle',
+  'quels',
+  'guerre',
+  'situation',
+  'actuelle',
+  'sources',
+  'rapides',
+  'lecture',
+])
+
 function host(value: string): string {
   try {
     return new URL(value).hostname.replace(/^www\./i, '')
@@ -108,6 +132,22 @@ function visibleList(items: string[], fallback: string): string {
   return items.length > 0 ? items.slice(0, 4).join(', ') : fallback
 }
 
+function relevantSourceSignal(signal: { signal_fr: string; source_title: string; source_name: string }, corpus: string): boolean {
+  const corpusWords = new Set(words(corpus).filter((word) => !RELEVANCE_STOPWORDS.has(word)))
+  if (corpusWords.size === 0) return true
+
+  const sourceText = `${signal.signal_fr} ${signal.source_title} ${signal.source_name}`
+  const signalWords = words(sourceText)
+  const overlap = signalWords.filter((word) => corpusWords.has(word))
+
+  if (overlap.length >= 2) return true
+  if (/\biran|iranien|isra[ëe]l|[ée]tats[-\s]?unis|usa|u\.s\.|trump|washington|teheran|t[ée]h[ée]ran\b/i.test(corpus)) {
+    return /\biran|iranien|isra[ëe]l|[ée]tats[-\s]?unis|usa|u\.s\.|trump|washington|teheran|t[ée]h[ée]ran\b/i.test(sourceText)
+  }
+
+  return overlap.length >= 1
+}
+
 function buildStructuralContradiction(actors: string[], institutions: string[]): string {
   const actorLine = visibleList(actors, 'les acteurs directement concernés')
   const institutionLine = visibleList(institutions, 'les instances capables de cadrer ou bloquer la suite')
@@ -145,10 +185,11 @@ function buildStructuralVulnerability(structuralGap: string, transitionSignal: s
 
 function buildDiamondThesis(actors: string[], structuralGap: string, transitionSignal: string): string {
   const actorLine = visibleList(actors, 'les acteurs concernés')
-  const object = /frappe|riposte|n[ée]gociation|militaire|diplomatique/i.test(structuralGap)
-    ? 'la riposte ou la négociation'
-    : structuralGap
-  return `La situation tient tant que ${actorLine} peuvent absorber l’écart entre récit, coût et décision ; elle bascule quand ${transitionSignal} rend ${object} impossible à contourner.`
+  if (/frappe|riposte|n[ée]gociation|militaire|diplomatique/i.test(structuralGap)) {
+    return `La situation tient tant que ${actorLine} peuvent absorber l’écart entre récit, coût et décision ; elle bascule quand ${transitionSignal} transforme la riposte ou la négociation en seuil public.`
+  }
+
+  return `La situation tient tant que ${actorLine} peuvent absorber l’écart entre récit, coût et décision ; elle bascule quand ${transitionSignal} rend ${structuralGap} impossible à contourner.`
 }
 
 function corpusText(input: ResonanceTraceInput): string {
@@ -211,13 +252,15 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     source.source,
     host(source.url),
   ]))
-  const sourceSignals = buildResourceRegimeSignals(input.resources, 4).map((signal) => ({
-    source_id: signal.source_id,
-    signal_fr: signal.signal_fr,
-    source_title: signal.source_title,
-    source_name: signal.source_name,
-    discriminant_terms: signal.discriminant_terms,
-  }))
+  const sourceSignals = buildResourceRegimeSignals(input.resources, 4)
+    .filter((signal) => relevantSourceSignal(signal, corpus))
+    .map((signal) => ({
+      source_id: signal.source_id,
+      signal_fr: signal.signal_fr,
+      source_title: signal.source_title,
+      source_name: signal.source_name,
+      discriminant_terms: signal.discriminant_terms,
+    }))
   const realActors = unique([
     ...input.interpretation.entity_explanations.map((entity) => entity.label),
     ...lexicalActorsFromCorpus(corpus),
