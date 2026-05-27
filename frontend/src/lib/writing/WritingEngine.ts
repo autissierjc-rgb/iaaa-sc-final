@@ -651,6 +651,7 @@ function polishPublicProofText(value: string): string {
     .replace(/\bnegociee\b/g, 'négociée')
     .replace(/\bconcernees\b/g, 'concernées')
     .replace(/\bdeclarations\b/g, 'déclarations')
+    .replace(/\bprecedents\b/g, 'précédents')
     .replace(/\bcachee\b/g, 'cachée')
     .replace(/\bvulnerabilite\b/g, 'vulnérabilité')
     .replace(/\bportee\b/g, 'portée')
@@ -679,6 +680,16 @@ function polishPublicProofText(value: string): string {
     .replace(/\bdependance\b/g, 'dépendance')
     .replace(/\bmodele\b/g, 'modèle')
     .replace(/\bstrategie\b/g, 'stratégie')
+    .replace(/\ba situer\b/g, 'à situer')
+    .replace(/\ba distinguer\b/g, 'à distinguer')
+}
+
+function conciseWatchSignal(evidence: string): string {
+  if (/acte,\s*une preuve ou un seuil observable/i.test(evidence)) {
+    return 'Signal clé : chercher la première trace vérifiable qui transforme la tension en seuil public.'
+  }
+
+  return `Signal clé : ${evidence}.`
 }
 
 function trajectorySections(trajectories: WritingContract['trajectories']): Array<{ id: string; title: string; body: string }> {
@@ -1225,12 +1236,12 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       analysis_fr: polishPublicProofText(approfondirAnalysis),
       sections_fr: [
         ...canonicalApprofondirSections({
-          really: `${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste a situer qui porte le cout, qui garde la marge d arbitrage, et quelle preuve ferait changer le regime de la situation. ${probabilityDemonstration}`,
+          really: `${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
           holds: resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
-          weakens: `Ce qui affaiblit la situation, c’est le point aveugle ${blindSpot} : tant qu’il n’est pas relié à ${evidence}, la lecture reste vulnérable.`,
+          weakens: `La fragilité tient à ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un fait opposable.`,
           escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
           shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr} ${probabilityChange}`,
-          watch: `${keySignal} ${probabilityChange} A verifier : ${blindSpot}.`,
+          watch: `${conciseWatchSignal(firstEvidence)} ${probabilityChange} À vérifier : ${blindSpot}.`,
         }),
         resourcesSection,
       ].filter((section): section is { id: string; title: string; body: string } => Boolean(section)),

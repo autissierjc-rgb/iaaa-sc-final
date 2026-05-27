@@ -264,6 +264,39 @@ function bodyRepeatsTitle(title: string, body: string): boolean {
   return Boolean(titleKey && bodyStart.startsWith(titleKey))
 }
 
+function repeatedSignalPhrase(normalizedText: string): string | null {
+  const tokens = normalizedText
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+  const phraseCounts = new Map<string, number>()
+  const signalWords = new Set([
+    'acte',
+    'preuve',
+    'seuil',
+    'observable',
+    'decision',
+    'trace',
+    'marges',
+    'hypothese',
+    'opposable',
+    'verifiable',
+  ])
+
+  for (let index = 0; index <= tokens.length - 8; index += 1) {
+    const window = tokens.slice(index, index + 8)
+    if (!window.some((token) => signalWords.has(token))) continue
+    const phrase = window.join(' ')
+    phraseCounts.set(phrase, (phraseCounts.get(phrase) ?? 0) + 1)
+  }
+
+  for (const [phrase, count] of phraseCounts.entries()) {
+    if (count >= 3) return phrase
+  }
+
+  return null
+}
+
 function meaningfulTheatreAnchors(theatre: ConcreteTheatreContract): string[] {
   return Array.from(new Set([
     ...(theatre.named_actors ?? []),
@@ -355,6 +388,7 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const noisyResourcePattern = PUBLIC_RESOURCE_NOISE_PATTERNS.find((pattern) => pattern.test(text))
   const internalWritingPattern = PUBLIC_INTERNAL_WRITING_PATTERNS.find((pattern) => pattern.test(text))
   const gluedTrajectoryPattern = GLUED_TRAJECTORY_PATTERNS.find((pattern) => pattern.test(text))
+  const repeatedSignal = repeatedSignalPhrase(normalizedNarrativeText)
   const defensiveOpeningPattern = DEFENSIVE_PUBLIC_OPENING_PATTERNS.find((pattern) =>
     pattern.test(input.writing.lecture.text_fr.slice(0, 320)) ||
     pattern.test(input.writing.situation_card.insight_fr.slice(0, 320)),
@@ -396,6 +430,15 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       'PUBLIC_TRAJECTORIES_GLUED',
       `Trajectory signals are glued together in public narrative: ${gluedTrajectoryPattern.source}.`,
       'writing.trajectories',
+    ))
+  }
+
+  if (repeatedSignal) {
+    issues.push(issue(
+      'warning',
+      'PUBLIC_SIGNAL_PHRASE_REPEATED',
+      `Public narrative repeats the same signal phrase across Lecture/Approfondir: ${repeatedSignal}.`,
+      'writing.approfondir.sections_fr',
     ))
   }
 
