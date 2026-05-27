@@ -5011,9 +5011,10 @@ export async function POST(req: NextRequest) {
           max_tokens: 4200,
         })
         const resourceSignalsUnderused = diamondWriter.errors.includes('RESOURCE_REGIME_SIGNALS_UNDERUSED')
+        const diamondWriterClean = diamondWriter.status === 'ok' && diamondWriter.quality?.trace.status === 'ok'
         diamondArchitectWriter = {
           status: diamondWriter.status,
-          accepted: Boolean(diamondWriter.writing) && !resourceSignalsUnderused,
+          accepted: Boolean(diamondWriter.writing) && diamondWriterClean && !resourceSignalsUnderused,
           model: diamondWriter.model,
           duration_ms: diamondWriter.duration_ms,
           errors: diamondWriter.errors,
@@ -5034,7 +5035,7 @@ export async function POST(req: NextRequest) {
           resourcesCount: canonicalResourcePlan.resources.length,
           modelPath: 'openai',
         })
-        if (diamondWriter.writing && !resourceSignalsUnderused) {
+        if (diamondWriter.writing && diamondWriterClean && !resourceSignalsUnderused) {
           writingContract = {
             ...diamondWriter.writing,
             trace: {
@@ -5047,14 +5048,16 @@ export async function POST(req: NextRequest) {
               ],
             },
           }
-        } else if (resourceSignalsUnderused) {
+        } else if (resourceSignalsUnderused || !diamondWriterClean) {
           recordGenerationTrace({
             status: 'partial',
             gate: 'GENERATE',
             route: '/api/generate',
             canonicalLayer: 'writing',
             pipelineStep: 'LLMDiamondWriter:fallback',
-            diagnostic: 'resource_regime_signals_underused_keep_local_contract',
+            diagnostic: resourceSignalsUnderused
+              ? 'resource_regime_signals_underused_keep_local_contract'
+              : `diamond_writer_quality_${diamondWriter.quality?.trace.status ?? diamondWriter.status}_keep_local_contract`,
             durationMs: 0,
             inputChars: generationAnalysisText.length,
             domain: generationInterpretation.domain,

@@ -43,6 +43,20 @@ function lectureAndApprofondirText(writing: WritingContract): string {
   ].join(' ')
 }
 
+function diamondNarrativeText(writing: WritingContract): string {
+  return [
+    writing.situation_card.insight_fr,
+    writing.situation_card.main_vulnerability_fr,
+    writing.situation_card.asymmetry_fr,
+    writing.situation_card.key_signal_fr,
+    writing.lecture.text_fr,
+    writing.approfondir.analysis_fr,
+    ...writing.approfondir.sections_fr
+      .filter((section) => section.id !== 'resources' && section.id !== 'ressources')
+      .map((section) => section.body),
+  ].join(' ')
+}
+
 function canonicalQuestionText(interpretation: InterpretationContract): string {
   return [
     interpretation.raw_input,
@@ -264,6 +278,26 @@ function bodyRepeatsTitle(title: string, body: string): boolean {
   return Boolean(titleKey && bodyStart.startsWith(titleKey))
 }
 
+function sourceTitleLeak(resources: ResourceServiceContract | undefined, writing: WritingContract, baseline: string): string | null {
+  if (!resources) return null
+
+  const narrative = normalize(diamondNarrativeText(writing)).replace(/[^a-z0-9]+/g, ' ')
+  const baselineTokens = new Set(normalize(baseline).split(/[^a-z0-9]+/).filter(Boolean))
+  for (const source of resources.public_sources) {
+    const titleTokens = normalize(source.title)
+      .split(/[^a-z0-9]+/)
+      .filter((token) => token.length >= 5 && !baselineTokens.has(token))
+    for (let index = 0; index <= titleTokens.length - 3; index += 1) {
+      const phrase = titleTokens.slice(index, index + 3).join(' ')
+      if (narrative.includes(phrase)) {
+        return source.title
+      }
+    }
+  }
+
+  return null
+}
+
 function repeatedSignalPhrase(normalizedText: string): string | null {
   const tokens = normalizedText
     .replace(/[^a-z0-9]+/g, ' ')
@@ -386,6 +420,7 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const publicAnchorContract = resonanceAnchors.length > 0 ? resonanceAnchors : theatreAnchors
   const theatreAnchorsUsed = countAnchorsUsed(publicAnchorContract, normalizedText)
   const noisyResourcePattern = PUBLIC_RESOURCE_NOISE_PATTERNS.find((pattern) => pattern.test(text))
+  const leakedSourceTitle = sourceTitleLeak(input.resources, input.writing, canonicalQuestionText(input.interpretation))
   const internalWritingPattern = PUBLIC_INTERNAL_WRITING_PATTERNS.find((pattern) => pattern.test(text))
   const gluedTrajectoryPattern = GLUED_TRAJECTORY_PATTERNS.find((pattern) => pattern.test(text))
   const repeatedSignal = repeatedSignalPhrase(normalizedNarrativeText)
@@ -411,6 +446,15 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       'error',
       'PUBLIC_PROBATIVE_EVIDENCE_NOISE',
       `Public writing contains raw resource noise instead of qualified evidence: ${noisyResourcePattern.source}.`,
+      'writing',
+    ))
+  }
+
+  if (leakedSourceTitle) {
+    issues.push(issue(
+      'error',
+      'PUBLIC_SOURCE_TITLE_IN_DIAMOND',
+      `Diamond narrative copied a source title instead of translating it into a structural signal: ${leakedSourceTitle}.`,
       'writing',
     ))
   }
