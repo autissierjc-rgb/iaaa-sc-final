@@ -132,6 +132,9 @@ const MECHANICAL_WRITING_PATTERNS = [
   /choose_action/i,
   /contestation trouve un relais capable de ralentir ou delegitimer la procedure/i,
   /fait opposable/i,
+  /la lecture utile consiste a situer/i,
+  /point aveugle\s+(?:le|la|les|l\s)/i,
+  /tant qu.?il n.?est pas relie a un acte,\s*une preuve ou un seuil observable/i,
 ]
 
 const TARGET_CHOICE_GENERIC_PATTERNS = [
