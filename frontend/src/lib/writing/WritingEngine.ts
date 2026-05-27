@@ -661,6 +661,7 @@ function polishPublicProofText(value: string): string {
     .replace(/\btant qu elles\b/g, 'tant qu’elles')
     .replace(/\btant qu aucun\b/g, 'tant qu’aucun')
     .replace(/\bl hypothese\b/g, 'l’hypothèse')
+    .replace(/\bl hypothèse\b/g, 'l’hypothèse')
     .replace(/\bl ecart\b/g, 'l’écart')
     .replace(/\bl analyse\b/g, 'l’analyse')
     .replace(/\bl intention\b/g, 'l’intention')
@@ -682,6 +683,7 @@ function polishPublicProofText(value: string): string {
     .replace(/\bstrategie\b/g, 'stratégie')
     .replace(/\ba situer\b/g, 'à situer')
     .replace(/\ba distinguer\b/g, 'à distinguer')
+    .replace(/\s*Signal clé\s*:\s*$/i, '')
 }
 
 function conciseWatchSignal(evidence: string): string {
@@ -1168,7 +1170,6 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     diamondText,
     resonance.structural_contradiction_fr || `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
     vulnerability,
-    keySignal,
   ].filter(Boolean).join(' ')
   const lectureFr = polishPublicProofText(compactSentence(lecture, 820))
   const approfondirAnalysis = [
@@ -1238,7 +1239,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
         ...canonicalApprofondirSections({
           really: `${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
           holds: resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
-          weakens: `La fragilité tient à ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un fait opposable.`,
+          weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un fait opposable.`,
           escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
           shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr} ${probabilityChange}`,
           watch: `${conciseWatchSignal(firstEvidence)} ${probabilityChange} À vérifier : ${blindSpot}.`,

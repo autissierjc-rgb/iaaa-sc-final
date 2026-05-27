@@ -199,11 +199,6 @@ function corpusText(input: ResonanceTraceInput): string {
     input.interpretation.object_of_analysis,
     input.interpretation.header_subject,
     input.interpretation.angle,
-    ...(input.resources?.public_sources ?? []).flatMap((source) => [
-      source.title,
-      source.excerpt,
-      source.source,
-    ]),
   ].filter(Boolean).join(' ')
 }
 
