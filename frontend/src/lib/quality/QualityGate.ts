@@ -153,6 +153,13 @@ const PUBLIC_INTERNAL_WRITING_PATTERNS = [
   /acteurs? influents?,\s*acteurs? capables? de bloquer/i,
 ]
 
+const WEAK_VULNERABILITY_PATTERNS = [
+  /\bvuln[ée]rabilit[ée]\s+centrale\s+est\s+(?:chronologie|d[ée]clarations?|dirigeants?)\b/i,
+  /\ble point fragile est\s+(?:chronologie|d[ée]clarations?|dirigeants?)\b/i,
+  /\b(?:chronologie|d[ée]clarations?)\s*:\s*tant que ce point\b/i,
+  /acteur absent,\s*contrainte cach[ée]e,\s*preuve manquante/i,
+]
+
 const GLUED_TRAJECTORY_PATTERNS = [
   /Signal\s*:\s*[^.?!\n]{20,}\s+Escalade\s*:/i,
   /Signal\s*:\s*[^.?!\n]{20,}\s+Bascule\s*:/i,
@@ -644,6 +651,19 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
 
   if (input.writing.situation_card.main_vulnerability_fr.length < 30) {
     issues.push(issue('warning', 'WEAK_MAIN_VULNERABILITY', 'Main vulnerability looks too short or generic.', 'writing.situation_card.main_vulnerability_fr'))
+  }
+
+  const weakVulnerabilityPattern = WEAK_VULNERABILITY_PATTERNS.find((pattern) =>
+    pattern.test(input.writing.situation_card.main_vulnerability_fr) ||
+    pattern.test(input.writing.approfondir.sections_fr.map((section) => section.body).join(' ')),
+  )
+  if (weakVulnerabilityPattern) {
+    issues.push(issue(
+      'warning',
+      'DOCUMENTARY_GAP_AS_VULNERABILITY',
+      `A documentary gap is being exposed as the structural vulnerability: ${weakVulnerabilityPattern.source}.`,
+      'writing.situation_card.main_vulnerability_fr',
+    ))
   }
 
   if (input.scoring.state_index_final > 70 && !input.scoring.astrolabe.some((branch) => branch.score === 3)) {

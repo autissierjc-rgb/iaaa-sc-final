@@ -39,5 +39,20 @@ export function countWords(text: string): number {
 export function compactSentence(text: string, maxLength = 220): string {
   const clean = text.replace(/\s+/g, ' ').trim()
   if (clean.length <= maxLength) return clean
-  return `${clean.slice(0, maxLength - 1).trim()}…`
+  const clipped = clean.slice(0, maxLength - 1).trim()
+  const sentenceBoundary = Math.max(
+    clipped.lastIndexOf('. '),
+    clipped.lastIndexOf('; '),
+    clipped.lastIndexOf(': '),
+  )
+  if (sentenceBoundary >= Math.floor(maxLength * 0.55)) {
+    return clipped.slice(0, sentenceBoundary + 1).trim()
+  }
+
+  const wordBoundary = clipped.lastIndexOf(' ')
+  const safe = wordBoundary >= Math.floor(maxLength * 0.55)
+    ? clipped.slice(0, wordBoundary).trim()
+    : clipped
+  const cleanEnd = safe.replace(/[,:;–—-]+$/g, '').trim()
+  return cleanEnd.endsWith('.') ? cleanEnd : `${cleanEnd}.`
 }

@@ -71,6 +71,18 @@ const PUBLIC_PLACEHOLDER_PATTERNS = [
   /^acteur\s+absent,\s*contrainte\s+cach[ée]e,\s*preuve\s+manquante/i,
 ]
 
+const VERIFICATION_GAP_PATTERNS = [
+  /^chronologie$/i,
+  /^d[ée]clarations?$/i,
+  /^dirigeants?$/i,
+  /^institutions?$/i,
+  /^preuves?$/i,
+  /^sources?$/i,
+  /^fait observable$/i,
+  /^trace v[ée]rifiable$/i,
+  /^preuve attendue\s*:/i,
+]
+
 function publicAnchor(value: string, sourceHosts: string[]): boolean {
   const item = value.trim()
   const normalized = normalize(item)
@@ -83,6 +95,11 @@ function publicAnchor(value: string, sourceHosts: string[]): boolean {
   return true
 }
 
+function structuralGapAnchor(value: string, sourceHosts: string[]): boolean {
+  return publicAnchor(value, sourceHosts) &&
+    !VERIFICATION_GAP_PATTERNS.some((pattern) => pattern.test(value.trim()))
+}
+
 function firstUseful(items: string[], fallback: string): string {
   return items.find((item) => item.trim().length > 0) ?? fallback
 }
@@ -92,18 +109,46 @@ function visibleList(items: string[], fallback: string): string {
 }
 
 function buildStructuralContradiction(actors: string[], institutions: string[]): string {
-  const actorLine = visibleList(actors, 'les acteurs directement concernes')
+  const actorLine = visibleList(actors, 'les acteurs directement concernés')
   const institutionLine = visibleList(institutions, 'les instances capables de cadrer ou bloquer la suite')
-  return `${actorLine} rendent la situation visible, mais ${institutionLine} decident si cette tension devient une contrainte, un arbitrage ou un changement de regime.`
+  return `${actorLine} rendent la situation visible, mais ${institutionLine} décident si cette tension devient une contrainte, un arbitrage ou un changement de régime.`
+}
+
+function defaultStructuralGap(input: ResonanceTraceInput): string {
+  const corpus = corpusText(input)
+  if (/\b(guerre|frappe|cessez[-\s]?le[-\s]?feu|ceasefire|iran|isra[ëe]l|[ée]tats[-\s]?unis|usa|u\.s\.)\b/i.test(corpus)) {
+    return 'le mécanisme qui transforme la frappe, la riposte ou la négociation en seuil officiel'
+  }
+
+  if (/\b(startup|march[ée]|cible|client|utilisateur|traction|produit)\b/i.test(corpus)) {
+    return 'le passage entre intérêt exprimé et usage répété'
+  }
+
+  return 'le mécanisme qui transforme la tension visible en contrainte effective'
+}
+
+function tantQue(signal: string): string {
+  const value = signal.trim()
+  if (/^(?:un|une|aucun|aucune)\b/i.test(value) || /^[aeiouyàâéèêëîïôùûü]/i.test(value)) {
+    return `tant qu’${value}`
+  }
+  return `tant que ${value}`
 }
 
 function buildStructuralVulnerability(structuralGap: string, transitionSignal: string): string {
-  return `La vulnerabilite centrale est ${structuralGap} : tant que ce point n est pas relie a ${transitionSignal}, la situation peut rester lisible sans devenir decidable.`
+  if (/\b(volont[ée]\s+de\s+payer|usage|traction|paiement|r[ée]tention|client|cible)\b/i.test(structuralGap)) {
+    return `Le point fragile est ${structuralGap} : tant qu’il ne se traduit pas par un usage répété, une demande explicite ou un paiement, la cible reste une hypothèse.`
+  }
+
+  return `Le point fragile est ${structuralGap} : ${tantQue(transitionSignal)} ne le rend pas opposable, la situation peut rester lisible sans devenir décidable.`
 }
 
 function buildDiamondThesis(actors: string[], structuralGap: string, transitionSignal: string): string {
-  const actorLine = visibleList(actors, 'les acteurs concernes')
-  return `La situation tient tant que ${actorLine} peuvent absorber l ecart entre recit, cout et decision ; elle bascule quand ${transitionSignal} rend ${structuralGap} impossible a contourner.`
+  const actorLine = visibleList(actors, 'les acteurs concernés')
+  const object = /frappe|riposte|n[ée]gociation|militaire|diplomatique/i.test(structuralGap)
+    ? 'la riposte ou la négociation'
+    : structuralGap
+  return `La situation tient tant que ${actorLine} peuvent absorber l’écart entre récit, coût et décision ; elle bascule quand ${transitionSignal} rend ${object} impossible à contourner.`
 }
 
 function corpusText(input: ResonanceTraceInput): string {
@@ -191,8 +236,8 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     unique([
       ...input.theatre.missing_anchors,
       ...input.theatre.unknowns,
-    ]).filter((item) => publicAnchor(item, sourceHosts)),
-    'la preuve ou le seuil qui ferait changer la lecture',
+    ]).filter((item) => structuralGapAnchor(item, sourceHosts)),
+    defaultStructuralGap(input),
   )
   const transitionSignal = firstUseful(
     unique([
@@ -200,7 +245,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       ...input.theatre.visible_actions,
       ...sourceSignals.map((signal) => signal.signal_fr),
     ]).filter((item) => publicAnchor(item, sourceHosts)),
-    'un acte, une preuve ou un seuil observable qui modifie les marges d action',
+    'un acte, une preuve ou un seuil observable qui modifie les marges d’action',
   )
   const structuralContradiction = buildStructuralContradiction(realActors, institutions)
   const structuralVulnerability = buildStructuralVulnerability(structuralGap, transitionSignal)
@@ -222,8 +267,8 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     structural_vulnerability_fr: structuralVulnerability,
     diamond_thesis_fr: diamondThesis,
     regime_hypothesis_fr: sourceSignals.length >= 2
-      ? 'Les sources rapides doivent preceder la lecture de regime : elles fixent ce qui est observable avant l interpretation.'
-      : 'Le regime reste une hypothese structurelle tant que les signaux observables sont incomplets.',
+      ? 'Les sources rapides doivent précéder la lecture de régime : elles fixent ce qui est observable avant l’interprétation.'
+      : 'Le régime reste une hypothèse structurelle tant que les signaux observables sont incomplets.',
     transition_signal_fr: transitionSignal,
     forbidden_public_confusions: forbidden,
     trace: {

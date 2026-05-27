@@ -84,8 +84,12 @@ function isPublicPlaceholder(item: string): boolean {
     'contrainte cachée',
     'preuve manquante',
     'dirigeants',
+    'chronologie',
+    'declarations',
+    'déclarations',
   ].includes(normalized)) return true
 
+  if (/^preuve attendue\s*:/i.test(item.trim())) return true
   if (/^acteur absent,\s*contrainte cach[ée]e,\s*preuve manquante/i.test(item)) return true
   return /^(acteurs?|institutions?|contraintes?|preuves?|sources?|signal|fait observable|trace verifiable|une trace verifiable|preuve publique)$/i.test(normalized)
 }
@@ -184,9 +188,9 @@ function resourceWarning(resources?: ResourceServiceContract): string | undefine
   if (!resources?.needs_web) return undefined
   if (resources.public_sources.length > 0) return undefined
   if (resources.policy === 'url_extract_required') {
-    return 'Un site ou une URL est present : l analyse doit rester provisoire tant que son contenu, sa promesse et ses preuves visibles n ont pas ete extraits ou verifies.'
+    return 'Un site ou une URL est présent : l’analyse doit rester provisoire tant que son contenu, sa promesse et ses preuves visibles n’ont pas été extraits ou vérifiés.'
   }
-  return 'Des sources rapides sont requises pour ce domaine : l analyse doit distinguer ce qui est structurellement lisible de ce qui reste a verifier.'
+  return 'Des sources rapides sont requises pour ce domaine : l’analyse doit distinguer ce qui est structurellement lisible de ce qui reste à vérifier.'
 }
 
 function hasProductOptionEvidence(resources?: ResourceServiceContract): boolean {
@@ -576,8 +580,29 @@ function probabilityDemonstrationSentence(probability: ProbabilityAssessment): s
   return `Statut de preuve : ${probabilityLabelFr(probability).toLowerCase()}. ${polishPublicProofText(probability.claim_fr)} ${probabilityChangeSentence(probability)}`
 }
 
+function signalSentence(base: string, suffix: string): string {
+  const polishedBase = polishPublicProofText(base).replace(/[.;:]+$/g, '').trim()
+  const polishedSuffix = polishPublicProofText(suffix).replace(/^\s*qui\s+/i, '')
+  if (!polishedBase) return `Signal clé : ${polishedSuffix}.`
+  if (normalizeAnchor(polishedBase).includes(normalizeAnchor(polishedSuffix).slice(0, 28))) {
+    return `Signal clé : ${polishedBase}.`
+  }
+  if (/modifie\s+les\s+marges/i.test(polishedBase) && /modifie\s+les\s+marges/i.test(polishedSuffix)) {
+    return `Signal clé : ${polishedBase}.`
+  }
+  const connector = polishedSuffix
+    .replace(/^relie\b/i, 'reliant')
+    .replace(/^modifie\b/i, 'modifiant')
+  return `Signal clé : ${polishedBase} ${connector}.`
+}
+
 function formatMissingProofForPublic(value: string): string {
-  return polishPublicProofText(value)
+  const polished = polishPublicProofText(value)
+  if (/acteur absent,\s*contrainte cach[ée]e,\s*preuve manquante/i.test(polished)) {
+    return 'une source primaire, une décision officielle ou une contradiction documentée'
+  }
+
+  return polished
     .replace(/^preuve ou ancre manquante\s*:\s*/i, '')
     .replace(/^preuve décisive encore à confronter\s*:\s*/i, '')
     .replace(/^preuve decisive encore a confronter\s*:\s*/i, '')
@@ -591,11 +616,62 @@ function polishPublicProofText(value: string): string {
   return value
     .replace(/\bHypothese\b/g, 'Hypothèse')
     .replace(/\bhypothese\b/g, 'hypothèse')
+    .replace(/\bA verifier\b/g, 'À vérifier')
+    .replace(/\ba verifier\b/g, 'à vérifier')
+    .replace(/\bdecision\b/g, 'décision')
+    .replace(/\bdecisions\b/g, 'décisions')
+    .replace(/\bdecide\b/g, 'décide')
+    .replace(/\bdecident\b/g, 'décident')
+    .replace(/\bdecidable\b/g, 'décidable')
+    .replace(/\brecit\b/g, 'récit')
+    .replace(/\bcout\b/g, 'coût')
+    .replace(/\bcouts\b/g, 'coûts')
+    .replace(/\becart\b/g, 'écart')
+    .replace(/\betablir\b/g, 'établir')
+    .replace(/\bregle\b/g, 'règle')
+    .replace(/\bregles\b/g, 'règles')
+    .replace(/\bregime\b/g, 'régime')
+    .replace(/\brole\b/g, 'rôle')
+    .replace(/\bhabilite\b/g, 'habilité')
+    .replace(/\belement\b/g, 'élément')
+    .replace(/\bapparait\b/g, 'apparaît')
+    .replace(/\bdelegitimer\b/g, 'délégitimer')
+    .replace(/\bprocedure\b/g, 'procédure')
+    .replace(/\breversible\b/g, 'réversible')
+    .replace(/\beconomiques\b/g, 'économiques')
+    .replace(/\bcapacite\b/g, 'capacité')
+    .replace(/\bsequence\b/g, 'séquence')
+    .replace(/\bescalade\b/g, 'escalade')
+    .replace(/\banalyse\b/g, 'analyse')
+    .replace(/\brelie\b/g, 'relié')
+    .replace(/\bverifiable\b/g, 'vérifiable')
+    .replace(/\bengages\b/g, 'engagés')
+    .replace(/\bnegociee\b/g, 'négociée')
+    .replace(/\bconcernees\b/g, 'concernées')
+    .replace(/\bdeclarations\b/g, 'déclarations')
+    .replace(/\bcachee\b/g, 'cachée')
+    .replace(/\bvulnerabilite\b/g, 'vulnérabilité')
     .replace(/\bportee\b/g, 'portée')
     .replace(/\bqualifiee\b/g, 'qualifiée')
     .replace(/\bdecisive\b/g, 'décisive')
     .replace(/\ba confronter\b/g, 'à confronter')
     .replace(/\btant qu elles\b/g, 'tant qu’elles')
+    .replace(/\btant qu aucun\b/g, 'tant qu’aucun')
+    .replace(/\bl hypothese\b/g, 'l’hypothèse')
+    .replace(/\bl ecart\b/g, 'l’écart')
+    .replace(/\bl analyse\b/g, 'l’analyse')
+    .replace(/\bl intention\b/g, 'l’intention')
+    .replace(/\btient a\b/g, 'tient à')
+    .replace(/\bd une\b/g, 'd’une')
+    .replace(/\bd un\b/g, 'd’un')
+    .replace(/\bd action\b/g, 'd’action')
+    .replace(/\bd arbitrage\b/g, 'd’arbitrage')
+    .replace(/\bd appui\b/g, 'd’appui')
+    .replace(/\bd usage\b/g, 'd’usage')
+    .replace(/\bn est\b/g, 'n’est')
+    .replace(/\bn ont\b/g, 'n’ont')
+    .replace(/\bqu elles\b/g, 'qu’elles')
+    .replace(/\bqu il\b/g, 'qu’il')
     .replace(/\betabli\b/g, 'établi')
     .replace(/\bvolonte\b/g, 'volonté')
     .replace(/\bdependance\b/g, 'dépendance')
@@ -613,7 +689,7 @@ function trajectorySections(trajectories: WritingContract['trajectories']): Arra
   return trajectories.map((trajectory) => ({
     id: labels[trajectory.type].id,
     title: labels[trajectory.type].title,
-    body: `${trajectory.title_fr} : ${trajectory.description_fr} Signal à surveiller : ${trajectory.signal_fr}`,
+    body: polishPublicProofText(`${trajectory.title_fr} : ${trajectory.description_fr} Signal à surveiller : ${trajectory.signal_fr}`),
   }))
 }
 
@@ -628,7 +704,7 @@ function canonicalApprofondirSections(input: {
   const section = (id: string, title: string, body: string) => ({
     id,
     title,
-    body: stripRepeatedSectionTitle(title, body),
+    body: polishPublicProofText(stripRepeatedSectionTitle(title, body)),
   })
   return [
     section('situation-reelle', APPROFONDIR_CANONICAL_TITLES_FR.really, input.really),
@@ -936,7 +1012,7 @@ function writingGrammar(input: WritingEngineInput) {
       asymmetry: (actors: string, institutions: string) =>
         `${actors} rendent l opportunite visible, mais ${institutions} decident si elle devient adoption, dependance ou levier reel.`,
       keySignal: (evidence: string) =>
-        `Signal cle : ${evidence} reliant offre, utilisateur, decision d achat et consequence observable.`,
+        signalSentence(evidence, 'relie offre, utilisateur, décision d’achat et conséquence observable'),
     }
   }
 
@@ -962,7 +1038,7 @@ function writingGrammar(input: WritingEngineInput) {
       asymmetry: (actors: string, institutions: string) =>
         `${actors} exposent la tension, mais ${institutions} decident si elle reste contenue, negociee ou convertie en nouveau seuil de conflit.`,
       keySignal: (evidence: string) =>
-        `Signal cle : ${evidence} qui modifie les marges militaires, diplomatiques ou economiques des acteurs engages.`,
+        signalSentence(evidence, 'modifie les marges militaires, diplomatiques ou économiques des acteurs engagés'),
     }
   }
 
@@ -986,7 +1062,7 @@ function writingGrammar(input: WritingEngineInput) {
     asymmetry: (actors: string, institutions: string) =>
       `${actors} rendent la tension visible, mais ${institutions} peuvent lui donner, ou lui refuser, une forme effective.`,
     keySignal: (evidence: string) =>
-      `Signal cle : ${evidence} reliant un acteur habilite, une regle et une consequence observable.`,
+      signalSentence(evidence, 'relie un acteur habilité, une règle et une conséquence observable'),
   }
 }
 
@@ -1025,9 +1101,9 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const resourcesSection = resourceEvidenceSection(input.resources)
   const resourcesSentence = resourceEvidenceSentence(input.resources)
   const resourceSignalOpening = resourceRegimeSignalSentence(input.resources, resonance)
-  const diamondText = compactSentence(
+  const diamondText = polishPublicProofText(compactSentence(
     resonance.diamond_thesis_fr || grammar.diamond(tension, institutions, firstProcedure),
-  )
+  ))
 
   const publicWarnings = [
     input.safety.required_disclaimer_fr,
@@ -1035,17 +1111,17 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     ...input.scoring.scoring_warnings,
   ].filter((item): item is string => Boolean(item))
 
-  const scInsight = compactSentence(
+  const scInsight = polishPublicProofText(compactSentence(
     grammar.insight(subject, tension, firstProcedure, institutions),
     360,
-  )
-  const vulnerability = compactSentence(
+  ))
+  const vulnerability = polishPublicProofText(compactSentence(
     resonance.structural_vulnerability_fr || grammar.vulnerability(blindSpot),
     320,
-  )
-  const asymmetry = compactSentence(grammar.asymmetry(actors, institutions))
-  const keySignal = compactSentence(grammar.keySignal(firstEvidence))
-  const trajectories: WritingContract['trajectories'] = [
+  ))
+  const asymmetry = polishPublicProofText(compactSentence(grammar.asymmetry(actors, institutions)))
+  const keySignal = polishPublicProofText(compactSentence(grammar.keySignal(firstEvidence)))
+  const rawTrajectories: WritingContract['trajectories'] = [
     {
       type: 'stabilization',
       title_fr: 'Clarification',
@@ -1065,6 +1141,11 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       signal_fr: 'Une decision, un document, une action ou un seuil rend la lecture non reversible.',
     },
   ]
+  const trajectories = rawTrajectories.map((trajectory) => ({
+    ...trajectory,
+    description_fr: polishPublicProofText(trajectory.description_fr),
+    signal_fr: polishPublicProofText(trajectory.signal_fr),
+  }))
   const trajectoryText = trajectorySpine(trajectories)
   const probabilityText = probabilitySpine(probability)
   const probabilityDemonstration = probabilityDemonstrationSentence(probability)
@@ -1138,11 +1219,11 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     },
     trajectories,
     lecture: {
-      text_fr: lecture,
+      text_fr: polishPublicProofText(lecture),
       word_count_fr: countWords(lecture),
     },
     approfondir: {
-      analysis_fr: approfondirAnalysis,
+      analysis_fr: polishPublicProofText(approfondirAnalysis),
       sections_fr: [
         ...canonicalApprofondirSections({
           really: `${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste a situer qui porte le cout, qui garde la marge d arbitrage, et quelle preuve ferait changer le regime de la situation. ${probabilityDemonstration}`,
