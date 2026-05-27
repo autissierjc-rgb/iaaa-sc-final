@@ -156,6 +156,7 @@ const PUBLIC_RESOURCE_NOISE_PATTERNS = [
   /\[[^\]]+]\(https?:\/\//i,
   /(?:^|\s)(?:image|img)\s*\d{1,4}\b/i,
   /\.(?:avif|png|jpe?g|gif|webp|svg)(?:\)|\s|$)/i,
+  /\s[-–]\s(?:reuters|politico|associated press|ap news|apnews|bbc|cnn|nyt|new york times|washington post|haaretz|times of israel|bloomberg|financial times|ft\.com|axios|the guardian|le monde|afp|france 24)\b/i,
 ]
 
 const PUBLIC_INTERNAL_WRITING_PATTERNS = [
