@@ -46,7 +46,8 @@ export function compactSentence(text: string, maxLength = 220): string {
     clipped.lastIndexOf(': '),
   )
   if (sentenceBoundary >= Math.floor(maxLength * 0.55)) {
-    return clipped.slice(0, sentenceBoundary + 1).trim()
+    const bounded = clipped.slice(0, sentenceBoundary + 1).trim()
+    return /[:;]$/.test(bounded) ? `${bounded.replace(/[:;]+$/g, '').trim()}.` : bounded
   }
 
   const wordBoundary = clipped.lastIndexOf(' ')

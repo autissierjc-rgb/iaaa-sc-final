@@ -920,12 +920,40 @@ function ensureMinimumSubjectWords(subject: string, fallback: string): string {
     .join(' ')
 }
 
+function isGenericHeaderSubjectText(value: string): boolean {
+  const normalized = comparableText(value)
+  return [
+    'la trajectoire de la crise evoquee',
+    'trajectoire crise evoquee',
+    'la situation evoquee',
+    'situation evoquee',
+    'le contexte evoque',
+    'contexte evoque',
+  ].some((placeholder) => normalized.includes(placeholder))
+}
+
+function knownGeopoliticalHeaderSubject(value: string): string {
+  const normalized = comparableText(value)
+  const actors: string[] = []
+  if (/\betats unis\b|\busa\b|\bus\b|\bamerica(?:n|ine)?\b/.test(normalized)) actors.push('États-Unis')
+  if (/\biran\b/.test(normalized)) actors.push('Iran')
+  if (/\bisrael\b/.test(normalized)) actors.push('Israël')
+  if (/\bukraine\b/.test(normalized)) actors.push('Ukraine')
+  if (/\brussie\b|\brussia\b/.test(normalized)) actors.push('Russie')
+  if (/\bgaza\b|\bpalestine\b/.test(normalized)) actors.push('Gaza')
+  const uniqueActors = actors.filter((actor, index) => actors.indexOf(actor) === index)
+  if (uniqueActors.length < 2) return ''
+  const prefix = /\bguerre\b|\bwar\b|\bconflit\b/.test(normalized) ? 'guerre' : 'situation'
+  return `${prefix} ${uniqueActors.join(' ')}`
+}
+
 function compactHeaderTitle(sc: SituationCard, situation: string): string {
   const interpreted = sc.intent_context?.interpreted_request ?? sc.coverage_check?.intent_context?.interpreted_request
   const labels = (interpreted?.entity_explanations ?? [])
     .map((item) => stripEntityExplanations(item.label))
     .filter((label) => label && !/^(Iran|France|Isra[eë]l|Gaza|Ukraine|Russie|Chine|États-Unis|Etats-Unis)$/i.test(label))
   const question = `${interpreted?.user_question ?? ''} ${situation}`
+  const geopoliticalSubject = knownGeopoliticalHeaderSubject(question)
   const first = labels[0] ?? ''
   const second = labels.find((label) => label !== first) ?? ''
   const domain = atlasDomainLabel(sc)
@@ -959,8 +987,11 @@ function compactHeaderTitle(sc: SituationCard, situation: string): string {
       ? String(nestedCanonicalInterpretation.header_subject).trim()
       : '',
   ], '')
-  if (canonicalHeaderSubjectText) {
+  if (canonicalHeaderSubjectText && !isGenericHeaderSubjectText(canonicalHeaderSubjectText)) {
     return `${domain} · ${ensureMinimumSubjectWords(canonicalHeaderSubjectText, question)}`
+  }
+  if (geopoliticalSubject && (isGenericHeaderSubjectText(canonicalHeaderSubjectText) || isGenericHeaderSubjectText(rawExistingTitle))) {
+    return `${domain} · ${ensureMinimumSubjectWords(geopoliticalSubject, question)}`
   }
   let subject = ''
 
@@ -1006,9 +1037,12 @@ function compactHeaderTitle(sc: SituationCard, situation: string): string {
     return `${domain} · ${ensureMinimumSubjectWords(subject, question)}`
   }
   if (interpreted?.intent_type === 'understand' && interpreted.object_of_analysis) {
+    if (geopoliticalSubject && isGenericHeaderSubjectText(interpreted.object_of_analysis)) {
+      return `${domain} · ${ensureMinimumSubjectWords(geopoliticalSubject, question)}`
+    }
     subject = canonicalHeaderSubject({
       entities: labels,
-      object: interpreted.object_of_analysis,
+      object: isGenericHeaderSubjectText(interpreted.object_of_analysis) ? '' : interpreted.object_of_analysis,
       fallback: question,
     })
     return `${domain} · ${ensureMinimumSubjectWords(subject || first || 'Lecture structurelle', question)}`
@@ -4753,6 +4787,32 @@ export async function POST(req: NextRequest) {
         : webNeeded
           ? 'unavailable'
           : 'not_needed'
+
+    if (resourcesStatus === 'unavailable' && canonicalResourcePlan.public_sources.length === 0) {
+      canonicalResourcePlan = {
+        ...canonicalResourcePlan,
+        status: 'partial',
+        needs_web: true,
+        policy: canonicalResourcePlan.policy === 'internal_context_ok'
+          ? 'fast_sources_required'
+          : canonicalResourcePlan.policy,
+        policy_reason_fr:
+          canonicalResourcePlan.policy_reason_fr ||
+          'La demande depend de faits externes actuels, mais aucune source rapide exploitable n a ete attachee dans le budget court.',
+        internal_notes: [
+          ...canonicalResourcePlan.internal_notes,
+          'Route resource status unavailable: force WritingEngine to mark the card as provisional structural reading.',
+        ],
+        trace: {
+          ...canonicalResourcePlan.trace,
+          status: 'partial',
+          notes: [
+            ...(canonicalResourcePlan.trace.notes ?? []),
+            'route_resources_status=unavailable',
+          ],
+        },
+      }
+    }
 
     if (readinessGate.status === 'ask_user' && readinessGate.question && !explicitPrudentGeneration && !answeredClarification) {
       recordGenerationTrace({

@@ -1,10 +1,18 @@
-import type { ConcreteTheatreContract, InterpretationContract, ResourceServiceContract } from '@/lib/contracts'
+import type {
+  ConcreteTheatreContract,
+  ExpertisesMetiersContract,
+  InterpretationContract,
+  ResourceServiceContract,
+  RiskAdviceGuardContract,
+  ScoringContract,
+} from '@/lib/contracts'
 import {
   buildFastResourceSearchPlansForDiagnostics,
 } from '@/lib/resources/FastResourceRunner'
 import type { ResourceItem } from '@/lib/resources/resourceContract'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
 import { buildResonanceTrace } from '@/lib/resonance'
+import { composeDiamondWriting } from '@/lib/writing'
 
 export type SourceQueryRegressionResult = {
   id: string
@@ -84,6 +92,72 @@ function theatreForCurrentQuestion(): ConcreteTheatreContract {
     evidence: [],
     unknowns: [],
     missing_anchors: [],
+    trace: {
+      service: 'SourceQueryRegression',
+      version: 'v1',
+      duration_ms: 0,
+      status: 'ok',
+    },
+  }
+}
+
+function safetyForRegression(): RiskAdviceGuardContract {
+  return {
+    domain_risk: 'normal',
+    sensitive_domains: ['none'],
+    advice_mode: 'analysis_only',
+    allowed_outputs: ['analysis'],
+    forbidden_outputs: [],
+    human_review_required: false,
+    emergency: false,
+    trace: {
+      service: 'SourceQueryRegression',
+      version: 'v1',
+      duration_ms: 0,
+      status: 'ok',
+    },
+  }
+}
+
+function expertisesForCurrentQuestion(): ExpertisesMetiersContract {
+  return {
+    domain: 'geopolitics',
+    domain_playbook: {
+      id: 'geopolitics',
+      domain: 'geopolitics',
+      label_fr: 'Géopolitique',
+      typical_actors: ['États-Unis', 'Iran', 'Israël'],
+      typical_institutions: ['ONU', 'gouvernements concernés'],
+      procedures_or_rules: ['déclaration officielle', 'Conseil de sécurité'],
+      expected_evidence: ['source primaire', 'décision officielle', 'contradiction documentée'],
+      common_blind_spots: ['source primaire manquante'],
+      source_channels: ['official', 'news_agency'],
+      probability_markers: ['hypothèse', 'plausible'],
+      tipping_points: ['seuil public'],
+      writing_anchors: ['preuve actualisée'],
+    },
+    metier_lenses: [],
+    source_channels: ['official', 'news_agency'],
+    evidence_to_seek: ['source primaire', 'décision officielle', 'contradiction documentée'],
+    blind_spots_to_test: ['preuve actualisée manquante'],
+    probability_markers: ['hypothèse'],
+    writing_anchors: ['lecture structurelle provisoire'],
+    trace: {
+      service: 'SourceQueryRegression',
+      version: 'v1',
+      duration_ms: 0,
+      status: 'ok',
+    },
+  }
+}
+
+function scoringForRegression(): ScoringContract {
+  return {
+    astrolabe: [],
+    radar: [],
+    state_index_final: 60,
+    state_label: 'tension',
+    scoring_warnings: [],
     trace: {
       service: 'SourceQueryRegression',
       version: 'v1',
@@ -200,6 +274,20 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     resources: resourcePlanWithSourceTitle(sourceTitle),
   })
   const resonanceIssues: SourceQueryRegressionResult['issues'] = []
+  const noSourceWriting = composeDiamondWriting({
+    interpretation: input.interpretation,
+    theatre: theatreForCurrentQuestion(),
+    resources: baseResourcePlan(),
+    resonance: buildResonanceTrace({
+      interpretation: input.interpretation,
+      theatre: theatreForCurrentQuestion(),
+      resources: baseResourcePlan(),
+    }),
+    safety: safetyForRegression(),
+    expertises_metiers: expertisesForCurrentQuestion(),
+    scoring: scoringForRegression(),
+  })
+  const noSourceIssues: SourceQueryRegressionResult['issues'] = []
 
   if (relevance.some((item) =>
     includesLoose(item.title ?? '', 'Bolivia') ||
@@ -229,6 +317,27 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  const noSourcePublicText = [
+    noSourceWriting.situation_card.insight_fr,
+    noSourceWriting.lecture.text_fr,
+    noSourceWriting.approfondir.analysis_fr,
+    ...noSourceWriting.approfondir.sections_fr.map((section) => section.body),
+  ].join(' ')
+  if (!includesLoose(noSourcePublicText, 'Lecture structurelle provisoire') && !includesLoose(noSourcePublicText, 'Sans source rapide exploitable')) {
+    noSourceIssues.push({
+      level: 'error',
+      code: 'current_without_sources_not_qualified',
+      message: 'A current/external question without usable fast sources must be visibly qualified as provisional structural reading.',
+    })
+  }
+  if (includesLoose(noSourceWriting.probability_assessments[0]?.claim_fr ?? '', 'premiers appuis')) {
+    noSourceIssues.push({
+      level: 'error',
+      code: 'current_without_sources_claims_evidence',
+      message: 'A current/external question without usable fast sources must not claim first factual support.',
+    })
+  }
+
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
@@ -247,5 +356,11 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: resonance.transition_signal_fr,
     subject: resonance.diamond_thesis_fr,
     issues: resonanceIssues,
+  }, {
+    id: 'current-question-without-fast-sources-is-provisional',
+    ok: noSourceIssues.length === 0,
+    query: noSourceWriting.lecture.text_fr,
+    subject: noSourceWriting.probability_assessments[0]?.probability_label_fr ?? '',
+    issues: noSourceIssues,
   }]
 }

@@ -51,6 +51,27 @@ function normalizeAnchor(value: string): string {
     .trim()
 }
 
+function isGenericPublicSubject(value?: string): boolean {
+  const normalized = normalizeAnchor(String(value ?? ''))
+  if (!normalized) return true
+  return [
+    'la trajectoire de la crise evoquee',
+    'la trajectoire de la crise évoquée',
+    'trajectoire crise evoquee',
+    'trajectoire crise évoquée',
+    'la situation evoquee',
+    'la situation évoquée',
+    'le contexte evoque',
+    'le contexte évoqué',
+  ].some((placeholder) => normalized.includes(normalizeAnchor(placeholder)))
+}
+
+function publicSubject(input: WritingEngineInput): string {
+  const object = input.interpretation.object_of_analysis
+  if (object && !isGenericPublicSubject(object)) return object
+  return input.interpretation.situation_soumise || input.interpretation.raw_input || object || 'la situation'
+}
+
 function unique(items: string[]): string[] {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)))
 }
@@ -181,6 +202,24 @@ function probabilityFromTheatre(theatre: ConcreteTheatreContract): ProbabilityAs
     missing_proof_fr: hasMissing
       ? theatre.missing_anchors.slice(0, 3).join(', ')
       : undefined,
+  }
+}
+
+function needsExternalEvidenceWithoutSources(resources?: ResourceServiceContract): boolean {
+  return Boolean(resources?.needs_web && resources.public_sources.length === 0)
+}
+
+function probabilityFromMissingResources(resources?: ResourceServiceContract): ProbabilityAssessment | null {
+  if (!needsExternalEvidenceWithoutSources(resources)) return null
+
+  return {
+    claim_fr:
+      'Aucune source rapide exploitable n’a été attachée dans le budget court : la carte peut structurer la situation, mais elle ne confirme pas l’état factuel du jour.',
+    status: 'hypothesis',
+    probability_label_fr: 'Lecture structurelle provisoire',
+    confidence: 0.34,
+    examples: [],
+    missing_proof_fr: 'une source primaire, une décision officielle ou une contradiction documentée',
   }
 }
 
@@ -640,6 +679,8 @@ function polishPublicProofText(value: string): string {
     .replace(/\breversible\b/g, 'réversible')
     .replace(/\beconomiques\b/g, 'économiques')
     .replace(/\bcapacite\b/g, 'capacité')
+    .replace(/\bcapacité de administration\b/g, 'capacité de l’administration')
+    .replace(/\bcapacité de gouvernement\b/g, 'capacité du gouvernement')
     .replace(/\bcapacité de autorités\b/g, 'capacité des autorités')
     .replace(/\ba maintenir\b/g, 'à maintenir')
     .replace(/\bsequence\b/g, 'séquence')
@@ -795,7 +836,8 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
   const approfondir = hasSegments
     ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${compactSegmentList} ne donnent pas la même preuve : ${priority.label} doit prouver l’usage et la valeur, ${secondary?.label ?? 'la cible suivante'} peut élargir l’apprentissage, et ${deferred?.label ?? 'la dernière cible'} ne doit monter que si le coût de vente ou d’intégration devient justifié. Le pari implicite est clair : mieux vaut une petite preuve de workflow qu’une grande preuve d’intérêt.`
     : 'Le fond de la situation tient à une absence d’informations qualifiées. La ressource doit être relue non comme une vitrine, mais comme un inventaire de publics, usages, offres et preuves. Tant que ces éléments restent implicites, la carte doit afficher sa prudence plutôt que trancher par formule.'
-  const probability = probabilityFromResources(input.resources) ?? probabilityFromTheatre(input.theatre)
+  const missingExternalEvidence = needsExternalEvidenceWithoutSources(input.resources)
+  const probability = probabilityFromResources(input.resources) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const trajectories: WritingContract['trajectories'] = [
     {
       type: 'stabilization',
@@ -1092,10 +1134,11 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     theatre: input.theatre,
     resources: input.resources,
   })
-  const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
-  const title = input.interpretation.header_subject
+  const subject = publicSubject(input)
+  const rawTitle = input.interpretation.header_subject
   const grammar = writingGrammar(input)
   const actors = publicAnchors(resonance.real_actors, grammar.actorsFallback)
+  const title = isGenericPublicSubject(rawTitle) ? `situation ${actors}` : rawTitle
   const institutions = publicAnchors(resonance.institutions, grammar.institutionsFallback)
   const actionAnchors = theatreActionAnchors(input.theatre)
   const proofAnchors = unique([
@@ -1111,7 +1154,8 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const firstProcedure = namedAction(actionAnchors, grammar.actionFallback)
   const firstEvidence = namedAction(proofAnchors, grammar.evidenceFallback)
   const tension = grammar.tensionNoun ?? tensionLabel(input)
-  const probability = probabilityFromResources(input.resources) ?? probabilityFromTheatre(input.theatre)
+  const missingExternalEvidence = needsExternalEvidenceWithoutSources(input.resources)
+  const probability = probabilityFromResources(input.resources) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
   const resourcesSection = resourceEvidenceSection(input.resources)
   const resourcesSentence = resourceEvidenceSentence(input.resources)
@@ -1128,7 +1172,9 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   ].filter((item): item is string => Boolean(item))
 
   const scInsight = polishPublicProofText(compactSentence(
-    grammar.insight(subject, tension, firstProcedure, institutions),
+    missingExternalEvidence
+      ? `Lecture structurelle provisoire : ${grammar.insight(subject, tension, firstProcedure, institutions)}`
+      : grammar.insight(subject, tension, firstProcedure, institutions),
     360,
   ))
   const vulnerability = polishPublicProofText(compactSentence(
@@ -1166,7 +1212,11 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const probabilityText = probabilitySpine(probability)
   const probabilityDemonstration = probabilityDemonstrationSentence(probability)
   const probabilityChange = probabilityChangeSentence(probability)
+  const evidenceGapOpening = missingExternalEvidence
+    ? `Sans source rapide exploitable, cette carte ne confirme pas l’état factuel du jour ; elle situe la structure à vérifier.`
+    : ''
   const lecture = [
+    evidenceGapOpening,
     diamondText,
     resonance.structural_contradiction_fr || `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
     vulnerability,
@@ -1237,7 +1287,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       analysis_fr: polishPublicProofText(approfondirAnalysis),
       sections_fr: [
         ...canonicalApprofondirSections({
-          really: `${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
+          really: `${missingExternalEvidence ? 'Sans source rapide exploitable, la carte reste une lecture structurelle provisoire. ' : ''}${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
           holds: resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
           weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un constat vérifiable.`,
           escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
