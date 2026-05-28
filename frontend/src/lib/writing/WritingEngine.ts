@@ -1147,13 +1147,13 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     {
       type: 'escalation',
       title_fr: 'Tension accrue',
-      description_fr: 'La pression augmente si la contestation trouve un relais capable de ralentir ou delegitimer la procedure.',
+      description_fr: 'La pression augmente si un acteur jusque-la secondaire obtient un levier public, juridique, militaire ou narratif.',
       signal_fr: `Le manque critique reste : ${blindSpot}.`,
     },
     {
       type: 'regime_shift',
       title_fr: 'Bascule',
-      description_fr: 'La logique change quand une preuve, une regle ou un acteur transforme l hypothese en fait opposable.',
+      description_fr: 'La logique change quand une preuve, une règle ou un acteur rend la lecture difficile à maintenir dans le flou.',
       signal_fr: 'Une decision, un document, une action ou un seuil rend la lecture non reversible.',
     },
   ]
@@ -1239,7 +1239,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
         ...canonicalApprofondirSections({
           really: `${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
           holds: resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
-          weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un fait opposable.`,
+          weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un constat vérifiable.`,
           escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
           shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr} ${probabilityChange}`,
           watch: `${conciseWatchSignal(firstEvidence)} ${probabilityChange} À vérifier : ${blindSpot}.`,

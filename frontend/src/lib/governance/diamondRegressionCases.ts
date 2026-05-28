@@ -65,6 +65,29 @@ export const DIAMOND_REGRESSION_CASES: DiamondRegressionCase[] = [
     },
   },
   {
+    id: 'dated-geopolitical-status-ready-to-generate',
+    domain: 'geopolitics',
+    input: 'Le 27/05 où en sommes nous avec la guerre usa Iran israel ?',
+    expectations: {
+      headerDomain: 'Géopolitique',
+      forbiddenTerms: [
+        'La carte commence à répondre trop généralement',
+        'Générer une carte exploratoire',
+        'Ukraine',
+        '- Reuters',
+        '- Politico',
+        'la contestation trouve un relais capable de ralentir',
+        'fait opposable',
+      ],
+      requiredTerms: ['Iran', 'Israël', 'États-Unis'],
+      maxModerateBranches: 3,
+      maxDominantBranches: 2,
+      visibleAxisVI: 'Incertitudes',
+      notes:
+        'Une question datée avec acteurs nommés et intention de compréhension doit générer une SC prudente. Une faiblesse d’écriture interne ne doit pas devenir une relance utilisateur.',
+    },
+  },
+  {
     id: 'flexup-site-analysis',
     domain: 'startup_vc',
     input: 'Que fait https://www.flexup.org/fr et est-ce intéressant ?',
