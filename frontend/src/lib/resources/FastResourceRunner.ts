@@ -8,6 +8,7 @@ import type {
 } from '@/lib/contracts'
 import { fetchResources } from './fetchResources'
 import type { ResourceItem } from './resourceContract'
+import { filterRelevantResources } from './resourceRelevance'
 import { shouldUseWeb } from './shouldUseWeb'
 
 export type FastResourceRunnerResult = {
@@ -365,7 +366,7 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       fetchTavilyFastPlan(plan, maxSources, timeoutMs),
       fetchTavilyFastPlan(broadPlan, maxSources, timeoutMs),
     ])
-    const fast = uniqueResourceItems([...targeted, ...broad]).slice(0, maxSources)
+    const fast = filterRelevantResources(uniqueResourceItems([...targeted, ...broad]), plan.query).slice(0, maxSources)
     const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
     const result = fast.length > 0 || !usedLegacyFallback
       ? fast
@@ -384,7 +385,11 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       }
     }
 
-    const resources = result
+    const relevantResult = Array.isArray(result)
+      ? filterRelevantResources(result, query)
+      : result
+
+    const resources = relevantResult
       .map((item, index) => toResourceContract(item, input.interpretation, index))
       .filter((item): item is ResourceContract => Boolean(item))
       .slice(0, maxSources)

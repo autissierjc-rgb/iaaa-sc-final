@@ -1,5 +1,9 @@
 import type { InterpretationContract, ResourceServiceContract } from '@/lib/contracts'
-import { buildFastResourceSearchPlansForDiagnostics } from '@/lib/resources/FastResourceRunner'
+import {
+  buildFastResourceSearchPlansForDiagnostics,
+} from '@/lib/resources/FastResourceRunner'
+import type { ResourceItem } from '@/lib/resources/resourceContract'
+import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
 
 export type SourceQueryRegressionResult = {
   id: string
@@ -98,11 +102,76 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  const offTopicItems: ResourceItem[] = [
+    {
+      title: 'Bolivia clears path to send troops onto streets to calm protests - Reuters',
+      url: 'https://www.reuters.com/world/americas/bolivia-clears-path-send-troops-streets-calm-protests/',
+      source: 'reuters.com',
+      type: 'fast-source',
+      excerpt: 'Bolivia authorized troop deployments after domestic protests.',
+      reliability: 'tavily:fast',
+    },
+    {
+      title: 'The clean energy backlash has reached North Carolina - Politico',
+      url: 'https://www.politico.com/news/clean-energy-north-carolina',
+      source: 'politico.com',
+      type: 'fast-source',
+      excerpt: 'A debate over clean energy projects in North Carolina.',
+      reliability: 'tavily:fast',
+    },
+    {
+      title: 'US Treasuries selloff exacerbated as mortgage investors hedge against rising yields - Reuters',
+      url: 'https://www.reuters.com/markets/rates-bonds/us-treasuries-selloff-mortgage-investors/',
+      source: 'reuters.com',
+      type: 'fast-source',
+      excerpt: 'Mortgage investors hedged against rising yields during a US rates selloff.',
+      reliability: 'tavily:fast',
+    },
+  ]
+  const relevantItems: ResourceItem[] = [
+    {
+      title: 'Iran says US and Israel crossed a red line as Security Council meets',
+      url: 'https://www.reuters.com/world/middle-east/iran-us-israel-security-council/',
+      source: 'reuters.com',
+      type: 'fast-source',
+      excerpt: 'Iran, the United States, Israel and the UN Security Council remain central to the crisis.',
+      reliability: 'tavily:fast',
+    },
+  ]
+  const relevance = filterRelevantResources([...offTopicItems, ...relevantItems], plans.targeted.query)
+  const relevanceIssues: SourceQueryRegressionResult['issues'] = []
+
+  if (relevance.some((item) =>
+    includesLoose(item.title ?? '', 'Bolivia') ||
+    includesLoose(item.title ?? '', 'clean energy') ||
+    includesLoose(item.title ?? '', 'Treasuries')
+  )) {
+    relevanceIssues.push({
+      level: 'error',
+      code: 'off_topic_source_kept',
+      message: 'Fast source relevance filter kept an off-topic major-media result.',
+    })
+  }
+
+  if (!relevance.some((item) => includesLoose(item.title ?? '', 'Iran'))) {
+    relevanceIssues.push({
+      level: 'error',
+      code: 'relevant_source_rejected',
+      message: 'Fast source relevance filter rejected a source anchored in the requested actors.',
+    })
+  }
+
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
     query,
     subject: plans.subject,
     issues,
+  }, {
+    id: 'current-question-rejects-off-topic-fast-sources',
+    ok: relevanceIssues.length === 0,
+    query: relevance.map((item) => item.title).join(' | '),
+    subject: plans.subject,
+    issues: relevanceIssues,
   }]
 }
