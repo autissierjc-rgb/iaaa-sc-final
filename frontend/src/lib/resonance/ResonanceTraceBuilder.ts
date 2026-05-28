@@ -281,7 +281,6 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     unique([
       ...input.theatre.evidence.map((item) => item.label),
       ...input.theatre.visible_actions,
-      ...sourceSignals.map((signal) => signal.signal_fr),
     ]).filter((item) => publicAnchor(item, sourceHosts)),
     'un acte, une preuve ou un seuil observable qui modifie les marges d’action',
   )

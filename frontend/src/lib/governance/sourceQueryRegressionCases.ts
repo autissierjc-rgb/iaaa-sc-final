@@ -1,9 +1,10 @@
-import type { InterpretationContract, ResourceServiceContract } from '@/lib/contracts'
+import type { ConcreteTheatreContract, InterpretationContract, ResourceServiceContract } from '@/lib/contracts'
 import {
   buildFastResourceSearchPlansForDiagnostics,
 } from '@/lib/resources/FastResourceRunner'
 import type { ResourceItem } from '@/lib/resources/resourceContract'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
+import { buildResonanceTrace } from '@/lib/resonance'
 
 export type SourceQueryRegressionResult = {
   id: string
@@ -31,6 +32,58 @@ function baseResourcePlan(): ResourceServiceContract {
     public_sources: [],
     extracted_options: [],
     internal_notes: [],
+    trace: {
+      service: 'SourceQueryRegression',
+      version: 'v1',
+      duration_ms: 0,
+      status: 'ok',
+    },
+  }
+}
+
+function resourcePlanWithSourceTitle(title: string): ResourceServiceContract {
+  return {
+    ...baseResourcePlan(),
+    status: 'available',
+    resources: [{
+      id: 'source-title-regression',
+      title,
+      url: 'https://www.reuters.com/world/middle-east/example',
+      source: 'reuters.com',
+      channel: 'news_agency',
+      domain_relevance: ['geopolitics'],
+      excerpt: 'Iran, Israel and the United States remain central to the diplomatic and military threshold.',
+      retrieved_at: '2026-05-28T00:00:00.000Z',
+      reliability: 'secondary',
+    }],
+    public_sources: [{
+      id: 'source-title-regression',
+      title,
+      url: 'https://www.reuters.com/world/middle-east/example',
+      source: 'reuters.com',
+      channel: 'news_agency',
+      domain_relevance: ['geopolitics'],
+      excerpt: 'Iran, Israel and the United States remain central to the diplomatic and military threshold.',
+      retrieved_at: '2026-05-28T00:00:00.000Z',
+      reliability: 'secondary',
+    }],
+  }
+}
+
+function theatreForCurrentQuestion(): ConcreteTheatreContract {
+  return {
+    domain: 'geopolitics',
+    actors: ['Iran', 'Israël', 'États-Unis'],
+    named_actors: ['Iran', 'Israël', 'États-Unis'],
+    institutions: ['administration américaine', 'gouvernement israélien', 'autorités iraniennes'],
+    dates: ['28 mai'],
+    places: [],
+    procedures: [],
+    visible_actions: [],
+    constraints: ['marges militaires et diplomatiques'],
+    evidence: [],
+    unknowns: [],
+    missing_anchors: [],
     trace: {
       service: 'SourceQueryRegression',
       version: 'v1',
@@ -140,6 +193,13 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
   ]
   const relevance = filterRelevantResources([...offTopicItems, ...relevantItems], plans.targeted.query)
   const relevanceIssues: SourceQueryRegressionResult['issues'] = []
+  const sourceTitle = 'Morning Bid: Three months, and counting - Reuters'
+  const resonance = buildResonanceTrace({
+    interpretation: input.interpretation,
+    theatre: theatreForCurrentQuestion(),
+    resources: resourcePlanWithSourceTitle(sourceTitle),
+  })
+  const resonanceIssues: SourceQueryRegressionResult['issues'] = []
 
   if (relevance.some((item) =>
     includesLoose(item.title ?? '', 'Bolivia') ||
@@ -161,6 +221,14 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  if (includesLoose(resonance.transition_signal_fr, 'Morning Bid') || includesLoose(resonance.diamond_thesis_fr, 'Morning Bid')) {
+    resonanceIssues.push({
+      level: 'error',
+      code: 'source_title_used_as_transition_signal',
+      message: 'Resonance must not turn a source title into the transition signal or diamond thesis.',
+    })
+  }
+
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
@@ -173,5 +241,11 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: relevance.map((item) => item.title).join(' | '),
     subject: plans.subject,
     issues: relevanceIssues,
+  }, {
+    id: 'source-title-does-not-drive-resonance-transition',
+    ok: resonanceIssues.length === 0,
+    query: resonance.transition_signal_fr,
+    subject: resonance.diamond_thesis_fr,
+    issues: resonanceIssues,
   }]
 }
