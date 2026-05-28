@@ -8,6 +8,7 @@ import type {
 } from '@/lib/contracts'
 import { fetchResources } from './fetchResources'
 import type { ResourceItem } from './resourceContract'
+import { shouldUseWeb } from './shouldUseWeb'
 
 export type FastResourceRunnerResult = {
   resources: ResourceContract[]
@@ -20,7 +21,7 @@ export type FastResourceRunnerResult = {
   timeout_ms: number
 }
 
-type FastResourceRunnerInput = {
+export type FastResourceRunnerInput = {
   interpretation: InterpretationContract
   resource_plan: ResourceServiceContract
   timeout_ms?: number
@@ -95,7 +96,11 @@ function reliabilityFromItem(item: ResourceItem): ResourceContract['reliability'
 }
 
 function sourceDomainsFor(input: FastResourceRunnerInput): string[] {
-  if (input.interpretation.domain === 'geopolitics' || input.interpretation.domain === 'institutional_crisis') {
+  if (
+    input.interpretation.domain === 'geopolitics' ||
+    input.interpretation.domain === 'war_security' ||
+    input.interpretation.domain === 'institutional_crisis'
+  ) {
     return [
       'reuters.com',
       'apnews.com',
@@ -123,6 +128,60 @@ function sourceDomainsFor(input: FastResourceRunnerInput): string[] {
   }
 
   return []
+}
+
+const GENERIC_SOURCE_SUBJECTS = [
+  'la trajectoire de la crise evoquee',
+  'la trajectoire de la crise évoquée',
+  'la situation evoquee',
+  'la situation évoquée',
+  'le contexte evoque',
+  'le contexte évoqué',
+]
+
+function normalizeQueryText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function compactQuery(value: string, max = 180): string {
+  return value
+    .replace(/\b(je peux avancer|pour la prochaine carte|une phrase suffit|repondez librement|répondez librement)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[?!.;:,\s]+$/g, '')
+    .trim()
+    .slice(0, max)
+}
+
+function isGenericSourceSubject(value?: string): boolean {
+  const normalized = normalizeQueryText(String(value ?? '').trim())
+  if (!normalized) return true
+  return GENERIC_SOURCE_SUBJECTS.some((subject) => normalized.includes(normalizeQueryText(subject)))
+}
+
+function isLiveSourceQuestion(input: FastResourceRunnerInput): boolean {
+  return shouldUseWeb([
+    input.interpretation.raw_input,
+    input.interpretation.situation_soumise,
+    input.interpretation.header_subject,
+  ].filter(Boolean).join(' '))
+}
+
+function sourceSubject(input: FastResourceRunnerInput): string {
+  if (COMPANY_DOMAINS.has(input.interpretation.domain)) return companySubject(input)
+
+  const rawSituation = compactQuery(input.interpretation.raw_input || input.interpretation.situation_soumise)
+  const submitted = compactQuery(input.interpretation.situation_soumise || input.interpretation.raw_input)
+  const object = compactQuery(input.interpretation.object_of_analysis || '')
+  const header = compactQuery(input.interpretation.header_subject || '')
+
+  if (isLiveSourceQuestion(input) && rawSituation) return rawSituation
+  if (!isGenericSourceSubject(object)) return object
+  if (submitted) return submitted
+  if (!isGenericSourceSubject(header)) return header
+  return object || header || submitted || rawSituation
 }
 
 function companySubject(input: FastResourceRunnerInput): string {
@@ -160,9 +219,7 @@ function companySubject(input: FastResourceRunnerInput): string {
 }
 
 function fastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
-  const subject = COMPANY_DOMAINS.has(input.interpretation.domain)
-    ? companySubject(input)
-    : input.interpretation.object_of_analysis || input.interpretation.situation_soumise
+  const subject = sourceSubject(input)
 
   return {
     query: COMPANY_DOMAINS.has(input.interpretation.domain)
@@ -177,14 +234,14 @@ function fastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
 }
 
 function broadFastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
-  const subject = COMPANY_DOMAINS.has(input.interpretation.domain)
-    ? companySubject(input)
-    : input.interpretation.object_of_analysis || input.interpretation.situation_soumise
+  const subject = sourceSubject(input)
   const query = [
     subject,
     COMPANY_DOMAINS.has(input.interpretation.domain)
       ? 'official website customers pricing jobs docs'
-      : input.interpretation.domain === 'geopolitics' || input.interpretation.domain === 'institutional_crisis'
+      : input.interpretation.domain === 'geopolitics' ||
+        input.interpretation.domain === 'war_security' ||
+        input.interpretation.domain === 'institutional_crisis'
       ? 'latest reliable sources'
       : 'official sources evidence',
   ].join(' ').slice(0, 200)
@@ -195,6 +252,18 @@ function broadFastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
       ? 'news'
       : 'general',
     label: 'broad',
+  }
+}
+
+export function buildFastResourceSearchPlansForDiagnostics(input: FastResourceRunnerInput): {
+  targeted: FastSearchPlan
+  broad: FastSearchPlan
+  subject: string
+} {
+  return {
+    targeted: fastSearchPlan(input),
+    broad: broadFastSearchPlan(input),
+    subject: sourceSubject(input),
   }
 }
 
