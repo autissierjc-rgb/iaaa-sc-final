@@ -317,6 +317,32 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  const unsupportedInstitutionIssues: SourceQueryRegressionResult['issues'] = []
+  const usaIranOnlyInterpretation: InterpretationContract = {
+    ...input.interpretation,
+    raw_input: 'Où en sommes nous avec la guerre usa Iran au 28/05 ?',
+    situation_soumise: 'Quelle est la situation actuelle de la guerre entre les États-Unis et l’Iran au 28 mai ?',
+    header_subject: 'situation actuelle guerre États-Unis Iran',
+  }
+  const usaIranOnlyResonance = buildResonanceTrace({
+    interpretation: usaIranOnlyInterpretation,
+    theatre: {
+      ...theatreForCurrentQuestion(),
+      actors: ['États-Unis', 'Iran'],
+      named_actors: ['États-Unis', 'Iran'],
+      institutions: ['administration américaine', 'autorités iraniennes', 'Conseil de sécurité de l’ONU'],
+    },
+    resources: baseResourcePlan(),
+  })
+  if (usaIranOnlyResonance.real_actors.some((actor) => includesLoose(actor, 'ONU')) ||
+    usaIranOnlyResonance.institutions.some((institution) => includesLoose(institution, 'Conseil de sécurité'))) {
+    unsupportedInstitutionIssues.push({
+      level: 'error',
+      code: 'unsupported_un_institution_injected',
+      message: 'Resonance must not inject UN/Security Council into a USA/Iran question unless the question or sources mention it.',
+    })
+  }
+
   const noSourcePublicText = [
     noSourceWriting.situation_card.insight_fr,
     noSourceWriting.lecture.text_fr,
@@ -356,6 +382,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: resonance.transition_signal_fr,
     subject: resonance.diamond_thesis_fr,
     issues: resonanceIssues,
+  }, {
+    id: 'usa-iran-question-does-not-inject-un',
+    ok: unsupportedInstitutionIssues.length === 0,
+    query: usaIranOnlyResonance.real_actors.join(', '),
+    subject: usaIranOnlyResonance.institutions.join(', '),
+    issues: unsupportedInstitutionIssues,
   }, {
     id: 'current-question-without-fast-sources-is-provisional',
     ok: noSourceIssues.length === 0,

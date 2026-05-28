@@ -219,7 +219,7 @@ function lexicalActorsFromCorpus(text: string): string[] {
   addIf(/\bchine|china|p[ée]kin|beijing\b/i, 'Chine')
   addIf(/\bunion europ[ée]enne|\bue\b|european union|\beu\b/i, 'Union européenne')
   addIf(/\botan|nato\b/i, 'OTAN')
-  addIf(/\bonu|united nations|\bun\b/i, 'ONU')
+  addIf(/\bonu|united nations\b/i, 'ONU')
   return unique(actors)
 }
 
@@ -234,10 +234,17 @@ function lexicalInstitutionsFromCorpus(text: string): string[] {
   addIf(/\bisra[ëe]l|israelien|isra[ée]lien|netanyahu|jerusalem|j[ée]rusalem\b/i, 'gouvernement israélien')
   addIf(/\biran|iranien|iranienne|teheran|t[ée]h[ée]ran|irgc|gardiens de la r[ée]volution\b/i, 'autorités iraniennes')
   addIf(/\baiea|iaea|nucl[ée]aire|nuclear\b/i, 'AIEA')
-  addIf(/\bonu|united nations|\bun\b|security council|conseil de s[ée]curit[ée]\b/i, 'Conseil de sécurité de l’ONU')
+  addIf(/\bonu|united nations|security council|conseil de s[ée]curit[ée]\b/i, 'Conseil de sécurité de l’ONU')
   addIf(/\bcessez[-\s]?le[-\s]?feu|ceasefire|truce|m[ée]diation|mediator|qatar|oman\b/i, 'canaux de médiation')
   addIf(/\bp[ée]trole|oil|energy|[ée]nergie|hormuz\b/i, 'marchés de l’énergie')
   return unique(institutions)
+}
+
+function institutionSupportedByQuestion(institution: string, corpus: string): boolean {
+  if (/onu|nations unies|conseil de s[ée]curit[ée]|security council/i.test(institution)) {
+    return /\bonu\b|united nations|nations unies|security council|conseil de s[ée]curit[ée]/i.test(corpus)
+  }
+  return true
 }
 
 export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceContract {
@@ -269,6 +276,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     ...input.theatre.institutions,
   ])
     .filter((institution) => publicAnchor(institution, sourceHosts))
+    .filter((institution) => institutionSupportedByQuestion(institution, corpus))
     .slice(0, 8)
   const structuralGap = firstUseful(
     unique([

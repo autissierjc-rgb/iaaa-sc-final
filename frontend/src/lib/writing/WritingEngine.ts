@@ -1213,7 +1213,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const probabilityDemonstration = probabilityDemonstrationSentence(probability)
   const probabilityChange = probabilityChangeSentence(probability)
   const evidenceGapOpening = missingExternalEvidence
-    ? `Sans source rapide exploitable, cette carte ne confirme pas l’état factuel du jour ; elle situe la structure à vérifier.`
+    ? `Lecture provisoire : la carte situe les seuils à vérifier, pas l’état factuel du jour.`
     : ''
   const lecture = [
     evidenceGapOpening,
@@ -1287,7 +1287,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       analysis_fr: polishPublicProofText(approfondirAnalysis),
       sections_fr: [
         ...canonicalApprofondirSections({
-          really: `${missingExternalEvidence ? 'Sans source rapide exploitable, la carte reste une lecture structurelle provisoire. ' : ''}${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
+          really: `${missingExternalEvidence ? 'Lecture structurelle provisoire : aucun signal rapide n’a été retenu comme source publique suffisante. ' : ''}${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
           holds: resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
           weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un constat vérifiable.`,
           escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,

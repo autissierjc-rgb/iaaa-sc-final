@@ -51,6 +51,7 @@ import { DEFAULT_BUZZ_READINESS, DEFAULT_PDF_EXPORT_CONTRACT, DEFAULT_UNIFIED_SH
 import { buildUserMaterialPolicy, classifyUserMaterialResourceRole, type UserMaterialResourceRoleAssessment } from '@/lib/contracts/userMaterial'
 import { planShare } from '@/lib/share'
 import { runSecurityAbuseGuard } from '@/lib/security/SecurityAbuseGuard'
+import { buildReflectivePrompts } from '@/lib/reflection'
 import type {
   ArbreACamesAnalysis,
   PatternContext,
@@ -5598,14 +5599,28 @@ export async function POST(req: NextRequest) {
         diamond_validation: diamondQuality,
       },
     }
+    const reflectivePrompts = buildReflectivePrompts({
+      situation_input: generationDisplayText,
+      sc_output: finalSc,
+      dominant_regime: resonanceTrace.regime_hypothesis_fr,
+      structure_gap: resonanceTrace.structural_gap_fr,
+      main_vulnerability: finalSc.main_vulnerability_fr,
+      tensions: arbre.tensions,
+      uncertainty: arbre.incertitudes?.[0],
+      context_type: String(generationIntentContext.dominant_frame ?? generationInterpretation.domain),
+    })
+    const finalScWithReflection = {
+      ...finalSc,
+      reflective_prompts: reflectivePrompts,
+    } as SituationCard & { reflective_prompts: typeof reflectivePrompts }
 
     recordGenerationTrace({
-      status: finalSc.generation_status === 'partial' ? 'partial' : 'ok',
+      status: finalScWithReflection.generation_status === 'partial' ? 'partial' : 'ok',
       gate: 'GENERATE',
       route: '/api/generate',
       canonicalLayer: 'archive',
       pipelineStep: 'GenerationTelemetry',
-      diagnostic: finalSc.generation_status === 'partial' ? 'generated_partial_card' : 'generated_card',
+      diagnostic: finalScWithReflection.generation_status === 'partial' ? 'generated_partial_card' : 'generated_card',
       durationMs: Date.now() - requestStartedAt,
       inputChars: analysisText.length,
       domain: effectiveCoverageForGeneration.domain,
@@ -5615,7 +5630,7 @@ export async function POST(req: NextRequest) {
       resourcesCount: resources.length,
       modelPath: prebuiltSiteCard ? 'local' : 'openai',
     })
-    return NextResponse.json({ gate: 'GENERATE', sc: finalSc })
+    return NextResponse.json({ gate: 'GENERATE', sc: finalScWithReflection })
   } catch (err: any) {
     console.error('generate error FULL:', err)
     console.error('generate error message:', err?.message)

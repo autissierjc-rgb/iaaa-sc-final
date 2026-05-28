@@ -1918,7 +1918,13 @@ function sanitizeSituationDraft(value: string): string {
 }
 
 function collaborativeQuestionsFromSc(sc: any): string[] {
+  const reflectiveQuestions = Array.isArray(sc?.reflective_prompts?.reflective_questions)
+    ? sc.reflective_prompts.reflective_questions
+        .map((item: any) => String(item?.question_fr ?? item?.question_en ?? '').trim())
+        .filter(Boolean)
+    : []
   const candidates = [
+    reflectiveQuestions,
     sc?.coverage_check?.concrete_theatre?.collaboration_questions,
     sc?.coverage_check?.theatre?.collaboration_questions,
     sc?.concrete_theatre?.collaboration_questions,
@@ -2774,8 +2780,8 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                                   ? 'Je peux déjà générer. Une question peut rendre la carte plus juste :'
                                   : 'I can generate now. Before the compass, one question may sharpen the reading:')
                                 : (lang === 'FR'
-                                  ? 'Pour la prochaine carte, un détail peut changer la lecture :'
-                                  : 'From the complete card, one follow-up can enrich the next reading:')}
+                                  ? 'Une piste à explorer, si elle aide :'
+                                  : 'One path to explore, if useful:')}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 5 }}>
                           {msg.questions.map((q, qi) => (
@@ -2790,7 +2796,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                             ? (lang === 'FR' ? 'Répondez librement, ou laissez la boussole produire une carte exploratoire.' : 'Reply freely, or let the compass produce an exploratory card.')
                             : msg.phase === 'bridge_to_complete'
                               ? (lang === 'FR' ? 'Répondez en une phrase, puis relancez la boussole pour compléter.' : 'Reply in one sentence, then run the compass again to complete it.')
-                              : (lang === 'FR' ? 'Une phrase suffit.' : 'One sentence is enough.')}
+                              : (lang === 'FR' ? 'Répondez librement ; SC s’en servira comme signal pour la suite.' : 'Reply freely; SC will use it as a signal for what comes next.')}
                         </div>
                         {msg.kind === 'clarify' && (
                           <button
