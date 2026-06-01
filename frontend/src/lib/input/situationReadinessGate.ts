@@ -156,6 +156,26 @@ function pointsToMissingMaterialSource(situation: string, intentContext: IntentC
   return pointsToSource && needsChoiceMaterial
 }
 
+function clearStrategicDecisionWithDomain(situation: string, intentContext: IntentContext): boolean {
+  if (!hasExplicitUrl(situation)) return false
+
+  const interpreted = intentContext.interpreted_request as Record<string, unknown> | undefined
+  const text = normalize([
+    situation,
+    interpreted?.user_need,
+    interpreted?.object_of_analysis,
+    intentContext.dominant_frame,
+    intentContext.decision_type,
+  ].filter(Boolean).join(' '))
+
+  const asksDecision =
+    /\b(decision|strategique|strategie|prioriser|choisir|comparer|arbitrer|vendre|exploiter|licence|licencier|valoriser|options?)\b/.test(text)
+  const hasObject =
+    /\b(produit|produits|offre|service|services|brevet|innovation|cible|clients?|marche|usage|business|modele|exploitation)\b/.test(text)
+
+  return asksDecision && hasObject
+}
+
 export function situationReadinessGate({
   situation,
   intentContext,
@@ -260,6 +280,18 @@ export function situationReadinessGate({
     const concrete = hasConcreteSiteUnderstanding(brief)
     if (!concrete) {
       const name = siteNameFromIntent(intentContext, situation)
+      if (clearStrategicDecisionWithDomain(situation, intentContext)) {
+        return {
+          status: 'generate_prudently',
+          reason: brief ? 'site_content_insufficient_question_clear' : 'site_not_understood_question_clear',
+          can_generate_prudently: true,
+          prudent_generation_label_fr: 'Générer une carte prudente',
+          warning_fr:
+            `URL fournie mais site insuffisamment compris : SC doit traiter ${name} comme point de départ, pas comme preuve produit complète.`,
+          needs: ['contenu produit exploitable', 'options visibles', 'preuves publiques utiles'],
+          doctrine: `${SC_NON_COMPLETION_PRINCIPLE}\n\n${SC_COLLABORATION_RULE}`,
+        }
+      }
       const question =
         `J’ai repéré ${name}, mais pas encore assez de contenu utile pour appuyer la décision. Voulez-vous lancer une enquête plus large sur le site, ou fournir une page précise à lire ?`
 

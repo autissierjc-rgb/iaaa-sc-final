@@ -145,10 +145,22 @@ export const READINESS_REGRESSION_CASES: ReadinessRegressionCase[] = [
     resourcePlan: urlExtractPlan('aerocalm.com'),
     resources: [],
     resourceAttempted: true,
-    expectedStatus: 'ask_user',
-    expectedReason: 'site_not_understood',
+    expectedStatus: 'generate_prudently',
+    expectedReason: 'site_not_understood_question_clear',
     notes:
-      'Après tentative de lecture d’un domaine fourni comme matière, SC ne doit pas produire une carte hors-sol si aucun site-brief exploitable n’existe.',
+      'Après tentative de lecture d’un domaine fourni comme matière, une question stratégique claire doit générer prudemment au lieu de redevenir un formulaire.',
+  },
+  {
+    id: 'product-prioritization-domain-without-site-brief-generates-prudently',
+    domain: 'startup_vc',
+    situation: 'Une décision stratégique avec plusieurs options, pour voltaiculture.fr quels sont les produits a prioriser',
+    resourcePlan: urlExtractPlan('voltaiculture.fr'),
+    resources: [],
+    resourceAttempted: true,
+    expectedStatus: 'generate_prudently',
+    expectedReason: 'site_not_understood_question_clear',
+    notes:
+      'Une priorisation de produits avec domaine explicite est une demande stratégique claire : SC doit orienter prudemment sans demander à nouveau une URL.',
   },
   {
     id: 'strategic-options-missing-without-resource',

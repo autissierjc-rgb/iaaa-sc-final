@@ -1857,8 +1857,15 @@ function siteNameFromBrief(brief: ResourceItem | undefined, fallback: string): s
   }
 }
 
+function explicitDomainName(value: string): string {
+  const match = value.match(/\b(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)(?:\/[^\s]*)?/i)
+  return match?.[1] ?? ''
+}
+
 function companyNameFromQuestion(text: string): string {
   const cleaned = cleanPublicText(text)
+  const domainName = explicitDomainName(cleaned)
+  if (domainName) return domainName
   const match =
     /\b(?:compagnie|entreprise|startup|soci[eé]t[eé]|plateforme|outil|app|service)\s+([A-Z][A-Za-z0-9+._-]{2,})\b/.exec(cleaned) ||
     /\b([A-Z][A-Za-z0-9+._-]{2,})\b/.exec(cleaned)

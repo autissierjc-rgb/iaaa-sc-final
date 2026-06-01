@@ -56,6 +56,11 @@ function siteNameFromBrief(brief: ResourceItem | undefined, fallback: string): s
   }
 }
 
+function explicitDomainName(value: string): string {
+  const match = value.match(/\b(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)(?:\/[^\s]*)?/i)
+  return match?.[1] ?? ''
+}
+
 function frenchSiteProduct(company: string, product: string): string {
   if (/platform that helps you start,\s*grow,\s*and manage your business/i.test(product)) {
     return `${company} se présente comme une plateforme qui aide à créer, développer et gérer une entreprise, avec une promesse de simplicité, d’équité et de transparence.`
@@ -348,19 +353,22 @@ function fallbackLecture(
     const brief = siteBrief(resources)
     const company = siteNameFromBrief(
       brief,
-      cleanModelText(intentContext.interpreted_request?.object_of_analysis || 'ce site')
+      explicitDomainName(situation) || cleanModelText(intentContext.interpreted_request?.object_of_analysis || 'ce site')
     )
     if (!brief) {
+      const sourceStatus = explicitDomainName(situation)
+        ? `Une URL a bien été fournie (${company}), mais son contenu n’a pas produit de fiche exploitable dans le budget court.`
+        : `La carte ne dispose pas encore d’une source exploitable pour dire précisément ce que ${company} fait.`
       return {
         lecture_systeme_fr: cleanModelText(
-          `${company} est l’objet à vérifier, mais la carte ne dispose pas encore d’une source exploitable pour dire précisément ce que l’entreprise fait. La situation doit donc rester centrée sur la décision demandée : comprendre l’offre avant d’envisager de la rejoindre avec votre startup.\n\n` +
-          `La contradiction centrale tient à l’écart entre l’intérêt possible et la preuve disponible. Sans URL officielle, contenu produit, clients, cas d’usage, conditions de collaboration ou signaux externes, SC ne doit pas transformer un nom d’entreprise en analyse de marché.\n\n` +
-          `Le point de bascule sera une source contrôlable : site officiel, démonstration, description produit, clients ou partenaires vérifiables, prix, conditions juridiques et sociales, ou retour d’utilisateur. Sans cela, la lecture reste prudente et la bonne relance est de demander la source ou de générer explicitement une carte provisoire.`
+          `${company} est l’objet à vérifier. ${sourceStatus} La situation doit donc rester centrée sur l’arbitrage demandé : quelles options, produits ou lignes d’offre prioriser, et selon quel signal observable.\n\n` +
+          `La contradiction centrale tient à l’écart entre une intention stratégique lisible et la preuve disponible. SC peut structurer la décision, mais ne doit pas inventer l’offre, les clients, les prix, la traction ou les contraintes de marché qui ne sont pas établis par une source.\n\n` +
+          `Le point de bascule sera une source contrôlable : page produit, démonstration, catalogue, clients ou partenaires vérifiables, prix, contraintes juridiques, preuve d’usage ou retour utilisateur. Sans cela, la carte doit rester une priorisation provisoire fondée sur les critères à vérifier plutôt qu’une conclusion de marché.`
         ),
         lecture_systeme_en: cleanModelText(
-          `${company} is the object to verify, but the card does not yet have a usable source to state precisely what the company does. The situation must therefore stay centered on the requested decision: understanding the offer before considering joining it with your startup.\n\n` +
-          `The central contradiction is the gap between possible interest and available proof. Without an official URL, product content, customers, use cases, collaboration terms, or external signals, SC must not turn a company name into a market analysis.\n\n` +
-          `The tipping point is a controllable source: official site, demo, product description, verifiable customers or partners, pricing, legal and social terms, or user feedback. Without that, the reading remains cautious.`
+          `${company} is the object to verify. The card can structure the strategic choice, but it must not invent the offer, customers, pricing, traction, or market constraints without an exploitable source.\n\n` +
+          `The central contradiction is the gap between a legible strategic intention and available proof. The useful reading is therefore provisional: which products, options, or offer lines should be prioritized, and which observable signal would confirm the priority.\n\n` +
+          `The tipping point is a controllable source: product page, demo, catalogue, verifiable customers or partners, pricing, legal constraints, usage proof, or user feedback.`
         ),
       }
     }
