@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type {
+  FunctionalResourceNeed,
   InterpretationContract,
   ResourceContract,
   ResourceServiceContract,
@@ -109,6 +110,82 @@ function reliabilityFromItem(item: ResourceItem): ResourceContract['reliability'
   if (/reuters|ap|afp|brave|openai-web-search|tavily|web-search/.test(reliability)) return 'secondary'
   if (/social|forum|reddit|x\.com|twitter/.test(reliability)) return 'signal'
   return 'unknown'
+}
+
+function domainsForChannels(channels: SourceChannel[]): string[] {
+  const domains = new Set<string>()
+  for (const channel of channels) {
+    if (channel === 'official') {
+      [
+        'legifrance.gouv.fr',
+        'service-public.fr',
+        'ecologie.gouv.fr',
+        'agriculture.gouv.fr',
+        'economie.gouv.fr',
+        'europa.eu',
+        'who.int',
+        'has-sante.fr',
+      ].forEach((domain) => domains.add(domain))
+    }
+    if (channel === 'legal') {
+      ['legifrance.gouv.fr', 'conseil-constitutionnel.fr', 'courdecassation.fr', 'justice.gouv.fr'].forEach((domain) => domains.add(domain))
+    }
+    if (channel === 'health_authority') {
+      ['has-sante.fr', 'sante.gouv.fr', 'who.int', 'ema.europa.eu', 'cdc.gov'].forEach((domain) => domains.add(domain))
+    }
+    if (channel === 'research') {
+      ['pubmed.ncbi.nlm.nih.gov', 'arxiv.org', 'nature.com', 'science.org'].forEach((domain) => domains.add(domain))
+    }
+    if (channel === 'news_agency') {
+      ['reuters.com', 'apnews.com', 'afp.com', 'bbc.com', 'lemonde.fr', 'france24.com'].forEach((domain) => domains.add(domain))
+    }
+    if (channel === 'market') {
+      ['cbinsights.com', 'pitchbook.com', 'crunchbase.com', 'dealroom.co', 'statista.com'].forEach((domain) => domains.add(domain))
+    }
+    if (channel === 'company') {
+      ['linkedin.com', 'crunchbase.com', 'producthunt.com', 'dealroom.co', 'businesswire.com'].forEach((domain) => domains.add(domain))
+    }
+  }
+  return Array.from(domains).slice(0, 10)
+}
+
+function topicForChannels(channels: SourceChannel[]): FastSearchPlan['topic'] {
+  return channels.some((channel) => channel === 'news_agency' || channel === 'local_media')
+    ? 'news'
+    : 'general'
+}
+
+function priorityRank(need: FunctionalResourceNeed): number {
+  if (need.priority === 'high') return 0
+  if (need.priority === 'medium') return 1
+  return 2
+}
+
+function functionalNeedPlans(input: FastResourceRunnerInput): FastSearchPlan[] {
+  return [...input.resource_plan.functional_needs]
+    .sort((a, b) => priorityRank(a) - priorityRank(b))
+    .flatMap((need) => {
+      const queryCount = need.priority === 'high' ? 2 : 1
+      const includeDomains = domainsForChannels(need.channels)
+      return need.suggested_queries.slice(0, queryCount).map((query, index) => ({
+        query: compactQuery(query, 200),
+        include_domains: includeDomains.length > 0 ? includeDomains : undefined,
+        topic: topicForChannels(need.channels),
+        label: `functional:${need.family}:${need.priority}:${index + 1}`,
+      } satisfies FastSearchPlan))
+    })
+    .filter((plan) => plan.query.length > 0)
+    .slice(0, 4)
+}
+
+function uniquePlans(plans: FastSearchPlan[]): FastSearchPlan[] {
+  const seen = new Set<string>()
+  return plans.filter((plan) => {
+    const key = `${plan.query}|${(plan.include_domains ?? []).join(',')}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 function sourceDomainsFor(input: FastResourceRunnerInput): string[] {
@@ -307,11 +384,13 @@ function broadFastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
 export function buildFastResourceSearchPlansForDiagnostics(input: FastResourceRunnerInput): {
   targeted: FastSearchPlan
   broad: FastSearchPlan
+  functional: FastSearchPlan[]
   subject: string
 } {
   return {
     targeted: fastSearchPlan(input),
     broad: broadFastSearchPlan(input),
+    functional: functionalNeedPlans(input),
     subject: sourceSubject(input),
   }
 }
@@ -402,19 +481,27 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     }
   }
 
-  const plan = fastSearchPlan(input)
+  const fallbackPlan = fastSearchPlan(input)
+  const broadPlan = broadFastSearchPlan(input)
+  const plans = uniquePlans([
+    ...functionalNeedPlans(input),
+    fallbackPlan,
+    broadPlan,
+  ]).slice(0, 4)
+  const primaryPlan = plans[0] ?? fallbackPlan
   const query = [
     input.interpretation.situation_soumise,
     input.resource_plan.fallback_searches[0] ?? '',
+    ...plans.map((plan) => plan.query),
   ].filter(Boolean).join(' ')
 
   try {
-    const broadPlan = broadFastSearchPlan(input)
-    const [targeted, broad] = await Promise.all([
-      fetchTavilyFastPlan(plan, maxSources, timeoutMs),
-      fetchTavilyFastPlan(broadPlan, maxSources, timeoutMs),
-    ])
-    const fast = filterRelevantResources(uniqueResourceItems([...targeted, ...broad]), plan.query).slice(0, maxSources)
+    const planResults = await Promise.all(
+      plans.map((plan) => fetchTavilyFastPlan(plan, maxSources, timeoutMs)),
+    )
+    const firstHitIndex = planResults.findIndex((items) => items.length > 0)
+    const firstHitPlan = firstHitIndex >= 0 ? plans[firstHitIndex] : primaryPlan
+    const fast = filterRelevantResources(uniqueResourceItems(planResults.flat()), query).slice(0, maxSources)
     const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
     const result = fast.length > 0 || !usedLegacyFallback
       ? fast
@@ -427,8 +514,8 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
         status: 'timeout',
         note_fr: 'Le runner sources rapides a depasse son budget ; SIS continue avec une lecture prudente.',
         provider: 'legacy_fetch_resources',
-        query: plan.query,
-        include_domains: plan.include_domains,
+        query: primaryPlan.query,
+        include_domains: primaryPlan.include_domains,
         timeout_ms: timeoutMs,
       }
     }
@@ -450,8 +537,8 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
         ? `Sources rapides attachees : ${resources.length}.`
         : 'Aucune source rapide exploitable trouvee dans le budget court.',
       provider: usedLegacyFallback ? 'legacy_fetch_resources' : 'tavily_fast',
-      query: targeted.length > 0 ? plan.query : broadPlan.query,
-      include_domains: targeted.length > 0 ? plan.include_domains : broadPlan.include_domains,
+      query: firstHitPlan.query,
+      include_domains: firstHitPlan.include_domains,
       timeout_ms: timeoutMs,
     }
   } catch {
@@ -461,8 +548,8 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       status: 'failed',
       note_fr: 'Le runner sources rapides a echoue ; SIS continue avec une lecture prudente.',
       provider: 'tavily_fast',
-      query: plan.query,
-      include_domains: plan.include_domains,
+      query: primaryPlan.query,
+      include_domains: primaryPlan.include_domains,
       timeout_ms: timeoutMs,
     }
   }
