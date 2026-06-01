@@ -1,12 +1,14 @@
 import type { ResourceServiceContract } from '../contracts'
 import { situationReadinessGate, type ReadinessStatus } from '../input/situationReadinessGate'
-import type { IntentContext, SituationDomain } from '../resources/resourceContract'
+import type { IntentContext, ResourceItem, SituationDomain } from '../resources/resourceContract'
 
 type ReadinessRegressionCase = {
   id: string
   situation: string
   domain: SituationDomain
   resourcePlan?: ResourceServiceContract
+  resources?: ResourceItem[]
+  resourceAttempted?: boolean
   expectedStatus: ReadinessStatus
   expectedReason?: string
   notes: string
@@ -78,6 +80,29 @@ function resourcePlanWithOptions(
   }
 }
 
+function urlExtractPlan(url: string): ResourceServiceContract {
+  return {
+    status: 'partial',
+    policy: 'url_extract_required',
+    needs_web: true,
+    policy_reason_fr: 'Une URL fournie doit etre exploitee par extraction ou recherche de domaine avant de conclure.',
+    functional_needs: [],
+    requested_urls: [`https://${url}`],
+    extracted_urls: [],
+    fallback_searches: [],
+    resources: [],
+    public_sources: [],
+    extracted_options: [],
+    internal_notes: ['readiness_regression_url_extract_required'],
+    trace: {
+      service: 'ReadinessRegressionResourcePlan',
+      version: 'v1',
+      status: 'partial',
+      notes: ['requested_urls=1', 'resources=0'],
+    },
+  }
+}
+
 export const READINESS_REGRESSION_CASES: ReadinessRegressionCase[] = [
   {
     id: 'strategic-options-known-from-document',
@@ -114,6 +139,18 @@ export const READINESS_REGRESSION_CASES: ReadinessRegressionCase[] = [
       'Un domaine nu fourni dans la question compte comme matière produit ; la gate ne doit pas redemander une URL.',
   },
   {
+    id: 'url-context-attempted-without-site-brief-stops-hors-sol',
+    domain: 'startup_vc',
+    situation: 'Une décision stratégique avec plusieurs options pour aerocalm.com vendre le brevet ou exploiter cette innovation',
+    resourcePlan: urlExtractPlan('aerocalm.com'),
+    resources: [],
+    resourceAttempted: true,
+    expectedStatus: 'ask_user',
+    expectedReason: 'site_not_understood',
+    notes:
+      'Après tentative de lecture d’un domaine fourni comme matière, SC ne doit pas produire une carte hors-sol si aucun site-brief exploitable n’existe.',
+  },
+  {
     id: 'strategic-options-missing-without-resource',
     domain: 'governance',
     situation: 'Décision stratégique avec plusieurs options pour une organisation : quelle option prioriser ?',
@@ -129,7 +166,9 @@ export function runReadinessRegressionCases(): ReadinessRegressionResult[] {
     const result = situationReadinessGate({
       situation: testCase.situation,
       intentContext: intentContextFor(testCase),
+      resources: testCase.resources,
       resourcePlan: testCase.resourcePlan,
+      resourceAttempted: testCase.resourceAttempted,
     })
     const ok =
       result.status === testCase.expectedStatus &&

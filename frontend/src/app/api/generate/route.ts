@@ -4781,6 +4781,7 @@ export async function POST(req: NextRequest) {
       resources,
       resourcePlan: canonicalResourcePlan,
       forceGenerate: readinessForceGenerate,
+      resourceAttempted: Boolean(webNeeded || fastRunnerResult || rawFetchedResources.length > 0),
     })
     const resourcesStatus =
       rawFetchedResources.length > 0

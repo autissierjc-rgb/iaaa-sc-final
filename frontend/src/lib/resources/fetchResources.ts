@@ -142,13 +142,14 @@ function normalizeInternalUrl(url: URL): string {
 
 function isTargetOrOfferQuery(query: string): boolean {
   const text = normalizeSearchText(query)
-  return /\b(cible|client|clients|clientele|utilisateur|utilisateurs|public|publics|segment|segments|offre|offres|pricing|tarif|tarifs|marche|market|startup|produit|product|usage|use case|cas usage)\b/.test(text)
+  return /\b(cible|client|clients|clientele|utilisateur|utilisateurs|public|publics|segment|segments|offre|offres|pricing|tarif|tarifs|marche|market|startup|produit|product|usage|use case|cas usage|concept|brevet|patent|innovation|licence|licensing|exploiter|exploitation)\b/.test(text)
 }
 
 function evidencePageScore(haystack: string): number {
   let score = 0
   if (/\b(offer|offering|pricing|price|plans?|tarif|tarifs|abonnement|subscription|packages?|services?)\b/.test(haystack)) score += 12
   if (/\b(product|produit|platform|plateforme|solution|solutions|features?|fonctionnalites?|fonctionnalités?)\b/.test(haystack)) score += 10
+  if (/\b(concept|brevet|patent|innovation|technology|technologie|licen[cs]e|licensing|exploitation|intellectual property|propriete intellectuelle|propriété intellectuelle)\b/.test(haystack)) score += 12
   if (/\b(use-?cases?|cas-?usage|applications?|examples?|exemples?|stories?|success|case-?stud(?:y|ies)|etudes?-?cas)\b/.test(haystack)) score += 10
   if (/\b(customers?|clients?|users?|utilisateurs?|audiences?|publics?|segments?|personas?|teams?|equipes?|professionnels?|organisations?|enterprise|entreprises?)\b/.test(haystack)) score += 10
   if (/\b(testimonials?|temoignages?|témoignages?|partners?|partenaires?|integrations?|references?|preuves?|proof|traction)\b/.test(haystack)) score += 8
@@ -160,7 +161,7 @@ function linkScore(url: URL, label: string, base: URL, query = ''): number {
   const haystack = normalizeSearchText(`${url.pathname} ${label}`)
   const targetOrOffer = isTargetOrOfferQuery(query)
   let score = 1
-  if (/\b(modele|model|business|economic|application|app|case|cas|etudes|study|pricing|tarif|faq|question|pour-vous|services|conseil|solution|offre|platform|plateforme|talent|freelance|client)\b/i.test(haystack)) score += 6
+  if (/\b(modele|model|business|economic|application|app|case|cas|etudes|study|pricing|tarif|faq|question|pour-vous|services|conseil|solution|offre|platform|plateforme|talent|freelance|client|concept|brevet|patent|innovation|technology|technologie|licen[cs]e|licensing|exploitation)\b/i.test(haystack)) score += 6
   if (targetOrOffer) score += evidencePageScore(haystack)
   if (targetOrOffer && /\b(about|a-propos|a propos|contact|connexion|login)\b/i.test(haystack)) score -= 7
   if (url.pathname.includes('/fr')) score += 3

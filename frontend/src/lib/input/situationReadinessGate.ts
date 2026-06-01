@@ -162,12 +162,14 @@ export function situationReadinessGate({
   resources = [],
   resourcePlan,
   forceGenerate = false,
+  resourceAttempted = false,
 }: {
   situation: string
   intentContext: IntentContext
   resources?: ResourceItem[]
   resourcePlan?: ResourceServiceContract
   forceGenerate?: boolean
+  resourceAttempted?: boolean
 }): SituationReadinessGate {
   const frame = intentContext.dominant_frame
   const decision = intentContext.decision_type
@@ -246,6 +248,31 @@ export function situationReadinessGate({
           ? `Site insuffisamment compris : SC ne peut pas affirmer ce que fait ${name} sans contenu utile.`
           : `Site officiel non identifié : SC ne doit pas inventer ce que fait ${name}.`,
         needs: hasUrl ? ['contenu utile du site', 'description produit concrète'] : ['URL officielle', 'source web fiable'],
+        doctrine: `${SC_NON_COMPLETION_PRINCIPLE}\n\n${SC_COLLABORATION_RULE}`,
+      }
+    }
+  }
+
+  const hasUrl = hasExplicitUrl(situation)
+  const urlMaterialWasRequested = resourcePlan?.policy === 'url_extract_required' || (resourcePlan?.requested_urls ?? []).length > 0
+  if (hasUrl && urlMaterialWasRequested && resourceAttempted) {
+    const brief = siteBrief(resources)
+    const concrete = hasConcreteSiteUnderstanding(brief)
+    if (!concrete) {
+      const name = siteNameFromIntent(intentContext, situation)
+      const question =
+        `J’ai repéré ${name}, mais pas encore assez de contenu utile pour appuyer la décision. Voulez-vous lancer une enquête plus large sur le site, ou fournir une page précise à lire ?`
+
+      return {
+        status: forceGenerate ? 'generate_prudently' : 'ask_user',
+        reason: brief ? 'site_content_insufficient' : 'site_not_understood',
+        question,
+        can_generate_prudently: true,
+        prudent_generation_label_fr: 'Générer une carte exploratoire',
+        message_fr: question,
+        warning_fr:
+          `URL fournie mais site insuffisamment compris : SC ne doit pas produire une décision hors-sol sur ${name}.`,
+        needs: ['site-brief exploitable', 'page concept/produit/brevet', 'preuve publique utile'],
         doctrine: `${SC_NON_COMPLETION_PRINCIPLE}\n\n${SC_COLLABORATION_RULE}`,
       }
     }
