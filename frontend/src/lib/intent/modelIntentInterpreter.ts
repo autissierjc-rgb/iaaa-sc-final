@@ -72,6 +72,7 @@ Rules:
 - If the user asks "pourquoi", "à quoi sert", "quel rôle", "comprendre", classify as understand.
 - If the user asks whether A caused, pushed, dragged, trained, manipulated, triggered, or led B into X, set question_type to "causal_attribution", intent_type to "diagnose", must_answer_first to true, and expected_answer_shape to "answer the causal hypothesis first, then separate established / plausible / not established / missing proof".
 - For every important proper noun and acronym in the user question, add one entity_explanations item. Explain from context when safe. If uncertain, do not invent: use "nom propre à identifier" or "acronyme à expliciter". If the surrounding context strongly suggests a likely correction, keep the original label, set certainty to "unknown", and write the explanation as "correction possible: [suggestion]".
+- If the user asks for a decision or prioritization that depends on a website, document, URL, data, public policy, current regulation, government measure, market fact, scientific claim, legal status, or recent event, state the required material in missing_evidence_policy. Add one or more signals beginning with "source_need:" such as "source_need:site_understanding", "source_need:official_recent_regulation", "source_need:market_evidence", "source_need:legal_text", or "source_need:current_news". These signals describe what Situation Card needs before structuring; they are not displayed to the user.
 - Ask for clarification only if the object or desired action is genuinely missing.
 - Keep object_of_analysis concrete and short.
 - Never use generic placeholders such as "la trajectoire de la crise évoquée", "l'objet de la question", or "la situation". Name the actual object from the user text.
@@ -227,7 +228,6 @@ async function inferConfirmationHypothesis({
 export async function interpretRequestWithModel(input: string): Promise<InterpretedRequest> {
   const fallback = interpretRequest(input)
   if (fallback.question_type === 'causal_attribution' || fallback.must_answer_first) return fallback
-  if (fallback.signals.includes('évaluation de site/startup') || hasSiteSignal(input)) return fallback
 
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) return fallback

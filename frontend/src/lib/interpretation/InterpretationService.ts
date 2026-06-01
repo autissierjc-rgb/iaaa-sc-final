@@ -242,6 +242,7 @@ export async function interpretSituation(
     object_of_analysis: interpreted.object_of_analysis || rawInput,
     primary_hypothesis: interpreted.primary_hypothesis || undefined,
     expected_answer_shape: interpreted.expected_answer_shape || '',
+    missing_evidence_policy: interpreted.missing_evidence_policy || undefined,
     must_answer_first: Boolean(interpreted.must_answer_first),
     needs_clarification: shouldClarify(interpreted, rawInput),
     clarification_question: interpreted.confirmation_hypothesis || undefined,

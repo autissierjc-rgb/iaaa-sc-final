@@ -120,6 +120,7 @@ export type InterpretationContract = {
   object_of_analysis: string
   primary_hypothesis?: string
   expected_answer_shape: string
+  missing_evidence_policy?: string
   must_answer_first: boolean
   needs_clarification: boolean
   clarification_question?: string

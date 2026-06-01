@@ -103,6 +103,17 @@ function isWarSecurityQuestion(input: string): boolean {
   return /\b(guerre|militaire|frappe|bombard|missile|cessez|cessez-le-feu|sanction|nucleaire|nucl[eé]aire|frontiere|frontière|otan|civils?|otage|attaque|riposte|escalade|dissuasion|iran|israel|gaza|ukraine|russie|chine|taiwan|syrie|liban|yemen|d[eé]troit|ormuz)\b/.test(text)
 }
 
+function sourceNeedSignals(input: string): string[] {
+  const text = normalize(input)
+  const signals: string[] = []
+  const asksRecentPublicFrame =
+    /\b(dernier|derniere|dernieres|recent|recente|actuel|actuelle|aujourd hui)\b/.test(text) &&
+    /\b(gouvernement|gouvernemental|public|reglement|reglementaire|reglementation|norme|normes|loi|decret|arrete|cadre legal|disposition|dispositions|aide|subvention)\b/.test(text)
+  if (asksRecentPublicFrame) signals.push('source_need:official_recent_regulation')
+  if (/\b(site|\.com|\.fr|\.io|\.ai)\b/.test(text)) signals.push('source_need:site_understanding')
+  return signals
+}
+
 function extractObject(input: string): string {
   const text = input.trim().replace(/\s+/g, ' ')
   const normalized = normalize(text)
@@ -225,6 +236,7 @@ export function interpretRequest(input: string): InterpretedRequest {
   const intent = detected?.intent ?? 'understand'
   if (detected) signals.push(detected.signal)
   if (resourceRole.urls.length > 0) signals.push(`resource_role:${resourceRole.role}`)
+  signals.push(...sourceNeedSignals(text))
 
   const object = extractObject(text)
   const tension = inferTension(text, intent)
@@ -258,6 +270,8 @@ export function interpretRequest(input: string): InterpretedRequest {
     must_answer_first: causalAttribution ? true : undefined,
     missing_evidence_policy: causalAttribution
       ? 'Si les preuves manquent, dire précisément ce qui manque au lieu de dériver vers une analyse générale.'
+      : signals.some((signal) => signal === 'source_need:official_recent_regulation')
+      ? 'Chercher les sources officielles ou juridiques récentes qui conditionnent la décision avant de conclure.'
       : undefined,
     domain,
     needs_clarification: needsClarification,

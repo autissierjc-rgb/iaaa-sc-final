@@ -110,6 +110,20 @@ const EXPLICIT_EXTERNAL_SOURCE_TERMS = [
   'preuve publique',
 ]
 
+const SOURCE_NEED_PREFIX = 'source_need:'
+
+function sourceNeedsFromInterpretation(interpretation: InterpretationContract): string[] {
+  return interpretation.signals
+    .map((signal) => signal.trim())
+    .filter((signal) => signal.toLowerCase().startsWith(SOURCE_NEED_PREFIX))
+    .map((signal) => signal.slice(SOURCE_NEED_PREFIX.length).trim().toLowerCase())
+    .filter(Boolean)
+}
+
+function needsOfficialOrLegalEvidence(sourceNeeds: string[]): boolean {
+  return sourceNeeds.some((need) => /official|government|public|regulation|regulatory|legal|law|text|policy/.test(need))
+}
+
 type FastResourceDecision = {
   policy: FastResourcePolicy
   needs_web: boolean
@@ -124,11 +138,14 @@ function normalizeText(value: string): string {
 }
 
 function decideFastResourcePolicy(interpretation: InterpretationContract, urls: string[]): FastResourceDecision {
+  const sourceNeeds = sourceNeedsFromInterpretation(interpretation)
   if (urls.length > 0) {
     return {
       policy: 'url_extract_required',
       needs_web: true,
-      reason_fr: 'Une URL fournie doit etre exploitee par extraction ou recherche de domaine avant de conclure.',
+      reason_fr: sourceNeeds.length > 0
+        ? `Une URL fournie et des besoins de sources explicites du referent doivent etre exploites avant de conclure: ${sourceNeeds.join(', ')}.`
+        : 'Une URL fournie doit etre exploitee par extraction ou recherche de domaine avant de conclure.',
     }
   }
 
@@ -141,6 +158,7 @@ function decideFastResourcePolicy(interpretation: InterpretationContract, urls: 
   ].join(' '))
   const termRequiresSources = FAST_SOURCE_TERMS.some((term) => haystack.includes(normalizeText(term)))
   const domainRequiresSources = FAST_SOURCE_DOMAINS.has(interpretation.domain)
+  const referentRequiresSources = sourceNeeds.length > 0
   const internalContext =
     INTERNAL_CONTEXT_DOMAINS.has(interpretation.domain) &&
     /\b(ma|mon|mes|notre|nos|dans ma|dans mon|dans notre|equipe|reorganisation|conflit interne)\b/.test(haystack) &&
@@ -154,11 +172,13 @@ function decideFastResourcePolicy(interpretation: InterpretationContract, urls: 
     }
   }
 
-  if (domainRequiresSources || termRequiresSources) {
+  if (domainRequiresSources || termRequiresSources || referentRequiresSources) {
     return {
       policy: 'fast_sources_required',
       needs_web: true,
-      reason_fr: 'Le domaine ou la demande depend de faits externes verifiables ; des ressources rapides doivent nourrir Lecture et Approfondir sans bloquer SIS.',
+      reason_fr: referentRequiresSources
+        ? `Le referent demande des sources externes avant structuration: ${sourceNeeds.join(', ')}.`
+        : 'Le domaine ou la demande depend de faits externes verifiables ; des ressources rapides doivent nourrir Lecture et Approfondir sans bloquer SIS.',
     }
   }
 
@@ -253,6 +273,27 @@ function buildFunctionalNeeds(input: ResourceServiceInput): FunctionalResourceNe
     },
   ]
 
+  const sourceNeeds = sourceNeedsFromInterpretation(input.interpretation)
+  if (needsOfficialOrLegalEvidence(sourceNeeds)) {
+    needs.unshift({
+      family: 'legitimation',
+      label_fr: 'Cadre public / reglementaire',
+      question_fr: 'Quelles sources officielles ou juridiques disent la regle recente qui conditionne la decision ?',
+      channels: ['official', 'legal'],
+      suggested_queries: [
+        query('sources officielles recentes reglementation'),
+        query('texte officiel decret arrete loi'),
+        query('cadre gouvernemental obligations aides'),
+      ],
+      expected_evidence_fr: [
+        'texte officiel recent',
+        'decret, arrete, loi ou doctrine administrative',
+        'condition publique qui change la priorite des options',
+      ],
+      priority: 'high',
+    })
+  }
+
   return needs.map((need) => ({
     ...need,
     channels: need.channels.length > 0 ? need.channels : route.channels.slice(0, 2),
@@ -269,11 +310,16 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
   )
   const suppliedResources = input.supplied_resources ?? []
   const decision = decideFastResourcePolicy(input.interpretation, urls)
+  const sourceNeeds = sourceNeedsFromInterpretation(input.interpretation)
   const extractedUrls = suppliedResources
     .map((resource) => resource.url)
     .filter((url) => urls.includes(url))
+  const functionalNeeds = buildFunctionalNeeds(input)
   const fallbackSearches = urls.length > extractedUrls.length || decision.needs_web
-    ? route.suggested_queries.slice(0, 4)
+    ? [
+        ...functionalNeeds.flatMap((need) => need.suggested_queries),
+        ...route.suggested_queries,
+      ].slice(0, 4)
     : []
   const publicSources = suppliedResources.filter((resource) => resource.reliability !== 'unknown')
   const optionSources = publicSources.length > 0 ? publicSources : suppliedResources
@@ -284,7 +330,7 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
     policy: decision.policy,
     needs_web: decision.needs_web,
     policy_reason_fr: decision.reason_fr,
-    functional_needs: buildFunctionalNeeds(input),
+    functional_needs: functionalNeeds,
     requested_urls: urls,
     extracted_urls: extractedUrls,
     fallback_searches: fallbackSearches,
@@ -300,6 +346,7 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
           : 'No URL detected: internal context is acceptable for fast SC.',
       `resource_policy=${decision.policy}`,
       `source_channels=${route.channels.join(',')}`,
+      ...(sourceNeeds.length > 0 ? [`source_needs=${sourceNeeds.join(',')}`] : []),
       `extracted_options=${extractedOptions.length}`,
     ],
     trace: {
@@ -313,6 +360,7 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
         `extracted_options=${extractedOptions.length}`,
         `fallback_searches=${fallbackSearches.length}`,
         `needs_web=${decision.needs_web}`,
+        ...(sourceNeeds.length > 0 ? [`source_needs=${sourceNeeds.join(',')}`] : []),
       ],
     },
   }

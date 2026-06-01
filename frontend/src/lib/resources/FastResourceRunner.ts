@@ -45,6 +45,21 @@ const COMPANY_DOMAINS = new Set([
   'technology_ai',
 ])
 
+const SOURCE_NEED_PREFIX = 'source_need:'
+
+function sourceNeedsFromInterpretation(interpretation: InterpretationContract): string[] {
+  return interpretation.signals
+    .map((signal) => signal.trim())
+    .filter((signal) => signal.toLowerCase().startsWith(SOURCE_NEED_PREFIX))
+    .map((signal) => signal.slice(SOURCE_NEED_PREFIX.length).trim().toLowerCase())
+    .filter(Boolean)
+}
+
+function needsOfficialOrLegalEvidence(input: FastResourceRunnerInput): boolean {
+  return sourceNeedsFromInterpretation(input.interpretation)
+    .some((need) => /official|government|public|regulation|regulatory|legal|law|text|policy/.test(need))
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | 'timeout'> {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => resolve('timeout'), timeoutMs)
@@ -97,6 +112,18 @@ function reliabilityFromItem(item: ResourceItem): ResourceContract['reliability'
 }
 
 function sourceDomainsFor(input: FastResourceRunnerInput): string[] {
+  if (needsOfficialOrLegalEvidence(input)) {
+    return [
+      'legifrance.gouv.fr',
+      'ecologie.gouv.fr',
+      'agriculture.gouv.fr',
+      'economie.gouv.fr',
+      'service-public.fr',
+      'ademe.fr',
+      'cre.fr',
+    ]
+  }
+
   if (
     input.interpretation.domain === 'geopolitics' ||
     input.interpretation.domain === 'war_security' ||
@@ -221,6 +248,15 @@ function companySubject(input: FastResourceRunnerInput): string {
 
 function fastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
   const subject = sourceSubject(input)
+  if (needsOfficialOrLegalEvidence(input)) {
+    const policyNeed = input.interpretation.missing_evidence_policy || 'sources officielles recentes reglementation cadre legal'
+    return {
+      query: `${subject} ${policyNeed}`.slice(0, 180),
+      include_domains: sourceDomainsFor(input),
+      topic: 'general',
+      label: 'referent-official-evidence',
+    }
+  }
 
   return {
     query: COMPANY_DOMAINS.has(input.interpretation.domain)
@@ -236,6 +272,18 @@ function fastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
 
 function broadFastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
   const subject = sourceSubject(input)
+  if (needsOfficialOrLegalEvidence(input)) {
+    return {
+      query: [
+        subject,
+        input.resource_plan.fallback_searches[0] ?? '',
+        'texte officiel gouvernement reglementation recente',
+      ].filter(Boolean).join(' ').slice(0, 200),
+      topic: 'general',
+      label: 'referent-official-broad',
+    }
+  }
+
   const query = [
     subject,
     COMPANY_DOMAINS.has(input.interpretation.domain)
