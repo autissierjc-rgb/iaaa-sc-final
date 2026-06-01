@@ -120,8 +120,19 @@ function isPublicPlaceholder(item: string): boolean {
   return /^(acteurs?|institutions?|contraintes?|preuves?|sources?|signal|fait observable|trace verifiable|une trace verifiable|preuve publique)$/i.test(normalized)
 }
 
+function isPublicSpineNoise(item: string): boolean {
+  const value = item.trim()
+  if (!value) return true
+  if (value.length > 180) return true
+  if (countWords(value) > 18) return true
+  if (/\s\/\s/.test(value)) return true
+  if (/^(?:non [ée]tabli|commencer par|ne pas extrapoler|v[ée]rification des|[ée]valuation des|analyse des co[ûu]ts)/i.test(value)) return true
+  if (/^(?:ce que fait|ce que le site permet|workflow produit|cas d[’']usage visibles?|preuves? ou signaux visibles?|preuves? manquantes?|angles morts critiques)/i.test(value)) return true
+  return false
+}
+
 function publicAnchors(items: string[], fallback: string, max = 4): string {
-  const cleaned = unique(items).filter((item) => !isPublicPlaceholder(item))
+  const cleaned = unique(items).filter((item) => !isPublicPlaceholder(item) && !isPublicSpineNoise(item))
   return (cleaned.length > 0 ? cleaned : [fallback]).slice(0, max).join(', ')
 }
 
