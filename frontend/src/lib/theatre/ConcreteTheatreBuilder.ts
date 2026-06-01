@@ -5,6 +5,7 @@ import type {
   ResourceServiceContract,
   TheatreEvidence,
 } from '../contracts'
+import { sanitizeProbativeEvidenceText } from '../resources/probativeEvidenceSanitizer'
 
 export type ConcreteTheatreBuilderInput = {
   interpretation: InterpretationContract
@@ -74,11 +75,21 @@ function extractNamedAnchors(text: string): string[] {
 }
 
 function evidenceFromResources(resources?: ResourceServiceContract): TheatreEvidence[] {
-  return (resources?.public_sources ?? []).slice(0, 8).map((resource) => ({
-    label: resource.title,
-    level: resource.reliability === 'primary' ? 'established' : 'plausible',
-    source_ids: [resource.id],
-  }))
+  return (resources?.public_sources ?? [])
+    .slice(0, 8)
+    .map((resource) => {
+      const evidence = sanitizeProbativeEvidenceText(
+        resource.excerpt,
+        'preuve publique à vérifier',
+        resource.id,
+      )
+      return {
+        label: evidence.status === 'usable' ? evidence.public_label_fr : 'preuve publique à vérifier',
+        level: resource.reliability === 'primary' ? 'established' : 'plausible',
+        source_ids: [resource.id],
+      } satisfies TheatreEvidence
+    })
+    .filter((item) => item.label !== 'preuve publique à vérifier')
 }
 
 function lineAfterPrefix(value: string, prefix: string): string {

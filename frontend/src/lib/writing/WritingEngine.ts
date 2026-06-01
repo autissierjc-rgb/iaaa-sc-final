@@ -12,7 +12,7 @@ import type {
 import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { cleanModelText, parseModelJSON } from '../ai/json'
 import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
-import { publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
+import { looksLikeProbativeEvidenceNoise, publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 import { buildResourceRegimeSignals } from '../resources/regimeSignals'
 import { buildResonanceTrace } from '../resonance'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
@@ -79,6 +79,7 @@ function unique(items: string[]): string[] {
 function isPublicPlaceholder(item: string): boolean {
   const normalized = normalizeAnchor(item)
   if (/^(?:[a-z0-9-]+\.)+[a-z]{2,}$/i.test(item.trim())) return true
+  if (looksLikeProbativeEvidenceNoise(item)) return true
 
   if ([
     'acteurs directs',

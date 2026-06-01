@@ -6,6 +6,7 @@ export type ProbativeEvidenceRejectionReason =
   | 'url_avalanche'
   | 'image_noise'
   | 'navigation_noise'
+  | 'source_title_noise'
   | 'too_long'
 
 export type ProbativeEvidenceStatus = 'usable' | 'weak' | 'rejected'
@@ -20,6 +21,7 @@ export type ProbativeEvidence = {
 }
 
 const PUBLIC_EVIDENCE_MAX_LENGTH = 220
+const SOURCE_TITLE_NOISE_PATTERN = /\s[-–]\s(?:reuters|politico|associated press|ap news|apnews|bbc|cnn|nyt|new york times|washington post|haaretz|times of israel|bloomberg|financial times|ft\.com|axios|the guardian|le monde|afp|france 24)\b/i
 
 function compact(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
@@ -46,6 +48,18 @@ function hasImageNoise(value: string): boolean {
 
 function hasNavigationNoise(value: string): boolean {
   return /\b(skip to|menu|privacy policy|terms of service|all rights reserved|cookie|javascript)\b/i.test(value)
+}
+
+export function looksLikeSourceTitleNoise(value: string): boolean {
+  return SOURCE_TITLE_NOISE_PATTERN.test(value)
+}
+
+export function looksLikeProbativeEvidenceNoise(value: string): boolean {
+  return hasMarkdownNoise(value) ||
+    countUrls(value) > 1 ||
+    hasImageNoise(value) ||
+    hasNavigationNoise(value) ||
+    looksLikeSourceTitleNoise(value)
 }
 
 function publicSourceLabel(source: ResourceContract): string {
@@ -122,6 +136,17 @@ export function sanitizeProbativeEvidenceText(
       public_label_fr: fallbackLabel,
       status: 'weak',
       reason: 'navigation_noise',
+      can_be_public: true,
+      can_drive_probability: false,
+    }
+  }
+
+  if (looksLikeSourceTitleNoise(raw) && !raw.includes(':')) {
+    return {
+      source_id: sourceId,
+      public_label_fr: fallbackLabel,
+      status: 'weak',
+      reason: 'source_title_noise',
       can_be_public: true,
       can_drive_probability: false,
     }

@@ -273,6 +273,19 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     theatre: theatreForCurrentQuestion(),
     resources: resourcePlanWithSourceTitle(sourceTitle),
   })
+  const evidenceTitle = 'Global bonds take wild ride in May as Iran war shocks market - Reuters'
+  const evidenceTitleResonance = buildResonanceTrace({
+    interpretation: input.interpretation,
+    theatre: {
+      ...theatreForCurrentQuestion(),
+      evidence: [{
+        label: evidenceTitle,
+        level: 'plausible',
+        source_ids: ['source-title-regression'],
+      }],
+    },
+    resources: resourcePlanWithSourceTitle(evidenceTitle),
+  })
   const resonanceIssues: SourceQueryRegressionResult['issues'] = []
   const noSourceWriting = composeDiamondWriting({
     interpretation: input.interpretation,
@@ -314,6 +327,43 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       level: 'error',
       code: 'source_title_used_as_transition_signal',
       message: 'Resonance must not turn a source title into the transition signal or diamond thesis.',
+    })
+  }
+
+  if (
+    includesLoose(evidenceTitleResonance.transition_signal_fr, 'Global bonds') ||
+    includesLoose(evidenceTitleResonance.structural_vulnerability_fr, 'Global bonds') ||
+    includesLoose(evidenceTitleResonance.diamond_thesis_fr, 'Global bonds')
+  ) {
+    resonanceIssues.push({
+      level: 'error',
+      code: 'theatre_evidence_source_title_used_as_spine',
+      message: 'A theatre evidence label that is only a source title must not enter the resonance spine.',
+    })
+  }
+
+  const navigationEvidence = 'Test Your News I.Q. 2026 Elections Election Results Election calendar White House Congress Supreme Court The latest AP-NORC polls Ground Game.'
+  const navigationEvidenceResonance = buildResonanceTrace({
+    interpretation: input.interpretation,
+    theatre: {
+      ...theatreForCurrentQuestion(),
+      evidence: [{
+        label: navigationEvidence,
+        level: 'plausible',
+        source_ids: ['navigation-noise-regression'],
+      }],
+    },
+    resources: baseResourcePlan(),
+  })
+  if (
+    includesLoose(navigationEvidenceResonance.transition_signal_fr, 'Test Your News') ||
+    includesLoose(navigationEvidenceResonance.structural_vulnerability_fr, 'Election calendar') ||
+    includesLoose(navigationEvidenceResonance.diamond_thesis_fr, 'AP-NORC')
+  ) {
+    resonanceIssues.push({
+      level: 'error',
+      code: 'navigation_noise_used_as_spine',
+      message: 'Navigation boilerplate from a source must not enter the resonance spine.',
     })
   }
 

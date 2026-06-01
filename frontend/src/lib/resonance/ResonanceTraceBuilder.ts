@@ -4,6 +4,7 @@ import type {
   ResonanceTraceContract,
   ResourceServiceContract,
 } from '../contracts'
+import { looksLikeProbativeEvidenceNoise } from '../resources/probativeEvidenceSanitizer'
 import { buildResourceRegimeSignals } from '../resources/regimeSignals'
 
 export type ResonanceTraceInput = {
@@ -113,6 +114,7 @@ function publicAnchor(value: string, sourceHosts: string[]): boolean {
   if (!item) return false
   if (domainLike(item)) return false
   if (sourceHosts.some((sourceHost) => normalize(sourceHost) === normalized)) return false
+  if (looksLikeProbativeEvidenceNoise(item)) return false
   if (PUBLIC_CONTROL_WORDS.has(normalized)) return false
   if (PUBLIC_PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(item))) return false
   if (/^(acteurs?|institutions?|sources?|preuves?|trace verifiable|fait observable)$/i.test(normalized)) return false
