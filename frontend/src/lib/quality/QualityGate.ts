@@ -152,6 +152,7 @@ const TARGET_CHOICE_RAW_AUDIENCE_PATTERNS = [
 ]
 
 const PUBLIC_RESOURCE_NOISE_PATTERNS = [
+  /\b(?:Fiche site|Synth[èe]se crawl site)\s[-–]\s[^\s,.!?;:]+/i,
   /!\[[^\]]*]\(https?:\/\//i,
   /\[[^\]]+]\(https?:\/\//i,
   /(?:^|\s)(?:image|img)\s*\d{1,4}\b/i,

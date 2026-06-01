@@ -66,6 +66,8 @@ function extractNamedAnchors(text: string): string[] {
     'Restreint',
     'Situation',
     'Télécharger',
+    'Un',
+    'Une',
     'Unis',
   ])
   return unique(text.match(CAPITALIZED_PATTERN) ?? [])

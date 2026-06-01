@@ -2,6 +2,7 @@ import type {
   ConcreteTheatreContract,
   ExpertisesMetiersContract,
   InterpretationContract,
+  ResourceContract,
   ResourceServiceContract,
   RiskAdviceGuardContract,
   ScoringContract,
@@ -196,6 +197,80 @@ function interpretationForCurrentQuestion(): InterpretationContract {
   }
 }
 
+function interpretationForPatentChoice(): InterpretationContract {
+  return {
+    ...interpretationForCurrentQuestion(),
+    raw_input: 'Une décision stratégique avec plusieurs options pour aerocalme.fr, vendre le brevet ou l’exploiter',
+    domain: 'startup_market',
+    situation_soumise: 'Quelle est la meilleure décision stratégique pour aerocalme.fr : vendre le brevet ou l’exploiter ?',
+    header_domain: 'Entreprise',
+    header_subject: 'décision stratégique brevet aerocalme.fr',
+    angle: 'arbitrage brevet exploitation',
+    user_need: 'comparer les options stratégiques',
+    object_of_analysis: 'la décision de vendre ou exploiter le brevet',
+    expected_answer_shape: 'comparaison structurée des options',
+    signals: ['strategic_choice', 'external_context'],
+  }
+}
+
+function patentChoiceTheatre(): ConcreteTheatreContract {
+  return {
+    domain: 'startup_market',
+    actors: ['Une', 'AéroCalme'],
+    named_actors: ['Une', 'AéroCalme'],
+    institutions: ['institutions concernées'],
+    dates: [],
+    places: [],
+    procedures: [],
+    visible_actions: [],
+    constraints: ['coût d’exploitation', 'protection du brevet', 'accès au marché'],
+    evidence: [{
+      label: 'Liberté d’exploitation d’un brevet : cadre juridique, FTO et rôle',
+      level: 'plausible',
+      source_ids: ['patent-title-regression'],
+    }],
+    unknowns: ['acteurs nommes'],
+    missing_anchors: ['acteurs nommes'],
+    trace: {
+      service: 'SourceQueryRegression',
+      version: 'v1',
+      duration_ms: 0,
+      status: 'ok',
+    },
+  }
+}
+
+function patentChoiceResources(): ResourceServiceContract {
+  const siteBrief: ResourceContract = {
+    id: 'aerocalme-site-brief',
+    title: 'Fiche site - AéroCalme',
+    url: 'https://aerocalme.fr/',
+    source: 'aerocalme.fr',
+    channel: 'company' as const,
+    domain_relevance: ['startup_market'],
+    excerpt: 'AéroCalme présente une innovation dont le modèle reste à arbitrer entre exploitation, licence ou cession.',
+    retrieved_at: '2026-05-29T00:00:00.000Z',
+    reliability: 'primary' as const,
+  }
+  const legalTitle: ResourceContract = {
+    id: 'patent-title-regression',
+    title: 'Liberté d’exploitation d’un brevet : cadre juridique, FTO et rôle',
+    url: 'https://example.com/brevet-fto',
+    source: 'example.com',
+    channel: 'legal' as const,
+    domain_relevance: ['law_justice', 'startup_market'],
+    excerpt: 'La liberté d’exploitation doit être vérifiée avant de choisir entre licence, cession ou exploitation directe.',
+    retrieved_at: '2026-05-29T00:00:00.000Z',
+    reliability: 'secondary' as const,
+  }
+  return {
+    ...baseResourcePlan(),
+    status: 'available',
+    resources: [siteBrief, legalTitle],
+    public_sources: [siteBrief, legalTitle],
+  }
+}
+
 function includesLoose(value: string, term: string): boolean {
   const normalize = (input: string) =>
     input.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -301,6 +376,20 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     scoring: scoringForRegression(),
   })
   const noSourceIssues: SourceQueryRegressionResult['issues'] = []
+  const patentChoiceResonance = buildResonanceTrace({
+    interpretation: interpretationForPatentChoice(),
+    theatre: patentChoiceTheatre(),
+    resources: patentChoiceResources(),
+  })
+  const patentChoicePublicText = [
+    patentChoiceResonance.real_actors.join(' '),
+    patentChoiceResonance.institutions.join(' '),
+    patentChoiceResonance.structural_gap_fr,
+    patentChoiceResonance.transition_signal_fr,
+    patentChoiceResonance.structural_vulnerability_fr,
+    patentChoiceResonance.diamond_thesis_fr,
+  ].join(' ')
+  const patentChoiceIssues: SourceQueryRegressionResult['issues'] = []
 
   if (relevance.some((item) =>
     includesLoose(item.title ?? '', 'Bolivia') ||
@@ -414,6 +503,30 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  if (patentChoiceResonance.real_actors.some((actor) => actor === 'Une' || actor === 'Un')) {
+    patentChoiceIssues.push({
+      level: 'error',
+      code: 'patent_choice_article_used_as_actor',
+      message: 'Patent-choice resonance must not turn the French article "Une" into an actor.',
+    })
+  }
+  for (const forbidden of ['Fiche site', 'Liberté d’exploitation', 'FTO', 'acteurs nommes', 'institutions concernées']) {
+    if (includesLoose(patentChoicePublicText, forbidden)) {
+      patentChoiceIssues.push({
+        level: 'error',
+        code: 'patent_choice_resource_label_used_as_spine',
+        message: `Patent-choice resonance spine leaked a non-public anchor or resource title: ${forbidden}`,
+      })
+    }
+  }
+  if (!includesLoose(patentChoiceResonance.structural_gap_fr, 'valeur potentielle')) {
+    patentChoiceIssues.push({
+      level: 'error',
+      code: 'strategic_choice_missing_domain_gap',
+      message: 'Strategic-choice resonance must fall back to the asset/exploitation structural gap, not a generic missing actor placeholder.',
+    })
+  }
+
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
@@ -444,5 +557,11 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: noSourceWriting.lecture.text_fr,
     subject: noSourceWriting.probability_assessments[0]?.probability_label_fr ?? '',
     issues: noSourceIssues,
+  }, {
+    id: 'patent-choice-resource-labels-do-not-drive-spine',
+    ok: patentChoiceIssues.length === 0,
+    query: patentChoiceResonance.transition_signal_fr,
+    subject: patentChoiceResonance.diamond_thesis_fr,
+    issues: patentChoiceIssues,
   }]
 }

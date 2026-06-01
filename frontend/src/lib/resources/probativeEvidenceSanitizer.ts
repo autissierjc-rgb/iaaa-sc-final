@@ -22,6 +22,7 @@ export type ProbativeEvidence = {
 
 const PUBLIC_EVIDENCE_MAX_LENGTH = 220
 const SOURCE_TITLE_NOISE_PATTERN = /\s[-–]\s(?:reuters|politico|associated press|ap news|apnews|bbc|cnn|nyt|new york times|washington post|haaretz|times of israel|bloomberg|financial times|ft\.com|axios|the guardian|le monde|afp|france 24)\b/i
+const INTERNAL_RESOURCE_LABEL_PATTERN = /^(?:fiche\s+site|synth[eè]se\s+crawl\s+site)\s*[-–]/i
 
 function compact(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
@@ -51,7 +52,7 @@ function hasNavigationNoise(value: string): boolean {
 }
 
 export function looksLikeSourceTitleNoise(value: string): boolean {
-  return SOURCE_TITLE_NOISE_PATTERN.test(value)
+  return SOURCE_TITLE_NOISE_PATTERN.test(value) || INTERNAL_RESOURCE_LABEL_PATTERN.test(value.trim())
 }
 
 export function looksLikeProbativeEvidenceNoise(value: string): boolean {

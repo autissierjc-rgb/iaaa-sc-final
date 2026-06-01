@@ -32,6 +32,13 @@ function words(value: string): string[] {
     .filter((part) => part.length >= 4)
 }
 
+function normalizedWords(value: string): string[] {
+  return normalize(value)
+    .split(/[^a-z0-9]+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length >= 3)
+}
+
 const RELEVANCE_STOPWORDS = new Set([
   'avec',
   'apres',
@@ -81,6 +88,8 @@ const PUBLIC_CONTROL_WORDS = new Set([
   'situation',
   'telecharger',
   'télécharger',
+  'un',
+  'une',
 ])
 
 const PUBLIC_PLACEHOLDER_PATTERNS = [
@@ -90,6 +99,9 @@ const PUBLIC_PLACEHOLDER_PATTERNS = [
   /^acteurs?\s+visibles?$/i,
   /^institutions?\s+concern[ée]es?$/i,
   /^dirigeants?$/i,
+  /^acteurs?\s+nomm[ée]s?$/i,
+  /^preuves?\s+observables?$/i,
+  /^preuve\s+usage$/i,
   /^acteur\s+absent$/i,
   /^contrainte\s+cach[ée]e$/i,
   /^preuve\s+manquante$/i,
@@ -108,12 +120,33 @@ const VERIFICATION_GAP_PATTERNS = [
   /^preuve attendue\s*:/i,
 ]
 
-function publicAnchor(value: string, sourceHosts: string[]): boolean {
+function looksLikeResourceLabel(value: string, sourceLabels: string[]): boolean {
+  const itemWords = normalizedWords(value)
+  if (itemWords.length === 0) return false
+  const item = itemWords.join(' ')
+
+  return sourceLabels.some((label) => {
+    const labelWords = normalizedWords(label)
+    if (labelWords.length === 0) return false
+    const normalizedLabel = labelWords.join(' ')
+
+    if (item === normalizedLabel) return true
+    if (item.length >= 16 && normalizedLabel.startsWith(item)) return true
+    if (normalizedLabel.length >= 16 && item.startsWith(normalizedLabel)) return true
+
+    const overlap = itemWords.filter((word) => labelWords.includes(word)).length
+    const strongOverlap = overlap >= 3 && overlap >= Math.min(itemWords.length, labelWords.length) - 1
+    return strongOverlap && (itemWords.length >= 3 || labelWords.length >= 3)
+  })
+}
+
+function publicAnchor(value: string, sourceHosts: string[], sourceLabels: string[] = []): boolean {
   const item = value.trim()
   const normalized = normalize(item)
   if (!item) return false
   if (domainLike(item)) return false
   if (sourceHosts.some((sourceHost) => normalize(sourceHost) === normalized)) return false
+  if (looksLikeResourceLabel(item, sourceLabels)) return false
   if (looksLikeProbativeEvidenceNoise(item)) return false
   if (PUBLIC_CONTROL_WORDS.has(normalized)) return false
   if (PUBLIC_PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(item))) return false
@@ -121,8 +154,8 @@ function publicAnchor(value: string, sourceHosts: string[]): boolean {
   return true
 }
 
-function structuralGapAnchor(value: string, sourceHosts: string[]): boolean {
-  return publicAnchor(value, sourceHosts) &&
+function structuralGapAnchor(value: string, sourceHosts: string[], sourceLabels: string[]): boolean {
+  return publicAnchor(value, sourceHosts, sourceLabels) &&
     !VERIFICATION_GAP_PATTERNS.some((pattern) => pattern.test(value.trim()))
 }
 
@@ -160,6 +193,10 @@ function defaultStructuralGap(input: ResonanceTraceInput): string {
   const corpus = corpusText(input)
   if (/\b(guerre|frappe|cessez[-\s]?le[-\s]?feu|ceasefire|iran|isra[ëe]l|[ée]tats[-\s]?unis|usa|u\.s\.)\b/i.test(corpus)) {
     return 'le mécanisme qui transforme la frappe, la riposte ou la négociation en seuil officiel'
+  }
+
+  if (/\b(vendre|exploiter|exploitation|licence|licensing|cession|cessionner|monetiser|monétiser|valoriser|partenariat|partenaire|investir|internaliser|externaliser|option|options)\b/i.test(corpus)) {
+    return 'le passage entre valeur potentielle, preuve d’usage et modèle d’exploitation'
   }
 
   if (/\b(startup|march[ée]|cible|client|utilisateur|traction|produit)\b/i.test(corpus)) {
@@ -256,6 +293,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     source.source,
     host(source.url),
   ]))
+  const sourceLabels = unique((input.resources?.public_sources ?? []).map((source) => source.title))
   const sourceSignals = buildResourceRegimeSignals(input.resources, 4)
     .filter((signal) => relevantSourceSignal(signal, corpus))
     .map((signal) => ({
@@ -271,27 +309,27 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     ...(input.theatre.named_actors ?? []),
     ...input.theatre.actors,
   ])
-    .filter((actor) => publicAnchor(actor, sourceHosts))
+    .filter((actor) => publicAnchor(actor, sourceHosts, sourceLabels))
     .slice(0, 8)
   const institutions = unique([
     ...lexicalInstitutionsFromCorpus(corpus),
     ...input.theatre.institutions,
   ])
-    .filter((institution) => publicAnchor(institution, sourceHosts))
+    .filter((institution) => publicAnchor(institution, sourceHosts, sourceLabels))
     .filter((institution) => institutionSupportedByQuestion(institution, corpus))
     .slice(0, 8)
   const structuralGap = firstUseful(
     unique([
       ...input.theatre.missing_anchors,
       ...input.theatre.unknowns,
-    ]).filter((item) => structuralGapAnchor(item, sourceHosts)),
+    ]).filter((item) => structuralGapAnchor(item, sourceHosts, sourceLabels)),
     defaultStructuralGap(input),
   )
   const transitionSignal = firstUseful(
     unique([
       ...input.theatre.evidence.map((item) => item.label),
       ...input.theatre.visible_actions,
-    ]).filter((item) => publicAnchor(item, sourceHosts)),
+    ]).filter((item) => publicAnchor(item, sourceHosts, sourceLabels)),
     'un acte, une preuve ou un seuil observable qui modifie les marges d’action',
   )
   const structuralContradiction = buildStructuralContradiction(realActors, institutions)
@@ -301,7 +339,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     ...sourceHosts.filter((sourceHost) =>
       input.theatre.actors.includes(sourceHost) || input.theatre.institutions.includes(sourceHost),
     ).map((sourceHost) => `source_host_as_actor:${sourceHost}`),
-    ...input.theatre.actors.filter((actor) => !publicAnchor(actor, sourceHosts)).map((actor) => `invalid_actor:${actor}`),
+    ...input.theatre.actors.filter((actor) => !publicAnchor(actor, sourceHosts, sourceLabels)).map((actor) => `invalid_actor:${actor}`),
   ])
 
   return {
