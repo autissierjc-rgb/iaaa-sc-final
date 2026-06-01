@@ -159,6 +159,15 @@ function structuralGapAnchor(value: string, sourceHosts: string[], sourceLabels:
     !VERIFICATION_GAP_PATTERNS.some((pattern) => pattern.test(value.trim()))
 }
 
+function transitionSignalAnchor(value: string, sourceHosts: string[], sourceLabels: string[]): boolean {
+  const item = value.trim()
+  if (!publicAnchor(item, sourceHosts, sourceLabels)) return false
+  if (item.length > 160) return false
+  if (/^(?:ce que fait|ce que le site permet|workflow produit|cas d[’']usage visibles?|preuves? ou signaux visibles?)\b/i.test(item)) return false
+
+  return /\b(?:acte|arbitrage|choix|contrat|d[ée]cision|d[ée]claration|demande|document|int[ée]gration|paiement|preuve|proc[ée]dure|refus|r[èe]gle|r[ée]tention|seuil|signal|usage|v[ée]rification)\b/i.test(item)
+}
+
 function firstUseful(items: string[], fallback: string): string {
   return items.find((item) => item.trim().length > 0) ?? fallback
 }
@@ -329,7 +338,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     unique([
       ...input.theatre.evidence.map((item) => item.label),
       ...input.theatre.visible_actions,
-    ]).filter((item) => publicAnchor(item, sourceHosts, sourceLabels)),
+    ]).filter((item) => transitionSignalAnchor(item, sourceHosts, sourceLabels)),
     'un acte, une preuve ou un seuil observable qui modifie les marges d’action',
   )
   const structuralContradiction = buildStructuralContradiction(realActors, institutions)

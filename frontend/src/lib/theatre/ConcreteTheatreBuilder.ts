@@ -79,6 +79,9 @@ function extractNamedAnchors(text: string): string[] {
 
 function evidenceFromResources(resources?: ResourceServiceContract): TheatreEvidence[] {
   return (resources?.public_sources ?? [])
+    .filter((resource) =>
+      !(resource.title.toLowerCase().startsWith('fiche site') && isCanonicalSiteUnderstandingResource(resource))
+    )
     .slice(0, 8)
     .map((resource) => {
       const evidence = sanitizeProbativeEvidenceText(
