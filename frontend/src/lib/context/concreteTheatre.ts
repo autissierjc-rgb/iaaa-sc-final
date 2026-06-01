@@ -306,7 +306,7 @@ export function buildConcreteTheatre({
   ], 18)
 
   const missing = unique([
-    actors.length === 0 ? 'acteurs nommés' : '',
+    actors.length === 0 ? 'acteurs réellement impliqués' : '',
     mechanisms.length === 0 ? 'mécanismes concrets' : '',
     thresholds.length === 0 ? 'seuils observables' : '',
     domain !== 'personal' && institutions.length === 0 ? 'institutions ou règles' : '',
@@ -329,7 +329,7 @@ export function buildConcreteTheatre({
     evidence_to_watch: evidence,
     missing_anchors: missing,
     guidance_fr:
-      'Avant de conclure, ancrer la lecture dans ce théâtre réel : acteurs nommés, institutions ou liens, procédures ou gestes, précédents, seuils et preuves à surveiller. Les abstractions ne sont acceptables que si elles sont immédiatement reliées à ces éléments.',
+      'Avant de conclure, ancrer la lecture dans ce théâtre réel : acteurs réellement impliqués, institutions ou liens, procédures ou gestes, précédents, seuils et preuves à surveiller. Les abstractions ne sont acceptables que si elles sont immédiatement reliées à ces éléments.',
     guidance_en:
       'Before concluding, anchor the reading in this real theatre: named actors, institutions or bonds, procedures or gestures, precedents, thresholds, and evidence to watch. Abstractions are acceptable only when immediately tied to those elements.',
   }

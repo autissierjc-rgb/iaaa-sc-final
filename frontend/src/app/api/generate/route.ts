@@ -40,6 +40,11 @@ import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/the
 import { composeDiamondWritingWithMode } from '@/lib/writing'
 import { runContractQualityGate, runQualityGate } from '@/lib/quality'
 import { buildResonanceTrace } from '@/lib/resonance'
+import {
+  interpretSCMaterial,
+  resourceItemsUsableForStructure,
+  resourcePlanForDiamond,
+} from '@/lib/material/scMaterialInterpreter'
 import { applyEntityExplanationsToSituationCard } from '@/lib/text/entityExplanations'
 import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
@@ -1507,7 +1512,7 @@ function contextualVulnerabilityFallbackFr(intentContext?: IntentContext): strin
   if (domain === 'personal') {
     return 'Le point fragile est l’écart entre ce qui est ressenti, ce qui est dit et ce que les actes permettent réellement de vérifier.'
   }
-  return 'Le point fragile est le passage entre les acteurs nommés, la contrainte décisive et le signal observable qui peut changer la lecture.'
+  return 'Le point fragile est le passage entre les acteurs réellement impliqués, la contrainte décisive et le signal vérifiable qui peut changer la lecture.'
 }
 
 function contextualVulnerabilityFallbackEn(intentContext?: IntentContext): string {
@@ -4684,7 +4689,7 @@ export async function POST(req: NextRequest) {
       situation: exploratoryWithoutMaterial ? generationAnalysisText : urlAugmentedAnalysisText,
       resources: rawFetchedResources,
       intentContext: generationIntentContext,
-      allowModel: !isPublicFast,
+      allowModel: !isPublicFast || hasUrlInFlow,
     })
     const shouldReconcileTargetChoicePlan =
       !exploratoryWithoutMaterial &&
@@ -4850,7 +4855,31 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const rawArbre = await analyzeWithArbreACames(generationAnalysisText, resources, generationIntentContext)
+    const scMaterialUnderstanding = interpretSCMaterial({
+      interpretation: generationInterpretation,
+      resources: canonicalResourcePlan,
+      userMaterialRole,
+    })
+    const diamondResourcePlan = resourcePlanForDiamond(canonicalResourcePlan, scMaterialUnderstanding)
+    const resourcesForStructure = resourceItemsUsableForStructure(resources, scMaterialUnderstanding)
+    recordGenerationTrace({
+      status: scMaterialUnderstanding.trace.status === 'partial' ? 'partial' : 'ok',
+      gate: 'GENERATE',
+      route: '/api/generate',
+      canonicalLayer: 'resources',
+      pipelineStep: 'SCMaterialInterpreter',
+      diagnostic: scMaterialUnderstanding.trace.notes?.join(' | ').slice(0, 240) ?? scMaterialUnderstanding.site_understanding_status,
+      durationMs: scMaterialUnderstanding.trace.duration_ms ?? 0,
+      inputChars: analysisText.length,
+      domain: generationInterpretation.domain,
+      intentType: generationIntentContext.interpreted_request?.intent_type,
+      questionType: generationIntentContext.interpreted_request?.question_type,
+      resourcesStatus: diamondResourcePlan.status,
+      resourcesCount: diamondResourcePlan.resources.length,
+      modelPath: 'local',
+    })
+
+    const rawArbre = await analyzeWithArbreACames(generationAnalysisText, resourcesForStructure, generationIntentContext)
     const effectiveCoverageWithReadiness = {
       ...effectiveCoverage,
       readiness_gate: readinessGate,
@@ -4861,7 +4890,7 @@ export async function POST(req: NextRequest) {
     const scopeContext = detectScopeContext(generationAnalysisText, arbre)
     const canonicalTheatre = buildCanonicalConcreteTheatre({
       interpretation: generationInterpretation,
-      resources: canonicalResourcePlan,
+      resources: diamondResourcePlan,
       expertises: expertisesMetiers,
     })
     const inquiry = buildBlindSpotInquiry({
@@ -4881,8 +4910,8 @@ export async function POST(req: NextRequest) {
       domain: canonicalInterpretation.domain,
       intentType: intentContext.interpreted_request?.intent_type,
       questionType: intentContext.interpreted_request?.question_type,
-      resourcesStatus: canonicalResourcePlan.status,
-      resourcesCount: canonicalResourcePlan.resources.length,
+      resourcesStatus: diamondResourcePlan.status,
+      resourcesCount: diamondResourcePlan.resources.length,
     })
     recordGenerationTrace({
       status: inquiry.trace.status === 'partial' ? 'partial' : 'ok',
@@ -4896,8 +4925,8 @@ export async function POST(req: NextRequest) {
       domain: canonicalInterpretation.domain,
       intentType: intentContext.interpreted_request?.intent_type,
       questionType: intentContext.interpreted_request?.question_type,
-      resourcesStatus: canonicalResourcePlan.status,
-      resourcesCount: canonicalResourcePlan.resources.length,
+      resourcesStatus: diamondResourcePlan.status,
+      resourcesCount: diamondResourcePlan.resources.length,
     })
     const effectiveCoverageForGeneration = {
       ...effectiveCoverageWithReadiness,
@@ -4906,14 +4935,15 @@ export async function POST(req: NextRequest) {
       inquiry,
       human_collective_patterns: humanCollectivePatterns,
       expertises_metiers: expertisesMetiers,
-      resource_service: canonicalResourcePlan,
+      resource_service: diamondResourcePlan,
+      sc_material_understanding: scMaterialUnderstanding,
     }
     const patternContext = detectPatterns({ situation: generationAnalysisText, arbre })
     const metierProfile = undefined
     const prebuiltSiteCard = siteAnalysisFallbackCard({
       situation: generationDisplayText,
       arbre,
-      resources,
+      resources: resourcesForStructure,
       branches,
       intentContext: generationIntentContext,
     })
@@ -4934,14 +4964,14 @@ export async function POST(req: NextRequest) {
               arbre,
               branches,
               intentContext: generationIntentContext,
-              resources,
+              resources: resourcesForStructure,
             })
-          : buildFallbackCard(generationDisplayText, arbre, resources, branches, generationIntentContext)),
+          : buildFallbackCard(generationDisplayText, arbre, resourcesForStructure, branches, generationIntentContext)),
         generation_status: readinessGate.status === 'generate_prudently' ? 'partial' : 'ok',
       }
     } else {
       try {
-        baseSc = await generateFastCard(generationDisplayText, branches, arbre, resources, generationIntentContext, concreteTheatre) as SituationCard
+        baseSc = await generateFastCard(generationDisplayText, branches, arbre, resourcesForStructure, generationIntentContext, concreteTheatre) as SituationCard
       } catch (error) {
         console.warn('model card generation unavailable, using local fallback:', error)
         const localFallback = generationIntentContext.interpreted_request?.question_type === 'causal_attribution'
@@ -4950,9 +4980,9 @@ export async function POST(req: NextRequest) {
               arbre,
               branches,
               intentContext: generationIntentContext,
-              resources,
+              resources: resourcesForStructure,
             })
-          : buildFallbackCard(generationDisplayText, arbre, resources, branches, generationIntentContext)
+          : buildFallbackCard(generationDisplayText, arbre, resourcesForStructure, branches, generationIntentContext)
         const fallbackSc: SituationCard = sanitizeSituationCardPublicText(enforceHeaderContract(
           applyEntityExplanationsToSituationCard({
             ...localFallback,
@@ -4965,7 +4995,7 @@ export async function POST(req: NextRequest) {
             metier_profile: metierProfile,
             arbre_a_cames: arbre,
             powers_context: arbre.powers_in_presence,
-            resources,
+            resources: resourcesForStructure,
             resources_status: resourcesStatus,
             generation_status: 'partial',
             generation_error_internal: error instanceof Error ? error.message : String(error),
@@ -4987,7 +5017,7 @@ export async function POST(req: NextRequest) {
             intentType: intentContext.interpreted_request?.intent_type,
             questionType: intentContext.interpreted_request?.question_type,
             resourcesStatus,
-            resourcesCount: resources.length,
+            resourcesCount: resourcesForStructure.length,
             modelPath: 'fallback',
             errorKind: error instanceof Error ? error.name : 'UnknownError',
           })
@@ -5014,7 +5044,7 @@ export async function POST(req: NextRequest) {
           intentType: intentContext.interpreted_request?.intent_type,
           questionType: intentContext.interpreted_request?.question_type,
           resourcesStatus,
-          resourcesCount: resources.length,
+          resourcesCount: resourcesForStructure.length,
           modelPath: 'fallback',
           errorKind: error instanceof Error ? error.name : 'UnknownError',
         })
@@ -5031,12 +5061,12 @@ export async function POST(req: NextRequest) {
       metier_profile: metierProfile,
       resources_status: resourcesStatus,
     }
-    baseSc = completeSituationCard(baseSc, generationDisplayText, arbre, resources, branches)
+    baseSc = completeSituationCard(baseSc, generationDisplayText, arbre, resourcesForStructure, branches)
     const canonicalScoringForWriting = scoringContractFromCard(baseSc)
     const resonanceTrace = buildResonanceTrace({
       interpretation: generationInterpretation,
       theatre: canonicalTheatre,
-      resources: canonicalResourcePlan,
+      resources: diamondResourcePlan,
     })
     let writingContract = canonicalScoringForWriting
       ? await composeDiamondWritingWithMode(
@@ -5046,7 +5076,7 @@ export async function POST(req: NextRequest) {
             expertises_metiers: expertisesMetiers,
             theatre: canonicalTheatre,
             scoring: canonicalScoringForWriting,
-            resources: canonicalResourcePlan,
+            resources: diamondResourcePlan,
             patterns: humanCollectivePatterns,
             resonance: resonanceTrace,
           },
@@ -5071,7 +5101,7 @@ export async function POST(req: NextRequest) {
           canonicalize_with_model: false,
           fetch_fast_resources: false,
           fast_resource_timeout_ms: 0,
-          supplied_resources: canonicalResourcePlan.resources,
+          supplied_resources: diamondResourcePlan.resources,
         })
         const diamondWriter = await runLLMDiamondWriter({
           dossier: diamondDossier.dossier,
@@ -5100,8 +5130,8 @@ export async function POST(req: NextRequest) {
           domain: generationInterpretation.domain,
           intentType: generationIntentContext.interpreted_request?.intent_type,
           questionType: generationIntentContext.interpreted_request?.question_type,
-          resourcesStatus: canonicalResourcePlan.status,
-          resourcesCount: canonicalResourcePlan.resources.length,
+          resourcesStatus: diamondResourcePlan.status,
+          resourcesCount: diamondResourcePlan.resources.length,
           modelPath: 'openai',
         })
         if (diamondWriter.writing && diamondWriterClean && !resourceSignalsUnderused) {
@@ -5132,8 +5162,8 @@ export async function POST(req: NextRequest) {
             domain: generationInterpretation.domain,
             intentType: generationIntentContext.interpreted_request?.intent_type,
             questionType: generationIntentContext.interpreted_request?.question_type,
-            resourcesStatus: canonicalResourcePlan.status,
-            resourcesCount: canonicalResourcePlan.resources.length,
+            resourcesStatus: diamondResourcePlan.status,
+            resourcesCount: diamondResourcePlan.resources.length,
             modelPath: 'local',
           })
         }
@@ -5155,8 +5185,8 @@ export async function POST(req: NextRequest) {
           domain: generationInterpretation.domain,
           intentType: generationIntentContext.interpreted_request?.intent_type,
           questionType: generationIntentContext.interpreted_request?.question_type,
-          resourcesStatus: canonicalResourcePlan.status,
-          resourcesCount: canonicalResourcePlan.resources.length,
+          resourcesStatus: diamondResourcePlan.status,
+          resourcesCount: diamondResourcePlan.resources.length,
           modelPath: 'fallback',
           errorKind: error instanceof Error ? error.name : 'UnknownError',
         })
@@ -5175,8 +5205,8 @@ export async function POST(req: NextRequest) {
         domain: canonicalInterpretation.domain,
         intentType: intentContext.interpreted_request?.intent_type,
         questionType: intentContext.interpreted_request?.question_type,
-        resourcesStatus: canonicalResourcePlan.status,
-        resourcesCount: canonicalResourcePlan.resources.length,
+        resourcesStatus: diamondResourcePlan.status,
+        resourcesCount: diamondResourcePlan.resources.length,
         modelPath: 'local',
       })
     }
@@ -5195,7 +5225,7 @@ export async function POST(req: NextRequest) {
           theatre: canonicalTheatre,
           scoring: canonicalScoringForWriting,
           writing: writingContract,
-          resources: canonicalResourcePlan,
+          resources: diamondResourcePlan,
           resonance: resonanceTrace,
         })
       : null
@@ -5226,8 +5256,8 @@ export async function POST(req: NextRequest) {
         domain: canonicalInterpretation.domain,
         intentType: intentContext.interpreted_request?.intent_type,
         questionType: intentContext.interpreted_request?.question_type,
-        resourcesStatus: canonicalResourcePlan.status,
-        resourcesCount: canonicalResourcePlan.resources.length,
+        resourcesStatus: diamondResourcePlan.status,
+        resourcesCount: diamondResourcePlan.resources.length,
         modelPath: 'local',
       })
     }
@@ -5243,7 +5273,7 @@ export async function POST(req: NextRequest) {
           raw_input: text,
           interpretation: generationInterpretation,
           dialogue: canonicalDialogueGate,
-          resources: canonicalResourcePlan,
+          resources: diamondResourcePlan,
           quality: canonicalQuality,
           latency_ms: Date.now() - requestStartedAt,
           tension_family: expertisesMetiers.domain_playbook.id,
@@ -5262,8 +5292,8 @@ export async function POST(req: NextRequest) {
         domain: canonicalInterpretation.domain,
         intentType: intentContext.interpreted_request?.intent_type,
         questionType: intentContext.interpreted_request?.question_type,
-        resourcesStatus: canonicalResourcePlan.status,
-        resourcesCount: canonicalResourcePlan.resources.length,
+        resourcesStatus: diamondResourcePlan.status,
+        resourcesCount: diamondResourcePlan.resources.length,
         modelPath: 'local',
       })
     }
@@ -5299,10 +5329,10 @@ export async function POST(req: NextRequest) {
           lecture: writingContract?.lecture ?? baseSc.lecture_systeme_fr ?? baseSc.insight_fr,
           approfondir: writingContract?.approfondir ?? baseSc.lecture_systeme_fr ?? baseSc.insight_fr,
         },
-        resources: canonicalResourcePlan,
+        resources: diamondResourcePlan,
         quality: canonicalQuality,
       },
-      source_count: canonicalResourcePlan.public_sources.length,
+      source_count: diamondResourcePlan.public_sources.length,
     } as const
     const sharePlan = planShare({
       snapshot: pendingShareSnapshot,
@@ -5354,8 +5384,8 @@ export async function POST(req: NextRequest) {
       domain: canonicalInterpretation.domain,
       intentType: intentContext.interpreted_request?.intent_type,
       questionType: intentContext.interpreted_request?.question_type,
-      resourcesStatus: canonicalResourcePlan.status,
-      resourcesCount: canonicalResourcePlan.resources.length,
+      resourcesStatus: diamondResourcePlan.status,
+      resourcesCount: diamondResourcePlan.resources.length,
       modelPath: 'local',
     })
     recordGenerationTrace({
@@ -5370,8 +5400,8 @@ export async function POST(req: NextRequest) {
       domain: canonicalInterpretation.domain,
       intentType: intentContext.interpreted_request?.intent_type,
       questionType: intentContext.interpreted_request?.question_type,
-      resourcesStatus: canonicalResourcePlan.status,
-      resourcesCount: canonicalResourcePlan.resources.length,
+      resourcesStatus: diamondResourcePlan.status,
+      resourcesCount: diamondResourcePlan.resources.length,
       modelPath: 'local',
     })
     recordGenerationTrace({
@@ -5403,8 +5433,8 @@ export async function POST(req: NextRequest) {
         domain: canonicalInterpretation.domain,
         intentType: intentContext.interpreted_request?.intent_type,
         questionType: intentContext.interpreted_request?.question_type,
-        resourcesStatus: canonicalResourcePlan.status,
-        resourcesCount: canonicalResourcePlan.resources.length,
+        resourcesStatus: diamondResourcePlan.status,
+        resourcesCount: diamondResourcePlan.resources.length,
         modelPath: 'local',
       })
     }
@@ -5419,6 +5449,7 @@ export async function POST(req: NextRequest) {
         role: userMaterialRole,
         policy: userMaterialPolicy,
       },
+      sc_material_understanding: scMaterialUnderstanding,
       writing_contract: writingContract,
       quality: {
         status: qualityStatus,
@@ -5447,7 +5478,7 @@ export async function POST(req: NextRequest) {
           arbre,
           branches,
           intentContext: generationIntentContext,
-          resources,
+          resources: resourcesForStructure,
         }),
         coverage_check: effectiveCoverageForGeneration,
         intent_context: generationIntentContext,
@@ -5488,7 +5519,7 @@ export async function POST(req: NextRequest) {
           situation: generationAnalysisText,
           arbre,
           sc: baseSc,
-          resources,
+          resources: resourcesForStructure,
           patternContext,
           metierProfile,
           intentContext: generationIntentContext,
@@ -5498,7 +5529,7 @@ export async function POST(req: NextRequest) {
     const assembledSc: SituationCard = {
       ...baseSc,
       ...lecture,
-      resources,
+      resources: resourcesForStructure,
       arbre_a_cames: arbre,
       powers_context: arbre.powers_in_presence,
       coverage_check: effectiveCoverageForGeneration,
@@ -5522,10 +5553,10 @@ export async function POST(req: NextRequest) {
                 arbre,
                 branches,
                 intentContext: generationIntentContext,
-                resources,
+                resources: resourcesForStructure,
               }),
             ...lecture,
-            resources,
+            resources: resourcesForStructure,
             arbre_a_cames: arbre,
             powers_context: arbre.powers_in_presence,
             coverage_check: effectiveCoverageForGeneration,

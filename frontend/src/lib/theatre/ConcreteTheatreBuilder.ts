@@ -5,6 +5,7 @@ import type {
   ResourceServiceContract,
   TheatreEvidence,
 } from '../contracts'
+import { isCanonicalSiteUnderstandingResource } from '../material/scMaterialInterpreter'
 import { sanitizeProbativeEvidenceText } from '../resources/probativeEvidenceSanitizer'
 
 export type ConcreteTheatreBuilderInput = {
@@ -112,7 +113,10 @@ function resourceHost(url: string): string {
 
 function resourceTheatreAnchors(resources?: ResourceServiceContract) {
   const publicSources = resources?.public_sources ?? []
-  const siteBriefs = publicSources.filter((resource) => resource.title.toLowerCase().startsWith('fiche site'))
+  const siteBriefs = publicSources.filter((resource) =>
+    resource.title.toLowerCase().startsWith('fiche site') &&
+    isCanonicalSiteUnderstandingResource(resource)
+  )
   const siteNames = unique(siteBriefs.map((resource) =>
     resource.title.replace(/^Fiche site\s*-\s*/i, '').trim()
   ))
@@ -151,9 +155,9 @@ function resourceTheatreAnchors(resources?: ResourceServiceContract) {
 
 function expectedMissingAnchors(input: ConcreteTheatreBuilderInput, present: string[]): string[] {
   const expected = DOMAIN_EXPECTED_ANCHORS[input.interpretation.domain] ?? [
-    'acteurs nommes',
+    'acteurs réellement impliqués',
     'contraintes',
-    'preuves observables',
+    'preuves vérifiables',
   ]
   const text = present.join(' ').toLowerCase()
   return expected.filter((anchor) => !text.includes(anchor.toLowerCase()))

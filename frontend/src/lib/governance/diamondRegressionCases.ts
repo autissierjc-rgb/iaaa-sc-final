@@ -148,6 +148,72 @@ export const DIAMOND_REGRESSION_CASES: DiamondRegressionCase[] = [
     },
   },
   {
+    id: 'aerocalme-patent-sell-or-exploit',
+    domain: 'startup_vc',
+    input: 'Une décision stratégique avec plusieurs options pour aerocalme.fr, vendre le brevet ou l’exploiter',
+    expectations: {
+      headerDomain: 'Entreprise',
+      forbiddenTerms: [
+        'Fiche site',
+        'fiche heuristique',
+        'Liberté d’exploitation d’un brevet',
+        'acteurs nommes',
+        'Une rendent',
+        'institutions concernées peuvent lui donner',
+      ],
+      requiredTerms: ['aerocalme.fr', 'vendre', 'exploiter'],
+      maxModerateBranches: 3,
+      maxDominantBranches: 2,
+      visibleAxisVI: 'Incertitudes',
+      notes:
+        'La carte doit traiter l’arbitrage vendre/exploiter comme décision stratégique. Une ressource juridique ou une fiche site peut informer, mais ne doit jamais devenir la colonne diamant.',
+    },
+  },
+  {
+    id: 'voltaiculture-products-to-prioritize',
+    domain: 'startup_vc',
+    input: 'Une décision stratégique avec plusieurs options, pour voltaiculture.fr quels sont les produits a prioriser',
+    expectations: {
+      headerDomain: 'Entreprise',
+      forbiddenTerms: [
+        'Compréhension ChatGPT du site : indisponible',
+        'fiche heuristique',
+        'Fiche site',
+        'Hangar peuvent absorber',
+        'photovolta&iuml;ques',
+        'Gr&acirc;ce',
+        'Règle d’analyse',
+      ],
+      requiredTerms: ['voltaiculture.fr', 'produits', 'prioriser'],
+      maxModerateBranches: 3,
+      maxDominantBranches: 2,
+      visibleAxisVI: 'Incertitudes',
+      notes:
+        'La carte doit laisser le référent comprendre la question et le site avant structuration. Si la compréhension site échoue, la matière heuristique reste hors colonne diamant.',
+    },
+  },
+  {
+    id: 'strategic-options-no-url',
+    domain: 'governance',
+    input: 'Décision stratégique avec plusieurs options : faut-il internaliser, externaliser ou créer un partenariat ?',
+    expectations: {
+      headerDomain: 'Gouvernance',
+      forbiddenTerms: [
+        'Donnez-moi l’URL',
+        'site officiel',
+        'Fiche site',
+        'contenu utile',
+        'Générer une carte exploratoire',
+      ],
+      requiredTerms: ['internaliser', 'externaliser', 'partenariat'],
+      maxModerateBranches: 3,
+      maxDominantBranches: 2,
+      visibleAxisVI: 'Incertitudes',
+      notes:
+        'Quand les options sont déjà nommées, SC doit structurer l’arbitrage sans demander une source ou une URL.',
+    },
+  },
+  {
     id: 'team-reorganization-no-site-fallback',
     domain: 'management',
     input: "Un conflit d'équipe autour d'une réorganisation dans ma société",
