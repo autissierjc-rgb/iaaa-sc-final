@@ -60,7 +60,7 @@ export const RESOURCE_POLICY_BENCHMARK_CASES: ResourcePolicyBenchmarkCase[] = [
   {
     id: 'site-plus-official-regulation',
     label: 'Site + dispositions gouvernementales',
-    input: 'Une décision stratégique avec plusieurs options pour voltaiculture.fr quels sont les services les plus adaptes aux dernieres dispositions gouvernementales',
+    input: 'Une décision stratégique avec plusieurs options pour agrivoltaisme-demo.fr quels sont les services les plus adaptes aux dernieres dispositions gouvernementales',
     expected_policy: 'url_extract_required',
     expected_needs_web: true,
   },

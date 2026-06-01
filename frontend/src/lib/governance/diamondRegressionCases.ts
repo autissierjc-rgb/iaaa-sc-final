@@ -170,9 +170,9 @@ export const DIAMOND_REGRESSION_CASES: DiamondRegressionCase[] = [
     },
   },
   {
-    id: 'voltaiculture-products-to-prioritize',
+    id: 'site-products-to-prioritize',
     domain: 'startup_vc',
-    input: 'Une décision stratégique avec plusieurs options, pour voltaiculture.fr quels sont les produits a prioriser',
+    input: 'Une décision stratégique avec plusieurs options, pour agrivoltaisme-demo.fr quels sont les produits a prioriser',
     expectations: {
       headerDomain: 'Entreprise',
       forbiddenTerms: [
@@ -184,7 +184,7 @@ export const DIAMOND_REGRESSION_CASES: DiamondRegressionCase[] = [
         'Gr&acirc;ce',
         'Règle d’analyse',
       ],
-      requiredTerms: ['voltaiculture.fr', 'produits', 'prioriser'],
+      requiredTerms: ['agrivoltaisme-demo.fr', 'produits', 'prioriser'],
       maxModerateBranches: 3,
       maxDominantBranches: 2,
       visibleAxisVI: 'Incertitudes',

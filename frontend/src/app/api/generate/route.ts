@@ -1148,6 +1148,7 @@ function firstPublicFrenchText(values: unknown[], situation: string, fallback: s
 
 type CanonicalWritingFamily =
   | 'target_choice'
+  | 'strategic_options'
   | 'organization_change'
   | 'relationship_clarification'
   | 'experience_explanation'
@@ -1164,8 +1165,19 @@ function canonicalWritingFamilyFromIntentContext(intentContext: IntentContext | 
   const asksTargetChoice =
     /\b(?:cible|segment|public|audience|utilisateurs?|clients?|client[eè]le)\b/i.test(text) &&
     /\b(?:choisir|viser|prioriser|prioritaire|premiers?|premi[eè]re|options?|strat[eé]gique|lancement)\b/i.test(text)
+  const asksStrategicOptions =
+    (
+      interpreted?.intent_type === 'decide' ||
+      interpreted?.intent_type === 'compare' ||
+      interpreted?.question_type === 'decision' ||
+      interpreted?.question_type === 'comparison' ||
+      intentContext?.decision_type === 'choose_action' ||
+      /\b(?:d[eé]cision|arbitrage|choisir|prioriser|options?|sc[eé]narios?|strat[eé]gique|vendre|exploiter)\b/i.test(text)
+    ) &&
+    /\b(?:option|options|choix|arbitrage|prioriser|vendre|exploiter|produits?|services?|offres?)\b/i.test(text)
 
   if (frame === 'startup_target_choice' || asksTargetChoice) return 'target_choice'
+  if (asksStrategicOptions) return 'strategic_options'
   if (frame === 'personal_relationship' || domain === 'personal') return 'relationship_clarification'
   if (frame === 'experience_explanation') return 'experience_explanation'
   if (domain === 'management' || decisionType === 'organization_change') return 'organization_change'
@@ -1202,7 +1214,7 @@ function isStrategicDecisionWithOptions(
   situation: string,
   writingFamily: CanonicalWritingFamily,
 ): boolean {
-  if (writingFamily === 'target_choice') return true
+  if (writingFamily === 'target_choice' || writingFamily === 'strategic_options') return true
   const interpreted = intentContext?.interpreted_request
   const text = [
     situation,
@@ -1230,6 +1242,20 @@ function rankedStrategicOptions(options: string[]): string[] {
   const secondary = strategicOptionByPattern(uniqueOptions.filter((option) => option !== priority), [/individuel/i, /\bCLARITY\b/i, /particulier/i], uniqueOptions.find((option) => option !== priority) ?? 'option secondaire')
   const deferred = strategicOptionByPattern(uniqueOptions.filter((option) => option !== priority && option !== secondary), [/organisation/i, /governance/i, /institution/i, /gouvernance/i], uniqueOptions.find((option) => option !== priority && option !== secondary) ?? 'option à différer')
   return uniqueCleanList([priority, secondary, deferred])
+}
+
+function strategicOptionsFromSituation(situation: string): string[] {
+  const normalized = situation.trim()
+  const sellExploit = /\b(vendre|cession|c[ée]der)\b/i.test(normalized) && /\b(exploiter|exploitation|licence|licensing)\b/i.test(normalized)
+  if (sellExploit) return ['vendre ou céder l’actif', 'l’exploiter directement', 'chercher une licence ou un partenariat']
+
+  const publicFrame = /\b(gouvernement|gouvernemental|public|administration|directions?|r[ée]glement|dispositions?|normes?|subventions?)\b/i.test(normalized)
+  if (publicFrame) return ['aligner l’offre sur le cadre public', 'tester un pilote avec décideur identifié', 'différer les services non vérifiés par le terrain']
+
+  const productPriority = /\b(produits?|services?|offres?)\b/i.test(normalized) && /\b(prioriser|prioritaire|choisir|options?)\b/i.test(normalized)
+  if (productPriority) return ['prioriser l’offre la plus testable', 'adapter l’offre au segment le plus contraint', 'différer les offres sans preuve d’usage']
+
+  return []
 }
 
 function strategicMovementsFr(options: string[], keySignal: string): string[] {
@@ -2818,15 +2844,18 @@ function completeSituationCard(
   const writingFamily = canonicalWritingFamilyFromIntentContext(sc.intent_context, situation)
   const isTargetChoice =
     writingFamily === 'target_choice'
+  const isStrategicOptions =
+    writingFamily === 'strategic_options'
   const isStrategicDecision = isStrategicDecisionWithOptions(sc.intent_context, situation, writingFamily) && !isPersonalRelationship
   const targetSegments = isTargetChoice ? targetSegmentsFromResources(resources) : []
   const targetFamilyOptions = isTargetChoice ? targetFamilyOptionsFromResources(resources) : []
   const targetDisplayOptions = targetFamilyOptions.length >= 2 ? targetFamilyOptions : targetSegments
   const targetSegmentsLabel = targetSegmentsPhrase(targetDisplayOptions)
+  const strategicOptionLabels = isStrategicOptions ? strategicOptionsFromSituation(situation) : []
   const radar = sc.radar && typeof sc.radar === 'object'
     ? sc.radar
     : { impact: 55, urgency: 50, uncertainty: 60, reversibility: 45 }
-  const understands = isUnderstandingRequest(sc) && !isPersonalRelationship && !isManagementContext && writingFamily !== 'target_choice'
+  const understands = isUnderstandingRequest(sc) && !isPersonalRelationship && !isManagementContext && writingFamily !== 'target_choice' && writingFamily !== 'strategic_options'
   const object = interpretedObject(sc)
   const tension = interpretedTension(sc)
   const objectLabel = object || 'l’objet de la question'
@@ -2900,6 +2929,36 @@ function completeSituationCard(
           signal_en: 'Repeated use becomes observable and makes the target choice defensible.',
         },
       ]
+    : isStrategicOptions
+    ? [
+        {
+          type: 'stabilization',
+          title_fr: 'Option testée',
+          title_en: 'Tested option',
+          description_fr: 'La situation se clarifie si une option devient une hypothèse d’action courte, mesurable et réversible.',
+          description_en: 'The situation clarifies if one option becomes a short, measurable, reversible action hypothesis.',
+          signal_fr: 'Un décideur, un segment ou un terrain accepte un test avec critère de succès explicite.',
+          signal_en: 'A decision-maker, segment, or field context accepts a test with an explicit success criterion.',
+        },
+        {
+          type: 'escalation',
+          title_fr: 'Arbitrage diffus',
+          title_en: 'Diffuse arbitration',
+          description_fr: 'La pression augmente si les options restent discutées sans test, responsable, contrainte ou signal de choix.',
+          description_en: 'Pressure rises if options remain discussed without test, owner, constraint, or choice signal.',
+          signal_fr: 'Les ressources se dispersent entre plusieurs pistes sans preuve de priorité.',
+          signal_en: 'Resources spread across several tracks without priority proof.',
+        },
+        {
+          type: 'regime_shift',
+          title_fr: 'Choix défendable',
+          title_en: 'Defensible choice',
+          description_fr: 'La logique change quand une option produit une preuve que les autres ne produisent pas encore.',
+          description_en: 'The logic shifts when one option produces proof the others do not yet produce.',
+          signal_fr: 'Un usage, un accord, un coût évité, une décision publique ou un paiement rend l’arbitrage défendable.',
+          signal_en: 'Usage, agreement, avoided cost, public decision, or payment makes the arbitration defensible.',
+        },
+      ]
     : isExperienceExplanation
     ? experienceTrajectories(experience.subject)
     : understands
@@ -2954,6 +3013,15 @@ function completeSituationCard(
           ? `Comparer ${targetSegmentsLabel} par activation, rétention, partage, recommandation, demande d’intégration ou passage payant.`
           : 'Surveiller activation, rétention, partage, recommandation, demande d’intégration ou passage payant.',
         watch_en: 'Watch activation, retention, sharing, recommendation, integration request, or paid step.',
+      }
+    : isStrategicOptions
+    ? {
+        hook_fr: strategicOptionLabels.length >= 2
+          ? `L’arbitrage utile se joue entre ${targetSegmentsPhrase(strategicOptionLabels)} : l’option qui produit le signal le plus vite doit passer devant.`
+          : 'La bonne option n’est pas la plus séduisante, mais celle qui peut être testée vite sans fermer les autres pistes.',
+        hook_en: 'The right option is not the most appealing one, but the one that can be tested quickly without closing the others.',
+        watch_fr: 'Surveiller le premier signal dur : usage répété, accord pilote, décision publique, coût évité, paiement ou refus explicite.',
+        watch_en: 'Watch the first hard signal: repeated use, pilot agreement, public decision, avoided cost, payment, or explicit refusal.',
       }
     : understands
     ? {
@@ -3020,6 +3088,8 @@ function completeSituationCard(
   ]
   const strategicMovementOptions = isTargetChoice
     ? targetDisplayOptions
+    : isStrategicOptions
+    ? strategicOptionLabels
     : []
   const strategicMovementSignalFr = isTargetChoice
     ? 'réutilisation, partage, demande de suite ou paiement du segment prioritaire'
@@ -3421,10 +3491,13 @@ function buildFallbackCard(
   const writingFamily = canonicalWritingFamilyFromIntentContext(intentContext, situation)
   const startupCommunity =
     writingFamily === 'target_choice'
+  const strategicOptions =
+    writingFamily === 'strategic_options'
   const targetSegments = startupCommunity ? targetSegmentsFromResources(resources) : []
   const targetFamilyOptions = startupCommunity ? targetFamilyOptionsFromResources(resources) : []
   const targetDisplayOptions = targetFamilyOptions.length >= 2 ? targetFamilyOptions : targetSegments
   const targetSegmentsLabel = targetSegmentsPhrase(targetDisplayOptions)
+  const strategicOptionLabels = strategicOptions ? strategicOptionsFromSituation(situation) : []
   const vulnerabilityFallbackFr = contextualVulnerabilityFallbackFr(intentContext)
   const firstDiamondSafeText = (values: unknown[], fallback: string): string => {
     for (const value of values) {
@@ -3447,6 +3520,8 @@ function buildFallbackCard(
       ? 'Le point fragile est l’écart entre l’organisation annoncée, les rôles réellement tenus et la charge que chacun porte ou refuse de porter.'
     : startupCommunity
       ? 'Le point fragile est le choix du premier segment : une communauté trop large crée du bruit, une cible trop étroite peut manquer d’élan.'
+    : strategicOptions
+      ? 'Le point fragile est le passage entre option séduisante, contrainte réelle et preuve de priorité.'
     : firstDiamondSafeText(
         [arbre.main_vulnerability_candidate],
         vulnerabilityFallbackFr
@@ -3461,6 +3536,8 @@ function buildFallbackCard(
       ? 'La réorganisation promet un cadre plus lisible, mais l’équipe peut vivre surtout une redistribution de charge, de pouvoir et de reconnaissance.'
     : startupCommunity
       ? 'Une communauté peut donner de la visibilité, mais seule une cible assez précise produit de l’usage répété, des retours qualifiés et une preuve de traction.'
+    : strategicOptions
+      ? 'Plusieurs options peuvent rester rationnelles, mais elles ne produisent pas le même signal, le même coût ni la même réversibilité.'
     : firstDiamondSafeText(
         [arbre.load_bearing_contradiction],
         'La lecture dépend du lien entre un acteur nommé, une contrainte précise et une preuve observable.'
@@ -3479,6 +3556,7 @@ function buildFallbackCard(
     intentContext?.dominant_frame !== 'site_analysis' &&
     intentContext?.dominant_frame !== 'startup_investment' &&
     writingFamily !== 'target_choice' &&
+    writingFamily !== 'strategic_options' &&
     intentContext?.dominant_frame !== 'causal_attribution' &&
     intentContext?.surface_domain !== 'war' &&
     interpreted?.domain !== 'war' &&
@@ -3489,6 +3567,8 @@ function buildFallbackCard(
     .replace(/[?.!]+$/g, '')
   const objectLabel = startupCommunity
     ? submittedLabel || 'le choix de cible utilisateur'
+    : strategicOptions
+    ? submittedLabel || 'la décision stratégique'
     : hasTruncatedPublicFragment(rawObjectLabel)
       ? submittedLabel || 'l’objet de la question'
       : rawObjectLabel || 'l’objet de la question'
@@ -3570,6 +3650,20 @@ function buildFallbackCard(
     targetDisplayOptions.length >= 2
       ? `Le signal clé est le segment, parmi ${targetSegmentsLabel}, qui passe le plus vite de l’intérêt à l’usage répété : retours qualifiés, réutilisation, partage ou demande d’intégration.`
       : 'Le signal clé est le passage de l’intérêt à l’usage répété : retours qualifiés, partages spontanés, réutilisation, invitation d’autres utilisateurs ou demande d’intégration.'
+  const strategicOptionsInsight =
+    strategicOptionLabels.length >= 2
+      ? `${objectSentence} doit être traité comme un arbitrage prospectif entre options : ${targetSegmentsPhrase(strategicOptionLabels)}. La carte doit aider à choisir l’hypothèse la plus testable, pas seulement décrire ce qui manque.`
+      : `${objectSentence} doit être traité comme un arbitrage prospectif. La carte doit faire apparaître l’option testable, les alternatives, le risque principal et le signal qui fera changer le choix.`
+  const strategicOptionsLecture =
+    strategicOptionLabels.length >= 2
+      ? `${objectSentence} ne demande pas seulement un état des lieux. La situation doit être lue comme une décision entre ${targetSegmentsPhrase(strategicOptionLabels)}. Le bon premier mouvement est celui qui produit le signal le plus rapide sans fermer les autres pistes.\n\n` +
+        `La contradiction centrale tient à ceci : plusieurs options peuvent sembler défendables, mais elles n’exigent pas les mêmes preuves. L’arbitrage doit donc comparer réversibilité, coût d’essai, accès au décideur, preuve d’usage et dépendance réglementaire.\n\n` +
+        `Le point de bascule sera concret : accord pilote, retour qualifié, paiement, refus explicite, décision publique, coût évité ou preuve que l’une des options ouvre un chemin que les autres ne peuvent pas ouvrir à court terme.`
+      : `${objectSentence} ne demande pas seulement un état des lieux. La situation doit être lue comme une décision à rendre testable : quelle option peut être essayée vite, avec quel coût, par quel acteur, et quel signal dira qu’il faut continuer ou changer.\n\n` +
+        `La contradiction centrale tient à ceci : une option peut être intellectuellement séduisante sans être actionnable. L’arbitrage doit donc comparer réversibilité, coût d’essai, accès au décideur, preuve d’usage et contrainte externe.\n\n` +
+        `Le point de bascule sera concret : accord pilote, retour qualifié, paiement, refus explicite, décision publique, coût évité ou preuve qu’une piste ouvre un chemin plus solide que les autres.`
+  const strategicOptionsSignal =
+    'Le signal clé est le premier fait qui rend une option plus défendable que les autres : usage répété, accord pilote, paiement, décision publique, coût évité ou refus explicite.'
   const siteFallback = siteAnalysisFallbackCard({
     situation,
     arbre,
@@ -3581,8 +3675,16 @@ function buildFallbackCard(
 
   return enrichWithScoring(
     {
-      title_fr: startupCommunity ? 'choix cible utilisateur stratégique' : 'Lecture structurelle',
-      title_en: startupCommunity ? 'strategic user target choice' : 'Structural Reading',
+      title_fr: startupCommunity
+        ? 'choix cible utilisateur stratégique'
+        : strategicOptions
+        ? 'arbitrage stratégique'
+        : 'Lecture structurelle',
+      title_en: startupCommunity
+        ? 'strategic user target choice'
+        : strategicOptions
+        ? 'strategic arbitration'
+        : 'Structural Reading',
       submitted_situation_fr: situation,
       submitted_situation_en: situation,
       insight_fr:
@@ -3599,6 +3701,8 @@ function buildFallbackCard(
             ? managementInsight
           : startupCommunity
             ? startupCommunityInsight
+          : strategicOptions
+            ? strategicOptionsInsight
             : genericInsight,
       insight_en:
         'The situation is first read through the powers in presence: who can act, block, legitimize, wear down, or tip the balance. The central point is the tension between what can still hold and what can now shift the system.',
@@ -3618,6 +3722,8 @@ function buildFallbackCard(
           ? managementSignal
         : startupCommunity
           ? startupCommunitySignal
+        : strategicOptions
+          ? strategicOptionsSignal
         : 'Le signal clé est le moment où un acteur ou un canal change de registre : décision, blocage, coût visible, récit public ou seuil de rupture.',
       key_signal_en: firstSafeText(
         [arbre.temps?.[0], arbre.temporalites?.[0]],
@@ -3733,6 +3839,36 @@ function buildFallbackCard(
                 signal_en: 'A prescribing relay or user group creates a measurable recommendation loop.',
               },
             ]
+        : strategicOptions
+          ? [
+              {
+                type: 'stabilization',
+                title_fr: 'Option testée',
+                title_en: 'Tested option',
+                description_fr: 'La situation se clarifie si une option devient une hypothèse d’action courte, mesurable et réversible.',
+                description_en: 'The situation clarifies if one option becomes a short, measurable, reversible action hypothesis.',
+                signal_fr: 'Un décideur, un segment ou un terrain accepte un test avec critère de succès explicite.',
+                signal_en: 'A decision-maker, segment, or field context accepts a test with an explicit success criterion.',
+              },
+              {
+                type: 'escalation',
+                title_fr: 'Arbitrage diffus',
+                title_en: 'Diffuse arbitration',
+                description_fr: 'La pression augmente si les options restent discutées sans test, responsable, contrainte ou signal de choix.',
+                description_en: 'Pressure rises if options remain discussed without test, owner, constraint, or choice signal.',
+                signal_fr: 'Les ressources se dispersent entre plusieurs pistes sans preuve de priorité.',
+                signal_en: 'Resources spread across several tracks without priority proof.',
+              },
+              {
+                type: 'regime_shift',
+                title_fr: 'Choix défendable',
+                title_en: 'Defensible choice',
+                description_fr: 'La logique change quand une option produit une preuve que les autres ne produisent pas encore.',
+                description_en: 'The logic shifts when one option produces proof the others do not yet produce.',
+                signal_fr: 'Un usage, un accord, un coût évité, une décision publique ou un paiement rend l’arbitrage défendable.',
+                signal_en: 'Usage, agreement, avoided cost, public decision, or payment makes the arbitration defensible.',
+              },
+            ]
         : defaultTrajectories(arbre, situation),
       cap: {
         hook_fr: understands
@@ -3745,6 +3881,8 @@ function buildFallbackCard(
           ? 'Le conflit devient lisible quand les rôles, la charge et le pouvoir de décision sont nommés.'
           : startupCommunity
           ? 'La bonne cible initiale n’est pas celle qui admire le produit, mais celle qui en fait un usage répété.'
+          : strategicOptions
+          ? 'La bonne option n’est pas celle qui explique le mieux le passé, mais celle qui produit le meilleur signal de décision.'
           : genericCapHook,
         hook_en: isPersonalRelationship
           ? personalRelationshipCap().hook_en
@@ -3759,6 +3897,8 @@ function buildFallbackCard(
           ? 'Surveiller qui porte la charge réelle, qui peut arbitrer, et quelle limite devient explicite.'
           : startupCommunity
           ? 'Surveiller le moment où un segment produit activation, rétention, recommandation ou demande d’intégration.'
+          : strategicOptions
+          ? 'Surveiller le premier signal dur : accord pilote, usage répété, paiement, décision publique, coût évité ou refus explicite.'
           : firstSafeText(
               [arbre.temps?.[0], arbre.temporalites?.[0]],
               situation,
@@ -3803,6 +3943,8 @@ function buildFallbackCard(
               'Choisir le segment qui produit le meilleur signal d’usage répété, pas seulement le plus de visibilité.',
               'Définir une preuve courte : activation, retour qualifié, partage, recommandation ou passage payant.',
             ]
+          : strategicOptions
+          ? strategicMovementsFr(strategicOptionLabels, strategicOptionsSignal)
           : [
               'Identifier les forces qui agissent, bloquent ou supportent la situation.',
               'Repérer le signal concret qui rend la tension visible.',
@@ -3836,6 +3978,8 @@ function buildFallbackCard(
         ? managementLecture
         : startupCommunity
         ? startupCommunityLecture
+        : strategicOptions
+        ? strategicOptionsLecture
         : genericLecture,
       lecture_systeme_en:
         `The situation is no longer only in the visible event. It is entering a phase where the system can still display control while its material, social, or political margins narrow.\n\n` +

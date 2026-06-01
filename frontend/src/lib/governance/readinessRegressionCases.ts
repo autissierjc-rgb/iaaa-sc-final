@@ -153,8 +153,8 @@ export const READINESS_REGRESSION_CASES: ReadinessRegressionCase[] = [
   {
     id: 'product-prioritization-domain-without-site-brief-generates-prudently',
     domain: 'startup_vc',
-    situation: 'Une décision stratégique avec plusieurs options, pour voltaiculture.fr quels sont les produits a prioriser',
-    resourcePlan: urlExtractPlan('voltaiculture.fr'),
+    situation: 'Une décision stratégique avec plusieurs options, pour agrivoltaisme-demo.fr quels sont les produits a prioriser',
+    resourcePlan: urlExtractPlan('agrivoltaisme-demo.fr'),
     resources: [],
     resourceAttempted: true,
     expectedStatus: 'generate_prudently',
