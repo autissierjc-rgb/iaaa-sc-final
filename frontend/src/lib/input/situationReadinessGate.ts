@@ -1,6 +1,6 @@
 import { SC_COLLABORATION_RULE, SC_NON_COMPLETION_PRINCIPLE } from '../governance/scDoctrine'
 import type { IntentContext, ResourceItem } from '../resources/resourceContract'
-import type { ResourceServiceContract } from '../contracts'
+import type { ResourceServiceContract, TreatmentPlanContract } from '../contracts'
 
 export type ReadinessStatus = 'ready' | 'ask_user' | 'generate_prudently'
 
@@ -18,6 +18,45 @@ export type SituationReadinessGate = {
 
 function hasExplicitUrl(value: string): boolean {
   return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
+}
+
+function readinessFromTreatmentPlan(
+  plan: TreatmentPlanContract | undefined,
+  forceGenerate: boolean,
+): SituationReadinessGate | null {
+  if (!plan) return null
+
+  if (plan.can_generate) {
+    return {
+      status: 'ready',
+      reason: `treatment_plan_${plan.mode}_${plan.source_status}`,
+      needs: plan.missing_material_fr,
+      doctrine: SC_NON_COMPLETION_PRINCIPLE,
+    }
+  }
+
+  if (forceGenerate && plan.can_generate_exploratory) {
+    return {
+      status: 'generate_prudently',
+      reason: `treatment_plan_${plan.mode}_${plan.source_status}_exploratory`,
+      can_generate_prudently: true,
+      prudent_generation_label_fr: 'Générer une carte exploratoire',
+      warning_fr: plan.public_clarification_fr,
+      needs: plan.missing_material_fr,
+      doctrine: `${SC_NON_COMPLETION_PRINCIPLE}\n\n${SC_COLLABORATION_RULE}`,
+    }
+  }
+
+  return {
+    status: 'ask_user',
+    reason: `treatment_plan_${plan.mode}_${plan.source_status}`,
+    question: plan.public_clarification_fr ?? plan.missing_material_fr[0] ?? 'Quelle précision changerait vraiment la lecture ?',
+    can_generate_prudently: plan.can_generate_exploratory,
+    prudent_generation_label_fr: plan.can_generate_exploratory ? 'Générer une carte exploratoire' : undefined,
+    message_fr: plan.public_clarification_fr,
+    needs: plan.missing_material_fr,
+    doctrine: `${SC_NON_COMPLETION_PRINCIPLE}\n\n${SC_COLLABORATION_RULE}`,
+  }
 }
 
 function normalize(value: string): string {
@@ -181,6 +220,7 @@ export function situationReadinessGate({
   intentContext,
   resources = [],
   resourcePlan,
+  treatmentPlan,
   forceGenerate = false,
   resourceAttempted = false,
 }: {
@@ -188,9 +228,13 @@ export function situationReadinessGate({
   intentContext: IntentContext
   resources?: ResourceItem[]
   resourcePlan?: ResourceServiceContract
+  treatmentPlan?: TreatmentPlanContract
   forceGenerate?: boolean
   resourceAttempted?: boolean
 }): SituationReadinessGate {
+  const treatmentPlanDecision = readinessFromTreatmentPlan(treatmentPlan, forceGenerate)
+  if (treatmentPlanDecision) return treatmentPlanDecision
+
   const frame = intentContext.dominant_frame
   const decision = intentContext.decision_type
   const resourceOptionsAvailable = hasComparableResourceOptions(resourcePlan)

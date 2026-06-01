@@ -4435,6 +4435,7 @@ export async function POST(req: NextRequest) {
       intentContext,
       resources: sanitizeResources(rawResources),
       resourcePlan: initialResourcePlan,
+      treatmentPlan: canonicalInterpretation.treatment_plan,
       forceGenerate: readinessForceGenerate,
     })
 
@@ -4792,6 +4793,7 @@ export async function POST(req: NextRequest) {
       intentContext: generationIntentContext,
       resources,
       resourcePlan: canonicalResourcePlan,
+      treatmentPlan: generationInterpretation.treatment_plan,
       forceGenerate: readinessForceGenerate,
       resourceAttempted: Boolean(webNeeded || fastRunnerResult || rawFetchedResources.length > 0),
     })
