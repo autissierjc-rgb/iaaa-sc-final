@@ -4794,12 +4794,12 @@ export async function POST(req: NextRequest) {
       questionType: intentContext.interpreted_request?.question_type,
       modelPath: 'local',
     })
-    const webNeeded = hasUrlInFlow || shouldUseWeb(urlAugmentedAnalysisText)
-    const fastRunnerResult = isPublicFast && providedResources.length === 0 && !exploratoryWithoutMaterial
+    const webNeeded = hasUrlInFlow || initialResourcePlan.needs_web || shouldUseWeb(urlAugmentedAnalysisText)
+    const fastRunnerResult = initialResourcePlan.needs_web && providedResources.length === 0 && !exploratoryWithoutMaterial
       ? await runFastResourceRunner({
           interpretation: canonicalInterpretation,
           resource_plan: initialResourcePlan,
-          timeout_ms: hasUrlInFlow ? 1800 : 1200,
+          timeout_ms: hasUrlInFlow ? 1800 : mode === 'generate_full' ? 2500 : 1200,
           max_sources: 3,
         })
       : undefined
@@ -4824,7 +4824,7 @@ export async function POST(req: NextRequest) {
     const rawFetchedResources =
       exploratoryWithoutMaterial
         ? []
-      : isPublicFast
+      : isPublicFast || fastRunnerResources.length > 0
         ? uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources])
       : providedResources.length > 0
         ? providedResources
