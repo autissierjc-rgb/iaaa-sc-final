@@ -72,9 +72,22 @@ function publicSourceLabel(source: ResourceContract): string {
 function cleanPublicEvidenceCandidate(value: string | undefined, sourceTitle?: string): string {
   let clean = compact(stripMarkdownLinks(value ?? '').replace(/#+\s*/g, ' '))
   const title = compact(sourceTitle ?? '')
-  if (title && clean.toLowerCase().startsWith(title.toLowerCase())) {
-    clean = compact(clean.slice(title.length).replace(/^[:|.\-–\s]+/, ''))
+  const titleCandidates = [
+    title,
+    title.replace(SOURCE_TITLE_NOISE_PATTERN, ''),
+  ].map((candidate) => compact(candidate)).filter(Boolean)
+
+  for (const candidate of titleCandidates) {
+    if (candidate && clean.toLowerCase().startsWith(candidate.toLowerCase())) {
+      clean = compact(clean.slice(candidate.length).replace(/^[:|.\-–\s]+/, ''))
+      break
+    }
   }
+
+  clean = clean
+    .replace(/^(?:exclusive\s+news,\s+data\s+and\s+analytics\s+from\s+[^.]+\.?\s*)/i, '')
+    .replace(/^(?:latest\s+news,\s+data\s+and\s+analysis\s+from\s+[^.]+\.?\s*)/i, '')
+    .trim()
   return clean
 }
 

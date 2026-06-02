@@ -363,6 +363,18 @@ function resourceRegimeSignalSentence(
   return `Les sources rapides disponibles${sourceLine} donnent un point d’appui factuel ; la lecture doit partir des faits publiés avant d’inférer le régime.`
 }
 
+function groundedFactOpeningSentence(grounding?: GroundingContract): string | undefined {
+  const facts = (grounding?.current_facts ?? [])
+    .filter((fact) => fact.source === 'resources')
+    .map((fact) => compactSentence(fact.label_fr, 160))
+    .filter((fact) => fact.length > 0 && !looksLikeProbativeEvidenceNoise(fact))
+    .slice(0, 2)
+
+  if (facts.length === 0) return undefined
+
+  return `Faits rapides retenus : ${facts.join(' ; ')}.`
+}
+
 function resourceProofLabel(resources?: ResourceServiceContract): string | undefined {
   if (!resources || resources.public_sources.length === 0) return undefined
   return 'une source primaire, une décision officielle ou une contradiction documentée'
@@ -1368,6 +1380,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const resourcesSection = resourceEvidenceSection(input.resources)
   const resourcesSentence = resourceEvidenceSentence(input.resources)
   const resourceSignalOpening = resourceRegimeSignalSentence(input.resources, resonance)
+  const groundedFactOpening = groundedFactOpeningSentence(input.grounding)
   const diamondText = polishPublicProofText(compactSentence(
     resonance.diamond_thesis_fr || grammar.diamond(tension, institutions, firstProcedure),
     320,
@@ -1431,6 +1444,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   ].filter(Boolean).join(' ')
   const lectureFr = polishPublicProofText(compactSentence(lecture, 820))
   const approfondirAnalysis = [
+    groundedFactOpening,
     resourceSignalOpening,
     diamondText,
     grammar.approfondirEntry,

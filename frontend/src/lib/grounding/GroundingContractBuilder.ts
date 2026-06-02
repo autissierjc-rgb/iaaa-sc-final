@@ -11,6 +11,7 @@ import type {
   ResourceServiceContract,
 } from '../contracts'
 import type { SCMaterialUnderstanding } from '../material/scMaterialInterpreter'
+import { publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 
 function unique(items: string[], limit = 12): string[] {
   return Array.from(new Set(items.map((item) => item.replace(/\s+/g, ' ').trim()).filter(Boolean))).slice(0, limit)
@@ -33,12 +34,14 @@ function sourceStatus(resources?: ResourceServiceContract, material?: SCMaterial
 }
 
 function factsFromResources(resources?: ResourceServiceContract): GroundedFact[] {
-  return (resources?.public_sources ?? []).slice(0, 6).map((resource) => ({
-    label_fr: resource.title,
-    source: 'resources',
-    evidence_level: resource.reliability === 'primary' ? 'established' : 'plausible',
-    source_ids: [resource.id],
-  }))
+  return publicProbativeEvidence(resources, 6)
+    .filter((evidence) => evidence.can_drive_probability)
+    .map((evidence) => ({
+      label_fr: evidence.public_label_fr,
+      source: 'resources',
+      evidence_level: evidence.status === 'usable' ? 'plausible' : 'uncertain',
+      source_ids: evidence.source_id ? [evidence.source_id] : [],
+    }))
 }
 
 function optionsFromResources(resources?: ResourceServiceContract): GroundedOption[] {
