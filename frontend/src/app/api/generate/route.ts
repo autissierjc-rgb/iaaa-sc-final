@@ -4825,10 +4825,10 @@ export async function POST(req: NextRequest) {
         ? []
       : isPublicFast
         ? uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources])
-        : providedResources.length > 0
+      : providedResources.length > 0
         ? providedResources
         : webNeeded
-          ? await fetchResourcesFast(urlAugmentedAnalysisText)
+          ? await fetchResources(urlAugmentedAnalysisText)
           : []
     const resources = await enrichResourcesWithSiteUnderstanding({
       situation: exploratoryWithoutMaterial ? generationAnalysisText : urlAugmentedAnalysisText,
