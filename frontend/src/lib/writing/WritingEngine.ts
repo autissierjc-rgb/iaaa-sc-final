@@ -347,18 +347,25 @@ function resourceRegimeSignalSentence(
   resources?: ResourceServiceContract,
   resonance?: ResonanceTraceContract,
 ): string | undefined {
-  const signals = (resonance?.source_signals ?? buildResourceRegimeSignals(resources, 3))
+  const sourceSignals = (resonance?.source_signals ?? buildResourceRegimeSignals(resources, 3))
     .filter((signal) => signal.discriminant_terms.length > 0)
-    .map((signal) => compactSentence(signal.signal_fr, 190))
-    .filter(Boolean)
 
-  if (signals.length < 2) return undefined
+  if (sourceSignals.length < 2) return undefined
 
-  return `Les signaux sourcés disponibles déplacent le point de départ : ${signals.join(' ; ')}.`
+  const sourceNames = unique(sourceSignals
+    .map((signal) => signal.source_name)
+    .filter(Boolean))
+    .slice(0, 3)
+  const sourceLine = sourceNames.length > 0
+    ? ` (${sourceNames.join(', ')})`
+    : ''
+
+  return `Les sources rapides disponibles${sourceLine} donnent un point d’appui factuel ; la lecture doit partir des faits publiés avant d’inférer le régime.`
 }
 
 function resourceProofLabel(resources?: ResourceServiceContract): string | undefined {
-  return publicProbativeEvidence(resources, 1)[0]?.public_label_fr
+  if (!resources || resources.public_sources.length === 0) return undefined
+  return 'une source primaire, une décision officielle ou une contradiction documentée'
 }
 
 function isTargetChoiceWithMaterial(input: WritingEngineInput): boolean {

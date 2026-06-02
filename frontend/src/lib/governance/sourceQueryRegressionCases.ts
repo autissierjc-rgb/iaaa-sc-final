@@ -79,6 +79,27 @@ function resourcePlanWithSourceTitle(title: string): ResourceServiceContract {
   }
 }
 
+function resourcePlanWithNoisyReutersExcerpt(): ResourceServiceContract {
+  const source: ResourceContract = {
+    id: 'noisy-reuters-excerpt-regression',
+    title: 'Exclusive: US carries out new strikes in Iran against military site, official says - Reuters',
+    url: 'https://www.reuters.com/world/middle-east/us-iran-strikes-example/',
+    source: 'reuters.com',
+    channel: 'news_agency',
+    domain_relevance: ['geopolitics'],
+    excerpt: '# Exclusive: US carries out new strikes in Iran against military site, official says. Exclusive news, data and analytics from Reuters. Iran and the United States remain central to the military threshold.',
+    retrieved_at: '2026-06-02T00:00:00.000Z',
+    reliability: 'secondary',
+  }
+
+  return {
+    ...baseResourcePlan(),
+    status: 'available',
+    resources: [source],
+    public_sources: [source],
+  }
+}
+
 function theatreForCurrentQuestion(): ConcreteTheatreContract {
   return {
     domain: 'geopolitics',
@@ -376,6 +397,21 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     scoring: scoringForRegression(),
   })
   const noSourceIssues: SourceQueryRegressionResult['issues'] = []
+  const noisySourceResources = resourcePlanWithNoisyReutersExcerpt()
+  const noisySourceWriting = composeDiamondWriting({
+    interpretation: input.interpretation,
+    theatre: theatreForCurrentQuestion(),
+    resources: noisySourceResources,
+    resonance: buildResonanceTrace({
+      interpretation: input.interpretation,
+      theatre: theatreForCurrentQuestion(),
+      resources: noisySourceResources,
+    }),
+    safety: safetyForRegression(),
+    expertises_metiers: expertisesForCurrentQuestion(),
+    scoring: scoringForRegression(),
+  })
+  const noisySourceIssues: SourceQueryRegressionResult['issues'] = []
   const patentChoiceResonance = buildResonanceTrace({
     interpretation: interpretationForPatentChoice(),
     theatre: patentChoiceTheatre(),
@@ -519,6 +555,36 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  const noisySourcePublicText = [
+    noisySourceWriting.situation_card.insight_fr,
+    noisySourceWriting.situation_card.main_vulnerability_fr,
+    noisySourceWriting.lecture.text_fr,
+    noisySourceWriting.approfondir.analysis_fr,
+    ...noisySourceWriting.approfondir.sections_fr.map((section) => section.body),
+  ].join(' ')
+  for (const forbidden of [
+    '# Exclusive',
+    'Exclusive: US carries out',
+    'Exclusive news, data and analytics',
+    'Reuters transforme',
+    'La lecture changerait si l’on observe Exclusive',
+  ]) {
+    if (includesLoose(noisySourcePublicText, forbidden)) {
+      noisySourceIssues.push({
+        level: 'error',
+        code: 'raw_source_excerpt_leaked_into_public_writing',
+        message: `Public writing must not turn source titles or scraped excerpts into the structural spine: ${forbidden}`,
+      })
+    }
+  }
+  if (!includesLoose(noisySourcePublicText, 'source primaire') || !includesLoose(noisySourcePublicText, 'contradiction documentée')) {
+    noisySourceIssues.push({
+      level: 'error',
+      code: 'source_writing_missing_canonical_proof_gate',
+      message: 'Sourced writing must keep the proof gate canonical instead of making a source title the missing proof.',
+    })
+  }
+
   if (patentChoiceResonance.real_actors.some((actor) => actor === 'Une' || actor === 'Un')) {
     patentChoiceIssues.push({
       level: 'error',
@@ -573,6 +639,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: noSourceWriting.lecture.text_fr,
     subject: noSourceWriting.probability_assessments[0]?.probability_label_fr ?? '',
     issues: noSourceIssues,
+  }, {
+    id: 'raw-source-excerpts-do-not-drive-public-writing',
+    ok: noisySourceIssues.length === 0,
+    query: noisySourceWriting.approfondir.analysis_fr,
+    subject: noisySourceWriting.probability_assessments[0]?.missing_proof_fr ?? '',
+    issues: noisySourceIssues,
   }, {
     id: 'patent-choice-resource-labels-do-not-drive-spine',
     ok: patentChoiceIssues.length === 0,

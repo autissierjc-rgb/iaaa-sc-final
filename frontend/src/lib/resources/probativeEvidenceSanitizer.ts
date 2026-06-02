@@ -69,6 +69,15 @@ function publicSourceLabel(source: ResourceContract): string {
   return title ? `${title} (${sourceName})` : sourceName
 }
 
+function cleanPublicEvidenceCandidate(value: string | undefined, sourceTitle?: string): string {
+  let clean = compact(stripMarkdownLinks(value ?? '').replace(/#+\s*/g, ' '))
+  const title = compact(sourceTitle ?? '')
+  if (title && clean.toLowerCase().startsWith(title.toLowerCase())) {
+    clean = compact(clean.slice(title.length).replace(/^[:|.\-–\s]+/, ''))
+  }
+  return clean
+}
+
 export function sanitizeProbativeEvidenceText(
   value: string | undefined,
   fallbackLabel: string,
@@ -175,7 +184,7 @@ export function sanitizeProbativeEvidenceText(
 
 export function sanitizeResourceAsProbativeEvidence(source: ResourceContract): ProbativeEvidence {
   const fallbackLabel = publicSourceLabel(source)
-  const candidate = source.excerpt ? `${source.title} : ${source.excerpt}` : fallbackLabel
+  const candidate = cleanPublicEvidenceCandidate(source.excerpt, source.title)
   return sanitizeProbativeEvidenceText(candidate, fallbackLabel, source.id)
 }
 
