@@ -366,6 +366,25 @@ function isTargetChoiceWithMaterial(input: WritingEngineInput): boolean {
     notes.some((note) => note === 'target_choice_with_material')
 }
 
+function isStrategicOptionsWriting(input: WritingEngineInput): boolean {
+  const text = normalizeAnchor([
+    input.interpretation.raw_input,
+    input.interpretation.situation_soumise,
+    input.interpretation.object_of_analysis,
+    input.interpretation.expected_answer_shape,
+    input.interpretation.intent,
+    input.interpretation.question_type,
+  ].filter(Boolean).join(' '))
+  const decisionIntent =
+    input.interpretation.intent === 'decide' ||
+    input.interpretation.intent === 'compare' ||
+    input.interpretation.question_type === 'decision' ||
+    input.interpretation.question_type === 'comparison' ||
+    /\b(decision|arbitrage|choisir|prioriser|options?|strategique|vendre|exploiter)\b/.test(text)
+  const optionObject = /\b(options?|choix|arbitrage|prioriser|vendre|exploiter|produits?|services?|offres?)\b/.test(text)
+  return decisionIntent && optionObject
+}
+
 function cleanAudienceCandidate(value: string): string {
   return cleanModelText(value)
     .replace(/^(?:utilisateurs?|clients?|publics?|cibles?|segments?)\s*(?:vis[ée]s?)?\s*:\s*/i, '')
@@ -957,6 +976,124 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
   }
 }
 
+function strategicOptionsFromSituation(input: WritingEngineInput): string[] {
+  const text = `${input.interpretation.raw_input} ${input.interpretation.situation_soumise} ${input.interpretation.object_of_analysis}`
+  const sellExploit = /\b(vendre|cession|c[ée]der)\b/i.test(text) && /\b(exploiter|exploitation|licence|licensing)\b/i.test(text)
+  if (sellExploit) return ['vendre ou céder l’actif', 'l’exploiter directement', 'chercher une licence ou un partenariat']
+
+  const publicFrame = /\b(gouvernement|gouvernemental|public|administration|directions?|r[ée]glement|dispositions?|normes?|subventions?)\b/i.test(text)
+  if (publicFrame) return ['aligner l’offre sur le cadre public', 'tester un pilote avec décideur identifié', 'différer les services non vérifiés par le terrain']
+
+  const productPriority = /\b(produits?|services?|offres?)\b/i.test(text) && /\b(prioriser|prioritaire|choisir|options?)\b/i.test(text)
+  if (productPriority) return ['prioriser l’offre la plus testable', 'adapter l’offre au segment le plus contraint', 'différer les offres sans preuve d’usage']
+
+  return []
+}
+
+function composeStrategicOptionsWriting(input: WritingEngineInput, started: number): WritingContract {
+  const subject = input.interpretation.situation_soumise || input.interpretation.object_of_analysis || 'la décision stratégique'
+  const options = strategicOptionsFromSituation(input)
+  const optionList = options.length >= 2 ? options.join(' ; ') : 'option prioritaire ; option alternative ; option à différer'
+  const priority = options[0] ?? 'l’option la plus testable'
+  const secondary = options[1] ?? 'l’option alternative'
+  const deferred = options[2] ?? 'l’option à différer'
+  const proof = 'usage répété, accord pilote, paiement, décision publique, coût évité ou refus explicite'
+  const title = input.interpretation.header_subject || 'arbitrage stratégique'
+  const diamond = `La bonne option n’est pas celle qui décrit le mieux la situation ; c’est celle qui produit le signal de décision le plus vite sans fermer les autres pistes.`
+  const insight = `${subject} doit être lu comme un arbitrage prospectif entre options : ${optionList}. La carte doit aider à choisir l’hypothèse la plus testable, pas seulement décrire ce qui manque.`
+  const vulnerability = 'Le point fragile est le passage entre option séduisante, contrainte réelle et preuve de priorité.'
+  const asymmetry = `Plusieurs options peuvent rester rationnelles, mais elles ne produisent pas le même signal : ${priority} peut ouvrir un test court, ${secondary} peut servir de comparaison, et ${deferred} ne doit monter que si les preuves changent.`
+  const keySignal = `Signal clé : chercher le premier fait qui rend une option plus défendable que les autres : ${proof}.`
+  const lecture =
+    `${subject} ne demande pas seulement un état des lieux. La situation doit être lue comme une décision entre ${optionList}. Le bon premier mouvement est celui qui produit le signal le plus rapide sans fermer les autres pistes.\n\n` +
+    `La contradiction centrale tient à ceci : plusieurs options peuvent sembler défendables, mais elles n’exigent pas les mêmes preuves. L’arbitrage doit donc comparer réversibilité, coût d’essai, accès au décideur, preuve d’usage et dépendance externe.\n\n` +
+    `Le point de bascule sera concret : accord pilote, retour qualifié, paiement, refus explicite, décision publique, coût évité ou preuve que l’une des options ouvre un chemin que les autres ne peuvent pas ouvrir à court terme.`
+  const probability = probabilityFromResources(input.resources) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
+  const trajectories: WritingContract['trajectories'] = [
+    {
+      type: 'stabilization',
+      title_fr: 'Option testée',
+      description_fr: `La situation se clarifie si ${priority} devient une hypothèse d’action courte, mesurable et réversible.`,
+      signal_fr: 'Un décideur, un segment ou un terrain accepte un test avec critère de succès explicite.',
+    },
+    {
+      type: 'escalation',
+      title_fr: 'Arbitrage diffus',
+      description_fr: 'La pression augmente si les options restent discutées sans test, responsable, contrainte ou signal de choix.',
+      signal_fr: 'Les ressources se dispersent entre plusieurs pistes sans preuve de priorité.',
+    },
+    {
+      type: 'regime_shift',
+      title_fr: 'Choix défendable',
+      description_fr: 'La logique change quand une option produit une preuve que les autres ne produisent pas encore.',
+      signal_fr: `Un signal dur apparaît : ${proof}.`,
+    },
+  ]
+
+  return {
+    substance_form: {
+      substance_fr: ['options stratégiques', 'preuve de priorité', 'réversibilité', 'signal de choix'],
+      form_fr: ['arbitrage prospectif', 'comparaison courte', 'test concret', 'condition de révision'],
+      diamond_sentence: {
+        text_fr: diamond,
+        role: 'thesis',
+        style: 'diamant_tranchant',
+        must_be_public: true,
+      },
+    },
+    diamond_sentences: [
+      {
+        text_fr: diamond,
+        role: 'thesis',
+        style: 'diamant_tranchant',
+        must_be_public: true,
+      },
+      {
+        text_fr: vulnerability,
+        role: 'vulnerability',
+        style: 'diamond',
+        must_be_public: true,
+      },
+    ],
+    probability_assessments: [probability],
+    situation_card: {
+      title_fr: title,
+      submitted_situation_fr: input.interpretation.situation_soumise,
+      insight_fr: insight,
+      main_vulnerability_fr: vulnerability,
+      asymmetry_fr: asymmetry,
+      key_signal_fr: keySignal,
+    },
+    trajectories,
+    lecture: {
+      text_fr: lecture,
+      word_count_fr: countWords(lecture),
+    },
+    approfondir: {
+      analysis_fr: '',
+      sections_fr: canonicalApprofondirSections({
+        really: `Le fond de la situation tient à un choix d’action, pas à une simple photographie. Les options à comparer sont : ${optionList}. Statut de preuve : ${probabilityLabelFr(probability).toLowerCase()}. ${polishPublicProofText(probability.claim_fr)} Ce classement donne un ordre d’essai, pas une vérité définitive.`,
+        holds: `Ce qui tient le système, c’est la possibilité de garder les options ouvertes tout en testant ${priority} sur un périmètre court. ${secondary} reste utile comme comparaison, et ${deferred} doit rester disponible si le signal attendu ne vient pas.`,
+        weakens: 'Ce qui l’affaiblit, c’est l’arbitrage sans test : discuter plusieurs pistes sans critère de succès peut donner une impression de stratégie tout en retardant la preuve utile.',
+        escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr}`,
+        shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr}`,
+        watch: `${keySignal} Si ce signal ne vient pas, il faut rejouer la carte avec ${secondary} ou ${deferred} plutôt que durcir la conclusion.`,
+      }),
+    },
+    public_warnings: [],
+    trace: {
+      service: 'WritingEngine',
+      version: 'v2-foundation',
+      duration_ms: Date.now() - started,
+      status: 'ok',
+      notes: [
+        'strategic_options_writing',
+        `options=${options.length}`,
+      ],
+    },
+  }
+}
+
 function extractOpenAIText(data: Record<string, unknown>): string {
   const output = Array.isArray(data.output) ? data.output : []
   return output
@@ -1143,6 +1280,9 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const started = Date.now()
   if (isTargetChoiceWithMaterial(input)) {
     return composeTargetChoiceWriting(input, started)
+  }
+  if (isStrategicOptionsWriting(input)) {
+    return composeStrategicOptionsWriting(input, started)
   }
 
   const resonance = input.resonance ?? buildResonanceTrace({
