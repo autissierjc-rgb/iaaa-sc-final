@@ -1,6 +1,7 @@
 import type {
   ConcreteTheatreContract,
   ExpertisesMetiersContract,
+  GroundingContract,
   InterpretationContract,
   ProbabilityAssessment,
   ResonanceTraceContract,
@@ -26,6 +27,7 @@ export type WritingEngineInput = {
   resources?: ResourceServiceContract
   patterns?: HumanCollectivePatternContext
   resonance?: ResonanceTraceContract
+  grounding?: GroundingContract
 }
 
 export type WritingEngineMode = 'local_contract' | 'referent_llm'
@@ -977,6 +979,13 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
 }
 
 function strategicOptionsFromResources(input: WritingEngineInput): string[] {
+  const groundedOptions = unique(
+    (input.grounding?.options ?? [])
+      .map((option) => cleanAudienceCandidate(option.label_fr))
+      .filter(Boolean)
+  )
+  if (groundedOptions.length >= 2) return groundedOptions.slice(0, 4)
+
   return unique(
     (input.resources?.extracted_options ?? [])
       .filter((option) =>
@@ -991,6 +1000,7 @@ function strategicOptionsFromResources(input: WritingEngineInput): string[] {
 function strategicOptionsFromSituation(input: WritingEngineInput): string[] {
   const resourceOptions = strategicOptionsFromResources(input)
   if (resourceOptions.length >= 2) return resourceOptions
+  if (input.grounding && !input.grounding.permissions.can_write_options) return []
 
   const text = `${input.interpretation.raw_input} ${input.interpretation.situation_soumise} ${input.interpretation.object_of_analysis}`
   const sellExploit = /\b(vendre|cession|c[ée]der)\b/i.test(text) && /\b(exploiter|exploitation|licence|licensing)\b/i.test(text)
@@ -1008,19 +1018,26 @@ function strategicOptionsFromSituation(input: WritingEngineInput): string[] {
 function composeStrategicOptionsWriting(input: WritingEngineInput, started: number): WritingContract {
   const subject = input.interpretation.situation_soumise || input.interpretation.object_of_analysis || 'la décision stratégique'
   const options = strategicOptionsFromSituation(input)
-  const optionList = options.length >= 2 ? options.join(' ; ') : 'option prioritaire ; option alternative ; option à différer'
-  const priority = options[0] ?? 'l’option la plus testable'
-  const secondary = options[1] ?? 'l’option alternative'
-  const deferred = options[2] ?? 'l’option à différer'
+  const hasGroundedOptions = options.length >= 2
+  const optionList = hasGroundedOptions ? options.join(' ; ') : 'options réelles non encore établies par les ressources lues'
+  const priority = options[0] ?? 'l’option que la matière rendra prioritaire'
+  const secondary = options[1] ?? 'une piste concurrente'
+  const deferred = options[2] ?? 'une piste à différer'
   const proof = 'usage répété, accord pilote, paiement, décision publique, coût évité ou refus explicite'
   const title = input.interpretation.header_subject || 'arbitrage stratégique'
   const diamond = `La bonne option n’est pas celle qui décrit le mieux la situation ; c’est celle qui produit le signal de décision le plus vite sans fermer les autres pistes.`
-  const insight = `${subject} doit être lu comme un arbitrage prospectif entre options : ${optionList}. La carte doit aider à choisir l’hypothèse la plus testable, pas seulement décrire ce qui manque.`
+  const insight = hasGroundedOptions
+    ? `${subject} doit être lu comme un arbitrage prospectif entre options : ${optionList}. La carte doit aider à choisir l’hypothèse la plus testable, pas seulement décrire ce qui manque.`
+    : `${subject} doit être lu comme un arbitrage prospectif, mais les options réelles ne sont pas encore assez établies par la matière lue. La carte peut cadrer les critères de choix ; elle ne doit pas choisir à la place des faits.`
   const vulnerability = 'Le point fragile est le passage entre option séduisante, contrainte réelle et preuve de priorité.'
-  const asymmetry = `Plusieurs options peuvent rester rationnelles, mais elles ne produisent pas le même signal : ${priority} peut ouvrir un test court, ${secondary} peut servir de comparaison, et ${deferred} ne doit monter que si les preuves changent.`
+  const asymmetry = hasGroundedOptions
+    ? `Plusieurs options peuvent rester rationnelles, mais elles ne produisent pas le même signal : ${priority} peut ouvrir un test court, ${secondary} peut servir de comparaison, et ${deferred} ne doit monter que si les preuves changent.`
+    : 'Plusieurs options peuvent être possibles, mais SC ne doit pas les nommer tant que la matière comprise ne les a pas établies.'
   const keySignal = `Signal clé : chercher le premier fait qui rend une option plus défendable que les autres : ${proof}.`
   const lecture =
-    `${subject} ne demande pas seulement un état des lieux. La situation doit être lue comme une décision entre ${optionList}. Le bon premier mouvement est celui qui produit le signal le plus rapide sans fermer les autres pistes.\n\n` +
+    (hasGroundedOptions
+      ? `${subject} ne demande pas seulement un état des lieux. La situation doit être lue comme une décision entre ${optionList}. Le bon premier mouvement est celui qui produit le signal le plus rapide sans fermer les autres pistes.\n\n`
+      : `${subject} ne demande pas seulement un état des lieux. Mais tant que les options réelles ne sont pas établies par la matière comprise, SC doit cadrer l’arbitrage sans inventer les pistes métier. Le bon premier mouvement consiste à identifier les options depuis la matière, puis seulement à les classer.\n\n`) +
     `La contradiction centrale tient à ceci : plusieurs options peuvent sembler défendables, mais elles n’exigent pas les mêmes preuves. L’arbitrage doit donc comparer réversibilité, coût d’essai, accès au décideur, preuve d’usage et dépendance externe.\n\n` +
     `Le point de bascule sera concret : accord pilote, retour qualifié, paiement, refus explicite, décision publique, coût évité ou preuve que l’une des options ouvre un chemin que les autres ne peuvent pas ouvrir à court terme.`
   const probability = probabilityFromResources(input.resources) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
@@ -1087,15 +1104,21 @@ function composeStrategicOptionsWriting(input: WritingEngineInput, started: numb
     approfondir: {
       analysis_fr: '',
       sections_fr: canonicalApprofondirSections({
-        really: `Le fond de la situation tient à un choix d’action, pas à une simple photographie. Les options à comparer sont : ${optionList}. Statut de preuve : ${probabilityLabelFr(probability).toLowerCase()}. ${polishPublicProofText(probability.claim_fr)} Ce classement donne un ordre d’essai, pas une vérité définitive.`,
-        holds: `La tenue du système vient de la possibilité de garder les options ouvertes tout en testant ${priority} sur un périmètre court. ${secondary} reste utile comme comparaison, et ${deferred} doit rester disponible si le signal attendu ne vient pas.`,
+        really: hasGroundedOptions
+          ? `Le fond de la situation tient à un choix d’action, pas à une simple photographie. Les options à comparer sont : ${optionList}. Statut de preuve : ${probabilityLabelFr(probability).toLowerCase()}. ${polishPublicProofText(probability.claim_fr)} Ce classement donne un ordre d’essai, pas une vérité définitive.`
+          : `Le fond de la situation tient à un choix d’action, pas à une simple photographie. Les options réelles ne sont pas encore établies par les ressources ou la matière comprise : SC doit donc expliciter les critères de priorité avant de classer.`,
+        holds: hasGroundedOptions
+          ? `La tenue du système vient de la possibilité de garder les options ouvertes tout en testant ${priority} sur un périmètre court. ${secondary} reste utile comme comparaison, et ${deferred} doit rester disponible si le signal attendu ne vient pas.`
+          : 'La tenue du système vient de la séparation entre deux moments : comprendre les options réelles, puis seulement les hiérarchiser.',
         weakens: 'La fragilité vient de l’arbitrage sans test : discuter plusieurs pistes sans critère de succès peut donner une impression de stratégie tout en retardant la preuve utile.',
         escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr}`,
         shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr}`,
-        watch: `${keySignal} Si ce signal ne vient pas, il faut rejouer la carte avec ${secondary} ou ${deferred} plutôt que durcir la conclusion.`,
+        watch: hasGroundedOptions
+          ? `${keySignal} Si ce signal ne vient pas, il faut rejouer la carte avec ${secondary} ou ${deferred} plutôt que durcir la conclusion.`
+          : `${keySignal} Si les options réelles restent absentes, la carte doit revenir à la matière ou aux sources avant de recommander.`,
       }),
     },
-    public_warnings: [],
+    public_warnings: hasGroundedOptions ? [] : ['Options réelles non établies par la matière lue.'],
     trace: {
       service: 'WritingEngine',
       version: 'v2-foundation',
@@ -1104,7 +1127,13 @@ function composeStrategicOptionsWriting(input: WritingEngineInput, started: numb
       notes: [
         'strategic_options_writing',
         `options=${options.length}`,
-        (input.resources?.extracted_options ?? []).length >= 2 ? 'resource_extracted_options_used' : 'situation_option_fallback_used',
+        (input.grounding?.options ?? []).length >= 2
+          ? 'grounding_options_used'
+          : (input.resources?.extracted_options ?? []).length >= 2
+            ? 'resource_extracted_options_used'
+            : input.grounding
+              ? 'grounding_options_missing'
+              : 'situation_option_fallback_used',
       ],
     },
   }

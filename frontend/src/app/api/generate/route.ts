@@ -40,6 +40,7 @@ import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/the
 import { composeDiamondWritingWithMode } from '@/lib/writing'
 import { runContractQualityGate, runQualityGate } from '@/lib/quality'
 import { buildResonanceTrace } from '@/lib/resonance'
+import { buildGroundingContract } from '@/lib/grounding'
 import {
   interpretSCMaterial,
   resourceItemsUsableForStructure,
@@ -5214,6 +5215,14 @@ export async function POST(req: NextRequest) {
       theatre: canonicalTheatre,
       resources: diamondResourcePlan,
     })
+    const groundingContract = buildGroundingContract({
+      interpretation: generationInterpretation,
+      resources: diamondResourcePlan,
+      material: scMaterialUnderstanding,
+      theatre: canonicalTheatre,
+      resonance: resonanceTrace,
+      inquiry,
+    })
     let writingContract = canonicalScoringForWriting
       ? await composeDiamondWritingWithMode(
           {
@@ -5225,6 +5234,7 @@ export async function POST(req: NextRequest) {
             resources: diamondResourcePlan,
             patterns: humanCollectivePatterns,
             resonance: resonanceTrace,
+            grounding: groundingContract,
           },
           'local_contract',
         )
