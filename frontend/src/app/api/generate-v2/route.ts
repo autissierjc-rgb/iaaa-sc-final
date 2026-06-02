@@ -5,7 +5,7 @@ import { interpretSituation } from '@/lib/interpretation'
 import { buildPipelineRunTrace } from '@/lib/pipeline/PipelineTelemetry'
 import { SITUATION_CARD_V2_PIPELINE } from '@/lib/pipeline/V2PipelineBlueprint'
 import { planResources } from '@/lib/resources'
-import { runFastResourceRunner } from '@/lib/resources/FastResourceRunner'
+import { MIN_FAST_RESOURCE_TIMEOUT_MS, runFastResourceRunner } from '@/lib/resources/FastResourceRunner'
 import { runRiskAdviceGuard } from '@/lib/safety'
 import { computeStateV2 } from '@/lib/scoringV2'
 import { buildConcreteTheatre } from '@/lib/theatre'
@@ -251,7 +251,7 @@ export async function runGenerateV2Contract(body: GenerateV2Body, route = '/api/
     : await runFastResourceRunner({
         interpretation,
         resource_plan: resources,
-        timeout_ms: generation_mode.id === 'public_fast' ? 1200 : 2500,
+        timeout_ms: generation_mode.id === 'public_fast' ? MIN_FAST_RESOURCE_TIMEOUT_MS : 2500,
         max_sources: 3,
       })
   if (fastResourceRun.resources.length > 0) {

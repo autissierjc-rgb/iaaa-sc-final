@@ -30,6 +30,8 @@ export type FastResourceRunnerInput = {
   max_sources?: number
 }
 
+export const MIN_FAST_RESOURCE_TIMEOUT_MS = 1800
+
 type FastSearchPlan = {
   query: string
   include_domains?: string[]
@@ -474,7 +476,7 @@ function uniqueResourceItems(items: ResourceItem[]): ResourceItem[] {
 
 export async function runFastResourceRunner(input: FastResourceRunnerInput): Promise<FastResourceRunnerResult> {
   const started = Date.now()
-  const timeoutMs = input.timeout_ms ?? 1200
+  const timeoutMs = Math.max(input.timeout_ms ?? MIN_FAST_RESOURCE_TIMEOUT_MS, MIN_FAST_RESOURCE_TIMEOUT_MS)
   const maxSources = input.max_sources ?? 3
 
   if (!input.resource_plan.needs_web) {
@@ -483,6 +485,17 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       duration_ms: Date.now() - started,
       status: 'skipped',
       note_fr: 'Sources rapides non obligatoires pour cette situation.',
+      provider: 'none',
+      timeout_ms: timeoutMs,
+    }
+  }
+
+  if (!process.env.TAVILY_API_KEY) {
+    return {
+      resources: [],
+      duration_ms: Date.now() - started,
+      status: 'failed',
+      note_fr: 'Runner sources rapides non configure : TAVILY_API_KEY absente.',
       provider: 'none',
       timeout_ms: timeoutMs,
     }

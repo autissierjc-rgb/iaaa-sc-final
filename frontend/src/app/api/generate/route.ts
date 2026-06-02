@@ -27,7 +27,7 @@ import { routeExpertisesMetiers } from '@/lib/expertisesMetiers'
 import { detectPatterns, patternGuidance } from '@/lib/patterns/detectPatterns'
 import { selectHumanCollectivePatterns } from '@/lib/patterns/humanCollective'
 import { fetchResources } from '@/lib/resources/fetchResources'
-import { runFastResourceRunner } from '@/lib/resources/FastResourceRunner'
+import { MIN_FAST_RESOURCE_TIMEOUT_MS, runFastResourceRunner } from '@/lib/resources/FastResourceRunner'
 import { planResources } from '@/lib/resources'
 import { DIAMOND_EDITORIAL_CONTRACT, SC_INTERPRETATION_AUTHORITY } from '@/lib/governance/scDoctrine'
 import { validateDiamondContract } from '@/lib/governance/diamondValidation'
@@ -4799,7 +4799,7 @@ export async function POST(req: NextRequest) {
       ? await runFastResourceRunner({
           interpretation: canonicalInterpretation,
           resource_plan: initialResourcePlan,
-          timeout_ms: hasUrlInFlow ? 1800 : mode === 'generate_full' ? 2500 : 1200,
+          timeout_ms: hasUrlInFlow ? MIN_FAST_RESOURCE_TIMEOUT_MS : mode === 'generate_full' ? 2500 : MIN_FAST_RESOURCE_TIMEOUT_MS,
           max_sources: 3,
         })
       : undefined
