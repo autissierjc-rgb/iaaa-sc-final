@@ -144,6 +144,7 @@ function responseShape(): SCGrammarPrompt['required_json_shape'] {
 function qualityTargets(dossier: DiamondDossier): string[] {
   const hasExtractedOptions = (dossier.resources.plan.extracted_options ?? []).length >= 2
   const hasRegimeSignals = buildResourceRegimeSignals(dossier.resources.plan, 2).length >= 2
+  const hasPublicEvidence = dossier.resources.public_evidence.some((evidence) => evidence.can_drive_probability)
   return [
     'Insight: faire voir la structure cachee, pas seulement reformuler la question.',
     'Main Vulnerability: nommer le point de rupture precis, testable et non banal.',
@@ -163,6 +164,11 @@ function qualityTargets(dossier: DiamondDossier): string[] {
           'Regime reading: utiliser les signaux de ressources pour nommer le regime actuel de la situation : escalade, treve fragile, verrouillage diplomatique, saturation, transition ou bascule.',
         ]
       : []),
+    ...(hasPublicEvidence
+      ? [
+          'Faits rapides: quand Resources.public_evidence contient des preuves publiques utilisables, Approfondir doit commencer par un fait rapide retenu ou sa consequence directe, puis seulement inferer la structure.',
+        ]
+      : []),
     ...dossier.grammar.required_public_moves_fr,
   ]
 }
@@ -170,6 +176,7 @@ function qualityTargets(dossier: DiamondDossier): string[] {
 export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
   const hasExtractedOptions = (dossier.resources.plan.extracted_options ?? []).length >= 2
   const hasRegimeSignals = buildResourceRegimeSignals(dossier.resources.plan, 2).length >= 2
+  const hasPublicEvidence = dossier.resources.public_evidence.some((evidence) => evidence.can_drive_probability)
   const system = [
     'You are the Situation Card Diamond Writer.',
     'You do not reinterpret the user request. The canonical interpretation is already decided.',
@@ -239,6 +246,13 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
             'For a dated/current geopolitical, market, crisis or public event question with regime_signals, lecture.text_fr must begin from at least two concrete source-derived signals, then infer the structural regime.',
             'Do not write a generic institutional reading if regime_signals exist. Name the factual signals first, then compress them into the regime diagnosis.',
             'situation_card.insight_fr must include at least one resource-derived regime signal or its direct consequence.',
+          ]
+        : []),
+      ...(hasPublicEvidence
+        ? [
+            'Resources.public_evidence with can_drive_probability=true is mandatory factual grounding, not a citation list.',
+            'Do not merely say that fast sources exist. In approfondir.analysis_fr or the first Approfondir section, state at least one cleaned public_evidence fact or its direct public consequence before the structural diagnosis.',
+            'Never paste raw titles, markdown headings, media boilerplate or URL text as evidence.',
           ]
         : []),
       ...(hasExtractedOptions

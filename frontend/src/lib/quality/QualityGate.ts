@@ -8,6 +8,7 @@ import type {
   ScoringContract,
   WritingContract,
 } from '../contracts'
+import { publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 import { buildResourceRegimeSignals, countRegimeSignalsUsed } from '../resources/regimeSignals'
 import { buildResonanceTrace } from '../resonance'
 import { containsForbiddenPublicPhrase } from '../writing/diamondRules'
@@ -370,6 +371,18 @@ function countAnchorsUsed(anchors: string[], normalizedText: string): number {
   )).length
 }
 
+function publicEvidenceVisible(resources: ResourceServiceContract | undefined, normalizedNarrativeText: string, baseline = ''): boolean {
+  const baselineTokens = new Set(normalize(baseline).split(/[^a-z0-9]+/).filter(Boolean))
+  return publicProbativeEvidence(resources, 4)
+    .filter((evidence) => evidence.can_drive_probability)
+    .some((evidence) => {
+      const tokens = normalize(evidence.public_label_fr)
+        .split(/[^a-z0-9]+/)
+        .filter((token) => token.length >= 6 && !baselineTokens.has(token))
+      return tokens.some((token) => normalizedNarrativeText.includes(token))
+    })
+}
+
 function trajectoryVisibilityCount(input: QualityGateInput, normalizedPublicText: string): number {
   if (input.writing.trajectories.length === 0) return 0
   const byType = [
@@ -681,6 +694,8 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     )
     const sourcesWithExcerpt = input.resources.public_sources.filter((source) => Boolean(source.excerpt)).length
     const regimeSignals = buildResourceRegimeSignals(input.resources, 4)
+    const hasPublicEvidence = publicProbativeEvidence(input.resources, 4)
+      .some((evidence) => evidence.can_drive_probability)
     const regimeSignalsUsed = countRegimeSignalsUsed(
       regimeSignals,
       lectureAndApprofondirText(input.writing),
@@ -728,6 +743,15 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
         'RESOURCE_REGIME_SIGNALS_TOO_WEAK',
         'Fast sources produced several regime signals, but public writing uses too few of them.',
         'writing.lecture',
+      ))
+    }
+
+    if (hasPublicEvidence && !publicEvidenceVisible(input.resources, normalizedNarrativeText, canonicalQuestionText(input.interpretation))) {
+      issues.push(issue(
+        'error',
+        'SOURCE_PUBLIC_EVIDENCE_UNDERUSED',
+        'Fast sources produced cleaned public evidence, but public writing only names sources or remains abstract instead of using the fact or its direct consequence.',
+        'writing.approfondir',
       ))
     }
   }
