@@ -5229,9 +5229,15 @@ export async function POST(req: NextRequest) {
           'local_contract',
         )
       : null
+    const deterministicWritingNotes = writingContract?.trace.notes ?? []
+    const locksDiamondArchitectWriter = deterministicWritingNotes.some((note) =>
+      note === 'strategic_options_writing' ||
+      note === 'target_choice_with_material'
+    )
     const shouldTryDiamondArchitectWriter =
       mode === 'generate_full' &&
       canonicalScoringForWriting &&
+      !locksDiamondArchitectWriter &&
       process.env.SC_DISABLE_DIAMOND_ARCHITECT_WRITER !== '1'
     let diamondArchitectWriter:
       | { status: string; accepted: boolean; model?: string; duration_ms?: number; errors?: string[] }
