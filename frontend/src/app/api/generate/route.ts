@@ -3378,7 +3378,7 @@ function completeSituationCard(
 
 async function fetchResourcesFast(situation: string): Promise<ResourceItem[]> {
   const timeout = new Promise<ResourceItem[]>((resolve) => {
-    setTimeout(() => resolve([]), hasExplicitUrl(situation) ? 4500 : 3000)
+    setTimeout(() => resolve([]), hasExplicitUrl(situation) ? 16000 : 3000)
   })
 
   try {
