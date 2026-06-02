@@ -213,7 +213,12 @@ function classifyCandidate(value: string, mode: ResourceLineMode, resource?: Qua
     }]
   }
 
-  if (mode === 'offer' || /\b(?:clarity|clarte|clarté|sis|iaaa\+ governance|governance|offre|abonnement|pricing|prix)\b/.test(normalized)) {
+  const looksLikeOffer =
+    mode === 'offer' ||
+    /\b(?:clarity|clarte|clarté|sis|iaaa\+ governance|governance|offre|offres|solution|solutions|service|services|produit|produits|plateforme|application|abonnement|pricing|prix|tarif|tarifs|forfait|devis)\b/.test(normalized) ||
+    /\b(?:louer|location|installer|installation|exploiter|exploitation|vendre|acheter|financer|developper|développer|equiper|équiper|transformer|valoriser|optimiser|automatiser|securiser|sécuriser)\b/.test(normalized)
+
+  if (looksLikeOffer) {
     return [{
       text,
       kind: 'offer',
