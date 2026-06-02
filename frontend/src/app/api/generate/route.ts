@@ -4820,11 +4820,19 @@ export async function POST(req: NextRequest) {
       })
     }
     const fastRunnerResources = resourceItemsFromContracts(fastRunnerResult?.resources ?? [])
+    const publicFastUrlFallbackResources =
+      isPublicFast &&
+      hasUrlInFlow &&
+      providedResources.length === 0 &&
+      fastRunnerResources.length === 0 &&
+      !exploratoryWithoutMaterial
+        ? await fetchResourcesFast(urlAugmentedAnalysisText)
+        : []
     const rawFetchedResources =
       exploratoryWithoutMaterial
         ? []
       : isPublicFast
-        ? uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources])
+        ? uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources, ...publicFastUrlFallbackResources])
         : providedResources.length > 0
         ? providedResources
         : webNeeded
