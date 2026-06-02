@@ -976,7 +976,22 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
   }
 }
 
+function strategicOptionsFromResources(input: WritingEngineInput): string[] {
+  return unique(
+    (input.resources?.extracted_options ?? [])
+      .filter((option) =>
+        ['strategic_option', 'offer', 'use_case', 'proof_signal'].includes(option.kind) &&
+        !isNavigationAudienceCandidate(option.label_fr)
+      )
+      .map((option) => cleanAudienceCandidate(option.label_fr))
+      .filter(Boolean)
+  ).slice(0, 4)
+}
+
 function strategicOptionsFromSituation(input: WritingEngineInput): string[] {
+  const resourceOptions = strategicOptionsFromResources(input)
+  if (resourceOptions.length >= 2) return resourceOptions
+
   const text = `${input.interpretation.raw_input} ${input.interpretation.situation_soumise} ${input.interpretation.object_of_analysis}`
   const sellExploit = /\b(vendre|cession|c[ée]der)\b/i.test(text) && /\b(exploiter|exploitation|licence|licensing)\b/i.test(text)
   if (sellExploit) return ['vendre ou céder l’actif', 'l’exploiter directement', 'chercher une licence ou un partenariat']
@@ -1073,8 +1088,8 @@ function composeStrategicOptionsWriting(input: WritingEngineInput, started: numb
       analysis_fr: '',
       sections_fr: canonicalApprofondirSections({
         really: `Le fond de la situation tient à un choix d’action, pas à une simple photographie. Les options à comparer sont : ${optionList}. Statut de preuve : ${probabilityLabelFr(probability).toLowerCase()}. ${polishPublicProofText(probability.claim_fr)} Ce classement donne un ordre d’essai, pas une vérité définitive.`,
-        holds: `Ce qui tient le système, c’est la possibilité de garder les options ouvertes tout en testant ${priority} sur un périmètre court. ${secondary} reste utile comme comparaison, et ${deferred} doit rester disponible si le signal attendu ne vient pas.`,
-        weakens: 'Ce qui l’affaiblit, c’est l’arbitrage sans test : discuter plusieurs pistes sans critère de succès peut donner une impression de stratégie tout en retardant la preuve utile.',
+        holds: `La tenue du système vient de la possibilité de garder les options ouvertes tout en testant ${priority} sur un périmètre court. ${secondary} reste utile comme comparaison, et ${deferred} doit rester disponible si le signal attendu ne vient pas.`,
+        weakens: 'La fragilité vient de l’arbitrage sans test : discuter plusieurs pistes sans critère de succès peut donner une impression de stratégie tout en retardant la preuve utile.',
         escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr}`,
         shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr}`,
         watch: `${keySignal} Si ce signal ne vient pas, il faut rejouer la carte avec ${secondary} ou ${deferred} plutôt que durcir la conclusion.`,
@@ -1089,6 +1104,7 @@ function composeStrategicOptionsWriting(input: WritingEngineInput, started: numb
       notes: [
         'strategic_options_writing',
         `options=${options.length}`,
+        (input.resources?.extracted_options ?? []).length >= 2 ? 'resource_extracted_options_used' : 'situation_option_fallback_used',
       ],
     },
   }
