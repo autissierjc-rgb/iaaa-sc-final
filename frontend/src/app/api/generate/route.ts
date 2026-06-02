@@ -84,6 +84,32 @@ function explicitUrls(value: string): string[] {
     })
 }
 
+function explicitDomains(value: string): string[] {
+  return explicitUrls(value)
+    .map((url) => {
+      try {
+        return new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).hostname.replace(/^www\./i, '').toLowerCase()
+      } catch {
+        return ''
+      }
+    })
+    .filter(Boolean)
+}
+
+function resourceHost(value: string): string {
+  try {
+    return new URL(value).hostname.replace(/^www\./i, '').toLowerCase()
+  } catch {
+    return ''
+  }
+}
+
+function hasResourceForExplicitDomain(resources: ResourceItem[], sourceText: string): boolean {
+  const domains = new Set(explicitDomains(sourceText))
+  if (domains.size === 0) return false
+  return resources.some((resource) => domains.has(resourceHost(resource.url)))
+}
+
 function stripExplicitUrls(value: string): string {
   return value
     .replace(/\b(https?:\/\/)?(www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)(\/[^\s]*)?/gi, (match, protocol, www, _domain, path) => {
@@ -4820,11 +4846,12 @@ export async function POST(req: NextRequest) {
       })
     }
     const fastRunnerResources = resourceItemsFromContracts(fastRunnerResult?.resources ?? [])
+    const publicFastResourcesBeforeUrlFallback = uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources])
     const publicFastUrlFallbackResources =
       isPublicFast &&
       hasUrlInFlow &&
       providedResources.length === 0 &&
-      fastRunnerResources.length === 0 &&
+      !hasResourceForExplicitDomain(publicFastResourcesBeforeUrlFallback, urlSourceText) &&
       !exploratoryWithoutMaterial
         ? await fetchResourcesFast(urlAugmentedAnalysisText)
         : []
@@ -4832,7 +4859,7 @@ export async function POST(req: NextRequest) {
       exploratoryWithoutMaterial
         ? []
       : isPublicFast
-        ? uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources, ...publicFastUrlFallbackResources])
+        ? uniqueResourceItemsForGenerate([...publicFastResourcesBeforeUrlFallback, ...publicFastUrlFallbackResources])
         : providedResources.length > 0
         ? providedResources
         : webNeeded
