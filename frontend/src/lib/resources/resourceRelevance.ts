@@ -13,6 +13,8 @@ const GEOPOLITICAL_TERMS = [
   'pétrole', 'irgc', 'cgri', 'sanction', 'nuclear', 'nucleaire', 'nucléaire',
 ]
 
+const US_TERMS = ['usa', 'us', 'u.s.', 'united states', 'etats unis', 'états unis', 'washington', 'white house']
+
 export function normalizeSearchText(value: string): string {
   return value
     .normalize('NFD')
@@ -91,11 +93,14 @@ export function isRelevantResource(resource: ResourceItem, query: string): boole
   if (geopoliticalQuery) {
     const geopoliticalHit = GEOPOLITICAL_TERMS.some((term) => haystack.includes(normalizeSearchText(term)))
     if (!geopoliticalHit) return false
+    const queryAsksUs = US_TERMS.some((term) => queryText.includes(normalizeSearchText(term)))
+    const resourceMentionsUs = US_TERMS.some((term) => haystack.includes(normalizeSearchText(term)))
+    if (queryAsksUs && resourceMentionsUs) return true
   }
 
   if (queryKeywords.length === 0) return true
   const overlap = queryKeywords.filter((keyword) => haystack.includes(keyword)).length
-  const minimumOverlap = causalQuery ? 2 : queryKeywords.length <= 3 ? 1 : 2
+  const minimumOverlap = geopoliticalQuery ? 1 : causalQuery ? 2 : queryKeywords.length <= 3 ? 1 : 2
   return overlap >= minimumOverlap
 }
 

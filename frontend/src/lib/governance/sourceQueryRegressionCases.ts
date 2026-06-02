@@ -411,6 +411,22 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  const usaIranEquivalence = filterRelevantResources([{
+    title: 'United States and Iran trade warnings as nuclear talks stall',
+    url: 'https://www.reuters.com/world/middle-east/us-iran-nuclear-talks-warning/',
+    source: 'reuters.com',
+    type: 'fast-source',
+    excerpt: 'The United States and Iran remain locked in a dispute over nuclear talks, sanctions and military thresholds.',
+    reliability: 'tavily:fast',
+  }], 'Où en sommes nous avec la guerre États-Unis Iran au 02/06 ?')
+  if (usaIranEquivalence.length === 0) {
+    relevanceIssues.push({
+      level: 'error',
+      code: 'usa_iran_equivalence_rejected',
+      message: 'Fast source relevance must keep English US/United States sources for a French États-Unis/Iran query.',
+    })
+  }
+
   if (includesLoose(resonance.transition_signal_fr, 'Morning Bid') || includesLoose(resonance.diamond_thesis_fr, 'Morning Bid')) {
     resonanceIssues.push({
       level: 'error',

@@ -209,10 +209,17 @@ function sourceDomainsFor(input: FastResourceRunnerInput): string[] {
     return [
       'reuters.com',
       'apnews.com',
+      'bbc.com',
+      'ft.com',
+      'france24.com',
+      'lemonde.fr',
       'politico.com',
       'axios.com',
+      'aljazeera.com',
+      'iaea.org',
+      'state.gov',
+      'whitehouse.gov',
       'congress.gov',
-      'ncsl.org',
     ]
   }
 
