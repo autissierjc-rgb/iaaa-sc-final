@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "codex:preflight": "node scripts/codex-preflight.mjs",
     "lint": "next lint"
   },
   "dependencies": {
