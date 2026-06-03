@@ -11,6 +11,7 @@ import {
   buildFastResourceSearchPlansForDiagnostics,
   filterFastResourceResultsByPlanForDiagnostics,
 } from '@/lib/resources/FastResourceRunner'
+import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSourceCoverage'
 import type { ResourceItem } from '@/lib/resources/resourceContract'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
 import { buildResonanceTrace } from '@/lib/resonance'
@@ -633,6 +634,68 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  const approfondirSourceSectionIssues: SourceQueryRegressionResult['issues'] = []
+  for (const section of noisySourceWriting.approfondir.sections_fr) {
+    if (includesLoose(section.id, 'sources-rapides') ||
+      includesLoose(section.id, 'ressources-produit') ||
+      includesLoose(section.title, 'Sources rapides') ||
+      includesLoose(section.title, 'Ressources produit')) {
+      approfondirSourceSectionIssues.push({
+        level: 'error',
+        code: 'sources_rendered_inside_approfondir',
+        message: 'Public sources must remain in the dedicated Resources surface, not as an Approfondir section.',
+      })
+    }
+  }
+
+  const completeCoverageIssues: SourceQueryRegressionResult['issues'] = []
+  const agencySource: ResourceContract = {
+    id: 'agency-source',
+    title: 'Agency reference',
+    url: 'https://reuters.example/current',
+    source: 'reuters.example',
+    channel: 'news_agency',
+    domain_relevance: ['geopolitics'],
+    retrieved_at: '2026-06-03T00:00:00.000Z',
+    reliability: 'secondary',
+  }
+  const officialSource: ResourceContract = {
+    id: 'official-source',
+    title: 'Official statement',
+    url: 'https://official.example/statement',
+    source: 'official.example',
+    channel: 'official',
+    domain_relevance: ['geopolitics'],
+    retrieved_at: '2026-06-03T00:00:00.000Z',
+    reliability: 'primary',
+  }
+  const localSource: ResourceContract = {
+    id: 'local-source',
+    title: 'Local perspective',
+    url: 'https://local.example/report',
+    source: 'local.example',
+    channel: 'local_media',
+    domain_relevance: ['geopolitics'],
+    retrieved_at: '2026-06-03T00:00:00.000Z',
+    reliability: 'secondary',
+  }
+  const incompleteCompleteCoverage = assessCompleteFactualSourceCoverage([agencySource])
+  const completeCoverage = assessCompleteFactualSourceCoverage([agencySource, officialSource, localSource])
+  if (incompleteCompleteCoverage.ok || !incompleteCompleteCoverage.missing.includes('local_media') || !incompleteCompleteCoverage.missing.includes('official')) {
+    completeCoverageIssues.push({
+      level: 'error',
+      code: 'complete_sc_accepts_single_agency_source',
+      message: 'A complete factual SC must not treat one agency source as the full public evidence base.',
+    })
+  }
+  if (!completeCoverage.ok) {
+    completeCoverageIssues.push({
+      level: 'error',
+      code: 'complete_sc_rejects_channel_coverage',
+      message: 'A complete factual SC should accept the canonical local/official/news-agency coverage base.',
+    })
+  }
+
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
@@ -681,5 +744,17 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: planSpecificResults.map((item) => item.title).join(' | '),
     subject: 'plan-specific filtering',
     issues: planSpecificIssues,
+  }, {
+    id: 'approfondir-does-not-render-source-section',
+    ok: approfondirSourceSectionIssues.length === 0,
+    query: noisySourceWriting.approfondir.sections_fr.map((section) => `${section.id}:${section.title}`).join(' | '),
+    subject: 'resources surface separation',
+    issues: approfondirSourceSectionIssues,
+  }, {
+    id: 'complete-factual-sc-requires-source-channel-coverage',
+    ok: completeCoverageIssues.length === 0,
+    query: incompleteCompleteCoverage.note_fr,
+    subject: completeCoverage.note_fr,
+    issues: completeCoverageIssues,
   }]
 }

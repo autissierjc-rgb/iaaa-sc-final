@@ -35,6 +35,7 @@ import { sanitizeResources } from '@/lib/resources/sanitizeResources'
 import { shouldUseWeb } from '@/lib/resources/shouldUseWeb'
 import { enrichResourcesWithSiteUnderstanding } from '@/lib/resources/siteUnderstanding'
 import { extractTargetAudienceFamiliesFromResources, extractTargetAudiencesFromResources } from '@/lib/resources/functionalResourceQualification'
+import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSourceCoverage'
 import { detectScopeContext } from '@/lib/scope/scopeContext'
 import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWritingWithMode } from '@/lib/writing'
@@ -5007,7 +5008,29 @@ export async function POST(req: NextRequest) {
       resources: canonicalResourcePlan,
       userMaterialRole,
     })
-    const diamondResourcePlan = resourcePlanForDiamond(canonicalResourcePlan, scMaterialUnderstanding)
+    let diamondResourcePlan = resourcePlanForDiamond(canonicalResourcePlan, scMaterialUnderstanding)
+    if (mode === 'generate_full' && diamondResourcePlan.needs_web) {
+      const sourceCoverage = assessCompleteFactualSourceCoverage(diamondResourcePlan.public_sources)
+      if (!sourceCoverage.ok) {
+        diamondResourcePlan = {
+          ...diamondResourcePlan,
+          status: 'partial',
+          policy_reason_fr: sourceCoverage.note_fr,
+          internal_notes: [
+            ...diamondResourcePlan.internal_notes,
+            `complete_source_coverage_missing=${sourceCoverage.missing.join(',')}`,
+          ],
+          trace: {
+            ...diamondResourcePlan.trace,
+            status: 'partial',
+            notes: [
+              ...(diamondResourcePlan.trace.notes ?? []),
+              sourceCoverage.note_fr,
+            ],
+          },
+        }
+      }
+    }
     const resourcesForStructure = resourceItemsUsableForStructure(resources, scMaterialUnderstanding)
     recordGenerationTrace({
       status: scMaterialUnderstanding.trace.status === 'partial' ? 'partial' : 'ok',

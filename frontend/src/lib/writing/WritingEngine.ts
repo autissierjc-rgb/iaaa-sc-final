@@ -243,6 +243,17 @@ function probabilityFromMissingResources(resources?: ResourceServiceContract): P
 
 function resourceWarning(resources?: ResourceServiceContract): string | undefined {
   if (!resources?.needs_web) return undefined
+  const missingCompleteCoverage = resources.internal_notes.find((note) => note.startsWith('complete_source_coverage_missing='))
+  if (missingCompleteCoverage) {
+    const missing = missingCompleteCoverage
+      .replace('complete_source_coverage_missing=', '')
+      .split(',')
+      .filter(Boolean)
+      .join(', ')
+    return missing
+      ? `Socle probatoire incomplet pour la SC complète factuelle : manque ${missing}.`
+      : 'Socle probatoire incomplet pour la SC complète factuelle.'
+  }
   if (resources.public_sources.length > 0) return undefined
   if (resources.policy === 'url_extract_required') {
     return 'Un site ou une URL est présent : l’analyse doit rester provisoire tant que son contenu, sa promesse et ses preuves visibles n’ont pas été extraits ou vérifiés.'
@@ -258,31 +269,6 @@ function hasProductOptionEvidence(resources?: ResourceServiceContract): boolean 
     comparableKinds.has(option.kind) &&
     productSourceTypes.has(option.source_type),
   ).length >= 2
-}
-
-function resourceEvidenceSection(resources?: ResourceServiceContract): { id: string; title: string; body: string } | null {
-  if (!resources || resources.public_sources.length === 0) return null
-
-  const sourceLine = resources.public_sources.slice(0, 3).map((source) => {
-    const reliability = source.reliability ? `, ${source.reliability}` : ''
-    return `${source.title} (${source.source}${reliability})`
-  }).join(' ; ')
-
-  if (hasProductOptionEvidence(resources)) {
-    return {
-      id: 'ressources-produit',
-      title: 'Ressources produit',
-      body:
-        `Ressources exploitees : ${sourceLine}. Elles donnent un contenu produit utilisable pour structurer les options, mais la preuve de marche reste a tester par usage repete, partage, integration ou paiement.`,
-    }
-  }
-
-  return {
-    id: 'sources-rapides',
-    title: 'Sources rapides',
-    body:
-      `Sources attachees : ${sourceLine}. Elles cadrent la lecture et reduisent le hors-sol, mais ne remplacent pas Recherche+ : il faut encore verifier la source primaire, la date, la contradiction possible et la preuve decisive.`,
-  }
 }
 
 function probabilityFromResources(resources?: ResourceServiceContract): ProbabilityAssessment | null {
@@ -1377,7 +1363,6 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const missingExternalEvidence = needsExternalEvidenceWithoutSources(input.resources)
   const probability = probabilityFromResources(input.resources) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
-  const resourcesSection = resourceEvidenceSection(input.resources)
   const resourcesSentence = resourceEvidenceSentence(input.resources)
   const resourceSignalOpening = resourceRegimeSignalSentence(input.resources, resonance)
   const groundedFactOpening = groundedFactOpeningSentence(input.grounding)
@@ -1507,17 +1492,14 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     },
     approfondir: {
       analysis_fr: polishPublicProofText(approfondirAnalysis),
-      sections_fr: [
-        ...canonicalApprofondirSections({
-          really: `${missingExternalEvidence ? 'Lecture structurelle provisoire : aucun signal rapide n’a été retenu comme source publique suffisante. ' : ''}${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
-          holds: resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
-          weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un constat vérifiable.`,
-          escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
-          shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr} ${probabilityChange}`,
-          watch: `${conciseWatchSignal(firstEvidence)} ${probabilityChange} À vérifier : ${blindSpot}.`,
-        }),
-        resourcesSection,
-      ].filter((section): section is { id: string; title: string; body: string } => Boolean(section)),
+      sections_fr: canonicalApprofondirSections({
+        really: `${missingExternalEvidence ? 'Lecture structurelle provisoire : aucun signal rapide n’a été retenu comme source publique suffisante. ' : ''}${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
+        holds: resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
+        weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un constat vérifiable.`,
+        escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
+        shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr} ${probabilityChange}`,
+        watch: `${conciseWatchSignal(firstEvidence)} ${probabilityChange} À vérifier : ${blindSpot}.`,
+      }),
     },
     public_warnings: publicWarnings,
     trace: {
@@ -1550,7 +1532,7 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
     '- utiliser silencieusement la triade fonctionnelle : qui legitime, qui protege/combattre/bloque, qui produit/reproduit/porte la charge ;',
     '- chercher le desalignement critique : ce qui legitime ne protege plus, ce qui protege empeche de produire, ou ce qui produit n est plus reconnu ;',
     '- ne jamais afficher les noms d auteurs, les labels de patterns ou la grille theorique sauf demande explicite de lecture theorique.',
-    '- si des public_sources existent, les utiliser comme preuves rapides dans Approfondir, en nommant leur portee et leur limite ;',
+    '- si des public_sources existent, elles restent attachees au contrat ressources et au panneau Ressources dedie ; Approfondir peut qualifier le statut de preuve, mais ne doit pas lister les sources ;',
     '- ne jamais presenter les sources rapides comme une enquete Recherche+ complete.',
     '',
     'Longueurs indicatives :',
@@ -1687,7 +1669,6 @@ async function composeWithOpenAI(input: WritingEngineInput, local: WritingContra
           { id: 'escalade', title: APPROFONDIR_CANONICAL_TITLES_FR.escalates, body: stripRepeatedSectionTitle(APPROFONDIR_CANONICAL_TITLES_FR.escalates, local.approfondir.sections_fr[3]?.body ?? '') },
           { id: 'bascule', title: APPROFONDIR_CANONICAL_TITLES_FR.shifts, body: stripRepeatedSectionTitle(APPROFONDIR_CANONICAL_TITLES_FR.shifts, local.approfondir.sections_fr[4]?.body ?? stringField(parsed.forme_fr, diamondText)) },
           { id: 'surveiller', title: APPROFONDIR_CANONICAL_TITLES_FR.watch, body: stripRepeatedSectionTitle(APPROFONDIR_CANONICAL_TITLES_FR.watch, stringField(parsed.probabilites_fr, local.approfondir.sections_fr[5]?.body ?? '')) },
-          ...local.approfondir.sections_fr.filter((section) => section.id === 'sources-rapides'),
         ],
       },
       trace: {

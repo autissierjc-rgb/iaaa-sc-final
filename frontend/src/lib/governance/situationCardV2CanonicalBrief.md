@@ -1804,7 +1804,7 @@ La V2 doit produire :
 1. Situation Card courte, lisible en 3 a 10 secondes ;
 2. Lecture, lecture diamant courte et claire ;
 3. Approfondir, page enrichie unique ;
-4. Ressources, sources separees et classees dans Approfondir ;
+4. Ressources, sources separees dans le panneau Ressources dedie ;
 5. Enquete, action optionnelle a l'interieur d'Approfondir pour verifier les
    angles morts.
 
@@ -1816,8 +1816,8 @@ Situation Card
   - Approfondir
       - Analyse enrichie
       - Incertitudes / angles morts
-      - Ressources
       - Lancer l'enquete
+  - Ressources
 ```
 
 Regle de timing :
