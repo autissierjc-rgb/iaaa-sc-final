@@ -474,6 +474,20 @@ function uniqueResourceItems(items: ResourceItem[]): ResourceItem[] {
   })
 }
 
+export function filterFastResourceResultsByPlanForDiagnostics(
+  planResults: ResourceItem[][],
+  planQueries: string[],
+  fallbackQuery: string,
+  maxSources: number,
+): ResourceItem[] {
+  return uniqueResourceItems(
+    planResults.flatMap((items, index) => {
+      const planQuery = planQueries[index] ?? fallbackQuery
+      return filterRelevantResources(items, planQuery)
+    }),
+  ).slice(0, maxSources)
+}
+
 export async function runFastResourceRunner(input: FastResourceRunnerInput): Promise<FastResourceRunnerResult> {
   const started = Date.now()
   const timeoutMs = Math.max(input.timeout_ms ?? MIN_FAST_RESOURCE_TIMEOUT_MS, MIN_FAST_RESOURCE_TIMEOUT_MS)
@@ -521,7 +535,12 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     )
     const firstHitIndex = planResults.findIndex((items) => items.length > 0)
     const firstHitPlan = firstHitIndex >= 0 ? plans[firstHitIndex] : primaryPlan
-    const fast = filterRelevantResources(uniqueResourceItems(planResults.flat()), query).slice(0, maxSources)
+    const fast = filterFastResourceResultsByPlanForDiagnostics(
+      planResults,
+      plans.map((plan) => plan.query),
+      query,
+      maxSources,
+    )
     const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
     const result = fast.length > 0 || !usedLegacyFallback
       ? fast
@@ -541,7 +560,9 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     }
 
     const relevantResult = Array.isArray(result)
-      ? filterRelevantResources(result, query)
+      ? usedLegacyFallback
+        ? filterRelevantResources(result, query)
+        : result
       : result
 
     const resources = relevantResult

@@ -9,6 +9,7 @@ import type {
 } from '@/lib/contracts'
 import {
   buildFastResourceSearchPlansForDiagnostics,
+  filterFastResourceResultsByPlanForDiagnostics,
 } from '@/lib/resources/FastResourceRunner'
 import type { ResourceItem } from '@/lib/resources/resourceContract'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
@@ -609,6 +610,29 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  const planSpecificResource: ResourceItem = {
+    title: 'Official decision confirms public threshold',
+    url: 'https://official.example/public-decision',
+    source: 'official.example',
+    type: 'web',
+    excerpt: 'The official decision statement confirms the public threshold and its immediate procedural effect.',
+    reliability: 'test',
+  }
+  const planSpecificResults = filterFastResourceResultsByPlanForDiagnostics(
+    [[planSpecificResource]],
+    ['official decision statement public threshold'],
+    'customers pricing revenue adoption market product team pipeline competitors segmentation traction retention onboarding channel official decision statement public threshold',
+    3,
+  )
+  const planSpecificIssues: SourceQueryRegressionResult['issues'] = []
+  if (planSpecificResults.length === 0) {
+    planSpecificIssues.push({
+      level: 'error',
+      code: 'plan_specific_resource_rejected',
+      message: 'Fast resource runner must filter each plan result with its own plan query, not with the composite query from unrelated plans.',
+    })
+  }
+
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
@@ -651,5 +675,11 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: patentChoiceResonance.transition_signal_fr,
     subject: patentChoiceResonance.diamond_thesis_fr,
     issues: patentChoiceIssues,
+  }, {
+    id: 'fast-runner-keeps-plan-specific-results',
+    ok: planSpecificIssues.length === 0,
+    query: planSpecificResults.map((item) => item.title).join(' | '),
+    subject: 'plan-specific filtering',
+    issues: planSpecificIssues,
   }]
 }
