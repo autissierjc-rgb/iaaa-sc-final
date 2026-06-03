@@ -99,19 +99,19 @@ function contextualizeQuestion(question: string, input: SelectClarifyingQuestion
 
   if (input.intentContext.dominant_frame === 'founder_governance') {
     if (/^quelle decision|trancher/.test(q)) {
-      return 'Pour votre ex qui demande à entrer comme cofondatrice, devez-vous plutôt accepter, refuser, différer ou poser des conditions ?'
+      return 'Dans cette entrée possible au capital ou au pouvoir de décision, faut-il plutôt accepter, refuser, différer ou poser des conditions ?'
     }
     if (/demande.*concretement|role|parts|pouvoir/.test(q)) {
-      return 'Dans son entrée possible comme associée, demande-t-elle un rôle opérationnel, des parts, du pouvoir de décision, un titre, ou surtout une reconnaissance de son aide passée ?'
+      return 'La demande porte-t-elle sur un rôle opérationnel, des parts, du pouvoir de décision, un titre ou une reconnaissance d’aide passée ?'
     }
   }
 
-  if ((input.domain === 'geopolitics' || input.domain === 'war') && /iran/.test(text)) {
+  if (input.domain === 'geopolitics' || input.domain === 'war') {
     if (/angle|privilegier|lecture/.test(q)) {
-      return 'Depuis quel point de vue voulez-vous lire ce que la guerre en Iran révèle du monde : général, politique, économique, militaire, psychologique ou mixte ?'
+      return 'Depuis quel point de vue voulez-vous lire cette situation : politique, économique, militaire, diplomatique, institutionnel ou mixte ?'
     }
     if (/acteurs|faits|donnees|lieux/.test(q)) {
-      return 'Sur l’Iran, quels acteurs, faits, lieux ou données doivent absolument être pris en compte ?'
+      return 'Quels acteurs habilités, faits datés, lieux ou données vérifiables doivent absolument être pris en compte ?'
     }
   }
 
@@ -222,13 +222,9 @@ export function selectRefineOptionalQuestions(input: SelectClarifyingQuestionsIn
 
   const candidates: string[] = []
 
-  if (isBroadWorldQuestion && /iran/.test(text)) {
+  if (isBroadWorldQuestion) {
     candidates.push(
-      'Depuis quel point de vue voulez-vous lire ce que la guerre en Iran révèle du monde : général, politique, économique, militaire, psychologique ou mixte ?'
-    )
-  } else if (isBroadWorldQuestion) {
-    candidates.push(
-      'Depuis quel point de vue voulez-vous lire cette question mondiale : général, politique, économique, militaire, psychologique ou mixte ?'
+      'Depuis quel point de vue voulez-vous lire cette question mondiale : politique, économique, militaire, diplomatique, institutionnel ou mixte ?'
     )
   } else if (isBroadDomainQuestion) {
     candidates.push(

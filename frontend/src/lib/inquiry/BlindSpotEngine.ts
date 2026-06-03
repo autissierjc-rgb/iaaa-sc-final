@@ -68,72 +68,75 @@ function situatedInquiry(
       'congres',
       'etat',
       'election',
-      'janvier 2021',
-      'responsable electoral',
-      'gouverneur',
+      'responsable',
+      'autorite',
+      'gouvernement',
       'parti',
       'relais institutionnel',
       'regle exploitable',
       'acteur capable',
       'bloquer',
       'pression',
+      'decision officielle',
+      'declaration',
+      'source primaire',
     ])
   ) {
     if (normalized.includes('relais institutionnel')) {
       return {
         why_it_matters:
-          'Le risque ne vient pas seulement de Trump ; il devient institutionnel si des relais acceptent de donner une procedure a la contestation.',
+          'Le risque change de nature quand un relais habilite transforme une tension ou une contestation en procedure, contrainte ou decision opposable.',
         where_to_look: [
-          'Parti republicain',
-          'responsables electoraux locaux',
-          'gouverneurs',
-          'Congres',
-          'tribunaux',
+          'autorites competentes',
+          'institutions de validation',
+          'acteurs disposant d un mandat',
+          'juridictions ou organes de controle',
+          'communications officielles',
         ],
         observable_signal:
-          'Un responsable ou une institution reprend la contestation et la transforme en refus, recours, consigne ou delai officiel.',
+          'Un acteur habilite change de registre : refus, recours, consigne, delai, decision, convocation ou declaration officielle.',
         decisive_evidence:
-          'Une prise de position, un acte procedural ou un document reliant la contestation de Trump a un relais institutionnel identifiable.',
+          'Une trace datable reliant un acteur habilite, une procedure ou regle precise, et une consequence observable.',
         counter_hypothesis:
-          'Trump peut contester publiquement sans bascule si aucun relais institutionnel ne convertit ce refus en procedure.',
+          'La tension peut rester surtout narrative si aucun relais habilite ne la convertit en acte ou contrainte verifiable.',
       }
     }
 
     if (normalized.includes('regle exploitable')) {
       return {
         why_it_matters:
-          'Une crise electorale progresse souvent par une regle utilisee a contre-emploi : delai, recours, certification, recomptage ou competence locale.',
+          'Une crise institutionnelle progresse souvent par une regle disponible : delai, recours, validation, competence, mandat ou procedure d exception.',
         where_to_look: [
-          'regles de certification des Etats',
-          'delais de recours',
-          'procedures de recomptage',
-          'reglements du Congres',
+          'textes applicables',
+          'delais de recours ou de validation',
+          'procedures officielles',
+          'competences des autorites',
           'decisions de justice',
         ],
         observable_signal:
-          'Une regle ordinaire est invoquee pour retarder, contester ou delegitimer un resultat dans un Etat cle.',
+          'Une regle ordinaire ou exceptionnelle est invoquee pour retarder, valider, contester ou delegitimer une etape decisive.',
         decisive_evidence:
-          'Un texte, un recours ou une decision montrant quelle regle precise est mobilisee pour bloquer ou deplacer le resultat.',
+          'Un texte, recours, decision ou calendrier montrant quelle regle precise est mobilisee et par qui.',
         counter_hypothesis:
-          'La contestation reste limitee si les regles disponibles ne permettent pas de retarder ou modifier les etapes electorales.',
+          'La tension reste limitee si les regles disponibles ne permettent pas de modifier les marges d action.',
       }
     }
 
     if (normalized.includes('acteur capable') || normalized.includes('bloquer')) {
       return {
         why_it_matters:
-          'La question decisive est de savoir qui possede reellement un levier : certifier, retarder, juger, mobiliser ou legitimer.',
+          'La question decisive est de savoir qui possede reellement un levier : decider, certifier, retarder, juger, mobiliser ou legitimer.',
         where_to_look: [
-          'autorites electorales locales',
-          'secretaires d Etat',
-          'gouverneurs',
-          'juges',
-          'leaders partisans',
+          'autorites competentes',
+          'administrations concernees',
+          'organes de controle',
+          'juridictions',
+          'acteurs politiques ou institutionnels habilites',
         ],
         observable_signal:
-          'Un acteur disposant d un levier formel annonce un refus, retarde une etape ou soutient une contestation procedurale.',
+          'Un acteur disposant d un levier formel annonce un refus, retarde une etape, soutient une procedure ou modifie une position officielle.',
         decisive_evidence:
-          'Un acte public d un acteur habilite : refus de certification, recours depose, injonction judiciaire, consigne partisane ou calendrier modifie.',
+          'Un acte public d un acteur habilite : decision, recours depose, injonction, consigne officielle, calendrier modifie ou refus documente.',
         counter_hypothesis:
           'Le risque reste surtout narratif si les acteurs capables de bloquer maintiennent les procedures ordinaires.',
       }
@@ -142,16 +145,16 @@ function situatedInquiry(
     if (normalized.includes('pression')) {
       return {
         why_it_matters:
-          'La pression devient dangereuse quand elle cible les personnes qui administrent ou valident le resultat.',
+          'La pression devient structurante quand elle cible les personnes ou institutions qui administrent, valident ou arbitrent la situation.',
         where_to_look: [
-          'responsables electoraux locaux',
-          'menaces publiques',
+          'responsables habilites',
+          'menaces ou pressions publiques',
           'consignes de mobilisation',
-          'medias allies',
+          'relais mediatiques ou politiques',
           'reactions des autorites',
         ],
         observable_signal:
-          'Des responsables electoraux sont nommes, menaces, pousses a retarder ou a justifier publiquement leur decision.',
+          'Des responsables sont nommes, menaces, pousses a retarder, justifier ou modifier publiquement leur decision.',
         decisive_evidence:
           'Une trace de pression coordonnee : declaration, campagne, menace documentee, plainte ou mesure de protection.',
         counter_hypothesis:
@@ -162,29 +165,29 @@ function situatedInquiry(
     if (normalized.includes('certification')) {
       return {
         why_it_matters:
-          'La certification est le passage ou une contestation electorale peut devenir un blocage institutionnel.',
+          'La certification ou validation officielle est le passage ou une tension peut devenir un blocage institutionnel.',
         where_to_look: [
-          'autorites electorales locales',
-          'secretaires d Etat des Etats',
-          'gouverneurs',
-          'calendrier officiel de certification',
+          'autorites de validation',
+          'calendrier officiel',
+          'proces-verbaux',
+          'organes de controle',
         ],
         observable_signal:
-          'Un Etat cle retarde, refuse ou conditionne publiquement la certification des resultats.',
+          'Une autorite retarde, refuse ou conditionne publiquement la validation d une etape decisive.',
         decisive_evidence:
-          'Une decision officielle, un proces-verbal, un recours ou une declaration d autorite electorale montrant que la certification change de statut.',
+          'Une decision officielle, un proces-verbal, un recours ou une declaration d autorite montrant que la validation change de statut.',
         counter_hypothesis:
-          'La contestation peut rester rhetorique si chaque Etat certifie dans les delais et si les recours n interrompent pas la procedure.',
+          'La tension peut rester rhetorique si les validations suivent le calendrier et si les recours n interrompent pas la procedure.',
       }
     }
 
     if (normalized.includes('recours') || normalized.includes('contentieux')) {
       return {
         why_it_matters:
-          'Le contentieux indique si la crainte reste politique ou si elle entre dans une strategie procedurale coordonnee.',
-        where_to_look: ['tribunaux', 'dossiers de recours', 'calendrier judiciaire', 'equipes juridiques des partis'],
+          'Le contentieux indique si la tension reste politique ou si elle entre dans une strategie procedurale coordonnee.',
+        where_to_look: ['tribunaux', 'dossiers de recours', 'calendrier judiciaire', 'conseils juridiques', 'autorites de controle'],
         observable_signal:
-          'Des recours similaires sont deposes dans plusieurs Etats cle avec le meme argument ou le meme calendrier.',
+          'Des recours ou procedures similaires apparaissent avec le meme argument, le meme calendrier ou les memes acteurs relais.',
         decisive_evidence:
           'Un depot de recours, une ordonnance judiciaire ou une coordination documentee qui relie la contestation a une procedure.',
         counter_hypothesis:
@@ -196,7 +199,7 @@ function situatedInquiry(
       return {
         why_it_matters:
           'L arbitrage judiciaire peut transformer un conflit politique en contrainte legale qui modifie le calendrier ou la validation.',
-        where_to_look: ['tribunaux federaux', 'cours des Etats', 'Cour supreme', 'decisions et injonctions publiees'],
+        where_to_look: ['juridictions competentes', 'decisions publiees', 'injonctions', 'calendrier judiciaire'],
         observable_signal:
           'Une decision judiciaire suspend, valide ou reconfigure une etape electorale decisive.',
         decisive_evidence:
@@ -206,11 +209,11 @@ function situatedInquiry(
       }
     }
 
-    if (normalized.includes('janvier 2021') || normalized.includes('precedent')) {
+    if (normalized.includes('precedent')) {
       return {
         why_it_matters:
-          'Le precedent du 6 janvier 2021 change ce qui parait imaginable, mais il ne prouve pas a lui seul une repetition.',
-        where_to_look: ['discours publics', 'consignes de mobilisation', 'relais militants', 'reactions des institutions de securite'],
+          'Un precedent change ce qui parait imaginable, mais il ne prouve pas a lui seul une repetition.',
+        where_to_look: ['discours publics', 'consignes de mobilisation', 'relais organises', 'reactions des institutions de securite'],
         observable_signal:
           'La rhetorique de fraude se combine avec des appels a mobilisation ou une pression explicite sur des responsables.',
         decisive_evidence:
@@ -222,13 +225,13 @@ function situatedInquiry(
 
     return {
       why_it_matters:
-        'Dans une crise electorale, le risque devient reel quand un acteur ou une institution donne une forme procedurale au refus.',
+        'Dans une crise institutionnelle, le risque devient reel quand un acteur ou une institution donne une forme procedurale a la tension.',
       where_to_look: [
-        'Congres',
-        'Etats federes',
-        'Parti republicain',
-        'autorites electorales',
-        'medias allies',
+        'institutions competentes',
+        'autorites de validation',
+        'acteurs habilites',
+        'procedures officielles',
+        'relais publics',
       ],
       observable_signal:
         'Un acteur capable de bloquer change de registre : consigne, refus, recours, pression publique ou decision officielle.',

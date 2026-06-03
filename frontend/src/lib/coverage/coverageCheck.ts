@@ -86,32 +86,26 @@ function detectMissingCritical(input: string, requiredSignals: string[]): string
     }
   }
 
-  if (/\b(iran|teheran|cessez-le-feu|nucleaire|cgr|israel)\b/.test(text)) {
-    if (!/\b(khamenei|guide supreme|guide supr[eê]me|raissi|pezeshkian|trump|washington)\b/.test(text)) {
-      missing.push('dirigeants nommés : Khamenei / Guide suprême, Trump / Washington selon le cas')
+  if (/\b(guerre|conflit|crise|cessez-le-feu|frappe|militaire|nucleaire|nucl[eé]aire|sanction|diplomatie|geopolitique|g[eé]opolitique)\b/.test(text)) {
+    if (!/\b(qui|acteur|acteurs|gouvernement|autorite|autorit[eé]|dirigeant|administration|etat|[eé]tat|institution)\b/.test(text)) {
+      missing.push('acteurs habilités à agir, bloquer ou officialiser')
     }
-    if (!/\b(cgri|irgc|armee|renseignement|securitaire|militaire)\b/.test(text)) {
-      missing.push('institutions militaires ou sécuritaires : CGRI / IRGC, armée, renseignement')
+    if (!/\b(source|preuve|document|decision|d[eé]cision|declaration|d[eé]claration|communique|communiqu[eé]|date|chronologie|confirme|v[eé]rifi)\b/.test(text)) {
+      missing.push('trace publique vérifiable : source, date, décision ou déclaration')
     }
-    if (!/\b(ormuz|detroit d ormuz|golfe|oman|teheran|israel|infrastructure)\b/.test(text)) {
-      missing.push('lieux ou chokepoints : détroit d’Ormuz, Oman, Israël/Iran, infrastructures critiques')
+    if (!/\b(seuil|riposte|incident|frappe|rupture|escalade|pause|cessez-le-feu|n[eé]gociation|sanction|co[uû]t|marge)\b/.test(text)) {
+      missing.push('seuils d’escalade, de négociation ou de contrainte')
     }
-    if (!/\b(nucleaire|energie|petrole|raffinerie|militaire|infrastructure|sanction)\b/.test(text)) {
-      missing.push('infrastructures critiques : nucléaire, énergie, militaire, sanctions')
-    }
-    if (!/\b(oman|qatar|onu|washington|moscou|pekin|mediateur|mediation|proxy|proxies|hezbollah|houthis)\b/.test(text)) {
-      missing.push('acteurs tiers ou médiateurs : Oman, proxies, ONU ou puissances tierces')
-    }
-    if (!/\b(24|48|seuil|riposte|incident|frappe|rupture|escalade|cessez-le-feu)\b/.test(text)) {
-      missing.push('seuils d’escalade et temporalités : 24–48 h après incident, rupture de pause')
+    if (!/\b(mediateur|m[eé]diateur|tiers|allie|alli[eé]|organisation|coalition|canal|relai|relais|institution)\b/.test(text)) {
+      missing.push('acteurs tiers, relais institutionnels ou canaux de médiation')
     }
   }
 
   const signalMissing = requiredSignals.filter((signal) => {
-    if (signal.includes('acteur')) return !/\b(qui|avec|contre|entre|manager|equipe|iran|israel|trump|client|famille|collegue|ong|autorite)\b/.test(text)
+    if (signal.includes('acteur')) return !/\b(qui|avec|contre|entre|manager|equipe|client|famille|collegue|ong|autorite|autorit[eé]|institution|gouvernement|etat|[eé]tat)\b/.test(text)
     if (signal.includes('décision') || signal.includes('question')) return !/\b(decider|decision|choisir|faire|trancher|question|comprendre|analyser)\b/.test(text)
     if (signal.includes('temps') || signal.includes('temporal')) return !/\b(aujourd|demain|hier|semaine|mois|annee|24|48|depuis|apres|avant|maintenant)\b/.test(text)
-    if (signal.includes('lieu') || signal.includes('théâtre')) return !/\b(iran|israel|gaza|ukraine|rdc|kivu|oman|ormuz|teheran|washington|frontiere|ville|pays)\b/.test(text)
+    if (signal.includes('lieu') || signal.includes('théâtre')) return !/\b(frontiere|fronti[eè]re|ville|pays|region|r[eé]gion|capitale|zone|site|territoire|theatre|th[eé][aâ]tre)\b/.test(text)
     if (signal.includes('limite')) return !/\b(limite|deborde|abus|refus|peur|risque|charge|pression)\b/.test(text)
     if (signal.includes('tentatives')) return !/\b(deja|tent[eé]|essay[eé]|parl[eé]|fait|aucun)\b/.test(text)
     if (signal.includes('source') || signal.includes('vérification')) return !/\b(source|verifi|temoin|document|preuve|confirme|autorite)\b/.test(text)

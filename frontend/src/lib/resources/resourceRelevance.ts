@@ -7,14 +7,6 @@ export const SEARCH_STOPWORDS = new Set([
   'this', 'will', 'have', 'about', 'after', 'before', 'over', 'into', 'where', 'when',
 ])
 
-const GEOPOLITICAL_TERMS = [
-  'iran', 'iranian', 'tehran', 'teheran', 'téhéran', 'hormuz', 'ormuz', 'strait', 'detroit',
-  'détroit', 'trump', 'ceasefire', 'cessez', 'israel', 'israël', 'gulf', 'oil', 'petrole',
-  'pétrole', 'irgc', 'cgri', 'sanction', 'nuclear', 'nucleaire', 'nucléaire',
-]
-
-const US_TERMS = ['usa', 'us', 'u.s.', 'united states', 'etats unis', 'états unis', 'washington', 'white house']
-
 export function normalizeSearchText(value: string): string {
   return value
     .normalize('NFD')
@@ -72,7 +64,7 @@ export function isDirectSiteResource(resource: ResourceItem): boolean {
 
 function isCausalInfluenceQuery(query: string): boolean {
   const text = normalizeSearchText(query)
-  return /\b(iran|ormuz|hormuz|teheran|teheran|israel|gaza|ukraine|russie|chine|otan|guerre|cessez-le-feu|sanction|militaire|trump|netanyahu|netanyahou|netanayou)\b/i.test(text) &&
+  return /\b(guerre|war|conflit|crise|decision|decision|arbitrage|responsabilite|responsibility|influence|pouvoir|rapport)\b/i.test(text) &&
     /\b(entraine|entraine|pousse|force|manipule|provoque|cause|declenche|amene|dragged|pushed|led|influence)\b/i.test(text)
 }
 
@@ -85,22 +77,12 @@ export function isRelevantResource(resource: ResourceItem, query: string): boole
     if (requestedDomains.length === 0 || requestedDomains.includes(host)) return true
   }
 
-  const queryText = normalizeSearchText(query)
   const queryKeywords = searchKeywords(query)
-  const geopoliticalQuery = GEOPOLITICAL_TERMS.some((term) => queryText.includes(normalizeSearchText(term)))
   const causalQuery = isCausalInfluenceQuery(query)
-
-  if (geopoliticalQuery) {
-    const geopoliticalHit = GEOPOLITICAL_TERMS.some((term) => haystack.includes(normalizeSearchText(term)))
-    if (!geopoliticalHit) return false
-    const queryAsksUs = US_TERMS.some((term) => queryText.includes(normalizeSearchText(term)))
-    const resourceMentionsUs = US_TERMS.some((term) => haystack.includes(normalizeSearchText(term)))
-    if (queryAsksUs && resourceMentionsUs) return true
-  }
 
   if (queryKeywords.length === 0) return true
   const overlap = queryKeywords.filter((keyword) => haystack.includes(keyword)).length
-  const minimumOverlap = geopoliticalQuery ? 1 : causalQuery ? 2 : queryKeywords.length <= 3 ? 1 : 2
+  const minimumOverlap = causalQuery ? 2 : queryKeywords.length <= 3 ? 1 : 2
   return overlap >= minimumOverlap
 }
 
@@ -114,7 +96,6 @@ export function bestRelevantExcerpt(resource: ResourceItem, query: string): stri
 
   const queryText = normalizeSearchText(query)
   const queryKeywords = searchKeywords(query)
-  const geopoliticalQuery = GEOPOLITICAL_TERMS.some((term) => queryText.includes(normalizeSearchText(term)))
   const sentences = excerpt
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => sentence.trim())
@@ -123,8 +104,8 @@ export function bestRelevantExcerpt(resource: ResourceItem, query: string): stri
   const scored = sentences.map((sentence) => {
     const text = normalizeSearchText(sentence)
     const keywordScore = queryKeywords.filter((keyword) => text.includes(keyword)).length
-    const geopoliticalScore = geopoliticalQuery && GEOPOLITICAL_TERMS.some((term) => text.includes(normalizeSearchText(term))) ? 2 : 0
-    return { sentence, score: keywordScore + geopoliticalScore }
+    const sequenceScore = queryText.length > 0 && text.includes(queryText.slice(0, 80)) ? 1 : 0
+    return { sentence, score: keywordScore + sequenceScore }
   }).filter((item) => item.score > 0)
 
   const selected = scored.sort((a, b) => b.score - a.score)[0]?.sentence ?? ''

@@ -19,7 +19,7 @@ type TavilySearchPlan = {
 }
 
 function isGeopoliticalQuery(query: string): boolean {
-  return /\b(iran|ormuz|hormuz|teheran|téhéran|israel|israël|gaza|ukraine|russie|chine|otan|guerre|cessez-le-feu|sanction|militaire|trump|netanyahu|netanyahou|netanayou)\b/i.test(query)
+  return /\b(guerre|war|conflit|crise|cessez[-\s]?le[-\s]?feu|ceasefire|sanction|militaire|military|frappe|strike|diplomatie|diplomacy|geopolitique|geopolitical|nucl[eé]aire|nuclear)\b/i.test(query)
 }
 
 function isCausalInfluenceQuery(query: string): boolean {
@@ -363,81 +363,37 @@ function detectSourceType(url: string): string {
   return 'web'
 }
 
-const COUNTRY_MEDIA_BASKETS: Array<{
-  id: string
-  patterns: RegExp[]
-  domains: string[]
-  labels: string
-}> = [
-  {
-    id: 'israel',
-    patterns: [/\bisrael\b/i, /\bisra[eë]l\b/i, /\bnet[a-z]{3,12}y[a-z]{0,4}ou\b/i, /\bnetanyahu\b/i],
-    domains: ['haaretz.com', 'timesofisrael.com', 'jpost.com', 'ynetnews.com'],
-    labels: 'Israeli media Haaretz Times of Israel Jerusalem Post Ynet',
-  },
-  {
-    id: 'iran',
-    patterns: [/\biran\b/i, /\bt[eé]h[eé]ran\b/i, /\btehran\b/i, /\birgc\b/i, /\bcgri\b/i],
-    domains: ['irna.ir', 'mehrnews.com', 'tasnimnews.com', 'tehrantimes.com', 'presstv.ir'],
-    labels: 'Iranian media IRNA Mehr Tasnim Tehran Times Press TV',
-  },
-  {
-    id: 'united-states',
-    patterns: [/\busa\b/i, /\b[eé]tats-unis\b/i, /\bunited states\b/i, /\btrump\b/i, /\bwashington\b/i],
-    domains: ['whitehouse.gov', 'state.gov', 'defense.gov', 'congress.gov', 'apnews.com', 'politico.com', 'axios.com', 'washingtonpost.com'],
-    labels: 'US sources White House State Department Congress AP Politico Axios Washington Post',
-  },
-  {
-    id: 'ukraine',
-    patterns: [/\bukraine\b/i, /\bkyiv\b/i, /\bkiev\b/i],
-    domains: ['kyivindependent.com', 'pravda.com.ua', 'ukrinform.net'],
-    labels: 'Ukrainian media Kyiv Independent Ukrainska Pravda Ukrinform',
-  },
-  {
-    id: 'russia',
-    patterns: [/\brussie\b/i, /\brussia\b/i, /\bmoscou\b/i, /\bmoscow\b/i, /\bkremlin\b/i],
-    domains: ['tass.com', 'interfax.com', 'kommersant.ru', 'themoscowtimes.com'],
-    labels: 'Russian media TASS Interfax Kommersant Moscow Times',
-  },
-  {
-    id: 'china',
-    patterns: [/\bchine\b/i, /\bchina\b/i, /\bbeijing\b/i, /\bp[eé]kin\b/i],
-    domains: ['scmp.com', 'globaltimes.cn', 'xinhuanet.com', 'chinadaily.com.cn'],
-    labels: 'China media SCMP Global Times Xinhua China Daily',
-  },
-  {
-    id: 'palestine',
-    patterns: [/\bpalestine\b/i, /\bpalestinien/i, /\bgaza\b/i, /\bhamas\b/i],
-    domains: ['wafa.ps', 'maannews.net', 'aljazeera.com', 'middleeasteye.net'],
-    labels: 'Palestinian and regional media WAFA Maan Al Jazeera Middle East Eye',
-  },
+const GEOPOLITICAL_INSTITUTIONAL_DOMAINS = [
+  'un.org',
+  'iaea.org',
+  'state.gov',
+  'whitehouse.gov',
+  'defense.gov',
+  'congress.gov',
+  'eia.gov',
+  'opec.org',
 ]
 
-function countryMediaPlans(query: string): TavilySearchPlan[] {
-  const plans: TavilySearchPlan[] = []
-  const seen = new Set<string>()
-  for (const basket of COUNTRY_MEDIA_BASKETS) {
-    if (!basket.patterns.some((pattern) => pattern.test(query))) continue
-    if (seen.has(basket.id)) continue
-    seen.add(basket.id)
-    plans.push({
-      query: `${query} ${basket.labels} local perspective official reactions`,
-      include_domains: basket.domains,
-      topic: 'news',
-      label: `country-perspective:${basket.id}`,
-    })
-  }
-  return plans.slice(0, 4)
-}
+const GEOPOLITICAL_MEDIA_DOMAINS = [
+  'reuters.com',
+  'apnews.com',
+  'afp.com',
+  'bbc.com',
+  'ft.com',
+  'theguardian.com',
+  'lemonde.fr',
+  'lefigaro.fr',
+  'euronews.com',
+  'france24.com',
+]
 
-function matchedCountryMediaDomains(query: string): Set<string> {
-  const domains = new Set<string>()
-  for (const basket of COUNTRY_MEDIA_BASKETS) {
-    if (!basket.patterns.some((pattern) => pattern.test(query))) continue
-    for (const domain of basket.domains) domains.add(domain)
-  }
-  return domains
-}
+const GEOPOLITICAL_REGIONAL_DOMAINS = [
+  'aljazeera.com',
+  'al-monitor.com',
+  'thenationalnews.com',
+  'arabnews.com',
+  'middleeasteye.net',
+]
 
 function namedSiteSearchQuery(value: string): string | null {
   const text = normalizeSearchText(value)
@@ -474,41 +430,38 @@ function inferSearchPlans(query: string): TavilySearchPlan[] {
   if (isGeopoliticalQuery(query)) {
     const causalQuery = isCausalInfluenceQuery(query)
     const geopoliticalQuery = causalQuery
-      ? `${query} Netanyahu Trump dragged United States into Iran war influence decision`
-      : /\b(iran|ormuz|hormuz)\b/i.test(text)
-        ? `${query} Iran war Trump ceasefire Strait of Hormuz escalation Tehran IRGC oil markets`
-        : query
+      ? `${query} influence decision responsibility official statements timeline`
+      : `${query} latest official statements timeline decision threshold verification`
     plans.push(
       ...(causalQuery
         ? [
             {
-              query: `${query} Reuters AP BBC Guardian Financial Times Netanyahu Trump Iran war dragged United States`,
-              include_domains: ['reuters.com', 'apnews.com', 'bbc.com', 'theguardian.com', 'ft.com', 'nytimes.com', 'washingtonpost.com', 'politico.com', 'axios.com'],
+              query: `${query} Reuters AP BBC Guardian Financial Times official chronology responsibility`,
+              include_domains: GEOPOLITICAL_MEDIA_DOMAINS,
               topic: 'news' as const,
               label: 'causal-major-media',
             },
             {
-              query: `${query} White House State Department Congress Israel Netanyahu Trump Iran`,
-              include_domains: ['whitehouse.gov', 'state.gov', 'congress.gov', 'senate.gov', 'house.gov', 'defense.gov'],
+              query: `${query} official statements government institutions decision timeline`,
+              include_domains: GEOPOLITICAL_INSTITUTIONAL_DOMAINS,
               label: 'causal-institutional',
             },
-            ...countryMediaPlans(query),
           ]
-        : countryMediaPlans(query)),
+        : []),
       {
-        query: `${geopoliticalQuery} United Nations IAEA US State Department White House EIA OPEC`,
-        include_domains: ['un.org', 'iaea.org', 'state.gov', 'whitehouse.gov', 'eia.gov', 'opec.org'],
+        query: geopoliticalQuery,
+        include_domains: GEOPOLITICAL_INSTITUTIONAL_DOMAINS,
         label: 'institutional',
       },
       {
-        query: `${geopoliticalQuery} local and regional media Al Jazeera Al Monitor The National Arab News`,
-        include_domains: ['aljazeera.com', 'al-monitor.com', 'thenationalnews.com', 'arabnews.com', 'middleeasteye.net'],
+        query: `${geopoliticalQuery} regional perspective local reactions`,
+        include_domains: GEOPOLITICAL_REGIONAL_DOMAINS,
         topic: 'news',
         label: 'local-regional',
       },
       {
-        query: `${geopoliticalQuery} Reuters AP Financial Times BBC Guardian Le Monde Euronews analysis`,
-        include_domains: ['reuters.com', 'apnews.com', 'ft.com', 'bbc.com', 'theguardian.com', 'lemonde.fr', 'lefigaro.fr', 'euronews.com', 'france24.com'],
+        query: `${geopoliticalQuery} analysis context verification`,
+        include_domains: GEOPOLITICAL_MEDIA_DOMAINS,
         topic: 'news',
         label: 'major-media',
       }
@@ -569,7 +522,6 @@ function rankDiverseResources(resources: ResourceItem[], query: string): Resourc
   })
 
   const geopolitical = isGeopoliticalQuery(query)
-  const countryDomains = matchedCountryMediaDomains(query)
   const trustedCount = sanitized.filter((resource) =>
     ['institutional', 'major-media', 'research', 'local-regional'].includes(resource.type)
   ).length
@@ -579,9 +531,7 @@ function rankDiverseResources(resources: ResourceItem[], query: string): Resourc
     .sort((a, b) => {
       const aType = typeRank[a.type] ?? 9
       const bType = typeRank[b.type] ?? 9
-      const aCountry = countryDomains.has(hostname(a.url)) ? -1 : 0
-      const bCountry = countryDomains.has(hostname(b.url)) ? -1 : 0
-      return (aCountry - bCountry) || (aType - bType)
+      return aType - bType
     })
     .filter((resource) => {
       const host = hostname(resource.url)

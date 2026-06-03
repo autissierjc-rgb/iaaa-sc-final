@@ -27,6 +27,34 @@ Situation Card.
    - UI/mobile ;
    - admin/cockpit.
 
+## Gate operationnel anti-patch
+
+Ce gate s'applique avant toute modification de code, de prompt, de test ou de
+document de gouvernance lie a Situation Card.
+
+Codex doit produire explicitement ces quatre lignes avant d'editer :
+
+```txt
+Symptome observe :
+Couche canonique responsable :
+Brique existante verifiee :
+Regle generale appliquee :
+```
+
+La question de controle obligatoire est :
+
+```txt
+Quelle couche canonique produit ce symptome ?
+```
+
+Si la reponse propose une correction par nom propre, site, pays, source,
+personne, entreprise, domaine d'actualite ou exemple utilisateur, Codex doit
+arreter la modification et remonter a la couche canonique.
+
+Une modification est recevable seulement si elle consiste a brancher, renforcer
+ou tester une brique deja presente dans `scV2BrickMap.md`, ou si une nouvelle
+brique canonique est explicitement demandee et documentee avant le code.
+
 ## Branches
 
 Branche stable :
