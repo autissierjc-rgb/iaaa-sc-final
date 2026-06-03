@@ -14,7 +14,6 @@ import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { cleanModelText, parseModelJSON } from '../ai/json'
 import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
 import { looksLikeProbativeEvidenceNoise, publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
-import { buildResourceRegimeSignals } from '../resources/regimeSignals'
 import { buildResonanceTrace } from '../resonance'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
 
@@ -232,7 +231,7 @@ function probabilityFromMissingResources(resources?: ResourceServiceContract): P
 
   return {
     claim_fr:
-      'Aucune source rapide exploitable n’a été attachée dans le budget court : la carte peut structurer la situation, mais elle ne confirme pas l’état factuel du jour.',
+      'Aucune source publique exploitable n’a été attachée dans le budget court : la carte peut structurer la situation, mais elle ne confirme pas l’état factuel du jour.',
     status: 'hypothesis',
     probability_label_fr: 'Lecture structurelle provisoire',
     confidence: 0.34,
@@ -258,7 +257,7 @@ function resourceWarning(resources?: ResourceServiceContract): string | undefine
   if (resources.policy === 'url_extract_required') {
     return 'Un site ou une URL est présent : l’analyse doit rester provisoire tant que son contenu, sa promesse et ses preuves visibles n’ont pas été extraits ou vérifiés.'
   }
-  return 'Des sources rapides sont requises pour ce domaine : l’analyse doit distinguer ce qui est structurellement lisible de ce qui reste à vérifier.'
+  return 'Des sources publiques sont requises pour ce domaine : l’analyse doit distinguer ce qui est structurellement lisible de ce qui reste à vérifier.'
 }
 
 function hasProductOptionEvidence(resources?: ResourceServiceContract): boolean {
@@ -297,7 +296,7 @@ function probabilityFromResources(resources?: ResourceServiceContract): Probabil
   const proof = resourceProofLabel(resources)
   const publicEvidence = publicProbativeEvidence(resources)
   return {
-    claim_fr: 'Les sources rapides donnent un premier appui factuel, mais leur portée doit rester qualifiée tant qu’elles ne sont pas confrontées par Recherche+.',
+    claim_fr: 'Le statut de preuve reste plausible : les faits attachés donnent un premier appui, mais leur portée doit rester qualifiée tant qu’ils ne sont pas confrontés par vérification contradictoire.',
     status: 'plausible',
     probability_label_fr: ASSERTION_LABELS_FR.plausible,
     confidence: resources.public_sources.length >= 2 ? 0.66 : 0.58,
@@ -310,43 +309,6 @@ function probabilityFromResources(resources?: ResourceServiceContract): Probabil
       ? `preuve décisive encore à confronter : ${proof}.`
       : 'preuve décisive encore à confronter par Recherche+.',
   }
-}
-
-function resourceEvidenceSentence(resources?: ResourceServiceContract): string | undefined {
-  if (!resources || resources.public_sources.length === 0) return undefined
-
-  const sources = resources.public_sources.slice(0, 3).map((source) => {
-    const reliability = source.reliability && source.reliability !== 'unknown'
-      ? `, ${source.reliability}`
-      : ''
-    return `${source.title} (${source.source}${reliability})`
-  }).join(' ; ')
-
-  if (hasProductOptionEvidence(resources)) {
-    return `Les ressources produit attachées (${sources}) cadrent la lecture : elles donnent des options exploitables, mais la preuve de marché reste à tester par usage observable.`
-  }
-
-  return `Les sources rapides attachées (${sources}) cadrent la lecture : elles donnent un premier appui vérifiable, mais ne remplacent pas Recherche+ ni une vérification de contradiction.`
-}
-
-function resourceRegimeSignalSentence(
-  resources?: ResourceServiceContract,
-  resonance?: ResonanceTraceContract,
-): string | undefined {
-  const sourceSignals = (resonance?.source_signals ?? buildResourceRegimeSignals(resources, 3))
-    .filter((signal) => signal.discriminant_terms.length > 0)
-
-  if (sourceSignals.length < 2) return undefined
-
-  const sourceNames = unique(sourceSignals
-    .map((signal) => signal.source_name)
-    .filter(Boolean))
-    .slice(0, 3)
-  const sourceLine = sourceNames.length > 0
-    ? ` (${sourceNames.join(', ')})`
-    : ''
-
-  return `Les sources rapides disponibles${sourceLine} donnent un point d’appui factuel ; la lecture doit partir des faits publiés avant d’inférer le régime.`
 }
 
 function groundedFactOpeningSentence(grounding?: GroundingContract): string | undefined {
@@ -1363,8 +1325,6 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const missingExternalEvidence = needsExternalEvidenceWithoutSources(input.resources)
   const probability = probabilityFromResources(input.resources) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
-  const resourcesSentence = resourceEvidenceSentence(input.resources)
-  const resourceSignalOpening = resourceRegimeSignalSentence(input.resources, resonance)
   const groundedFactOpening = groundedFactOpeningSentence(input.grounding)
   const diamondText = polishPublicProofText(compactSentence(
     resonance.diamond_thesis_fr || grammar.diamond(tension, institutions, firstProcedure),
@@ -1430,12 +1390,10 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const lectureFr = polishPublicProofText(compactSentence(lecture, 820))
   const approfondirAnalysis = [
     groundedFactOpening,
-    resourceSignalOpening,
     diamondText,
     grammar.approfondirEntry,
     resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
     `Ce qu il faut etablir n est pas seulement l intention, mais le lien entre ${firstProcedure}, ${evidence} et ${blindSpot}.`,
-    resourcesSentence,
     resourcesWarning ? resourcesWarning : '',
     trajectoryText,
     probabilityText,
@@ -1493,7 +1451,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     approfondir: {
       analysis_fr: polishPublicProofText(approfondirAnalysis),
       sections_fr: canonicalApprofondirSections({
-        really: `${missingExternalEvidence ? 'Lecture structurelle provisoire : aucun signal rapide n’a été retenu comme source publique suffisante. ' : ''}${resourceSignalOpening ? `${resourceSignalOpening} ` : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
+        really: `${missingExternalEvidence ? 'Lecture structurelle provisoire : aucun signal public n’a été retenu comme preuve suffisante. ' : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
         holds: resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
         weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un constat vérifiable.`,
         escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,

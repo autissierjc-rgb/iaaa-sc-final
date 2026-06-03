@@ -33,7 +33,12 @@ export function benchmarkWritingQuality(
   const forbidden = containsForbiddenPublicPhrase(publicText(writing))
   const needsResourceWarning = Boolean(resources?.needs_web)
   const hasResourceWarning = !needsResourceWarning ||
-    writing.public_warnings.some((warning) => warning === resources?.policy_reason_fr || warning.includes('sources rapides') || warning.includes('URL'))
+    writing.public_warnings.some((warning) =>
+      warning === resources?.policy_reason_fr ||
+      warning.includes('sources rapides') ||
+      warning.includes('sources publiques') ||
+      warning.includes('URL')
+    )
 
   const checks = [
     {

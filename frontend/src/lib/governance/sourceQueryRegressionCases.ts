@@ -647,6 +647,19 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       })
     }
   }
+  const approfondirPublicText = [
+    noisySourceWriting.approfondir.analysis_fr,
+    ...noisySourceWriting.approfondir.sections_fr.map((section) => `${section.title} ${section.body}`),
+  ].join(' ')
+  for (const forbidden of ['sources rapides disponibles', 'sources rapides attachées', 'reuters.com', 'aljazeera.com']) {
+    if (includesLoose(approfondirPublicText, forbidden)) {
+      approfondirSourceSectionIssues.push({
+        level: 'error',
+        code: 'source_listing_leaked_into_approfondir_text',
+        message: `Approfondir may qualify proof status but must not list fast sources or source domains: ${forbidden}.`,
+      })
+    }
+  }
 
   const completeCoverageIssues: SourceQueryRegressionResult['issues'] = []
   const agencySource: ResourceContract = {

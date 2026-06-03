@@ -561,14 +561,14 @@ function fallbackLecture(
 
   return {
     lecture_systeme_fr: cleanModelText(
-      `La situation ne se réduit pas à l’événement visible. Elle révèle une distribution de leviers : qui peut agir, bloquer, légitimer, user, protéger ou faire basculer. La contradiction porteuse est nette : ${contradiction}.\n\n` +
-      `Ce qui garde encore la face n’est pas forcément ce qui protège vraiment. Le point fragile est ${main}. C’est là que la tension cesse d’être seulement une lecture et devient une contrainte réelle.${humanHint}\n\n` +
-      `La bascule à surveiller sera concrète : un acteur qui change de rythme, une décision qui rend le coût visible, un refus qui bloque, ou un seuil qui oblige les parties à sortir du flou. À ce moment-là, la situation ne sera plus seulement contenue ; elle changera de logique.`
+      `${capitalizeFirst(contradiction)}\n\n` +
+      `Le point fragile est ${main}.${humanHint}\n\n` +
+      `${sentenceWithPeriod(cleanModelText(sc?.key_signal_fr) || 'Le signal à surveiller est la première trace publique qui transforme la tension en décision, coût assumé ou seuil reconnu par les acteurs concernés')}`
     ),
     lecture_systeme_en: cleanModelText(
-      `The situation is not reducible to the visible event. It is held together by a load-bearing contradiction: ${contradiction}.\n\n` +
-      `What still holds is not necessarily what protects the system. The fragile point is ${main}. That is where the tension stops being only a reading and becomes a real constraint.\n\n` +
-      `The tipping point to watch will be concrete: an actor changing tempo, a decision making the cost visible, or a threshold forcing the parties out of ambiguity. At that point, the situation will no longer be merely contained; it will change logic.`
+      `${capitalizeFirst(contradiction)}\n\n` +
+      `The fragile point is ${main}.\n\n` +
+      `${sentenceWithPeriod(cleanModelText(sc?.key_signal_en) || 'The signal to watch is the first public trace that turns the tension into a decision, an assumed cost, or a threshold recognized by the actors involved')}`
     ),
   }
 }

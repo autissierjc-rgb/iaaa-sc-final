@@ -119,6 +119,11 @@ const RESOURCE_AS_OBJECT_PHRASES = [
 ]
 
 const MECHANICAL_WRITING_PATTERNS = [
+  /la situation ne se reduit pas a l.?evenement visible/i,
+  /distribution de leviers/i,
+  /ce qui garde encore la face/i,
+  /un acteur qui change de rythme/i,
+  /qui peut agir,\s*bloquer,\s*legitimer/i,
   /ne se tranche pas par une formule generale/i,
   /acteurs et passages obliges/i,
   /levier reel qui n.?est pas encore protege ou clarifie/i,

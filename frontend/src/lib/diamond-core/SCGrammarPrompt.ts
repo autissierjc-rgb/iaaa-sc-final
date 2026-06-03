@@ -160,13 +160,13 @@ function qualityTargets(dossier: DiamondDossier): string[] {
       : []),
     ...(hasRegimeSignals
       ? [
-          'Sources rapides: quand Resources.regime_signals contient des signaux, lecture.text_fr doit ouvrir sur au moins deux faits ou signaux sourcables avant la lecture structurelle.',
-          'Regime reading: utiliser les signaux de ressources pour nommer le regime actuel de la situation : escalade, treve fragile, verrouillage diplomatique, saturation, transition ou bascule.',
+          'Regime reading: utiliser les signaux de ressources comme ancrage interne pour nommer le regime actuel de la situation : escalade, treve fragile, verrouillage diplomatique, saturation, transition ou bascule.',
+          'Ne jamais lister les sources rapides, les domaines ou les titres de sources dans Approfondir ; les sources restent dans le panneau Ressources.',
         ]
       : []),
     ...(hasPublicEvidence
       ? [
-          'Faits rapides: quand Resources.public_evidence contient des preuves publiques utilisables, Approfondir doit commencer par un fait rapide retenu ou sa consequence directe, puis seulement inferer la structure.',
+          'Quand Resources.public_evidence contient des preuves publiques utilisables, les transformer en consequences structurelles propres, sans lister les sources ni ouvrir Approfondir par une citation ou un titre.',
         ]
       : []),
     ...dossier.grammar.required_public_moves_fr,
@@ -236,6 +236,8 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       'situation_card.submitted_situation_fr must equal the canonical situation or its polished faithful French form.',
       'situation_card.insight_fr must contain the core reading, not a disclaimer.',
       'situation_card.insight_fr must open a diamond reading: a central contradiction carried by actors, constraints and proof, not an administrative summary.',
+      'Never open with generic scaffolding such as "La situation ne se réduit pas...", "distribution de leviers", "ce qui garde encore la face" or "un acteur qui change de rythme".',
+      'A diamond sentence must name the contradiction directly: actor + mechanism/threshold + proof/status. No abstract preamble.',
       'situation_card.main_vulnerability_fr must be specific, structural and testable.',
       'situation_card.asymmetry_fr must name the asymmetry of power, proof, role, timing or adoption.',
       'situation_card.key_signal_fr must name the observable signal that would change the regime of the situation.',
@@ -243,15 +245,15 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       ...(hasRegimeSignals
         ? [
             'Resources.regime_signals are mandatory anchors, not optional background.',
-            'For a dated/current geopolitical, market, crisis or public event question with regime_signals, lecture.text_fr must begin from at least two concrete source-derived signals, then infer the structural regime.',
-            'Do not write a generic institutional reading if regime_signals exist. Name the factual signals first, then compress them into the regime diagnosis.',
-            'situation_card.insight_fr must include at least one resource-derived regime signal or its direct consequence.',
+            'For a dated/current geopolitical, market, crisis or public event question with regime_signals, lecture.text_fr must begin from the concrete regime diagnosis, not from method or source availability.',
+            'Do not write a generic institutional reading if regime_signals exist. Compress their consequences into the regime diagnosis without citing source domains or titles.',
+            'situation_card.insight_fr must include at least one resource-derived consequence, not a source label.',
           ]
         : []),
       ...(hasPublicEvidence
         ? [
             'Resources.public_evidence with can_drive_probability=true is mandatory factual grounding, not a citation list.',
-            'Do not merely say that fast sources exist. In approfondir.analysis_fr or the first Approfondir section, state at least one cleaned public_evidence fact or its direct public consequence before the structural diagnosis.',
+            'Do not merely say that sources exist. In public writing, state the direct consequence for regime/probability, without listing source domains, titles, URLs or media labels.',
             'Never paste raw titles, markdown headings, media boilerplate or URL text as evidence.',
           ]
         : []),

@@ -5395,7 +5395,6 @@ export async function POST(req: NextRequest) {
         modelPath: 'local',
       })
     }
-    baseSc = applyWritingContractToCard(baseSc, writingContract, generationDisplayText)
     const contractQuality = canonicalScoringForWriting
       ? runContractQualityGate({
           interpretation: generationInterpretation,
@@ -5446,6 +5445,26 @@ export async function POST(req: NextRequest) {
         modelPath: 'local',
       })
     }
+    if (qualityHasError && writingContract) {
+      recordGenerationTrace({
+        status: 'partial',
+        gate: 'GENERATE',
+        route: '/api/generate',
+        canonicalLayer: 'quality',
+        pipelineStep: 'DiamondDisplayGate',
+        diagnostic: `writing_rejected_before_public_display:${qualityIssues.map((issue) => issue.code).join(' | ')}`.slice(0, 240),
+        durationMs: 0,
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+        resourcesStatus: diamondResourcePlan.status,
+        resourcesCount: diamondResourcePlan.resources.length,
+        modelPath: 'local',
+      })
+      writingContract = null
+    }
+    baseSc = applyWritingContractToCard(baseSc, writingContract, generationDisplayText)
     if (qualityHasError && !diamondArchitectWriter?.accepted) {
       baseSc = {
         ...baseSc,
