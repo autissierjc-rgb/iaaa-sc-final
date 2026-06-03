@@ -373,13 +373,47 @@ function countAnchorsUsed(anchors: string[], normalizedText: string): number {
 
 function publicEvidenceVisible(resources: ResourceServiceContract | undefined, normalizedNarrativeText: string, baseline = ''): boolean {
   const baselineTokens = new Set(normalize(baseline).split(/[^a-z0-9]+/).filter(Boolean))
+  const genericEvidenceTokens = new Set([
+    'source',
+    'sources',
+    'rapides',
+    'disponibles',
+    'preuve',
+    'preuves',
+    'factuel',
+    'factuelle',
+    'factuels',
+    'lecture',
+    'situation',
+    'acteurs',
+    'decision',
+    'officielle',
+    'contradiction',
+    'documentee',
+    'observable',
+    'verifiable',
+    'threshold',
+    'military',
+    'public',
+    'published',
+    'available',
+  ])
   return publicProbativeEvidence(resources, 4)
     .filter((evidence) => evidence.can_drive_probability)
     .some((evidence) => {
       const tokens = normalize(evidence.public_label_fr)
         .split(/[^a-z0-9]+/)
-        .filter((token) => token.length >= 6 && !baselineTokens.has(token))
-      return tokens.some((token) => normalizedNarrativeText.includes(token))
+        .filter((token) => token.length >= 6 && !baselineTokens.has(token) && !genericEvidenceTokens.has(token))
+      const uniqueTokens = Array.from(new Set(tokens))
+      const tokenHits = uniqueTokens.filter((token) => normalizedNarrativeText.includes(token)).length
+      if (tokenHits >= 3) return true
+
+      for (let index = 0; index <= uniqueTokens.length - 2; index += 1) {
+        const phrase = uniqueTokens.slice(index, index + 2).join(' ')
+        if (normalizedNarrativeText.includes(phrase)) return true
+      }
+
+      return false
     })
 }
 
