@@ -103,6 +103,27 @@ function resourcePlanWithNoisyReutersExcerpt(): ResourceServiceContract {
   }
 }
 
+function resourcePlanWithCleanPublicEvidence(): ResourceServiceContract {
+  const source: ResourceContract = {
+    id: 'clean-public-evidence-regression',
+    title: 'Official warning follows emergency session',
+    url: 'https://official.example/emergency-session',
+    source: 'official.example',
+    channel: 'official',
+    domain_relevance: ['geopolitics'],
+    excerpt: 'An emergency session followed official warnings between Iran, Israel and the United States over military thresholds.',
+    retrieved_at: '2026-06-04T00:00:00.000Z',
+    reliability: 'primary',
+  }
+
+  return {
+    ...baseResourcePlan(),
+    status: 'available',
+    resources: [source],
+    public_sources: [source],
+  }
+}
+
 function theatreForCurrentQuestion(): ConcreteTheatreContract {
   return {
     domain: 'geopolitics',
@@ -415,6 +436,21 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     scoring: scoringForRegression(),
   })
   const noisySourceIssues: SourceQueryRegressionResult['issues'] = []
+  const cleanEvidenceResources = resourcePlanWithCleanPublicEvidence()
+  const cleanEvidenceWriting = composeDiamondWriting({
+    interpretation: input.interpretation,
+    theatre: theatreForCurrentQuestion(),
+    resources: cleanEvidenceResources,
+    resonance: buildResonanceTrace({
+      interpretation: input.interpretation,
+      theatre: theatreForCurrentQuestion(),
+      resources: cleanEvidenceResources,
+    }),
+    safety: safetyForRegression(),
+    expertises_metiers: expertisesForCurrentQuestion(),
+    scoring: scoringForRegression(),
+  })
+  const cleanEvidenceIssues: SourceQueryRegressionResult['issues'] = []
   const patentChoiceResonance = buildResonanceTrace({
     interpretation: interpretationForPatentChoice(),
     theatre: patentChoiceTheatre(),
@@ -601,6 +637,28 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  const cleanEvidencePublicText = [
+    cleanEvidenceWriting.situation_card.key_signal_fr,
+    cleanEvidenceWriting.lecture.text_fr,
+    cleanEvidenceWriting.approfondir.analysis_fr,
+    ...cleanEvidenceWriting.approfondir.sections_fr.map((section) => section.body),
+  ].join(' ')
+  if (!includesLoose(cleanEvidencePublicText, 'emergency session') ||
+    !includesLoose(cleanEvidencePublicText, 'official warnings')) {
+    cleanEvidenceIssues.push({
+      level: 'error',
+      code: 'clean_public_evidence_underused',
+      message: 'A clean public evidence excerpt must become a concrete writing anchor instead of falling back to generic proof wording.',
+    })
+  }
+  if (!includesLoose(cleanEvidenceWriting.probability_assessments[0]?.probability_label_fr ?? '', 'Plausible')) {
+    cleanEvidenceIssues.push({
+      level: 'error',
+      code: 'clean_public_evidence_not_plausible',
+      message: 'A clean public evidence excerpt can support a plausible status while remaining revisable.',
+    })
+  }
+
   if (patentChoiceResonance.real_actors.some((actor) => actor === 'Une' || actor === 'Un')) {
     patentChoiceIssues.push({
       level: 'error',
@@ -781,6 +839,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: noisySourceWriting.approfondir.analysis_fr,
     subject: noisySourceWriting.probability_assessments[0]?.missing_proof_fr ?? '',
     issues: noisySourceIssues,
+  }, {
+    id: 'clean-public-evidence-drives-public-writing',
+    ok: cleanEvidenceIssues.length === 0,
+    query: cleanEvidenceWriting.situation_card.key_signal_fr,
+    subject: cleanEvidenceWriting.probability_assessments[0]?.probability_label_fr ?? '',
+    issues: cleanEvidenceIssues,
   }, {
     id: 'patent-choice-resource-labels-do-not-drive-spine',
     ok: patentChoiceIssues.length === 0,

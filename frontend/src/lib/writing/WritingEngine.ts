@@ -295,20 +295,45 @@ function probabilityFromResources(resources?: ResourceServiceContract): Probabil
 
   const proof = resourceProofLabel(resources)
   const publicEvidence = publicProbativeEvidence(resources)
+  const usableEvidence = publicEvidence.filter((evidence) => evidence.can_drive_probability)
+  if (usableEvidence.length === 0) {
+    return {
+      claim_fr: 'Des sources rapides sont attachées, mais elles ne fournissent pas encore de fait public suffisamment propre pour durcir la lecture.',
+      status: 'hypothesis',
+      probability_label_fr: 'Hypothèse à vérifier',
+      confidence: 0.44,
+      examples: publicEvidence.map((evidence) => ({
+        text_fr: evidence.public_label_fr,
+        status: 'hypothesis',
+        source_ids: evidence.source_id ? [evidence.source_id] : [],
+      })),
+      missing_proof_fr: proof
+        ? `preuve décisive encore à confronter : ${proof}.`
+        : 'preuve décisive encore à confronter par Recherche+.',
+    }
+  }
+
   return {
     claim_fr: 'Le statut de preuve reste plausible : les faits attachés donnent un premier appui, mais leur portée doit rester qualifiée tant qu’ils ne sont pas confrontés par vérification contradictoire.',
     status: 'plausible',
     probability_label_fr: ASSERTION_LABELS_FR.plausible,
     confidence: resources.public_sources.length >= 2 ? 0.66 : 0.58,
-    examples: publicEvidence.map((evidence) => ({
+    examples: usableEvidence.map((evidence) => ({
       text_fr: evidence.public_label_fr,
-      status: evidence.status === 'usable' ? 'plausible' : 'hypothesis',
+      status: 'plausible',
       source_ids: evidence.source_id ? [evidence.source_id] : [],
     })),
     missing_proof_fr: proof
       ? `preuve décisive encore à confronter : ${proof}.`
       : 'preuve décisive encore à confronter par Recherche+.',
   }
+}
+
+function publicEvidenceAnchors(resources?: ResourceServiceContract): string[] {
+  return publicProbativeEvidence(resources)
+    .filter((evidence) => evidence.can_drive_probability)
+    .map((evidence) => compactSentence(evidence.public_label_fr, 160))
+    .filter((evidence) => evidence.length > 0 && !looksLikeProbativeEvidenceNoise(evidence))
 }
 
 function groundedFactOpeningSentence(grounding?: GroundingContract): string | undefined {
@@ -1310,6 +1335,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const institutions = publicAnchors(resonance.institutions, grammar.institutionsFallback)
   const actionAnchors = theatreActionAnchors(input.theatre)
   const proofAnchors = unique([
+    ...publicEvidenceAnchors(input.resources),
     resonance.transition_signal_fr,
     ...theatreProofAnchors(input.theatre, input.expertises_metiers),
   ])
