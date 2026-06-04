@@ -25,6 +25,25 @@ function unique(items: string[]): string[] {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)))
 }
 
+function removeCompositeActors(items: string[]): string[] {
+  const values = unique(items)
+  const keys = values.map((value) => normalize(value).replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim())
+
+  return values.filter((value, index) => {
+    const key = keys[index]
+    if (!key || key.split(' ').length < 2) return true
+
+    const containedActors = keys.filter((otherKey, otherIndex) =>
+      otherIndex !== index &&
+      otherKey.length >= 3 &&
+      otherKey !== key &&
+      key.includes(otherKey)
+    )
+
+    return containedActors.length < 2
+  })
+}
+
 function words(value: string): string[] {
   return normalize(value)
     .split(/[^a-z0-9]+/)
@@ -312,7 +331,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       source_name: signal.source_name,
       discriminant_terms: signal.discriminant_terms,
     }))
-  const realActors = unique([
+  const realActors = removeCompositeActors([
     ...input.interpretation.entity_explanations.map((entity) => entity.label),
     ...lexicalActorsFromCorpus(corpus),
     ...(input.theatre.named_actors ?? []),

@@ -819,6 +819,18 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       })
     }
   }
+  for (const forbidden of ['Iran États-Unis Israël', 'États-Unis Israël Iran']) {
+    if (
+      uppercaseRawTheatre.actors.some((actor) => includesLoose(actor, forbidden)) ||
+      (uppercaseRawTheatre.named_actors ?? []).some((actor) => includesLoose(actor, forbidden))
+    ) {
+      canonicalTheatreIssues.push({
+        level: 'error',
+        code: 'canonical_actor_composite_kept',
+        message: `ConcreteTheatreBuilder must not keep a composite actor when the component actors are already present: ${forbidden}.`,
+      })
+    }
+  }
 
   const planSpecificResource: ResourceItem = {
     title: 'Official decision confirms public threshold',

@@ -35,6 +35,35 @@ function unique(items: string[]): string[] {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)))
 }
 
+function actorKey(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function removeCompositeActors(items: string[]): string[] {
+  const values = unique(items)
+  const keys = values.map((value) => actorKey(value))
+
+  return values.filter((value, index) => {
+    const key = keys[index]
+    if (!key || key.split(' ').length < 2) return true
+
+    const containedActors = keys.filter((otherKey, otherIndex) =>
+      otherIndex !== index &&
+      otherKey.length >= 3 &&
+      otherKey !== key &&
+      key.includes(otherKey)
+    )
+
+    return containedActors.length < 2
+  })
+}
+
 function extractDates(text: string): string[] {
   return unique(text.match(DATE_PATTERN) ?? [])
 }
@@ -299,13 +328,13 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
   const sourceNames = unique((input.resources?.public_sources ?? []).map((resource) => resource.source))
   const resourceAnchors = resourceTheatreAnchors(input.resources)
   const playbook = input.expertises?.domain_playbook
-  const namedActors = unique([
+  const namedActors = removeCompositeActors([
     ...interpretation.entity_explanations.map((entity) => entity.label),
     ...namedAnchors,
     ...resourceAnchors.actors,
   ]).slice(0, 12)
   const roleAnchors = unique(playbook?.typical_actors ?? []).slice(0, 12)
-  const actors = unique([
+  const actors = removeCompositeActors([
     ...namedActors,
     ...roleAnchors,
   ]).slice(0, 12)
