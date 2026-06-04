@@ -42,3 +42,23 @@ Quelle couche canonique produit ce symptome ?
 ```
 
 Commits must name the canonical layer or contract, not the anecdotal symptom.
+
+## Interpretation Authority Guard
+
+The LLM referent is the only authority allowed to understand, correct, and
+reformulate the user's public question.
+
+Local interpretation fallbacks may classify, protect, route, normalize display
+text, or mark the referent as unavailable. They must not improve public
+comprehension by fabricating a better `situation_soumise`.
+
+Before editing `src/lib/intent/interpretRequest.ts`,
+`src/lib/interpretation/InterpretationService.ts`, or public generation
+interpretation flow, answer explicitly:
+
+```txt
+Does this preserve the LLM referent as interpretation authority?
+```
+
+If the answer is not yes, stop and move the correction to the canonical
+referent flow, timeout policy, or unavailable-reference handling.

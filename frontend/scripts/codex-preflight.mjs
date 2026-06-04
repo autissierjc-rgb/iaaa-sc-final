@@ -30,4 +30,6 @@ Rules:
 - No special-case patch before canonical mapping.
 - Branch, strengthen, test, or document an existing brick first.
 - Keep commits scoped to one canonical layer.
+- Interpretation authority: the LLM referent understands; SC structures.
+- Local interpretation fallbacks must not fabricate a better public situation_soumise.
 `)

@@ -55,6 +55,49 @@ Une modification est recevable seulement si elle consiste a brancher, renforcer
 ou tester une brique deja presente dans `scV2BrickMap.md`, ou si une nouvelle
 brique canonique est explicitement demandee et documentee avant le code.
 
+## Gate d'autorite d'interpretation
+
+Le LLM referent est la seule autorite de comprehension publique :
+
+```txt
+Le LLM referent comprend.
+SC structure.
+```
+
+Les fallbacks locaux d'interpretation peuvent :
+
+- classer une demande ;
+- proteger ou router ;
+- normaliser un affichage ;
+- signaler que le referent LLM est indisponible.
+
+Ils ne peuvent pas :
+
+- corriger la question a la place du referent ;
+- enrichir la comprehension publique ;
+- fabriquer une meilleure `situation_soumise` ;
+- transformer une faute, une date, un acronyme ou une formulation confuse en
+  intention canonique.
+
+Avant toute modification de :
+
+```txt
+src/lib/intent/interpretRequest.ts
+src/lib/interpretation/InterpretationService.ts
+src/app/api/generate/route.ts
+```
+
+Codex doit repondre explicitement :
+
+```txt
+Cette modification preserve-t-elle le LLM referent comme autorite
+d'interpretation ?
+```
+
+Si la reponse n'est pas oui, la modification doit etre arretee. La correction
+doit se faire dans le flux referent, la politique de timeout ou le signalement
+d'indisponibilite du referent, pas dans un fallback local de comprehension.
+
 ## Branches
 
 Branche stable :
