@@ -2,6 +2,7 @@ import type {
   ConcreteTheatreContract,
   ExpertisesMetiersContract,
   InterpretationContract,
+  GroundingContract,
   ResourceContract,
   ResourceServiceContract,
   RiskAdviceGuardContract,
@@ -14,9 +15,11 @@ import {
 import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSourceCoverage'
 import type { ResourceItem } from '@/lib/resources/resourceContract'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
+import type { SituationCard } from '@/lib/resources/resourceContract'
 import { buildResonanceTrace } from '@/lib/resonance'
 import { buildConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWriting } from '@/lib/writing'
+import { validateDiamondContract } from './diamondValidation'
 
 export type SourceQueryRegressionResult = {
   id: string
@@ -122,6 +125,67 @@ function resourcePlanWithCleanPublicEvidence(): ResourceServiceContract {
     resources: [source],
     public_sources: [source],
   }
+}
+
+function notReadyGroundingContract(): GroundingContract {
+  return {
+    understood_question_fr: 'Où en sommes-nous sur la guerre entre les États-Unis et l’Iran au 2 juin ?',
+    object_fr: 'guerre États-Unis Iran',
+    source_status: 'missing',
+    current_facts: [],
+    options: [],
+    actors: ['Iran', 'États-Unis'],
+    institutions: ['administration américaine', 'autorités iraniennes'],
+    constraints: [],
+    missing_evidence_fr: ['source publique datée'],
+    permissions: {
+      can_write_current_state: false,
+      can_write_strategy: false,
+      can_write_options: false,
+      can_write_source_backed_claims: false,
+      must_mark_provisional: true,
+    },
+    trace: {
+      service: 'GroundingContractBuilder',
+      version: 'regression',
+      duration_ms: 0,
+      status: 'partial',
+    },
+  }
+}
+
+function genericCurrentCardForValidation(): SituationCard {
+  return {
+    title_fr: 'guerre États-Unis Iran',
+    title_en: 'US Iran war',
+    submitted_situation_fr: 'Où en sommes-nous sur la guerre entre les États-Unis et l’Iran au 2 juin ?',
+    submitted_situation_en: 'Where are we on the war between the United States and Iran on June 2?',
+    insight_fr: 'La situation tient tant que Iran, États-Unis peuvent absorber l’écart entre récit, coût et décision ; elle bascule quand un acte transforme la riposte en seuil public.',
+    insight_en: '',
+    main_vulnerability_fr: 'Le point fragile est le mécanisme qui transforme la frappe, la riposte ou la négociation en seuil officiel.',
+    main_vulnerability_en: '',
+    asymmetry_fr: 'Iran, États-Unis exposent la tension, mais administration américaine, autorités iraniennes décident si elle reste contenue.',
+    asymmetry_en: '',
+    state_index_final: 60,
+    state_label_fr: 'Vigilance',
+    state_label_en: 'Watch',
+    radar: [],
+    astrolabe_scores: [],
+    axes: [],
+    forces: [],
+    tensions: [],
+    constraints_fr: [],
+    constraints_en: [],
+    uncertainties_fr: [],
+    uncertainties_en: [],
+    movements_fr: [],
+    movements_en: [],
+    trajectories: [],
+    lecture_systeme_fr: 'Lecture provisoire : la carte situe les seuils à vérifier, pas l’état factuel du jour.',
+    lecture_systeme_en: '',
+    approfondir_fr: '',
+    approfondir_en: '',
+  } as unknown as SituationCard
 }
 
 function theatreForCurrentQuestion(): ConcreteTheatreContract {
@@ -451,6 +515,15 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     scoring: scoringForRegression(),
   })
   const cleanEvidenceIssues: SourceQueryRegressionResult['issues'] = []
+  const diamondReadinessIssues: SourceQueryRegressionResult['issues'] = []
+  const notReadyDiamondValidation = validateDiamondContract(
+    genericCurrentCardForValidation(),
+    'geopolitics',
+    {
+      grounding: notReadyGroundingContract(),
+      resources: baseResourcePlan(),
+    },
+  )
   const patentChoiceResonance = buildResonanceTrace({
     interpretation: interpretationForPatentChoice(),
     theatre: patentChoiceTheatre(),
@@ -658,6 +731,14 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       message: 'A clean public evidence excerpt can support a plausible status while remaining revisable.',
     })
   }
+  if (notReadyDiamondValidation.ok ||
+    !notReadyDiamondValidation.issues.some((issue) => issue.code === 'diamond_readiness_current_facts_missing')) {
+    diamondReadinessIssues.push({
+      level: 'error',
+      code: 'diamond_readiness_missing_fact_not_blocked',
+      message: 'DiamondValidation must reject current/source-dependent cards when GroundingContract has no public current facts.',
+    })
+  }
 
   if (patentChoiceResonance.real_actors.some((actor) => actor === 'Une' || actor === 'Un')) {
     patentChoiceIssues.push({
@@ -845,6 +926,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: cleanEvidenceWriting.situation_card.key_signal_fr,
     subject: cleanEvidenceWriting.probability_assessments[0]?.probability_label_fr ?? '',
     issues: cleanEvidenceIssues,
+  }, {
+    id: 'diamond-readiness-requires-current-public-facts',
+    ok: diamondReadinessIssues.length === 0,
+    query: notReadyDiamondValidation.issues.map((issue) => issue.code).join(' | '),
+    subject: 'DiamondValidation + GroundingContract',
+    issues: diamondReadinessIssues,
   }, {
     id: 'patent-choice-resource-labels-do-not-drive-spine',
     ok: patentChoiceIssues.length === 0,

@@ -5806,7 +5806,10 @@ export async function POST(req: NextRequest) {
       submitted_situation_en: exploratoryWithoutMaterial ? generationDisplayText : canonicalSubmittedText,
     }
 
-    const diamondValidation = validateDiamondContract(sc, effectiveCoverageForGeneration.domain)
+    const diamondValidation = validateDiamondContract(sc, effectiveCoverageForGeneration.domain, {
+      grounding: groundingContract,
+      resources: diamondResourcePlan,
+    })
     const diamondActionableIssues = diamondValidation.issues.filter((issue) => issue.level !== 'info')
     const diamondQuality = {
       status: diamondValidation.ok

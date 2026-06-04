@@ -1,3 +1,4 @@
+import type { GroundedFact, GroundingContract, ResourceServiceContract } from '../contracts'
 import type { SituationCard, SituationDomain } from '../resources/resourceContract'
 
 // Boundary rule:
@@ -18,6 +19,11 @@ export type DiamondValidationIssue = {
 export type DiamondValidationResult = {
   ok: boolean
   issues: DiamondValidationIssue[]
+}
+
+export type DiamondValidationContext = {
+  grounding?: GroundingContract
+  resources?: ResourceServiceContract
 }
 
 const DOMAIN_FORBIDDEN_TERMS: Record<SituationDomain, RegExp[]> = {
@@ -125,6 +131,13 @@ const PUBLIC_SCAFFOLDING_PATTERNS = [
 
 const CONCRETE_SIGNAL = /\b[A-ZÉÈÀÂÎÏÔÛÇ][A-Za-zÀ-ÿ'’-]{2,}\b|\b\d{4}\b|\b\d{1,2}\s+(janvier|f[eé]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[eé]cembre)\b|https?:\/\//i
 
+function normalizeForReadiness(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
 function collectPublicText(value: unknown, parts: string[]): void {
   if (typeof value === 'string') {
     parts.push(value)
@@ -183,6 +196,92 @@ function issue(level: DiamondValidationLevel, code: string, message: string, fie
   return { level, code, message, field }
 }
 
+function significantFactTokens(value: string): string[] {
+  const genericTokens = new Set([
+    'source',
+    'sources',
+    'public',
+    'publique',
+    'preuve',
+    'preuves',
+    'situation',
+    'acteurs',
+    'decision',
+    'officielle',
+    'documentee',
+    'observable',
+    'verifiable',
+    'threshold',
+    'warning',
+    'warnings',
+    'official',
+  ])
+
+  return Array.from(new Set(normalizeForReadiness(value)
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 6 && !genericTokens.has(token))))
+    .slice(0, 10)
+}
+
+function factVisibleInPublicText(fact: GroundedFact, normalizedText: string): boolean {
+  const tokens = significantFactTokens(fact.label_fr)
+  if (tokens.length === 0) return false
+  const tokenHits = tokens.filter((token) => normalizedText.includes(token)).length
+  if (tokenHits >= Math.min(2, tokens.length)) return true
+
+  for (let index = 0; index <= tokens.length - 2; index += 1) {
+    if (normalizedText.includes(`${tokens[index]} ${tokens[index + 1]}`)) return true
+  }
+
+  return false
+}
+
+function validateGroundedAntiHorsSol(
+  sc: SituationCard,
+  context?: DiamondValidationContext,
+): DiamondValidationIssue[] {
+  const issues: DiamondValidationIssue[] = []
+  const resources = context?.resources
+  const grounding = context?.grounding
+  const needsPublicGrounding = Boolean(resources?.needs_web)
+  if (!needsPublicGrounding) return issues
+
+  const publicSourceFacts = (grounding?.current_facts ?? [])
+    .filter((fact) => fact.source === 'resources')
+  const publicText = normalizeForReadiness(collectCardText(sc))
+
+  if (!grounding?.permissions.can_write_current_state || resources?.public_sources.length === 0) {
+    issues.push(issue(
+      'error',
+      'diamond_readiness_current_facts_missing',
+      'A current or source-dependent card is not diamond-ready without public facts attached to the grounding contract.',
+      'grounding.current_facts',
+    ))
+    return issues
+  }
+
+  if (publicSourceFacts.length === 0) {
+    issues.push(issue(
+      'error',
+      'diamond_readiness_public_fact_missing',
+      'Sources are attached, but no clean public fact is available to carry a diamond reading.',
+      'grounding.current_facts',
+    ))
+    return issues
+  }
+
+  if (!publicSourceFacts.some((fact) => factVisibleInPublicText(fact, publicText))) {
+    issues.push(issue(
+      'error',
+      'diamond_readiness_public_fact_underused',
+      'Grounding contains public facts, but the Situation Card output remains abstract instead of using one visible fact.',
+      'writing',
+    ))
+  }
+
+  return issues
+}
+
 export function validateDomainCoherence(sc: SituationCard, domain: SituationDomain): DiamondValidationResult {
   const text = collectCardText(sc)
   const issues = (DOMAIN_FORBIDDEN_TERMS[domain] ?? [])
@@ -196,9 +295,12 @@ export function validateDomainCoherence(sc: SituationCard, domain: SituationDoma
   return { ok: !issues.some((item) => item.level === 'error'), issues }
 }
 
-export function validateAntiHorsSol(sc: SituationCard): DiamondValidationResult {
+export function validateAntiHorsSol(
+  sc: SituationCard,
+  context?: DiamondValidationContext,
+): DiamondValidationResult {
   const text = collectCardText(sc)
-  const issues: DiamondValidationIssue[] = []
+  const issues: DiamondValidationIssue[] = validateGroundedAntiHorsSol(sc, context)
 
   for (const pattern of GENERIC_PHRASES) {
     if (pattern.test(text)) {
@@ -271,10 +373,14 @@ export function validateScoringCoherence(sc: SituationCard): DiamondValidationRe
   return { ok: !issues.some((item) => item.level === 'error'), issues }
 }
 
-export function validateDiamondContract(sc: SituationCard, domain: SituationDomain): DiamondValidationResult {
+export function validateDiamondContract(
+  sc: SituationCard,
+  domain: SituationDomain,
+  context?: DiamondValidationContext,
+): DiamondValidationResult {
   const results = [
     validateDomainCoherence(sc, domain),
-    validateAntiHorsSol(sc),
+    validateAntiHorsSol(sc, context),
     validateScoringCoherence(sc),
   ]
   const issues = results.flatMap((result) => result.issues)
