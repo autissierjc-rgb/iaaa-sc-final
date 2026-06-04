@@ -15,6 +15,7 @@ import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSou
 import type { ResourceItem } from '@/lib/resources/resourceContract'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
 import { buildResonanceTrace } from '@/lib/resonance'
+import { buildConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWriting } from '@/lib/writing'
 
 export type SourceQueryRegressionResult = {
@@ -428,6 +429,19 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     patentChoiceResonance.diamond_thesis_fr,
   ].join(' ')
   const patentChoiceIssues: SourceQueryRegressionResult['issues'] = []
+  const canonicalTheatreIssues: SourceQueryRegressionResult['issues'] = []
+  const uppercaseRawInterpretation: InterpretationContract = {
+    ...input.interpretation,
+    raw_input: 'OU EN SOMMES NOUS AVEC LA GUERRE US ISRAEL Iran AU 03/06',
+    situation_soumise: 'Quelle est la situation actuelle de la guerre entre les États-Unis, Israël et l’Iran au 3 juin ?',
+    header_subject: 'situation guerre États-Unis Israël Iran',
+    object_of_analysis: 'guerre États-Unis Israël Iran',
+  }
+  const uppercaseRawTheatre = buildConcreteTheatre({
+    interpretation: uppercaseRawInterpretation,
+    resources: baseResourcePlan(),
+    expertises: expertisesForCurrentQuestion(),
+  })
 
   if (relevance.some((item) =>
     includesLoose(item.title ?? '', 'Bolivia') ||
@@ -611,6 +625,28 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  for (const forbidden of ['SOMMES', 'NOUS', 'AVEC', 'SOMMES NOUS AVEC']) {
+    if (
+      uppercaseRawTheatre.actors.some((actor) => includesLoose(actor, forbidden)) ||
+      (uppercaseRawTheatre.named_actors ?? []).some((actor) => includesLoose(actor, forbidden))
+    ) {
+      canonicalTheatreIssues.push({
+        level: 'error',
+        code: 'raw_question_fragment_used_as_actor',
+        message: `ConcreteTheatreBuilder must not extract actors from raw question scaffolding: ${forbidden}.`,
+      })
+    }
+  }
+  for (const required of ['Iran', 'Israël', 'États-Unis']) {
+    if (!uppercaseRawTheatre.actors.some((actor) => includesLoose(actor, required))) {
+      canonicalTheatreIssues.push({
+        level: 'error',
+        code: 'canonical_actor_lost',
+        message: `ConcreteTheatreBuilder must preserve canonical interpreted actors: ${required}.`,
+      })
+    }
+  }
+
   const planSpecificResource: ResourceItem = {
     title: 'Official decision confirms public threshold',
     url: 'https://official.example/public-decision',
@@ -751,6 +787,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: patentChoiceResonance.transition_signal_fr,
     subject: patentChoiceResonance.diamond_thesis_fr,
     issues: patentChoiceIssues,
+  }, {
+    id: 'concrete-theatre-respects-canonical-interpretation',
+    ok: canonicalTheatreIssues.length === 0,
+    query: uppercaseRawTheatre.actors.join(', '),
+    subject: uppercaseRawInterpretation.situation_soumise,
+    issues: canonicalTheatreIssues,
   }, {
     id: 'fast-runner-keeps-plan-specific-results',
     ok: planSpecificIssues.length === 0,

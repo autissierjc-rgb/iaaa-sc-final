@@ -166,6 +166,17 @@ function expectedMissingAnchors(input: ConcreteTheatreBuilderInput, present: str
   return expected.filter((anchor) => !text.includes(anchor.toLowerCase()))
 }
 
+function canonicalTheatreText(interpretation: InterpretationContract): string {
+  return [
+    interpretation.situation_soumise,
+    interpretation.object_of_analysis,
+    interpretation.header_subject,
+    interpretation.angle,
+    interpretation.user_need,
+    interpretation.primary_hypothesis ?? '',
+  ].join(' ')
+}
+
 function shortSubject(input: ConcreteTheatreBuilderInput): string {
   const value =
     input.interpretation.object_of_analysis ||
@@ -278,17 +289,12 @@ function collaborationQuestions(
 export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): ConcreteTheatreContract {
   const started = Date.now()
   const interpretation = input.interpretation
-  const text = [
-    interpretation.raw_input,
-    interpretation.situation_soumise,
-    interpretation.object_of_analysis,
-    interpretation.angle,
-    interpretation.user_need,
-    interpretation.primary_hypothesis ?? '',
-  ].join(' ')
+  const text = canonicalTheatreText(interpretation)
 
   const namedAnchors = extractNamedAnchors(text)
-  const dates = extractDates(text)
+  const dates = extractDates(text).length > 0
+    ? extractDates(text)
+    : extractDates(interpretation.raw_input)
   const evidence = evidenceFromResources(input.resources)
   const sourceNames = unique((input.resources?.public_sources ?? []).map((resource) => resource.source))
   const resourceAnchors = resourceTheatreAnchors(input.resources)
