@@ -14,15 +14,40 @@ export function normalizeSearchText(value: string): string {
     .toLowerCase()
 }
 
+const SEARCH_EQUIVALENT_KEYWORDS: Record<string, string[]> = {
+  usa: ['us', 'united', 'states', 'america', 'american', 'etats', 'unis'],
+  us: ['usa', 'united', 'states', 'america', 'american', 'etats', 'unis'],
+  etats: ['usa', 'us', 'united', 'states', 'america', 'american'],
+  unis: ['usa', 'us', 'united', 'states', 'america', 'american'],
+  united: ['usa', 'us', 'etats', 'unis', 'america', 'american'],
+  states: ['usa', 'us', 'etats', 'unis', 'america', 'american'],
+  israel: ['israeli', 'israelien', 'israelienne'],
+  israeli: ['israel'],
+  iran: ['iranian', 'iranien', 'iranienne'],
+  iranian: ['iran'],
+}
+
+function expandEquivalentKeywords(keywords: string[]): string[] {
+  const expanded = new Set<string>()
+  for (const keyword of keywords) {
+    expanded.add(keyword)
+    for (const equivalent of SEARCH_EQUIVALENT_KEYWORDS[keyword] ?? []) {
+      expanded.add(equivalent)
+    }
+  }
+  return Array.from(expanded)
+}
+
 export function searchKeywords(value: string): string[] {
-  return Array.from(
+  const baseKeywords = Array.from(
     new Set(
       normalizeSearchText(value)
         .split(/[^a-z0-9]+/i)
         .map((word) => word.trim())
-        .filter((word) => word.length >= 4 && !SEARCH_STOPWORDS.has(word))
+        .filter((word) => (word.length >= 4 || word === 'us') && !SEARCH_STOPWORDS.has(word))
     )
   ).slice(0, 12)
+  return expandEquivalentKeywords(baseKeywords).slice(0, 24)
 }
 
 export function resourceSearchText(resource: ResourceItem): string {
