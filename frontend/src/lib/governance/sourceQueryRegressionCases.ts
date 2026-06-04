@@ -17,7 +17,6 @@ import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
 import { buildResonanceTrace } from '@/lib/resonance'
 import { buildConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWriting } from '@/lib/writing'
-import { interpretRequest } from '@/lib/intent/interpretRequest'
 
 export type SourceQueryRegressionResult = {
   id: string
@@ -804,34 +803,6 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
-  const currentStatusInterpretationIssues: SourceQueryRegressionResult['issues'] = []
-  const localCurrentStatus = interpretRequest('Où en sommes nous avec la guerre en entre Iran us israel 04/06')
-  if (!includesLoose(localCurrentStatus.user_question, 'Quelle est la situation actuelle')) {
-    currentStatusInterpretationIssues.push({
-      level: 'error',
-      code: 'current_status_not_reformalized',
-      message: 'Local interpretation fallback must formalize current-status questions when the referent LLM is unavailable.',
-    })
-  }
-  for (const forbidden of ['en entre', ' us ', 'Où en sommes nous']) {
-    if (includesLoose(` ${localCurrentStatus.user_question} `, forbidden)) {
-      currentStatusInterpretationIssues.push({
-        level: 'error',
-        code: 'current_status_raw_fragment_leaked',
-        message: `Local current-status interpretation leaked a raw fragment: ${forbidden}.`,
-      })
-    }
-  }
-  for (const required of ['Iran', 'États-Unis', 'Israël', '4 juin']) {
-    if (!includesLoose(localCurrentStatus.user_question, required)) {
-      currentStatusInterpretationIssues.push({
-        level: 'error',
-        code: 'current_status_required_anchor_missing',
-        message: `Local current-status interpretation lost required anchor: ${required}.`,
-      })
-    }
-  }
-
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
@@ -904,11 +875,5 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: incompleteCompleteCoverage.note_fr,
     subject: completeCoverage.note_fr,
     issues: completeCoverageIssues,
-  }, {
-    id: 'local-current-status-question-is-reformalized',
-    ok: currentStatusInterpretationIssues.length === 0,
-    query: localCurrentStatus.user_question,
-    subject: localCurrentStatus.object_of_analysis,
-    issues: currentStatusInterpretationIssues,
   }]
 }

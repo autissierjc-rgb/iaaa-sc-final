@@ -68,80 +68,6 @@ function formalizePrefixedQuestion(input: string): string {
   return `${stem} pour ${context} ?`
 }
 
-const CURRENT_STATUS_MONTHS_FR = [
-  '',
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-]
-
-function formatStatusDate(input: string): string {
-  const match = input.match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-]\d{2,4})?\b/)
-  if (!match) return ''
-
-  const day = Number(match[1])
-  const month = Number(match[2])
-  const monthName = CURRENT_STATUS_MONTHS_FR[month]
-  if (!Number.isFinite(day) || day < 1 || day > 31 || !monthName) return ''
-  return ` au ${day} ${monthName}`
-}
-
-function currentStatusActors(input: string): string[] {
-  const normalized = normalize(input)
-  const actors: string[] = []
-  if (/\biran\b/.test(normalized)) actors.push('l’Iran')
-  if (/\b(us|usa|etats unis|etats-unis|united states)\b/.test(normalized)) actors.push('les États-Unis')
-  if (/\bisrael\b/.test(normalized)) actors.push('Israël')
-  if (/\bgaza\b/.test(normalized)) actors.push('Gaza')
-  if (/\bukraine\b/.test(normalized)) actors.push('l’Ukraine')
-  if (/\brussie\b/.test(normalized)) actors.push('la Russie')
-  return Array.from(new Set(actors))
-}
-
-function joinFrenchList(items: string[]): string {
-  if (items.length <= 1) return items[0] ?? ''
-  if (items.length === 2) return `${items[0]} et ${items[1]}`
-  return `${items.slice(0, -1).join(', ')} et ${items[items.length - 1]}`
-}
-
-function formalizeCurrentStatusQuestion(input: string): string | null {
-  const normalized = normalize(input)
-  const asksCurrentStatus = /\b(?:ou|où)\s+en\s+sommes\s+nous\b/.test(normalized) ||
-    /\b(?:ou|où)\s+en\s+est\s+on\b/.test(normalized) ||
-    /\bsituation\s+actuelle\b/.test(normalized)
-  if (!asksCurrentStatus) return null
-
-  const date = formatStatusDate(input)
-  const actors = currentStatusActors(input)
-  if (/\b(guerre|conflit|crise)\b/.test(normalized) && actors.length >= 2) {
-    const subject = normalized.includes('conflit') ? 'du conflit' : 'de la guerre'
-    return `Quelle est la situation actuelle ${subject} entre ${joinFrenchList(actors)}${date} ?`
-  }
-
-  const cleaned = input
-    .replace(/\b(?:Où|Ou)\s+en\s+sommes\s+nous\b/gi, '')
-    .replace(/\b(?:Où|Ou)\s+en\s+est\s+on\b/gi, '')
-    .replace(/\b(?:avec|sur|concernant)\b/gi, ' ')
-    .replace(/\b(?:au|le)\s+\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{2,4})?\b/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-  if (cleaned.length < 8) return null
-  return `Quelle est la situation actuelle de ${cleaned}${date} ?`
-}
-
-function formalizeUserQuestion(input: string): string {
-  return formalizeCurrentStatusQuestion(input) ?? formalizePrefixedQuestion(input)
-}
-
 function isSiteOrStartupEvaluation(input: string): boolean {
   const text = normalize(input)
   const hasSite = Boolean(extractRequestedSite(input) || extractNamedSite(input))
@@ -314,7 +240,7 @@ export function interpretRequest(input: string): InterpretedRequest {
 
   const object = extractObject(text)
   const tension = inferTension(text, intent)
-  const userQuestion = formalizeUserQuestion(text)
+  const userQuestion = formalizePrefixedQuestion(text)
   const questionType: QuestionType = causalAttribution
     ? 'causal_attribution'
     : forcedSiteEvaluation
