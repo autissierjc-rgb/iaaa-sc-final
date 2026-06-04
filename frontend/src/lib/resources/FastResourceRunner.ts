@@ -476,6 +476,16 @@ function uniqueResourceItems(items: ResourceItem[]): ResourceItem[] {
   })
 }
 
+async function legacyFastFallback(
+  query: string,
+  timeoutMs: number,
+  maxSources: number,
+): Promise<ResourceItem[] | 'timeout'> {
+  const result = await withTimeout(fetchResources(query), Math.max(800, timeoutMs))
+  if (result === 'timeout') return 'timeout'
+  return uniqueResourceItems(filterRelevantResources(result, query)).slice(0, maxSources)
+}
+
 export function filterFastResourceResultsByPlanForDiagnostics(
   planResults: ResourceItem[][],
   planQueries: string[],
@@ -509,17 +519,6 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     }
   }
 
-  if (!process.env.TAVILY_API_KEY) {
-    return {
-      resources: [],
-      duration_ms: Date.now() - started,
-      status: 'failed',
-      note_fr: 'Runner sources rapides non configure : TAVILY_API_KEY absente.',
-      provider: 'none',
-      timeout_ms: timeoutMs,
-    }
-  }
-
   const fallbackPlan = fastSearchPlan(input)
   const broadPlan = broadFastSearchPlan(input)
   const plans = uniquePlans([
@@ -533,6 +532,40 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     input.resource_plan.fallback_searches[0] ?? '',
     ...plans.map((plan) => plan.query),
   ].filter(Boolean).join(' ')
+
+  if (!process.env.TAVILY_API_KEY) {
+    const fallback = await legacyFastFallback(query, timeoutMs, maxSources)
+    if (fallback === 'timeout') {
+      return {
+        resources: [],
+        duration_ms: Date.now() - started,
+        status: 'timeout',
+        note_fr: 'Le fallback sources rapides a depasse son budget ; SIS continue avec une lecture prudente.',
+        provider: 'legacy_fetch_resources',
+        query: primaryPlan.query,
+        include_domains: primaryPlan.include_domains,
+        timeout_ms: timeoutMs,
+      }
+    }
+
+    const resources = fallback
+      .map((item, index) => toResourceContract(item, input.interpretation, index, query))
+      .filter((item): item is ResourceContract => Boolean(item))
+      .slice(0, maxSources)
+
+    return {
+      resources,
+      duration_ms: Date.now() - started,
+      status: resources.length > 0 ? 'ok' : 'empty',
+      note_fr: resources.length > 0
+        ? `Sources rapides attachees via fallback : ${resources.length}.`
+        : 'Aucune source rapide exploitable trouvee dans le budget court.',
+      provider: 'legacy_fetch_resources',
+      query: primaryPlan.query,
+      include_domains: primaryPlan.include_domains,
+      timeout_ms: timeoutMs,
+    }
+  }
 
   try {
     const planResults = await Promise.all(
@@ -549,7 +582,7 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
     const result = fast.length > 0 || !usedLegacyFallback
       ? fast
-      : await withTimeout(fetchResources(query), Math.max(800, timeoutMs))
+      : await legacyFastFallback(query, timeoutMs, maxSources)
 
     if (result === 'timeout') {
       return {
