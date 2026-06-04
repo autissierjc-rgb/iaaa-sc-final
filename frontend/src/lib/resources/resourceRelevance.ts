@@ -93,6 +93,27 @@ function isCausalInfluenceQuery(query: string): boolean {
     /\b(entraine|entraine|pousse|force|manipule|provoque|cause|declenche|amene|dragged|pushed|led|influence)\b/i.test(text)
 }
 
+const GEO_ACTOR_GROUPS = [
+  ['iran', 'iranian', 'iranien', 'iranienne', 'tehran', 'teheran'],
+  ['israel', 'israeli', 'israelien', 'israelienne'],
+  ['usa', 'us', 'united', 'states', 'america', 'american', 'etats', 'unis'],
+  ['ukraine', 'kyiv', 'kiev'],
+  ['russia', 'russie', 'moscow', 'moscou'],
+  ['china', 'chine', 'beijing', 'pekin'],
+  ['gaza', 'hamas', 'palestine', 'palestinian'],
+]
+
+function requestedGeoActorGroups(query: string): string[][] {
+  const text = normalizeSearchText(query)
+  return GEO_ACTOR_GROUPS.filter((group) => group.some((term) => text.includes(term)))
+}
+
+function carriesRequestedGeoActor(resourceText: string, query: string): boolean {
+  const groups = requestedGeoActorGroups(query)
+  if (groups.length === 0) return true
+  return groups.some((group) => group.some((term) => resourceText.includes(term)))
+}
+
 export function isRelevantResource(resource: ResourceItem, query: string): boolean {
   const haystack = resourceSearchText(resource)
   if (!haystack) return false
@@ -106,6 +127,7 @@ export function isRelevantResource(resource: ResourceItem, query: string): boole
   const causalQuery = isCausalInfluenceQuery(query)
 
   if (queryKeywords.length === 0) return true
+  if (!carriesRequestedGeoActor(haystack, query)) return false
   const overlap = queryKeywords.filter((keyword) => haystack.includes(keyword)).length
   const minimumOverlap = causalQuery ? 2 : queryKeywords.length <= 3 ? 1 : 2
   return overlap >= minimumOverlap

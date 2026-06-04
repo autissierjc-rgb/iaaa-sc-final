@@ -451,6 +451,14 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       excerpt: 'Mortgage investors hedged against rising yields during a US rates selloff.',
       reliability: 'tavily:fast',
     },
+    {
+      title: 'WHO chief wraps up visit to Ebola-hit Congo, briefs president on response - Reuters',
+      url: 'https://www.reuters.com/business/healthcare-pharmaceuticals/who-chief-meet-congo-president-group-warns-ebola-likely-spread-undetected-months-2026-06-01/',
+      source: 'reuters.com',
+      type: 'fast-source',
+      excerpt: 'The head of the World Health Organization briefed the president of Democratic Republic of Congo on the Ebola outbreak response.',
+      reliability: 'tavily:fast',
+    },
   ]
   const relevantItems: ResourceItem[] = [
     {
@@ -581,7 +589,8 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
   if (relevance.some((item) =>
     includesLoose(item.title ?? '', 'Bolivia') ||
     includesLoose(item.title ?? '', 'clean energy') ||
-    includesLoose(item.title ?? '', 'Treasuries')
+    includesLoose(item.title ?? '', 'Treasuries') ||
+    includesLoose(item.title ?? '', 'Ebola-hit Congo')
   )) {
     relevanceIssues.push({
       level: 'error',
