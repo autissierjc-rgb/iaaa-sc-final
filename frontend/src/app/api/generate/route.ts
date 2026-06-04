@@ -70,6 +70,8 @@ import type {
 } from '@/lib/resources/resourceContract'
 import type { AstrolabeBranchV2, RadarScoreV2, ResourceContract, ScoringContract, SourceChannel, TreatmentInstruction, TreatmentPlanContract, WritingContract } from '@/lib/contracts'
 
+const PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS = Number(process.env.SC_PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS ?? 3200)
+
 function hasExplicitUrl(value: string): boolean {
   return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
 }
@@ -84,6 +86,29 @@ function explicitUrls(value: string): string[] {
       seen.add(key)
       return true
     })
+}
+
+async function interpretRequestForPublicRoute(input: string, isPublicFast: boolean) {
+  if (!isPublicFast) {
+    return interpretRequestWithModel(input)
+  }
+
+  const modelInterpretation = await Promise.race([
+    interpretRequestWithModel(input),
+    new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS)),
+  ])
+
+  if (modelInterpretation !== 'timeout') {
+    return modelInterpretation
+  }
+
+  const fallback = interpretRequest(input)
+  fallback.signals = [
+    ...(fallback.signals ?? []),
+    `referent_llm_timeout=${PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS}`,
+    'public_fast_local_interpretation_fallback',
+  ]
+  return fallback
 }
 
 function stripExplicitUrls(value: string): string {
@@ -4256,9 +4281,9 @@ export async function POST(req: NextRequest) {
     const previousContract = conversation_contract && typeof conversation_contract === 'object'
       ? conversation_contract as ConversationContract
       : undefined
-    const modelInterpreted = isPublicFast
-      ? interpretRequest(interpretationText)
-      : await interpretRequestWithModel(interpretationText)
+    const modelInterpreted = await interpretRequestForPublicRoute(interpretationText, isPublicFast)
+    const interpretationUsedLocalFallback = (modelInterpreted.signals ?? [])
+      .some((signal) => signal === 'public_fast_local_interpretation_fallback')
     modelInterpreted.signals = [
       ...(modelInterpreted.signals ?? []),
       `resource_role:${userMaterialRole.role}`,
@@ -4274,7 +4299,7 @@ export async function POST(req: NextRequest) {
     )
     const canonicalInterpretation = await interpretSituation({
       raw_input: interpretationText,
-      mode: isPublicFast ? 'local_contract' : 'referent_llm',
+      mode: isPublicFast && interpretationUsedLocalFallback ? 'local_contract' : 'referent_llm',
       preinterpreted: interpretedRequest,
     })
     const canonicalDialogueGate = runDialogueGate({ interpretation: canonicalInterpretation })
