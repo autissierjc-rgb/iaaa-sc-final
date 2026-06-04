@@ -9,7 +9,7 @@ import type {
 } from '@/lib/contracts'
 import { fetchResources } from './fetchResources'
 import type { ResourceItem } from './resourceContract'
-import { filterRelevantResources } from './resourceRelevance'
+import { bestRelevantExcerpt, filterRelevantResources } from './resourceRelevance'
 import { shouldUseWeb } from './shouldUseWeb'
 
 export type FastResourceRunnerResult = {
@@ -446,8 +446,10 @@ function toResourceContract(
   item: ResourceItem,
   interpretation: InterpretationContract,
   index: number,
+  query: string,
 ): ResourceContract | null {
   if (!item.title || !item.url) return null
+  const excerpt = bestRelevantExcerpt(item, query) || item.excerpt
 
   return {
     id: `fast-${index + 1}-${host(item.url) || 'source'}`,
@@ -456,7 +458,7 @@ function toResourceContract(
     source: item.source || host(item.url) || 'source publique',
     channel: channelFromItem(item),
     domain_relevance: [interpretation.domain],
-    excerpt: item.excerpt,
+    excerpt,
     published_at: item.date,
     retrieved_at: new Date().toISOString(),
     reliability: reliabilityFromItem(item),
@@ -483,7 +485,10 @@ export function filterFastResourceResultsByPlanForDiagnostics(
   return uniqueResourceItems(
     planResults.flatMap((items, index) => {
       const planQuery = planQueries[index] ?? fallbackQuery
-      return filterRelevantResources(items, planQuery)
+      return filterRelevantResources(items, planQuery).map((item) => ({
+        ...item,
+        excerpt: bestRelevantExcerpt(item, planQuery) || item.excerpt,
+      }))
     }),
   ).slice(0, maxSources)
 }
@@ -566,7 +571,7 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       : result
 
     const resources = relevantResult
-      .map((item, index) => toResourceContract(item, input.interpretation, index))
+      .map((item, index) => toResourceContract(item, input.interpretation, index, query))
       .filter((item): item is ResourceContract => Boolean(item))
       .slice(0, maxSources)
 

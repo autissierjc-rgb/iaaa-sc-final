@@ -135,7 +135,7 @@ export function bestRelevantExcerpt(resource: ResourceItem, query: string): stri
 
   const selected = scored.sort((a, b) => b.score - a.score)[0]?.sentence ?? ''
   const cleanSelected = selected.replace(/\s+\./g, '.').replace(/\.{2,}/g, '.').trim()
-  return cleanSelected.length > 260 ? `${cleanSelected.slice(0, 257).trim()}...` : cleanSelected
+  return cleanSelected.length > 220 ? `${cleanSelected.slice(0, 217).trim()}...` : cleanSelected
 }
 
 export function filterRelevantResources(resources: ResourceItem[], query: string): ResourceItem[] {

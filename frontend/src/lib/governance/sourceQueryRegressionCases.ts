@@ -843,6 +843,41 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  const longExcerptResource: ResourceItem = {
+    title: 'Iran, Israel and United States trade warnings as talks stall',
+    url: 'https://reuters.example/world/middle-east/current-threshold',
+    source: 'reuters.example',
+    type: 'web',
+    excerpt: [
+      'Markets moved sideways while unrelated policy debates continued in Europe and Asia without changing the requested crisis.',
+      'Iran, Israel and the United States traded warnings after a dated official statement, making the military and diplomatic threshold the concrete fact to verify.',
+      'Analysts also discussed commodities, elections, technology shares, energy prices, fiscal policy and other background signals that should not become the card spine.',
+    ].join(' '),
+    reliability: 'test',
+  }
+  const longExcerptResults = filterFastResourceResultsByPlanForDiagnostics(
+    [[longExcerptResource]],
+    ['Iran Israel United States warnings official statement military diplomatic threshold'],
+    'Iran Israel United States current conflict',
+    3,
+  )
+  const longExcerptIssues: SourceQueryRegressionResult['issues'] = []
+  const longExcerpt = longExcerptResults[0]?.excerpt ?? ''
+  if (!includesLoose(longExcerpt, 'traded warnings') || !includesLoose(longExcerpt, 'official statement')) {
+    longExcerptIssues.push({
+      level: 'error',
+      code: 'fast_runner_did_not_extract_probative_sentence',
+      message: 'FastResourceRunner must pass a relevant sentence, not the whole raw search blob, to the grounding contract.',
+    })
+  }
+  if (longExcerpt.length > 220) {
+    longExcerptIssues.push({
+      level: 'error',
+      code: 'fast_runner_probative_sentence_too_long',
+      message: 'FastResourceRunner relevant excerpts must stay short enough to become probative public facts.',
+    })
+  }
+
   const approfondirSourceSectionIssues: SourceQueryRegressionResult['issues'] = []
   for (const section of noisySourceWriting.approfondir.sections_fr) {
     if (includesLoose(section.id, 'sources-rapides') ||
@@ -984,6 +1019,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: planSpecificResults.map((item) => item.title).join(' | '),
     subject: 'plan-specific filtering',
     issues: planSpecificIssues,
+  }, {
+    id: 'fast-runner-extracts-probative-excerpt',
+    ok: longExcerptIssues.length === 0,
+    query: longExcerpt,
+    subject: 'probative grounding excerpt',
+    issues: longExcerptIssues,
   }, {
     id: 'approfondir-does-not-render-source-section',
     ok: approfondirSourceSectionIssues.length === 0,
