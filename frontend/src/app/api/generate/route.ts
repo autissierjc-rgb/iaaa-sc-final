@@ -5818,15 +5818,7 @@ export async function POST(req: NextRequest) {
         : 'error',
       issues: diamondValidation.issues,
     }
-    const canReleaseQualityPartial =
-      !diamondValidation.ok &&
-      (
-        answeredClarification ||
-        hasUrlInFlow ||
-        resources.length > 0
-      )
-
-    if (!diamondValidation.ok && !explicitPrudentGeneration && !canReleaseQualityPartial) {
+    if (!diamondValidation.ok && !explicitPrudentGeneration) {
       recordGenerationTrace({
         status: 'partial',
         gate: 'CLARIFY',
@@ -5862,7 +5854,7 @@ export async function POST(req: NextRequest) {
 
     const finalSc: SituationCard = {
       ...sc,
-      generation_status: (explicitPrudentGeneration || canReleaseQualityPartial) && !diamondValidation.ok
+      generation_status: explicitPrudentGeneration && !diamondValidation.ok
         ? 'partial'
         : sc.generation_status,
       quality: {

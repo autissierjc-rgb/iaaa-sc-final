@@ -243,7 +243,13 @@ function validateGroundedAntiHorsSol(
   const issues: DiamondValidationIssue[] = []
   const resources = context?.resources
   const grounding = context?.grounding
-  const needsPublicGrounding = Boolean(resources?.needs_web)
+  const needsPublicGrounding = Boolean(
+    resources?.needs_web ||
+    resources?.policy === 'fast_sources_required' ||
+    resources?.policy === 'url_extract_required' ||
+    resources?.public_sources.length ||
+    grounding?.permissions.must_mark_provisional,
+  )
   if (!needsPublicGrounding) return issues
 
   const publicSourceFacts = (grounding?.current_facts ?? [])
@@ -253,8 +259,8 @@ function validateGroundedAntiHorsSol(
   if (!grounding?.permissions.can_write_current_state || resources?.public_sources.length === 0) {
     issues.push(issue(
       'error',
-      'diamond_readiness_current_facts_missing',
-      'A current or source-dependent card is not diamond-ready without public facts attached to the grounding contract.',
+      'grounded_anti_hors_sol_current_facts_missing',
+      'A current or source-dependent card cannot pass anti-hors-sol without public facts attached to the grounding contract.',
       'grounding.current_facts',
     ))
     return issues
@@ -263,8 +269,8 @@ function validateGroundedAntiHorsSol(
   if (publicSourceFacts.length === 0) {
     issues.push(issue(
       'error',
-      'diamond_readiness_public_fact_missing',
-      'Sources are attached, but no clean public fact is available to carry a diamond reading.',
+      'grounded_anti_hors_sol_public_fact_missing',
+      'Sources are attached, but no clean public fact is available to carry the public card.',
       'grounding.current_facts',
     ))
     return issues
@@ -273,7 +279,7 @@ function validateGroundedAntiHorsSol(
   if (!publicSourceFacts.some((fact) => factVisibleInPublicText(fact, publicText))) {
     issues.push(issue(
       'error',
-      'diamond_readiness_public_fact_underused',
+      'grounded_anti_hors_sol_public_fact_underused',
       'Grounding contains public facts, but the Situation Card output remains abstract instead of using one visible fact.',
       'writing',
     ))

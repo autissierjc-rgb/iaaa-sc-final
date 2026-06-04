@@ -154,6 +154,19 @@ function notReadyGroundingContract(): GroundingContract {
   }
 }
 
+function notProbativePublicSourcesGroundingContract(): GroundingContract {
+  return {
+    ...notReadyGroundingContract(),
+    source_status: 'available',
+    permissions: {
+      ...notReadyGroundingContract().permissions,
+      can_write_current_state: true,
+      can_write_source_backed_claims: true,
+      must_mark_provisional: false,
+    },
+  }
+}
+
 function genericCurrentCardForValidation(): SituationCard {
   return {
     title_fr: 'guerre États-Unis Iran',
@@ -524,6 +537,19 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       resources: baseResourcePlan(),
     },
   )
+  const nonProbativeSourcePlan = resourcePlanWithNoisyReutersExcerpt()
+  const nonProbativeDiamondValidation = validateDiamondContract(
+    genericCurrentCardForValidation(),
+    'geopolitics',
+    {
+      grounding: notProbativePublicSourcesGroundingContract(),
+      resources: {
+        ...nonProbativeSourcePlan,
+        needs_web: false,
+        policy: 'internal_context_ok',
+      },
+    },
+  )
   const patentChoiceResonance = buildResonanceTrace({
     interpretation: interpretationForPatentChoice(),
     theatre: patentChoiceTheatre(),
@@ -732,11 +758,19 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
   if (notReadyDiamondValidation.ok ||
-    !notReadyDiamondValidation.issues.some((issue) => issue.code === 'diamond_readiness_current_facts_missing')) {
+    !notReadyDiamondValidation.issues.some((issue) => issue.code === 'grounded_anti_hors_sol_current_facts_missing')) {
     diamondReadinessIssues.push({
       level: 'error',
-      code: 'diamond_readiness_missing_fact_not_blocked',
+      code: 'grounded_anti_hors_sol_missing_fact_not_blocked',
       message: 'DiamondValidation must reject current/source-dependent cards when GroundingContract has no public current facts.',
+    })
+  }
+  if (nonProbativeDiamondValidation.ok ||
+    !nonProbativeDiamondValidation.issues.some((issue) => issue.code === 'grounded_anti_hors_sol_public_fact_missing')) {
+    diamondReadinessIssues.push({
+      level: 'error',
+      code: 'grounded_anti_hors_sol_non_probative_sources_not_blocked',
+      message: 'DiamondValidation must reject cards with attached public sources when none becomes a clean public fact, even if needs_web is false.',
     })
   }
 
@@ -927,7 +961,7 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     subject: cleanEvidenceWriting.probability_assessments[0]?.probability_label_fr ?? '',
     issues: cleanEvidenceIssues,
   }, {
-    id: 'diamond-readiness-requires-current-public-facts',
+    id: 'diamond-validation-grounded-anti-hors-sol',
     ok: diamondReadinessIssues.length === 0,
     query: notReadyDiamondValidation.issues.map((issue) => issue.code).join(' | '),
     subject: 'DiamondValidation + GroundingContract',
