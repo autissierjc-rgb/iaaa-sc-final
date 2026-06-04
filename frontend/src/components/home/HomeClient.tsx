@@ -1801,7 +1801,7 @@ type ChatMsg =
   | { kind: 'ren'; text: string; mode?: string; next?: string }
   | { kind: 'material'; text: string }
   | { kind: 'flash'; etat: string; lecture: string }
-  | { kind: 'clarify'; questions: string[] }
+  | { kind: 'clarify'; questions: string[]; canGeneratePrudently?: boolean }
   | { kind: 'refine'; questions: string[]; phase?: 'pre_generate' | 'post_complete' | 'bridge_to_complete' }
   | { kind: 'block'; reason: string }
 
@@ -1945,6 +1945,17 @@ function syncRefineMessages(
   const withoutRefine = messages.filter((msg) => msg.kind !== 'refine')
   if (questions.length === 0) return withoutRefine
   return [...withoutRefine, { kind: 'refine', questions, phase }]
+}
+
+function syncClarifyMessages(
+  messages: ChatMsg[],
+  questions: string[],
+  canGeneratePrudently = true,
+): ChatMsg[] {
+  const cleanQuestions = Array.from(new Set(questions.map((question) => question.trim()).filter(Boolean)))
+  const withoutClarify = messages.filter((msg) => msg.kind !== 'clarify')
+  if (cleanQuestions.length === 0) return withoutClarify
+  return [...withoutClarify, { kind: 'clarify', questions: cleanQuestions, canGeneratePrudently }]
 }
 
 type VisibilityState = 'private' | 'public' | 'collab'
@@ -2207,7 +2218,12 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       const scData2 = await scRes.json()
       if (scData2.gate === 'CLARIFY') {
         setCompassMode('idle')
-        setChatMsgs(prev => [...prev, { kind: 'clarify', questions: scData2.questions ?? [] }])
+        const qualityIssues = Array.isArray(scData2.quality_issues) ? scData2.quality_issues : []
+        const qualityClarify = qualityIssues.some((issue: any) =>
+          String(issue?.code ?? '').startsWith('grounded_anti_hors_sol_') ||
+          String(issue?.code ?? '') === 'generic_phrase'
+        )
+        setChatMsgs(prev => syncClarifyMessages(prev, scData2.questions ?? [], !qualityClarify))
         setAnswers(new Array(scData2.questions?.length ?? 0).fill(''))
         setActiveSituation(canonicalSituationFromResponse(scData2, text))
         try { localStorage.removeItem(LAST_SC_STORAGE_KEY) } catch {}
@@ -2603,15 +2619,17 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                   <div key={i} style={{ alignSelf: 'flex-start', color: TXT2, fontSize: 13, lineHeight: 1.6, fontStyle: 'italic', maxWidth: '86%' }}>
                     <div>{msg.questions.join(' · ')}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-                      <button
-                        type="button"
-                        onClick={() => handleGenerate(true)}
-                        disabled={scLoading || !activeSituation.trim()}
-                        style={{ border: `1px solid ${BDR_G}`, background: 'rgba(204,163,100,0.14)', color: TXT, borderRadius: 999, padding: '7px 11px', fontSize: 11, fontStyle: 'normal', cursor: scLoading || !activeSituation.trim() ? 'not-allowed' : 'pointer' }}
-                      >
-                        {lang === 'FR' ? 'Générer une carte exploratoire' : 'Generate an exploratory card'}
-                      </button>
-                      <span style={{ color: TXT3, fontSize: 11 }}>{lang === 'FR' ? 'Ou répondez dans le champ.' : 'Or reply in the field.'}</span>
+                      {(msg.kind !== 'clarify' || msg.canGeneratePrudently !== false) && (
+                        <button
+                          type="button"
+                          onClick={() => handleGenerate(true)}
+                          disabled={scLoading || !activeSituation.trim()}
+                          style={{ border: `1px solid ${BDR_G}`, background: 'rgba(204,163,100,0.14)', color: TXT, borderRadius: 999, padding: '7px 11px', fontSize: 11, fontStyle: 'normal', cursor: scLoading || !activeSituation.trim() ? 'not-allowed' : 'pointer' }}
+                        >
+                          {lang === 'FR' ? 'Générer une carte exploratoire' : 'Generate an exploratory card'}
+                        </button>
+                      )}
+                      <span style={{ color: TXT3, fontSize: 11 }}>{lang === 'FR' ? 'Répondez dans le champ.' : 'Reply in the field.'}</span>
                     </div>
                   </div>
                 )
@@ -2798,7 +2816,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
                               ? (lang === 'FR' ? 'Répondez en une phrase, puis relancez la boussole pour compléter.' : 'Reply in one sentence, then run the compass again to complete it.')
                               : (lang === 'FR' ? 'Répondez librement ; SC s’en servira comme signal pour la suite.' : 'Reply freely; SC will use it as a signal for what comes next.')}
                         </div>
-                        {msg.kind === 'clarify' && (
+                        {msg.kind === 'clarify' && msg.canGeneratePrudently !== false && (
                           <button
                             type="button"
                             onClick={() => handleGenerate(true)}
