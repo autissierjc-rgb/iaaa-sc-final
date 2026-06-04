@@ -392,3 +392,41 @@ export function validateDiamondContract(
   const issues = results.flatMap((result) => result.issues)
   return { ok: !issues.some((item) => item.level === 'error'), issues }
 }
+
+export function buildDiamondClarificationQuestions(issues: DiamondValidationIssue[]): string[] {
+  const codes = new Set(issues.map((item) => item.code))
+
+  if (codes.has('grounded_anti_hors_sol_current_facts_missing')) {
+    return [
+      'La carte ne peut pas etablir l etat du jour sans fait public attache. Quelle source publique datee faut-il joindre, ou faut-il lancer Recherche+ avant de rediger la carte ?',
+    ]
+  }
+
+  if (codes.has('grounded_anti_hors_sol_public_fact_missing')) {
+    return [
+      'Les sources attachees ne donnent pas encore de fait public porteur. Quelle trace verifiable doit fonder la carte : declaration officielle, source locale, agence ou chronologie datee ?',
+    ]
+  }
+
+  if (codes.has('grounded_anti_hors_sol_public_fact_underused')) {
+    return [
+      'Un fait public existe, mais il ne porte pas encore la lecture. Quel fait verifiable doit devenir la colonne vertebrale de la carte ?',
+    ]
+  }
+
+  if (codes.has('public_scaffolding')) {
+    return [
+      'La carte contient encore du texte de dialogue au lieu d une lecture publique. Quelle trace ou decision doit remplacer cette formulation avant publication ?',
+    ]
+  }
+
+  if (codes.has('generic_phrase')) {
+    return [
+      'La redaction produite reste trop generale. Quel fait public, acteur decisionnaire ou seuil date doit servir d ancrage a la carte ?',
+    ]
+  }
+
+  return [
+    'Quel fait verifiable doit empecher la carte de rester generale ?',
+  ]
+}

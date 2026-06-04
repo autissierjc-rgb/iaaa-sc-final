@@ -30,7 +30,7 @@ import { fetchResources } from '@/lib/resources/fetchResources'
 import { MIN_FAST_RESOURCE_TIMEOUT_MS, runFastResourceRunner } from '@/lib/resources/FastResourceRunner'
 import { planResources } from '@/lib/resources'
 import { DIAMOND_EDITORIAL_CONTRACT, SC_INTERPRETATION_AUTHORITY } from '@/lib/governance/scDoctrine'
-import { validateDiamondContract } from '@/lib/governance/diamondValidation'
+import { buildDiamondClarificationQuestions, validateDiamondContract } from '@/lib/governance/diamondValidation'
 import { sanitizeResources } from '@/lib/resources/sanitizeResources'
 import { shouldUseWeb } from '@/lib/resources/shouldUseWeb'
 import { enrichResourcesWithSiteUnderstanding } from '@/lib/resources/siteUnderstanding'
@@ -5218,9 +5218,7 @@ export async function POST(req: NextRequest) {
           })
           return NextResponse.json({
             gate: 'CLARIFY',
-            questions: [
-              'La carte manque d ancrage concret pour etre fiable. Quel element faut-il ajouter : acteur precis, preuve disponible, public vise, contrainte, option strategique ou decision a prendre ?',
-            ],
+            questions: buildDiamondClarificationQuestions(fallbackValidation.issues),
             quality_issues: fallbackValidation.issues,
             coverage_check: effectiveCoverageForGeneration,
             resources_status: resourcesStatus,
@@ -5836,9 +5834,7 @@ export async function POST(req: NextRequest) {
       })
       return NextResponse.json({
         gate: 'CLARIFY',
-        questions: [
-          'La carte commence à répondre trop généralement. Quel élément concret faut-il intégrer pour situer la lecture : usage réel, public visé, preuve observée, contrainte, décision à prendre ou option stratégique prioritaire ?',
-        ],
+        questions: buildDiamondClarificationQuestions(diamondValidation.issues),
         quality_issues: diamondValidation.issues,
         coverage_check: {
           ...effectiveCoverageForGeneration,
