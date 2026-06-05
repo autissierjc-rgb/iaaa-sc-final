@@ -1,4 +1,6 @@
+import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
+import type { Interaction, Raindrop, RaindropProperties } from 'raindrop-ai'
 import {
   getStateLabel,
   AstrolabeBranch,
@@ -71,6 +73,106 @@ import type {
 import type { AstrolabeBranchV2, RadarScoreV2, ResourceContract, ScoringContract, SourceChannel, TreatmentInstruction, TreatmentPlanContract, WritingContract } from '@/lib/contracts'
 
 const PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS = Number(process.env.SC_PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS ?? 3200)
+const RAINDROP_GENERATE_EVENT = 'situation_card_generate'
+const RAINDROP_GENERATE_MODEL = 'gpt-4.1-mini'
+
+type RaindropGenerateTelemetry = {
+  client: Raindrop
+  interaction: Interaction
+  eventId: string
+}
+
+function truncateRaindropText(value: unknown, maxLength = 6000): string {
+  const text = typeof value === 'string' ? value : JSON.stringify(value)
+  if (!text) return ''
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text
+}
+
+function cleanRaindropProperties(input: Record<string, unknown>): RaindropProperties {
+  const properties: RaindropProperties = {}
+  for (const [key, value] of Object.entries(input)) {
+    if (typeof value === 'string' && value.trim()) {
+      properties[key] = value.slice(0, 500)
+    } else if (typeof value === 'number' && Number.isFinite(value)) {
+      properties[key] = value
+    } else if (typeof value === 'boolean') {
+      properties[key] = value
+    }
+  }
+  return properties
+}
+
+async function beginRaindropGenerateTelemetry(params: {
+  input: string
+  mode: unknown
+  inputChars: number
+}): Promise<RaindropGenerateTelemetry | null> {
+  const writeKey = process.env.RAINDROP_WRITE_KEY
+  if (!writeKey) return null
+
+  try {
+    const { Raindrop } = await import('raindrop-ai')
+    const client = new Raindrop({
+      writeKey,
+      redactPii: true,
+      disabled: process.env.NODE_ENV === 'test',
+      debugLogs: process.env.RAINDROP_DEBUG === '1',
+    })
+    const eventId = randomUUID()
+    const interaction = client.begin({
+      eventId,
+      event: RAINDROP_GENERATE_EVENT,
+      userId: 'anonymous',
+      input: truncateRaindropText(params.input),
+      model: RAINDROP_GENERATE_MODEL,
+      properties: cleanRaindropProperties({
+        route: '/api/generate',
+        mode: typeof params.mode === 'string' ? params.mode : 'unknown',
+        input_chars: params.inputChars,
+        canonical_layer: 'archive',
+      }),
+    })
+    return { client, interaction, eventId }
+  } catch (error) {
+    console.warn('[raindrop] generate telemetry begin failed', error)
+    return null
+  }
+}
+
+async function finishRaindropGenerateTelemetry(
+  telemetry: RaindropGenerateTelemetry | null,
+  output: string,
+  properties: Record<string, unknown>
+): Promise<void> {
+  if (!telemetry) return
+
+  try {
+    telemetry.interaction.setProperties(cleanRaindropProperties(properties))
+    await telemetry.interaction.finish({
+      output: truncateRaindropText(output),
+      model: typeof properties.model === 'string' ? properties.model : RAINDROP_GENERATE_MODEL,
+    })
+  } catch (error) {
+    console.warn('[raindrop] generate telemetry finish failed', error)
+  } finally {
+    try {
+      await telemetry.client.close()
+    } catch (error) {
+      console.warn('[raindrop] generate telemetry flush failed', error)
+    }
+  }
+}
+
+function buildRaindropCardOutput(sc: SituationCard): string {
+  return truncateRaindropText({
+    situation_soumise: sc.situation_soumise_fr,
+    lecture: sc.lecture_systeme_fr ?? sc.insight_fr,
+    main_vulnerability: sc.main_vulnerability_fr,
+    asymmetry: sc.asymmetry_fr,
+    key_signal: sc.key_signal_fr,
+    generation_status: sc.generation_status,
+  })
+}
 
 function hasExplicitUrl(value: string): boolean {
   return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
@@ -4187,6 +4289,12 @@ function applyPatternContextToCard(
 
 export async function POST(req: NextRequest) {
   const requestStartedAt = Date.now()
+  let raindropTelemetry: RaindropGenerateTelemetry | null = null
+  let raindropOutput = 'generation_not_completed'
+  let raindropProperties: Record<string, unknown> = {
+    route: '/api/generate',
+    route_result: 'not_finished',
+  }
   try {
     const {
       situation,
@@ -4236,6 +4344,16 @@ export async function POST(req: NextRequest) {
           cto_watch_required: securityGuard.cto_watch_required,
         },
       }, { status: securityGuard.risk_level === 'block' ? 400 : 429 })
+    }
+    raindropTelemetry = await beginRaindropGenerateTelemetry({
+      input: text,
+      mode,
+      inputChars: text.length,
+    })
+    raindropProperties = {
+      ...raindropProperties,
+      mode: typeof mode === 'string' ? mode : 'unknown',
+      input_chars: text.length,
     }
     const rawDisplayText =
       typeof original_situation === 'string' && original_situation.trim()
@@ -5886,6 +6004,22 @@ export async function POST(req: NextRequest) {
       resourcesCount: resources.length,
       modelPath: prebuiltSiteCard ? 'local' : 'openai',
     })
+    raindropOutput = buildRaindropCardOutput(finalScWithReflection)
+    raindropProperties = {
+      ...raindropProperties,
+      gate: 'GENERATE',
+      route_result: 'generated_card',
+      generation_status: finalScWithReflection.generation_status ?? 'ok',
+      domain: effectiveCoverageForGeneration.domain,
+      intent_type: intentContext.interpreted_request?.intent_type,
+      question_type: intentContext.interpreted_request?.question_type,
+      resources_status: resourcesStatus,
+      resources_count: resources.length,
+      quality_status: canonicalQuality?.trace.status ?? 'unknown',
+      generation_event_id: generationArchive?.event.id ?? '',
+      model_path: prebuiltSiteCard ? 'local' : 'openai',
+      model: prebuiltSiteCard ? 'local' : RAINDROP_GENERATE_MODEL,
+    }
     return NextResponse.json({ gate: 'GENERATE', sc: finalScWithReflection })
   } catch (err: any) {
     console.error('generate error FULL:', err)
@@ -5906,6 +6040,18 @@ export async function POST(req: NextRequest) {
       inputChars: 0,
       errorKind: err instanceof Error ? err.name : 'UnknownError',
     })
+    raindropOutput = `error:${err instanceof Error ? err.message : String(err)}`
+    raindropProperties = {
+      ...raindropProperties,
+      gate: 'ERROR',
+      route_result: 'error',
+      error_kind: err instanceof Error ? err.name : 'UnknownError',
+    }
     return NextResponse.json({ error: String(err) }, { status: 500 })
+  } finally {
+    await finishRaindropGenerateTelemetry(raindropTelemetry, raindropOutput, {
+      ...raindropProperties,
+      latency_ms: Date.now() - requestStartedAt,
+    })
   }
 }
