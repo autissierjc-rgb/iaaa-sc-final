@@ -6,7 +6,7 @@ import type {
   TheatreEvidence,
 } from '../contracts'
 import { isCanonicalSiteUnderstandingResource } from '../material/scMaterialInterpreter'
-import { sanitizeProbativeEvidenceText } from '../resources/probativeEvidenceSanitizer'
+import { sanitizeResourceAsProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 
 export type ConcreteTheatreBuilderInput = {
   interpretation: InterpretationContract
@@ -112,19 +112,20 @@ function evidenceFromResources(resources?: ResourceServiceContract): TheatreEvid
       !(resource.title.toLowerCase().startsWith('fiche site') && isCanonicalSiteUnderstandingResource(resource))
     )
     .slice(0, 8)
-    .map((resource) => {
-      const evidence = sanitizeProbativeEvidenceText(
-        resource.excerpt,
-        'preuve publique à vérifier',
-        resource.id,
-      )
+    .map((resource): TheatreEvidence | null => {
+      const evidence = sanitizeResourceAsProbativeEvidence(resource)
+      if (!evidence.can_be_public) return null
       return {
-        label: evidence.status === 'usable' ? evidence.public_label_fr : 'preuve publique à vérifier',
-        level: resource.reliability === 'primary' ? 'established' : 'plausible',
+        label: evidence.public_label_fr,
+        level: resource.reliability === 'primary'
+          ? 'established'
+          : evidence.can_drive_probability
+            ? 'plausible'
+            : 'uncertain',
         source_ids: [resource.id],
       } satisfies TheatreEvidence
     })
-    .filter((item) => item.label !== 'preuve publique à vérifier')
+    .filter((item): item is TheatreEvidence => Boolean(item))
 }
 
 function lineAfterPrefix(value: string, prefix: string): string {

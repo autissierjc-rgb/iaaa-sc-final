@@ -1409,6 +1409,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     : ''
   const lecture = [
     evidenceGapOpening,
+    groundedFactOpening,
     diamondText,
     resonance.structural_contradiction_fr || `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
     vulnerability,
