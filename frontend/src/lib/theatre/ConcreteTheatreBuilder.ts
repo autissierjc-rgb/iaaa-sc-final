@@ -7,6 +7,8 @@ import type {
 } from '../contracts'
 import { isCanonicalSiteUnderstandingResource } from '../material/scMaterialInterpreter'
 import { sanitizeResourceAsProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
+import type { ResourceItem } from '../resources/resourceContract'
+import { isRelevantResource } from '../resources/resourceRelevance'
 
 export type ConcreteTheatreBuilderInput = {
   interpretation: InterpretationContract
@@ -106,11 +108,25 @@ function extractNamedAnchors(text: string): string[] {
     .slice(0, 12)
 }
 
-function evidenceFromResources(resources?: ResourceServiceContract): TheatreEvidence[] {
+function resourceItemFromContract(resource: ResourceServiceContract['public_sources'][number]): ResourceItem {
+  return {
+    title: resource.title,
+    url: resource.url,
+    type: resource.channel,
+    source: resource.source,
+    date: resource.published_at,
+    excerpt: resource.excerpt,
+    reliability: resource.reliability,
+  }
+}
+
+function evidenceFromResources(resources?: ResourceServiceContract, relevanceQuery?: string): TheatreEvidence[] {
+  const query = relevanceQuery?.trim() ?? ''
   return (resources?.public_sources ?? [])
     .filter((resource) =>
       !(resource.title.toLowerCase().startsWith('fiche site') && isCanonicalSiteUnderstandingResource(resource))
     )
+    .filter((resource) => !query || isRelevantResource(resourceItemFromContract(resource), query))
     .slice(0, 8)
     .map((resource): TheatreEvidence | null => {
       const evidence = sanitizeResourceAsProbativeEvidence(resource)
@@ -325,7 +341,7 @@ export function buildConcreteTheatre(input: ConcreteTheatreBuilderInput): Concre
   const dates = extractDates(text).length > 0
     ? extractDates(text)
     : extractDates(interpretation.raw_input)
-  const evidence = evidenceFromResources(input.resources)
+  const evidence = evidenceFromResources(input.resources, text)
   const sourceNames = unique((input.resources?.public_sources ?? []).map((resource) => resource.source))
   const resourceAnchors = resourceTheatreAnchors(input.resources)
   const playbook = input.expertises?.domain_playbook

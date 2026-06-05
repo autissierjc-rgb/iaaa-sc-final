@@ -1,4 +1,6 @@
 import type { ResourceContract, ResourceServiceContract } from '../contracts/resources'
+import type { ResourceItem } from './resourceContract'
+import { isRelevantResource } from './resourceRelevance'
 
 export type ProbativeEvidenceRejectionReason =
   | 'empty'
@@ -67,6 +69,24 @@ function publicSourceLabel(source: ResourceContract): string {
   const sourceName = source.source || 'source'
   const title = compact(source.title)
   return title ? `${title} (${sourceName})` : sourceName
+}
+
+function resourceItemFromContract(source: ResourceContract): ResourceItem {
+  return {
+    title: source.title,
+    url: source.url,
+    type: source.channel,
+    source: source.source,
+    date: source.published_at,
+    excerpt: source.excerpt,
+    reliability: source.reliability,
+  }
+}
+
+function isRelevantProbativeSource(source: ResourceContract, relevanceQuery?: string): boolean {
+  const query = compact(relevanceQuery ?? '')
+  if (!query) return true
+  return isRelevantResource(resourceItemFromContract(source), query)
 }
 
 function cleanPublicEvidenceCandidate(value: string | undefined, sourceTitle?: string): string {
@@ -201,10 +221,15 @@ export function sanitizeResourceAsProbativeEvidence(source: ResourceContract): P
   return sanitizeProbativeEvidenceText(candidate, fallbackLabel, source.id)
 }
 
-export function publicProbativeEvidence(resources?: ResourceServiceContract, max = 3): ProbativeEvidence[] {
+export function publicProbativeEvidence(
+  resources?: ResourceServiceContract,
+  max = 3,
+  relevanceQuery?: string,
+): ProbativeEvidence[] {
   if (!resources) return []
 
   return resources.public_sources
+    .filter((source) => isRelevantProbativeSource(source, relevanceQuery))
     .map((source) => sanitizeResourceAsProbativeEvidence(source))
     .filter((evidence) => evidence.can_be_public)
     .slice(0, max)

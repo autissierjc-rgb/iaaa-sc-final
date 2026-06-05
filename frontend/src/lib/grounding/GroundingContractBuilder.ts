@@ -33,8 +33,20 @@ function sourceStatus(resources?: ResourceServiceContract, material?: SCMaterial
   return 'missing'
 }
 
-function factsFromResources(resources?: ResourceServiceContract): GroundedFact[] {
-  return publicProbativeEvidence(resources, 6)
+function resourceRelevanceQuery(interpretation: InterpretationContract): string {
+  return unique([
+    interpretation.raw_input,
+    interpretation.situation_soumise,
+    interpretation.object_of_analysis,
+    interpretation.header_subject,
+    interpretation.angle,
+    interpretation.user_need,
+    interpretation.primary_hypothesis ?? '',
+  ], 24).join(' ')
+}
+
+function factsFromResources(resources?: ResourceServiceContract, relevanceQuery?: string): GroundedFact[] {
+  return publicProbativeEvidence(resources, 6, relevanceQuery)
     .filter((evidence) => evidence.can_drive_probability)
     .map((evidence) => ({
       label_fr: evidence.public_label_fr,
@@ -82,6 +94,7 @@ export function buildGroundingContract(input: {
     input.resources?.policy === 'fast_sources_required' ||
     input.resources?.policy === 'url_extract_required'
   const sourceAvailable = status === 'available' || status === 'partial'
+  const relevanceQuery = resourceRelevanceQuery(input.interpretation)
   const optionCandidates = [...optionsFromResources(input.resources), ...optionsFromMaterial(input.material)]
   const optionLabels = new Set<string>()
   const options = optionCandidates.filter((option) => {
@@ -91,7 +104,7 @@ export function buildGroundingContract(input: {
     return true
   }).slice(0, 8)
   const facts = [
-    ...factsFromResources(input.resources),
+    ...factsFromResources(input.resources, relevanceQuery),
     ...(input.theatre?.evidence ?? []).map((evidence) => ({
       label_fr: evidence.label,
       source: 'theatre' as const,
