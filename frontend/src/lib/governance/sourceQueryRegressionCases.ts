@@ -14,6 +14,7 @@ import {
 } from '@/lib/resources/FastResourceRunner'
 import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSourceCoverage'
 import type { ResourceItem } from '@/lib/resources/resourceContract'
+import { buildGeneralDiamondDeepFallback } from '@/lib/editorial/diamond'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
 import type { SituationCard } from '@/lib/resources/resourceContract'
 import { buildResonanceTrace } from '@/lib/resonance'
@@ -974,6 +975,56 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     })
   }
 
+  const deepAnchorNoiseIssues: SourceQueryRegressionResult['issues'] = []
+  const noisyDeepReading = buildGeneralDiamondDeepFallback({
+    situation: 'Ou en est la guerre usa Iran au 05/06',
+    sc: {
+      ...genericCurrentCardForValidation(),
+      submitted_situation_fr: 'Quelle est la situation actuelle du conflit entre les États-Unis et l’Iran au 5 juin ?',
+      intent_context: {
+        dominant_frame: 'geopolitical_crisis',
+        surface_domain: 'geopolitics',
+        interpreted_request: {
+          intent_type: 'understand',
+          domain: 'geopolitics',
+          object_of_analysis: 'conflit États-Unis Iran',
+        },
+      },
+      concrete_theatre: {
+        anchors: [
+          'Unis',
+          'Iran',
+          'la situation actuelle du conflit entre les États-Unis et l’Iran',
+          'Sat, 30 May 2026 15:29:03 GMT',
+          'Tue, 02 Jun 2026 11:25:51 GMT',
+        ],
+        actors: ['États-Unis', 'Iran'],
+        institutions: ['administration américaine', 'autorités iraniennes'],
+        procedures: [],
+        places: [],
+        dates: [],
+        precedents: [],
+        relays: [],
+        blockers: [],
+        mechanisms: ['canaux diplomatiques'],
+        thresholds: ['déclaration officielle'],
+        evidence_to_watch: ['déclaration officielle datée'],
+        missing_anchors: [],
+        domain: 'geopolitics',
+      },
+    } as unknown as SituationCard,
+    resources: [],
+  })
+  for (const forbidden of ['Unis', 'Sat, 30 May', 'Tue, 02 Jun', 'la situation actuelle du conflit']) {
+    if (includesLoose(noisyDeepReading.approfondir_fr, forbidden)) {
+      deepAnchorNoiseIssues.push({
+        level: 'error',
+        code: 'deep_reading_anchor_noise_leaked',
+        message: `Deep reading must not render raw anchor noise as concrete matter: ${forbidden}.`,
+      })
+    }
+  }
+
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
@@ -1058,5 +1109,11 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: incompleteCompleteCoverage.note_fr,
     subject: completeCoverage.note_fr,
     issues: completeCoverageIssues,
+  }, {
+    id: 'deep-reading-filters-non-material-anchors',
+    ok: deepAnchorNoiseIssues.length === 0,
+    query: noisyDeepReading.approfondir_fr.slice(0, 240),
+    subject: 'writing/approfondir anchor hygiene',
+    issues: deepAnchorNoiseIssues,
   }]
 }

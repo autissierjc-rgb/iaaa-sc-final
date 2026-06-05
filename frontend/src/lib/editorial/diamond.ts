@@ -74,6 +74,39 @@ function compact(value: unknown): string {
   return cleanModelText(String(value ?? '')).replace(/[.;:]+$/g, '').trim()
 }
 
+function normalizeForAnchor(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function isDeepAnchorNoise(value: string): boolean {
+  const text = compact(value)
+  const normalized = normalizeForAnchor(text)
+  if (!text || text.length < 4) return true
+  if (/^(?:mon|tue|wed|thu|fri|sat|sun),?\s+\d{1,2}\s+\w+\s+\d{4}/i.test(text)) return true
+  if (/\b\d{2}:\d{2}:\d{2}\s+gmt\b/i.test(text)) return true
+  if (/^(?:ou|où|que|quoi|quelle?|comment|pourquoi|quand)\b/i.test(text)) return true
+  if (/\b(?:ou|où)\s+en\s+sommes\s+nous\b/i.test(text)) return true
+  if (/\b(?:situation actuelle|quelle est la situation|où en est|ou en est)\b/i.test(normalized)) return true
+  if (/^(?:unis|une|un|avec|entre|guerre|conflit|situation|actuelle?)$/i.test(normalized)) return true
+  if (/^(?:la|le|les|des|du|de)\s+/i.test(text) && text.length > 50) return true
+  return false
+}
+
+function cleanDeepAnchors(items: string[], max = 8): string[] {
+  return items
+    .map((item) => item.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .filter((item) => item.length < 80)
+    .filter((item) => !/[,:;]{2,}|[,;].*[,;]/.test(item))
+    .filter((item) => !isDeepAnchorNoise(item))
+    .filter((item, index, all) => all.findIndex((other) => other.toLowerCase() === item.toLowerCase()) === index)
+    .slice(0, max)
+}
+
 function firstArrayItem(value: unknown): unknown {
   return Array.isArray(value) ? value[0] : undefined
 }
@@ -122,13 +155,7 @@ function concreteAnchors(situation: string, arbre?: ArbreACamesAnalysis): string
     )
   ).filter((name) => !/^(Deux|Après|Apres|Où|Ou|Quel|Quelle|Pourquoi|Comment)$/i.test(name))
 
-  return [...properNames, ...fromArbre]
-    .map((item) => item.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-    .filter((item) => item.length < 80)
-    .filter((item) => !/[,:;]{2,}|[,;].*[,;]/.test(item))
-    .filter((item, index, all) => all.findIndex((other) => other.toLowerCase() === item.toLowerCase()) === index)
-    .slice(0, 8)
+  return cleanDeepAnchors([...properNames, ...fromArbre])
 }
 
 function readableList(items: string[], fallback: string): string {
@@ -903,6 +930,10 @@ export function buildGeneralDiamondDeepFallback({
     return buildCausalAttributionDeepFallback({ situation, arbre, sc, resources })
   }
 
+  if (isGeopoliticalReading(sc)) {
+    return buildGeopoliticalDeepFallback({ situation, arbre, sc, scopeContext, resources })
+  }
+
   if ((sc?.intent_context?.dominant_frame ?? sc?.coverage_check?.intent_context?.dominant_frame) === 'startup_target_choice') {
     return buildStartupTargetChoiceDeepFallback({ situation, sc })
   }
@@ -922,12 +953,12 @@ export function buildGeneralDiamondDeepFallback({
   const scope = scopeContext ?? sc?.scope_context
   const concreteTheatre = sc?.concrete_theatre ?? sc?.coverage_check?.concrete_theatre
   const anchors = concreteTheatre?.anchors?.length
-    ? concreteTheatre.anchors.slice(0, 10)
+    ? cleanDeepAnchors(concreteTheatre.anchors, 10)
     : concreteAnchors(situation, arbre)
   const anchorLine = readableList(
     anchors.slice(0, 5),
     firstUseful(
-      [arbre?.acteurs?.[0], arbre?.forces?.[0], sc?.submitted_situation_fr, situation],
+      [arbre?.acteurs?.[0], arbre?.forces?.[0]],
       'les acteurs et faits déjà identifiés dans la situation'
     )
   )
