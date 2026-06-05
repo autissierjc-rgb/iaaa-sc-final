@@ -394,12 +394,21 @@ export function buildFastResourceSearchPlansForDiagnostics(input: FastResourceRu
   targeted: FastSearchPlan
   broad: FastSearchPlan
   functional: FastSearchPlan[]
+  execution: FastSearchPlan[]
   subject: string
 } {
+  const targeted = fastSearchPlan(input)
+  const broad = broadFastSearchPlan(input)
+  const functional = functionalNeedPlans(input)
   return {
-    targeted: fastSearchPlan(input),
-    broad: broadFastSearchPlan(input),
-    functional: functionalNeedPlans(input),
+    targeted,
+    broad,
+    functional,
+    execution: uniquePlans([
+      targeted,
+      broad,
+      ...functional,
+    ]).slice(0, 4),
     subject: sourceSubject(input),
   }
 }
@@ -522,9 +531,9 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
   const fallbackPlan = fastSearchPlan(input)
   const broadPlan = broadFastSearchPlan(input)
   const plans = uniquePlans([
-    ...functionalNeedPlans(input),
     fallbackPlan,
     broadPlan,
+    ...functionalNeedPlans(input),
   ]).slice(0, 4)
   const primaryPlan = plans[0] ?? fallbackPlan
   const query = [

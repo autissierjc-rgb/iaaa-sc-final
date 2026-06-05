@@ -408,6 +408,41 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
   const plans = buildFastResourceSearchPlansForDiagnostics(input)
   const query = `${plans.targeted.query} ${plans.broad.query}`.trim()
   const issues: SourceQueryRegressionResult['issues'] = []
+  const crowdedPlans = buildFastResourceSearchPlansForDiagnostics({
+    interpretation: interpretationForCurrentQuestion(),
+    resource_plan: {
+      ...baseResourcePlan(),
+      functional_needs: [
+        {
+          family: 'legitimation',
+          label_fr: 'Legitimation',
+          question_fr: 'Official frame',
+          channels: ['official', 'news_agency', 'research'],
+          suggested_queries: ['generic official statement', 'generic legal framework'],
+          expected_evidence_fr: ['official statement'],
+          priority: 'high',
+        },
+        {
+          family: 'protection_conflict',
+          label_fr: 'Conflict',
+          question_fr: 'Conflict frame',
+          channels: ['news_agency', 'local_media', 'official'],
+          suggested_queries: ['generic controversy'],
+          expected_evidence_fr: ['conflict signal'],
+          priority: 'high',
+        },
+        {
+          family: 'production_reproduction',
+          label_fr: 'Infrastructure',
+          question_fr: 'Infrastructure frame',
+          channels: ['local_media', 'official', 'research'],
+          suggested_queries: ['generic infrastructure dependency'],
+          expected_evidence_fr: ['dependency'],
+          priority: 'medium',
+        },
+      ],
+    },
+  })
 
   for (const term of ['Iran', 'Israel', 'usa']) {
     if (!includesLoose(query, term)) {
@@ -424,6 +459,14 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       level: 'error',
       code: 'source_query_uses_generic_placeholder',
       message: 'Current source query must not use the generic interpreted object as search subject.',
+    })
+  }
+
+  if (crowdedPlans.execution[0]?.label !== 'targeted' || !includesLoose(crowdedPlans.execution[0]?.query ?? '', 'Iran')) {
+    issues.push({
+      level: 'error',
+      code: 'targeted_plan_crowded_out_by_functional_needs',
+      message: 'FastResourceRunner must execute the current-question targeted plan before functional enrichment plans.',
     })
   }
 
