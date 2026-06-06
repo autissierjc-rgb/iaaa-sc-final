@@ -54,7 +54,7 @@ import { buildCausalMatter } from '@/lib/text/diamondConcrete'
 import { normalizeSubmittedSituation } from '@/lib/text/normalizeSubmittedSituation'
 import { buildDiamondDossier, runLLMDiamondWriter } from '@/lib/diamond-core'
 import { recordGenerationTrace } from '@/lib/admin/generationTelemetry'
-import { buildCtoWatchMetricsFromEvents, buildCtoWatchReport, buildGenerationEvent } from '@/lib/archive'
+import { buildCtoWatchMetricsFromEvents, buildCtoWatchReport, buildGenerationEvent, buildRaindropLayerDiagnostics } from '@/lib/archive'
 import { DEFAULT_LANGUAGE_SERVICE_CONTRACT } from '@/lib/contracts/language'
 import { DEFAULT_BUZZ_READINESS, DEFAULT_PDF_EXPORT_CONTRACT, DEFAULT_UNIFIED_SHARE_BUTTON } from '@/lib/contracts/share'
 import { buildUserMaterialPolicy, classifyUserMaterialResourceRole, type UserMaterialResourceRoleAssessment } from '@/lib/contracts/userMaterial'
@@ -5934,6 +5934,21 @@ export async function POST(req: NextRequest) {
       issues: diamondValidation.issues,
     }
     if (!diamondValidation.ok) {
+      const raindropLayerDiagnostics = buildRaindropLayerDiagnostics({
+        interpretation: generationInterpretation,
+        initialResourcePlan,
+        canonicalResourcePlan,
+        diamondResourcePlan,
+        fastRunnerResult,
+        material: scMaterialUnderstanding,
+        theatre: canonicalTheatre,
+        resonance: resonanceTrace,
+        grounding: groundingContract,
+        writing: writingContract,
+        quality: canonicalQuality,
+        diamondValidation,
+        output: sc,
+      })
       recordGenerationTrace({
         status: 'partial',
         gate: 'CLARIFY',
@@ -5950,6 +5965,28 @@ export async function POST(req: NextRequest) {
         resourcesCount: resources.length,
         modelPath: prebuiltSiteCard ? 'local' : 'openai',
       })
+      raindropOutput = truncateRaindropText({
+        gate: 'CLARIFY',
+        route_result: 'diamond_validation_clarify',
+        situation_soumise: sc.situation_soumise_fr,
+        quality_issues: diamondValidation.issues.map((issue) => issue.code),
+      })
+      raindropProperties = {
+        ...raindropProperties,
+        ...raindropLayerDiagnostics,
+        gate: 'CLARIFY',
+        route_result: 'diamond_validation_clarify',
+        generation_status: sc.generation_status ?? 'partial',
+        domain: effectiveCoverageForGeneration.domain,
+        intent_type: intentContext.interpreted_request?.intent_type,
+        question_type: intentContext.interpreted_request?.question_type,
+        resources_status: resourcesStatus,
+        resources_count: resources.length,
+        quality_status: canonicalQuality?.trace.status ?? 'unknown',
+        generation_event_id: generationArchive?.event.id ?? '',
+        model_path: prebuiltSiteCard ? 'local' : 'openai',
+        model: prebuiltSiteCard ? 'local' : RAINDROP_GENERATE_MODEL,
+      }
       return NextResponse.json({
         gate: 'CLARIFY',
         questions: buildDiamondClarificationQuestions(diamondValidation.issues),
@@ -6005,8 +6042,24 @@ export async function POST(req: NextRequest) {
       modelPath: prebuiltSiteCard ? 'local' : 'openai',
     })
     raindropOutput = buildRaindropCardOutput(finalScWithReflection)
+    const raindropLayerDiagnostics = buildRaindropLayerDiagnostics({
+      interpretation: generationInterpretation,
+      initialResourcePlan,
+      canonicalResourcePlan,
+      diamondResourcePlan,
+      fastRunnerResult,
+      material: scMaterialUnderstanding,
+      theatre: canonicalTheatre,
+      resonance: resonanceTrace,
+      grounding: groundingContract,
+      writing: writingContract,
+      quality: canonicalQuality,
+      diamondValidation,
+      output: finalScWithReflection,
+    })
     raindropProperties = {
       ...raindropProperties,
+      ...raindropLayerDiagnostics,
       gate: 'GENERATE',
       route_result: 'generated_card',
       generation_status: finalScWithReflection.generation_status ?? 'ok',
