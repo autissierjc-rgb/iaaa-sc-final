@@ -657,6 +657,11 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     resources: baseResourcePlan(),
     expertises: expertisesForCurrentQuestion(),
   })
+  const uppercaseRawResonance = buildResonanceTrace({
+    interpretation: uppercaseRawInterpretation,
+    theatre: uppercaseRawTheatre,
+    resources: baseResourcePlan(),
+  })
 
   if (relevance.some((item) =>
     includesLoose(item.title ?? '', 'Bolivia') ||
@@ -790,6 +795,7 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
   const noisySourcePublicText = [
     noisySourceWriting.situation_card.insight_fr,
     noisySourceWriting.situation_card.main_vulnerability_fr,
+    noisySourceWriting.situation_card.key_signal_fr,
     noisySourceWriting.lecture.text_fr,
     noisySourceWriting.approfondir.analysis_fr,
     ...noisySourceWriting.approfondir.sections_fr.map((section) => section.body),
@@ -822,6 +828,9 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     cleanEvidenceWriting.lecture.text_fr,
     cleanEvidenceWriting.approfondir.analysis_fr,
     ...cleanEvidenceWriting.approfondir.sections_fr.map((section) => section.body),
+    ...cleanEvidenceWriting.probability_assessments.flatMap((assessment) =>
+      assessment.examples.map((example) => example.text_fr),
+    ),
   ].join(' ')
   if (!includesLoose(cleanEvidencePublicText, 'emergency session') ||
     !includesLoose(cleanEvidencePublicText, 'official warnings')) {
@@ -911,6 +920,13 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
         level: 'error',
         code: 'canonical_actor_lost',
         message: `ConcreteTheatreBuilder must preserve canonical interpreted actors: ${required}.`,
+      })
+    }
+    if (!uppercaseRawResonance.real_actors.some((actor) => includesLoose(actor, required))) {
+      canonicalTheatreIssues.push({
+        level: 'error',
+        code: 'canonical_actor_lost_in_resonance',
+        message: `ResonanceTrace must preserve canonical interpreted actors after normalized extraction: ${required}.`,
       })
     }
   }

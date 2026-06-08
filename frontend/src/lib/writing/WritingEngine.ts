@@ -347,7 +347,7 @@ function probabilityFromResources(
 function publicEvidenceAnchors(resources?: ResourceServiceContract, relevanceQuery?: string): string[] {
   return publicProbativeEvidence(resources, 3, relevanceQuery)
     .filter((evidence) => evidence.can_drive_probability)
-    .map((evidence) => compactSentence(evidence.public_label_fr, 160))
+    .map((evidence) => publicFactSignal(evidence.public_label_fr))
     .filter((evidence) => evidence.length > 0 && !looksLikeProbativeEvidenceNoise(evidence))
 }
 
@@ -380,7 +380,9 @@ function groundedFactOpeningSentence(grounding?: GroundingContract): string | un
   if (facts.length === 0) return undefined
 
   const signals = unique(facts.map(publicFactSignal))
-  return `Le premier appui public disponible signale ${signals.join(' et ')} ; il doit rester confronté à la chronologie et aux sources primaires.`
+  const specificSignals = signals.filter((signal) => signal !== 'un fait public à vérifier')
+  const visibleSignals = (specificSignals.length > 0 ? specificSignals : signals).slice(0, 2)
+  return `Le premier appui public disponible signale ${visibleSignals.join(' et ')} ; il doit rester confronté à la chronologie et aux sources primaires.`
 }
 
 function resourceProofLabel(resources?: ResourceServiceContract): string | undefined {

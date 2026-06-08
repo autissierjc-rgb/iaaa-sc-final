@@ -270,40 +270,42 @@ function corpusText(input: ResonanceTraceInput): string {
 }
 
 function lexicalActorsFromCorpus(text: string): string[] {
+  const normalizedText = normalize(text)
   const actors: string[] = []
   const addIf = (pattern: RegExp, label: string) => {
-    if (pattern.test(text)) actors.push(label)
+    if (pattern.test(normalizedText)) actors.push(label)
   }
 
-  addIf(/\biran|iranien|iranienne|teheran|t[ée]h[ée]ran\b/i, 'Iran')
-  addIf(/\bisra[ëe]l|israelien|isra[ée]lien|jerusalem|j[ée]rusalem\b/i, 'Israël')
-  addIf(/\b(?:usa|u\.s\.|us\b|united states|[ée]tats[-\s]?unis|am[ée]ricain|washington|trump)\b/i, 'États-Unis')
+  addIf(/\biran|iranien|iranienne|teheran\b/i, 'Iran')
+  addIf(/\bisrael|israelien|jerusalem\b/i, 'Israël')
+  addIf(/\b(?:usa|u\.s\.|us\b|united states|etats[-\s]?unis|americain|washington|trump)\b/i, 'États-Unis')
   addIf(/\bhezbollah\b/i, 'Hezbollah')
   addIf(/\bhamas\b/i, 'Hamas')
-  addIf(/\bhouthi|houthis|y[ée]men\b/i, 'Houthis')
+  addIf(/\bhouthi|houthis|yemen\b/i, 'Houthis')
   addIf(/\brussie|russia|moscou|moscow\b/i, 'Russie')
   addIf(/\bukraine|kyiv|kiev\b/i, 'Ukraine')
-  addIf(/\bchine|china|p[ée]kin|beijing\b/i, 'Chine')
-  addIf(/\bunion europ[ée]enne|\bue\b|european union|\beu\b/i, 'Union européenne')
+  addIf(/\bchine|china|pekin|beijing\b/i, 'Chine')
+  addIf(/\bunion europeenne|\bue\b|european union|\beu\b/i, 'Union européenne')
   addIf(/\botan|nato\b/i, 'OTAN')
   addIf(/\bonu|united nations\b/i, 'ONU')
   return unique(actors)
 }
 
 function lexicalInstitutionsFromCorpus(text: string): string[] {
+  const normalizedText = normalize(text)
   const institutions: string[] = []
   const addIf = (pattern: RegExp, label: string) => {
-    if (pattern.test(text)) institutions.push(label)
+    if (pattern.test(normalizedText)) institutions.push(label)
   }
 
-  addIf(/\b(?:usa|u\.s\.|us\b|united states|[ée]tats[-\s]?unis|washington|trump|white house|maison[-\s]?blanche)\b/i, 'administration américaine')
-  addIf(/\bcongress|congr[èe]s\b/i, 'Congrès américain')
-  addIf(/\bisra[ëe]l|israelien|isra[ée]lien|netanyahu|jerusalem|j[ée]rusalem\b/i, 'gouvernement israélien')
-  addIf(/\biran|iranien|iranienne|teheran|t[ée]h[ée]ran|irgc|gardiens de la r[ée]volution\b/i, 'autorités iraniennes')
-  addIf(/\baiea|iaea|nucl[ée]aire|nuclear\b/i, 'AIEA')
-  addIf(/\bonu|united nations|security council|conseil de s[ée]curit[ée]\b/i, 'Conseil de sécurité de l’ONU')
-  addIf(/\bcessez[-\s]?le[-\s]?feu|ceasefire|truce|m[ée]diation|mediator|qatar|oman\b/i, 'canaux de médiation')
-  addIf(/\bp[ée]trole|oil|energy|[ée]nergie|hormuz\b/i, 'marchés de l’énergie')
+  addIf(/\b(?:usa|u\.s\.|us\b|united states|etats[-\s]?unis|washington|trump|white house|maison[-\s]?blanche)\b/i, 'administration américaine')
+  addIf(/\bcongress|congres\b/i, 'Congrès américain')
+  addIf(/\bisrael|israelien|netanyahu|jerusalem\b/i, 'gouvernement israélien')
+  addIf(/\biran|iranien|iranienne|teheran|irgc|gardiens de la revolution\b/i, 'autorités iraniennes')
+  addIf(/\baiea|iaea|nucleaire|nuclear\b/i, 'AIEA')
+  addIf(/\bonu|united nations|security council|conseil de securite\b/i, 'Conseil de sécurité de l’ONU')
+  addIf(/\bcessez[-\s]?le[-\s]?feu|ceasefire|truce|mediation|mediator|qatar|oman\b/i, 'canaux de médiation')
+  addIf(/\bpetrole|oil|energy|energie|hormuz\b/i, 'marchés de l’énergie')
   return unique(institutions)
 }
 
