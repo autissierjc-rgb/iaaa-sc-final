@@ -360,7 +360,7 @@ function groundedFactOpeningSentence(grounding?: GroundingContract): string | un
 
   if (facts.length === 0) return undefined
 
-  return `Faits rapides retenus : ${facts.join(' ; ')}.`
+  return `Le premier appui public disponible indique que ${facts.join(' ; ')}.`
 }
 
 function resourceProofLabel(resources?: ResourceServiceContract): string | undefined {

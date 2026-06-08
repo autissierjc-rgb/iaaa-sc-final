@@ -15,6 +15,7 @@ import {
 import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSourceCoverage'
 import type { ResourceItem } from '@/lib/resources/resourceContract'
 import { buildGeneralDiamondDeepFallback } from '@/lib/editorial/diamond'
+import { publicProbativeEvidence } from '@/lib/resources/probativeEvidenceSanitizer'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
 import type { SituationCard } from '@/lib/resources/resourceContract'
 import { buildResonanceTrace } from '@/lib/resonance'
@@ -118,6 +119,27 @@ function resourcePlanWithCleanPublicEvidence(): ResourceServiceContract {
     excerpt: 'An emergency session followed official warnings between Iran, Israel and the United States over military thresholds.',
     retrieved_at: '2026-06-04T00:00:00.000Z',
     reliability: 'primary',
+  }
+
+  return {
+    ...baseResourcePlan(),
+    status: 'available',
+    resources: [source],
+    public_sources: [source],
+  }
+}
+
+function resourcePlanWithDatelineEvidence(): ResourceServiceContract {
+  const source: ResourceContract = {
+    id: 'dateline-evidence-regression',
+    title: 'Iran reviewing proposed agreement with the United States - Reuters',
+    url: 'https://www.reuters.com/world/middle-east/iran-reviewing-us-agreement-example/',
+    source: 'reuters.com',
+    channel: 'news_agency',
+    domain_relevance: ['geopolitics'],
+    excerpt: "DUBAI, June 5 (Reuters) - Iran is reviewing a proposed agreement with the United States while Israel keeps military pressure visible.",
+    retrieved_at: '2026-06-05T00:00:00.000Z',
+    reliability: 'secondary',
   }
 
   return {
@@ -580,6 +602,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     scoring: scoringForRegression(),
   })
   const cleanEvidenceIssues: SourceQueryRegressionResult['issues'] = []
+  const datelineEvidence = publicProbativeEvidence(
+    resourcePlanWithDatelineEvidence(),
+    2,
+    'Ou en est la guerre Iran usa israel au 05/06',
+  )
+  const datelineEvidenceIssues: SourceQueryRegressionResult['issues'] = []
   const diamondReadinessIssues: SourceQueryRegressionResult['issues'] = []
   const notReadyDiamondValidation = validateDiamondContract(
     genericCurrentCardForValidation(),
@@ -808,6 +836,20 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       level: 'error',
       code: 'clean_public_evidence_not_plausible',
       message: 'A clean public evidence excerpt can support a plausible status while remaining revisable.',
+    })
+  }
+  if (datelineEvidence.some((evidence) => includesLoose(evidence.public_label_fr, 'DUBAI') || includesLoose(evidence.public_label_fr, 'Reuters'))) {
+    datelineEvidenceIssues.push({
+      level: 'error',
+      code: 'news_dateline_not_sanitized',
+      message: 'Probative evidence must remove news-agency datelines before public writing.',
+    })
+  }
+  if (!datelineEvidence.some((evidence) => includesLoose(evidence.public_label_fr, 'Iran is reviewing'))) {
+    datelineEvidenceIssues.push({
+      level: 'error',
+      code: 'news_dateline_removed_public_fact',
+      message: 'Dateline cleaning must preserve the underlying public fact.',
     })
   }
   if (notReadyDiamondValidation.ok ||
@@ -1110,6 +1152,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: cleanEvidenceWriting.situation_card.key_signal_fr,
     subject: cleanEvidenceWriting.probability_assessments[0]?.probability_label_fr ?? '',
     issues: cleanEvidenceIssues,
+  }, {
+    id: 'news-dateline-evidence-is-sanitized',
+    ok: datelineEvidenceIssues.length === 0,
+    query: datelineEvidence.map((evidence) => evidence.public_label_fr).join(' | '),
+    subject: 'probative evidence sanitizer',
+    issues: datelineEvidenceIssues,
   }, {
     id: 'diamond-validation-grounded-anti-hors-sol',
     ok: diamondReadinessIssues.length === 0,
