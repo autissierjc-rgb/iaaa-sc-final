@@ -4939,10 +4939,37 @@ export async function POST(req: NextRequest) {
       modelPath: 'local',
     })
     const webNeeded = hasUrlInFlow || initialResourcePlan.needs_web || shouldUseWeb(urlAugmentedAnalysisText)
-    const fastRunnerResult = initialResourcePlan.needs_web && providedResources.length === 0 && !exploratoryWithoutMaterial
+    const fastResourcePlan = initialResourcePlan.needs_web
+      ? initialResourcePlan
+      : webNeeded
+        ? {
+            ...initialResourcePlan,
+            status: initialResourcePlan.status === 'not_needed' ? 'partial' : initialResourcePlan.status,
+            policy: 'fast_sources_required' as const,
+            needs_web: true,
+            policy_reason_fr:
+              'La route publique a detecte une question dependant de faits externes : les ressources rapides doivent etre tentees avant la carte.',
+            fallback_searches: initialResourcePlan.fallback_searches.length > 0
+              ? initialResourcePlan.fallback_searches
+              : [generationAnalysisText],
+            internal_notes: [
+              ...initialResourcePlan.internal_notes,
+              'webNeeded route signal promoted ResourceService plan for FastResourceRunner.',
+            ],
+            trace: {
+              ...initialResourcePlan.trace,
+              status: initialResourcePlan.trace.status === 'ok' ? 'partial' : initialResourcePlan.trace.status,
+              notes: [
+                ...(initialResourcePlan.trace.notes ?? []),
+                'web_needed_promoted_fast_runner=true',
+              ],
+            },
+          }
+        : initialResourcePlan
+    const fastRunnerResult = fastResourcePlan.needs_web && providedResources.length === 0 && !exploratoryWithoutMaterial
       ? await runFastResourceRunner({
           interpretation: canonicalInterpretation,
-          resource_plan: initialResourcePlan,
+          resource_plan: fastResourcePlan,
           timeout_ms: hasUrlInFlow ? MIN_FAST_RESOURCE_TIMEOUT_MS : mode === 'generate_full' ? 2500 : MIN_FAST_RESOURCE_TIMEOUT_MS,
           max_sources: 3,
         })
