@@ -236,6 +236,10 @@ function factVisibleInPublicText(fact: GroundedFact, normalizedText: string): bo
   return false
 }
 
+function isExplicitlyProvisionalCurrentReading(publicText: string): boolean {
+  return /lecture\s+(?:structurelle\s+)?provisoire|sans\s+source\s+rapide\s+exploitable|ne\s+confirme\s+pas\s+l[’']?[eé]tat\s+factuel\s+du\s+jour|situe\s+les\s+seuils\s+[aà]\s+v[eé]rifier/i.test(publicText)
+}
+
 function validateGroundedAntiHorsSol(
   sc: SituationCard,
   context?: DiamondValidationContext,
@@ -257,6 +261,16 @@ function validateGroundedAntiHorsSol(
   const publicText = normalizeForReadiness(collectCardText(sc))
 
   if (!grounding?.permissions.can_write_current_state || resources?.public_sources.length === 0) {
+    if (isExplicitlyProvisionalCurrentReading(publicText)) {
+      issues.push(issue(
+        'warning',
+        'grounded_anti_hors_sol_current_facts_missing_provisional',
+        'No public current fact is attached, but the card explicitly marks the reading as provisional and does not claim factual confirmation.',
+        'grounding.current_facts',
+      ))
+      return issues
+    }
+
     issues.push(issue(
       'error',
       'grounded_anti_hors_sol_current_facts_missing',

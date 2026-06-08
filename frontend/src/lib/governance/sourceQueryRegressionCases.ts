@@ -217,10 +217,19 @@ function genericCurrentCardForValidation(): SituationCard {
     movements_fr: [],
     movements_en: [],
     trajectories: [],
-    lecture_systeme_fr: 'Lecture provisoire : la carte situe les seuils à vérifier, pas l’état factuel du jour.',
+    lecture_systeme_fr: 'La situation tient tant que les acteurs peuvent absorber l’écart entre récit, coût et décision.',
     lecture_systeme_en: '',
     approfondir_fr: '',
     approfondir_en: '',
+  } as unknown as SituationCard
+}
+
+function provisionalCurrentCardForValidation(): SituationCard {
+  return {
+    ...genericCurrentCardForValidation(),
+    generation_status: 'partial',
+    insight_fr: 'Lecture structurelle provisoire : la carte situe les seuils à vérifier, pas l’état factuel du jour.',
+    lecture_systeme_fr: 'Lecture structurelle provisoire : aucun signal rapide n’a été retenu comme source publique suffisante ; la carte situe les seuils à vérifier, pas l’état factuel du jour.',
   } as unknown as SituationCard
 }
 
@@ -617,6 +626,14 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       resources: baseResourcePlan(),
     },
   )
+  const provisionalNoSourceDiamondValidation = validateDiamondContract(
+    provisionalCurrentCardForValidation(),
+    'geopolitics',
+    {
+      grounding: notReadyGroundingContract(),
+      resources: baseResourcePlan(),
+    },
+  )
   const nonProbativeSourcePlan = resourcePlanWithNoisyReutersExcerpt()
   const nonProbativeDiamondValidation = validateDiamondContract(
     genericCurrentCardForValidation(),
@@ -858,6 +875,14 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       level: 'error',
       code: 'grounded_anti_hors_sol_missing_fact_not_blocked',
       message: 'DiamondValidation must reject current/source-dependent cards when GroundingContract has no public current facts.',
+    })
+  }
+  if (!provisionalNoSourceDiamondValidation.ok ||
+    provisionalNoSourceDiamondValidation.issues.some((issue) => issue.code === 'grounded_anti_hors_sol_current_facts_missing')) {
+    diamondReadinessIssues.push({
+      level: 'error',
+      code: 'grounded_anti_hors_sol_provisional_card_blocked',
+      message: 'DiamondValidation must allow an explicitly provisional current card instead of asking the user to provide a source.',
     })
   }
   if (nonProbativeDiamondValidation.ok ||
