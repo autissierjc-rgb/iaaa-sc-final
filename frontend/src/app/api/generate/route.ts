@@ -4992,14 +4992,39 @@ export async function POST(req: NextRequest) {
       })
     }
     const fastRunnerResources = resourceItemsFromContracts(fastRunnerResult?.resources ?? [])
+    const shouldRunFetchResourcesFallback =
+      !exploratoryWithoutMaterial &&
+      providedResources.length === 0 &&
+      webNeeded &&
+      fastRunnerResources.length === 0
+    const fetchedFallbackResources = shouldRunFetchResourcesFallback
+      ? await fetchResources(fastRunnerResult?.query ?? urlAugmentedAnalysisText)
+      : []
+    if (shouldRunFetchResourcesFallback) {
+      recordGenerationTrace({
+        status: fetchedFallbackResources.length > 0 ? 'ok' : 'partial',
+        gate: 'GENERATE',
+        route: '/api/generate',
+        canonicalLayer: 'resources',
+        pipelineStep: 'fetchResourcesFallback',
+        diagnostic: `fallback_after_fast_runner:${fastRunnerResult?.status ?? 'not_run'}:${fastRunnerResult?.provider ?? 'none'}`.slice(0, 240),
+        durationMs: 0,
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: interpretedRequest.intent_type,
+        questionType: interpretedRequest.question_type,
+        resourcesStatus: fetchedFallbackResources.length > 0 ? 'available' : 'unavailable',
+        resourcesCount: fetchedFallbackResources.length,
+      })
+    }
     const rawFetchedResources =
       exploratoryWithoutMaterial
         ? []
-      : isPublicFast || fastRunnerResources.length > 0
-        ? uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources])
+      : isPublicFast || fastRunnerResources.length > 0 || fetchedFallbackResources.length > 0
+        ? uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources, ...fetchedFallbackResources])
       : providedResources.length > 0
         ? providedResources
-        : webNeeded
+      : webNeeded
           ? await fetchResources(urlAugmentedAnalysisText)
           : []
     const resources = await enrichResourcesWithSiteUnderstanding({
