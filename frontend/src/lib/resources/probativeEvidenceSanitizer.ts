@@ -27,7 +27,7 @@ const SOURCE_TITLE_NOISE_PATTERN = /\s[-–]\s(?:reuters|politico|associated pre
 const INTERNAL_RESOURCE_LABEL_PATTERN = /^(?:fiche\s+site|synth[eè]se\s+crawl\s+site)\s*[-–]/i
 
 function compact(value: string): string {
-  return value.replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim()
+  return value.replace(/\s+/g, ' ').trim()
 }
 
 function stripMarkdownLinks(value: string): string {
@@ -105,7 +105,6 @@ function cleanPublicEvidenceCandidate(value: string | undefined, sourceTitle?: s
   }
 
   clean = clean
-    .replace(/^[A-ZÀ-Ý][A-ZÀ-Ý .'/()-]{2,},\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:,\s+\d{4})?\s+\((?:Reuters|AP|AFP|Associated Press)\)\s*[-–]\s*/i, '')
     .replace(/^(?:exclusive\s+news,\s+data\s+and\s+analytics\s+from\s+[^.]+\.?\s*)/i, '')
     .replace(/^(?:latest\s+news,\s+data\s+and\s+analysis\s+from\s+[^.]+\.?\s*)/i, '')
     .trim()

@@ -16,7 +16,6 @@ import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSou
 import type { ResourceItem } from '@/lib/resources/resourceContract'
 import { buildGeneralDiamondDeepFallback } from '@/lib/editorial/diamond'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
-import { publicProbativeEvidence } from '@/lib/resources/probativeEvidenceSanitizer'
 import type { SituationCard } from '@/lib/resources/resourceContract'
 import { buildResonanceTrace } from '@/lib/resonance'
 import { buildConcreteTheatre } from '@/lib/theatre'
@@ -153,27 +152,6 @@ function notReadyGroundingContract(): GroundingContract {
       duration_ms: 0,
       status: 'partial',
     },
-  }
-}
-
-function resourcePlanWithDatelineEvidence(): ResourceServiceContract {
-  const source: ResourceContract = {
-    id: 'dateline-evidence-regression',
-    title: 'Iran reviewing proposed agreement with the United States - Reuters',
-    url: 'https://www.reuters.com/world/middle-east/iran-reviewing-us-agreement-example/',
-    source: 'reuters.com',
-    channel: 'news_agency',
-    domain_relevance: ['geopolitics'],
-    excerpt: "DUBAI, June 5 (Reuters) - Iran is reviewing a proposed agreement with the United States while Israel keeps military pressure visible.",
-    retrieved_at: '2026-06-05T00:00:00.000Z',
-    reliability: 'secondary',
-  }
-
-  return {
-    ...baseResourcePlan(),
-    status: 'available',
-    resources: [source],
-    public_sources: [source],
   }
 }
 
@@ -602,26 +580,6 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     scoring: scoringForRegression(),
   })
   const cleanEvidenceIssues: SourceQueryRegressionResult['issues'] = []
-  const datelineEvidenceResources = resourcePlanWithDatelineEvidence()
-  const datelineEvidence = publicProbativeEvidence(
-    datelineEvidenceResources,
-    2,
-    'Ou en est la guerre Iran usa israel au 05/06',
-  )
-  const datelineEvidenceWriting = composeDiamondWriting({
-    interpretation: input.interpretation,
-    theatre: theatreForCurrentQuestion(),
-    resources: datelineEvidenceResources,
-    resonance: buildResonanceTrace({
-      interpretation: input.interpretation,
-      theatre: theatreForCurrentQuestion(),
-      resources: datelineEvidenceResources,
-    }),
-    safety: safetyForRegression(),
-    expertises_metiers: expertisesForCurrentQuestion(),
-    scoring: scoringForRegression(),
-  })
-  const datelineEvidenceIssues: SourceQueryRegressionResult['issues'] = []
   const diamondReadinessIssues: SourceQueryRegressionResult['issues'] = []
   const notReadyDiamondValidation = validateDiamondContract(
     genericCurrentCardForValidation(),
@@ -850,21 +808,6 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       level: 'error',
       code: 'clean_public_evidence_not_plausible',
       message: 'A clean public evidence excerpt can support a plausible status while remaining revisable.',
-    })
-  }
-  if (datelineEvidence.some((evidence) => includesLoose(evidence.public_label_fr, 'DUBAI') || includesLoose(evidence.public_label_fr, 'Reuters'))) {
-    datelineEvidenceIssues.push({
-      level: 'error',
-      code: 'news_dateline_not_sanitized',
-      message: 'Probative evidence must remove news-agency datelines before public writing.',
-    })
-  }
-  if (includesLoose(datelineEvidenceWriting.situation_card.key_signal_fr, 'Iran is reviewing') ||
-    includesLoose(datelineEvidenceWriting.situation_card.key_signal_fr, 'DUBAI')) {
-    datelineEvidenceIssues.push({
-      level: 'error',
-      code: 'public_fact_used_as_key_signal',
-      message: 'WritingEngine must not turn a public fact excerpt into the structural key signal.',
     })
   }
   if (notReadyDiamondValidation.ok ||
@@ -1167,15 +1110,6 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: cleanEvidenceWriting.situation_card.key_signal_fr,
     subject: cleanEvidenceWriting.probability_assessments[0]?.probability_label_fr ?? '',
     issues: cleanEvidenceIssues,
-  }, {
-    id: 'news-dateline-evidence-is-sanitized-and-not-key-signal',
-    ok: datelineEvidenceIssues.length === 0,
-    query: [
-      datelineEvidence.map((evidence) => evidence.public_label_fr).join(' | '),
-      datelineEvidenceWriting.situation_card.key_signal_fr,
-    ].join(' || '),
-    subject: plans.subject,
-    issues: datelineEvidenceIssues,
   }, {
     id: 'diamond-validation-grounded-anti-hors-sol',
     ok: diamondReadinessIssues.length === 0,

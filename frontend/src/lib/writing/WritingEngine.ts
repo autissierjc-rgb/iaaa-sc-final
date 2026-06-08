@@ -149,6 +149,10 @@ function publicAnchors(items: string[], fallback: string, max = 4): string {
   return (cleaned.length > 0 ? cleaned : [fallback]).slice(0, max).join(', ')
 }
 
+function theatreEvidenceLabels(theatre: ConcreteTheatreContract): string[] {
+  return theatre.evidence.map((item) => item.label)
+}
+
 function theatreActionAnchors(theatre: ConcreteTheatreContract): string[] {
   return unique([
     ...theatre.visible_actions,
@@ -162,6 +166,7 @@ function theatreProofAnchors(
   expertises: ExpertisesMetiersContract,
 ): string[] {
   return unique([
+    ...theatreEvidenceLabels(theatre),
     ...theatre.visible_actions,
     ...theatre.constraints,
     ...expertises.evidence_to_seek,
@@ -1347,13 +1352,10 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const institutions = publicAnchors(resonance.institutions, grammar.institutionsFallback)
   const actionAnchors = theatreActionAnchors(input.theatre)
   const relevanceQuery = writingRelevanceQuery(input)
-  const structuralProofAnchors = unique([
+  const proofAnchors = unique([
+    ...publicEvidenceAnchors(input.resources, relevanceQuery),
     resonance.transition_signal_fr,
     ...theatreProofAnchors(input.theatre, input.expertises_metiers),
-  ])
-  const proofAnchors = unique([
-    ...structuralProofAnchors,
-    ...publicEvidenceAnchors(input.resources, relevanceQuery),
   ])
   const fragilityAnchors = unique([
     resonance.structural_gap_fr,
@@ -1362,7 +1364,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const evidence = publicAnchors(proofAnchors, 'une trace verifiable')
   const blindSpot = publicAnchors(fragilityAnchors, 'le point qui ferait changer la lecture')
   const firstProcedure = namedAction(actionAnchors, grammar.actionFallback)
-  const firstEvidence = namedAction(structuralProofAnchors, grammar.evidenceFallback)
+  const firstEvidence = namedAction(proofAnchors, grammar.evidenceFallback)
   const tension = grammar.tensionNoun ?? tensionLabel(input)
   const missingExternalEvidence = needsExternalEvidenceWithoutSources(input.resources)
   const probability = probabilityFromResources(input.resources, relevanceQuery) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
