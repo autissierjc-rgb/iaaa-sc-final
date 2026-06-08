@@ -351,6 +351,25 @@ function publicEvidenceAnchors(resources?: ResourceServiceContract, relevanceQue
     .filter((evidence) => evidence.length > 0 && !looksLikeProbativeEvidenceNoise(evidence))
 }
 
+function publicFactSignal(value: string): string {
+  const text = normalizeAnchor(value)
+  const signals: string[] = []
+
+  if (/\b(agreement|deal|ceasefire|halt|talks?|negotiat|accord|cessez|negociation)\b/i.test(text)) {
+    signals.push('une piste d’accord ou de négociation à vérifier')
+  }
+  if (/\b(attack|attacks|strike|strikes|hostilit|flare|damag|injur|missile|frappe|attaque|hostilite)\b/i.test(text)) {
+    signals.push('un signal d’hostilités ou d’escalade à vérifier')
+  }
+  if (/\b(official|statement|decision|reported|confirmed|source|declaration|communique|decision)\b/i.test(text)) {
+    signals.push('une trace publique à confronter à une source primaire')
+  }
+
+  return signals.length > 0
+    ? unique(signals).slice(0, 2).join(' et ')
+    : 'un fait public à vérifier'
+}
+
 function groundedFactOpeningSentence(grounding?: GroundingContract): string | undefined {
   const facts = (grounding?.current_facts ?? [])
     .filter((fact) => fact.source === 'resources')
@@ -360,7 +379,8 @@ function groundedFactOpeningSentence(grounding?: GroundingContract): string | un
 
   if (facts.length === 0) return undefined
 
-  return `Le premier appui public disponible indique que ${facts.join(' ; ')}.`
+  const signals = unique(facts.map(publicFactSignal))
+  return `Le premier appui public disponible signale ${signals.join(' et ')} ; il doit rester confronté à la chronologie et aux sources primaires.`
 }
 
 function resourceProofLabel(resources?: ResourceServiceContract): string | undefined {
