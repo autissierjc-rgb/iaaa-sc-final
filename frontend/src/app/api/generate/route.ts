@@ -5467,6 +5467,7 @@ export async function POST(req: NextRequest) {
           'local_contract',
         )
       : null
+    const localWritingContract = writingContract
     const deterministicWritingNotes = writingContract?.trace.notes ?? []
     const locksDiamondArchitectWriter = deterministicWritingNotes.some((note) =>
       note === 'strategic_options_writing' ||
@@ -5667,7 +5668,19 @@ export async function POST(req: NextRequest) {
         resourcesCount: diamondResourcePlan.resources.length,
         modelPath: 'local',
       })
-      writingContract = null
+      writingContract = diamondArchitectWriter?.accepted && localWritingContract
+        ? {
+          ...localWritingContract,
+          trace: {
+            ...localWritingContract.trace,
+            status: localWritingContract.trace.status === 'error' ? 'partial' : localWritingContract.trace.status,
+            notes: [
+              ...(localWritingContract.trace.notes ?? []),
+              'diamond_architect_writer_rejected_by_quality_keep_local_contract',
+            ],
+          },
+        }
+        : null
     }
     baseSc = applyWritingContractToCard(baseSc, writingContract, generationDisplayText)
     if (qualityHasError && !diamondArchitectWriter?.accepted) {

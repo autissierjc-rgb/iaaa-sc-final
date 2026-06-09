@@ -646,6 +646,37 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       message: 'QualityGate must reject the abstract understand fallback when it reaches public writing.',
     })
   }
+  const sourceMobilizedQuality = runQualityGate({
+    interpretation: input.interpretation,
+    theatre: theatreForCurrentQuestion(),
+    resources: baseResourcePlan(),
+    resonance: buildResonanceTrace({
+      interpretation: input.interpretation,
+      theatre: theatreForCurrentQuestion(),
+      resources: baseResourcePlan(),
+    }),
+    scoring: scoringForRegression(),
+    writing: {
+      ...noSourceWriting,
+      situation_card: {
+        ...noSourceWriting.situation_card,
+        insight_fr: 'La crise reste contenue ; sources mobilisées: apnews.com, aljazeera.com, politico.com.',
+        asymmetry_fr: 'La crise reste contenue ; sources mobilisées: apnews.com, aljazeera.com, politico.com.',
+      },
+      lecture: {
+        ...noSourceWriting.lecture,
+        text_fr: 'La crise reste contenue ; sources mobilisées: apnews.com, aljazeera.com, politico.com. La lecture doit partir des faits publics, pas des noms de domaines.',
+      },
+    },
+  })
+  const sourceMobilizedIssues: SourceQueryRegressionResult['issues'] = []
+  if (!sourceMobilizedQuality.issues.some((issue) => issue.code === 'PUBLIC_INTERNAL_WRITING_LEAK')) {
+    sourceMobilizedIssues.push({
+      level: 'error',
+      code: 'source_domains_not_rejected',
+      message: 'QualityGate must reject source-domain lists such as "sources mobilisées" in public writing.',
+    })
+  }
   const noisySourceResources = resourcePlanWithNoisyReutersExcerpt()
   const noisySourceWriting = composeDiamondWriting({
     interpretation: input.interpretation,
@@ -1401,6 +1432,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: abstractFallbackQuality.issues.map((issue) => issue.code).join(' | '),
     subject: 'writing/quality situated lecture',
     issues: abstractFallbackIssues,
+  }, {
+    id: 'quality-gate-rejects-source-domain-list-writing',
+    ok: sourceMobilizedIssues.length === 0,
+    query: sourceMobilizedQuality.issues.map((issue) => issue.code).join(' | '),
+    subject: 'writing/quality source facts not source domains',
+    issues: sourceMobilizedIssues,
   }, {
     id: 'raw-source-excerpts-do-not-drive-public-writing',
     ok: noisySourceIssues.length === 0,

@@ -345,10 +345,21 @@ function probabilityFromResources(
 }
 
 function publicEvidenceAnchors(resources?: ResourceServiceContract, relevanceQuery?: string): string[] {
+  return publicEvidenceFactAnchors(resources, relevanceQuery)
+}
+
+function publicEvidenceFactAnchors(resources?: ResourceServiceContract, relevanceQuery?: string): string[] {
+  return publicProbativeEvidence(resources, 3, relevanceQuery)
+    .filter((evidence) => evidence.can_drive_probability)
+    .map((evidence) => compactSentence(polishPublicProofText(evidence.public_label_fr), 180))
+    .filter((evidence) => evidence.length > 0 && !looksLikeProbativeEvidenceNoise(evidence))
+}
+
+function publicEvidenceSignalAnchors(resources?: ResourceServiceContract, relevanceQuery?: string): string[] {
   return publicProbativeEvidence(resources, 3, relevanceQuery)
     .filter((evidence) => evidence.can_drive_probability)
     .map((evidence) => publicFactSignal(evidence.public_label_fr))
-    .filter((evidence) => evidence.length > 0 && !looksLikeProbativeEvidenceNoise(evidence))
+    .filter((signal) => signal.length > 0)
 }
 
 function publicFactSignal(value: string): string {
@@ -379,10 +390,7 @@ function groundedFactOpeningSentence(grounding?: GroundingContract): string | un
 
   if (facts.length === 0) return undefined
 
-  const signals = unique(facts.map(publicFactSignal))
-  const specificSignals = signals.filter((signal) => signal !== 'un fait public à vérifier')
-  const visibleSignals = (specificSignals.length > 0 ? specificSignals : signals).slice(0, 2)
-  return `Le premier appui public disponible signale ${visibleSignals.join(' et ')} ; il doit rester confronté à la chronologie et aux sources primaires.`
+  return `Le premier appui public disponible indique : ${facts.join(' ; ')}. Ce socle reste à confronter à la chronologie et aux sources primaires.`
 }
 
 function resourceProofLabel(resources?: ResourceServiceContract): string | undefined {
@@ -1376,6 +1384,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const relevanceQuery = writingRelevanceQuery(input)
   const proofAnchors = unique([
     ...publicEvidenceAnchors(input.resources, relevanceQuery),
+    ...publicEvidenceSignalAnchors(input.resources, relevanceQuery),
     resonance.transition_signal_fr,
     ...theatreProofAnchors(input.theatre, input.expertises_metiers),
   ])
@@ -1558,6 +1567,7 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
     '- chercher le desalignement critique : ce qui legitime ne protege plus, ce qui protege empeche de produire, ou ce qui produit n est plus reconnu ;',
     '- ne jamais afficher les noms d auteurs, les labels de patterns ou la grille theorique sauf demande explicite de lecture theorique.',
     '- si des public_sources existent, elles restent attachees au contrat ressources et au panneau Ressources dedie ; Approfondir peut qualifier le statut de preuve, mais ne doit pas lister les sources ;',
+    '- ne jamais écrire "sources mobilisées", ne jamais lister les domaines ou médias dans la phrase diamant, l asymetrie, Lecture ou Approfondir ; transformer les sources en faits publics datés ou en signaux structurants.',
     '- ne jamais presenter les sources rapides comme une enquete Recherche+ complete.',
     '',
     'Longueurs indicatives :',
@@ -1594,12 +1604,10 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
           policy_reason_fr: input.resources.policy_reason_fr,
           fallback_searches: input.resources.fallback_searches,
           public_sources_count: input.resources.public_sources.length,
-          public_sources: input.resources.public_sources.slice(0, 3).map((source) => ({
-            title: source.title,
-            source: source.source,
-            channel: source.channel,
-            reliability: source.reliability,
-            excerpt: source.excerpt,
+          clean_public_evidence: publicProbativeEvidence(input.resources, 3, writingRelevanceQuery(input)).map((evidence) => ({
+            fact_fr: evidence.public_label_fr,
+            status: evidence.status,
+            can_drive_probability: evidence.can_drive_probability,
           })),
         }
         : undefined,
