@@ -143,6 +143,19 @@ const MECHANICAL_WRITING_PATTERNS = [
   /tant qu.?il n.?est pas relie a un acte,\s*une preuve ou un seuil observable/i,
 ]
 
+const CAUSAL_FRAME_PUBLIC_PATTERNS = [
+  /qui manipule qui/i,
+  /chaine d.?entrainement/i,
+  /\binfluence et decision\b/i,
+  /preuve d.?entrainement/i,
+  /a-t-il convaincu/i,
+  /decideur n.?est pas seulement ["“”']?entraine/i,
+  /manipulated another/i,
+  /political entrainment/i,
+  /dragged by an ally/i,
+  /causal proof/i,
+]
+
 const TARGET_CHOICE_GENERIC_PATTERNS = [
   /segment tres qualifie/i,
   /communaute plus large/i,
@@ -451,6 +464,14 @@ function probabilityVisible(input: QualityGateInput, normalizedPublicText: strin
   )
 }
 
+function isCausalAttributionFrame(input: QualityGateInput): boolean {
+  return (
+    input.interpretation.question_type === 'causal_attribution' ||
+    input.interpretation.signals.some((signal) => signal === 'causal_attribution') ||
+    normalize(input.interpretation.expected_answer_shape).includes('causal')
+  )
+}
+
 export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const started = Date.now()
   const issues: QualityIssue[] = []
@@ -488,6 +509,9 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const repeatedSection = input.writing.approfondir.sections_fr.find((section) =>
     bodyRepeatsTitle(section.title, section.body),
   )
+  const leakedCausalFrame = !isCausalAttributionFrame(input)
+    ? CAUSAL_FRAME_PUBLIC_PATTERNS.find((pattern) => pattern.test(normalizedText))
+    : undefined
 
   if (hasRepeatedSubmittedSentence(input.writing.situation_card.submitted_situation_fr)) {
     issues.push(issue(
@@ -558,6 +582,15 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       'APPROFONDIR_SECTION_REPEATS_TITLE',
       `Approfondir section body repeats its title: ${repeatedSection.title}.`,
       'writing.approfondir.sections_fr',
+    ))
+  }
+
+  if (leakedCausalFrame) {
+    issues.push(issue(
+      'error',
+      'CAUSAL_FRAME_LEAKED_INTO_NON_CAUSAL_CARD',
+      `Public writing imports a causal-attribution frame although the interpreted question is not causal: ${leakedCausalFrame.source}.`,
+      'writing',
     ))
   }
 

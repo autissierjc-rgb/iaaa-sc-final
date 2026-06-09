@@ -1277,6 +1277,61 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     }
   }
 
+  const deepCausalFrameLeakIssues: SourceQueryRegressionResult['issues'] = []
+  const nonCausalCurrentDeepReading = buildGeneralDiamondDeepFallback({
+    situation: 'Ou en est la guerre entre Iran et israel et usa le 09/06',
+    sc: {
+      ...genericCurrentCardForValidation(),
+      submitted_situation_fr: 'Quelle est la situation actuelle du conflit entre l’Iran, Israël et les États-Unis au 9 juin ?',
+      intent_context: {
+        dominant_frame: 'geopolitical_crisis',
+        surface_domain: 'geopolitics',
+        interpreted_request: {
+          intent_type: 'understand',
+          domain: 'geopolitics',
+          question_type: 'open_analysis',
+          object_of_analysis: 'conflit Iran Israël États-Unis',
+        },
+      },
+      concrete_theatre: {
+        anchors: ['Iran', 'Israël', 'États-Unis', '9 juin'],
+        actors: ['Iran', 'Israël', 'États-Unis'],
+        institutions: ['administration américaine', 'gouvernement israélien', 'autorités iraniennes'],
+        procedures: [],
+        places: [],
+        dates: ['9 juin'],
+        precedents: [],
+        relays: [],
+        blockers: [],
+        mechanisms: ['canaux diplomatiques', 'dispositifs militaires'],
+        thresholds: ['déclaration officielle', 'frappe revendiquée'],
+        evidence_to_watch: ['déclaration officielle datée', 'mouvement militaire vérifié'],
+        missing_anchors: [],
+        domain: 'geopolitics',
+      },
+    } as unknown as SituationCard,
+    resources: [],
+  })
+  const nonCausalDeepText = `${nonCausalCurrentDeepReading.approfondir_fr} ${nonCausalCurrentDeepReading.approfondir_en}`
+  for (const forbidden of [
+    'qui manipule qui',
+    'chaîne d’entraînement',
+    'influence et décision',
+    'a-t-il convaincu',
+    'entraîné',
+    'manipulated another',
+    'political entrainment',
+    'dragged by an ally',
+  ]) {
+    if (includesLoose(nonCausalDeepText, forbidden)) {
+      deepCausalFrameLeakIssues.push({
+        level: 'error',
+        code: 'deep_reading_causal_frame_leaked',
+        message: `A non-causal current-status deep reading must not import causal attribution wording: ${forbidden}.`,
+      })
+    }
+  }
+
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
@@ -1379,5 +1434,11 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: noisyDeepReading.approfondir_fr.slice(0, 240),
     subject: 'writing/approfondir anchor hygiene',
     issues: deepAnchorNoiseIssues,
+  }, {
+    id: 'deep-reading-does-not-import-causal-frame',
+    ok: deepCausalFrameLeakIssues.length === 0,
+    query: nonCausalCurrentDeepReading.approfondir_fr.slice(0, 240),
+    subject: 'writing/quality context isolation',
+    issues: deepCausalFrameLeakIssues,
   }]
 }

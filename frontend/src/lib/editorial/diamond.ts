@@ -836,7 +836,7 @@ function buildGeopoliticalDeepFallback({
   const question = geopoliticalQuestion(situation, sc)
   const tension = capitalizeFirst(geopoliticalText(
     [sc?.intent_context?.interpreted_request?.implicit_tension, arbre?.load_bearing_contradiction, sc?.asymmetry_fr],
-    'un dirigeant peut pousser un allié vers une option militaire, mais l’allié conserve ses propres seuils, coûts et chaînes de décision'
+    'un écart subsiste entre récit de contrôle, capacité d’action et seuil public de riposte ou de négociation'
   ))
   const keySignal = conciseSignal(
     geopoliticalText(
@@ -847,7 +847,7 @@ function buildGeopoliticalDeepFallback({
   )
   const vulnerability = geopoliticalText(
     [sc?.main_vulnerability_fr, arbre?.main_vulnerability_candidate, arbre?.vulnerabilites?.[0]],
-    'le point fragile est la frontière entre influence politique, solidarité stratégique et décision militaire assumée'
+    'le point fragile est le passage entre tension déclarée, capacité réelle et acte public vérifiable'
   )
   const constraints = geopoliticalListSentence(
     [sc?.constraints_fr, arbre?.contraintes],
@@ -855,7 +855,7 @@ function buildGeopoliticalDeepFallback({
   )
   const uncertainties = geopoliticalListSentence(
     [sc?.uncertainties_fr, arbre?.incertitudes],
-    'le degré réel de coordination, les relations longues entre décideurs, les réseaux de conseillers, donateurs ou relais politiques, les garanties données en privé, la réponse adverse, la position des appareils militaires, les institutions politiques et les alliés restent à vérifier'
+    'la chronologie vérifiable, les canaux diplomatiques actifs, les seuils militaires, les positions officielles, les contraintes internes et la réponse adverse restent à vérifier'
   )
   const channels =
     'langage officiel, déploiements militaires, renseignement publié, calendrier diplomatique, vote interne, réaction de l’acteur visé, positions des alliés, marchés stratégiques et justification juridique'
@@ -863,31 +863,31 @@ function buildGeopoliticalDeepFallback({
   return {
     approfondir_fr: polishDiamondText(
       `${DIAMOND_DEEP_HEADINGS_FR[0]}\n\n` +
-      `La question “${question}” ne se réduit pas à savoir qui manipule qui. Elle porte sur une chaîne d’entraînement politique : comment ${actors} peuvent transformer une menace, une frappe, une promesse d’alliance ou une pression médiatique en décision militaire. Le cœur de la situation est donc la différence entre influence et décision. ${tension}.\n\n` +
+      `La question “${question}” porte sur l’état public d’une crise : quels acteurs disposent encore de marges, quelles contraintes les retiennent, et quel fait daté transformerait la tension en seuil opposable. Le cœur de la lecture est donc le passage entre récit, capacité et décision observable. ${tension}.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[1]}\n\n` +
-      `Ce qui tient encore le système, c’est que plusieurs verrous restent séparés. Un dirigeant peut cadrer le récit, dramatiser le danger ou demander un appui, mais une entrée en guerre dépend aussi du renseignement, du commandement militaire, des coûts anticipés, des alliés, du droit interne, de l’opinion et du risque de riposte. Les contraintes concrètes sont les suivantes : ${constraints}. Tant que ces verrous ne s’alignent pas, l’influence ne suffit pas à prouver l’entraînement.\n\n` +
+      `Ce qui tient encore le système, c’est que plusieurs verrous de décision restent séparés : renseignement, commandement militaire, coûts anticipés, alliés, droit interne, opinion, médiations et risque de riposte. Les contraintes concrètes sont les suivantes : ${constraints}. Tant que ces verrous ne s’alignent pas publiquement, la tension reste un champ de pression plutôt qu’un changement de régime établi.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[2]}\n\n` +
-      `Ce qui affaiblit la situation, c’est la personnalisation du lien politique. Si l’analyse se limite à deux dirigeants, elle manque les appareils qui rendent la décision possible ou impossible : renseignement, commandement militaire, diplomaties régionales, institutions politiques, opinion publique, alliés, marchés stratégiques et capacités de riposte. ${vulnerability}. C’est là que la lecture devient sérieuse : non pas “a-t-il convaincu ?”, mais “quels mécanismes ont réduit ou augmenté la liberté de choix de l’acteur qui décide ?”.\n\n` +
+      `Ce qui affaiblit la situation, c’est l’écart entre déclarations, capacités militaires ou diplomatiques et preuves publiques. Si l’analyse se limite aux intentions affichées, elle manque les appareils qui rendent une décision possible ou impossible : renseignement, commandement militaire, diplomaties régionales, institutions politiques, opinion publique, alliés, marchés stratégiques et capacités de riposte. ${vulnerability}. La question décisive devient : quel fait rendrait la lecture opposable aux acteurs eux-mêmes ?\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[3]}\n\n` +
-      `L’escalade commence quand un signal oblige l’acteur décisif à passer d’un soutien politique à une logique d’engagement. Ce signal peut être ${keySignal}, mais aussi une attaque contre ses forces, une menace sur une infrastructure critique, une preuve stratégique nouvelle, une pression électorale ou une demande explicite de couverture militaire. À ce moment-là, le récit de l’allié devient un élément parmi d’autres dans une architecture de décision plus large.\n\n` +
+      `L’escalade commence quand un signal oblige un acteur décisif à passer d’une posture à un engagement public ou opérationnel. Ce signal peut être ${keySignal}, mais aussi une attaque contre ses forces, une menace sur une infrastructure critique, une preuve stratégique nouvelle, une pression électorale ou une demande explicite de couverture militaire. À ce moment-là, le récit devient secondaire : la contrainte observable commence à organiser les choix.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[4]}\n\n` +
-      `La bascule se produit si la question de l’influence devient une contrainte d’action. Autrement dit : si refuser d’intervenir coûte soudain plus cher politiquement, stratégiquement ou symboliquement que participer. Dans ce scénario, le décideur n’est pas seulement “entraîné” par un allié ; il est pris dans une configuration où alliance, crédibilité, dissuasion, opinion et calendrier rendent l’option militaire plus probable.\n\n` +
+      `La bascule se produit si un acte rend le flou impossible à maintenir : frappe revendiquée, décision officielle, rupture de négociation, mobilisation, sanction, vote, fermeture de canal ou justification juridique publique. Dans ce scénario, la crise cesse d’être seulement une tension interprétable ; elle devient une suite d’obligations, de coûts et de seuils que les acteurs doivent assumer.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_FR[5]}\n\n` +
-      `Il faut surveiller des signaux observables : ${channels}. Il faut surtout vérifier ${uncertainties}. C’est la fonction enquête de VI : transformer les angles morts en questions vérifiables. La réponse solide ne sera donc pas un oui ou non immédiat ; elle dépendra des traces de coordination, des relations anciennes, des déclarations officielles, des mouvements militaires, des justifications juridiques, des réactions adverses et du moment où le coût de ne pas suivre devient plus élevé que le coût de suivre.`
+      `Il faut surveiller des signaux observables : ${channels}. Il faut surtout vérifier ${uncertainties}. C’est la fonction enquête de VI : transformer les angles morts en questions vérifiables. La lecture solide dépendra des traces datées, des déclarations officielles, des mouvements militaires, des justifications juridiques, des réactions adverses et du moment où une option devient plus coûteuse à éviter qu’à assumer.`
     ),
     approfondir_en: polishDiamondText(
       `${DIAMOND_DEEP_HEADINGS_EN[0]}\n\n` +
-      `The question is not only whether one leader manipulated another. It concerns a chain of political entrainment: how leaders, military institutions, allies, adversaries, public narratives, and threat assessments can turn pressure into military decision.\n\n` +
+      `The question concerns the public state of a crisis: which actors still have room to maneuver, which constraints hold them back, and which dated fact would turn tension into an enforceable threshold.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_EN[1]}\n\n` +
-      `What still holds the system together is the separation of decision locks. An ally can frame the danger and request support, but war still depends on intelligence, command structures, expected costs, allies, domestic law, public opinion, and retaliation risks.\n\n` +
+      `What still holds the system together is the separation of decision locks: intelligence, military command, expected costs, allies, domestic law, public opinion, mediation channels, and retaliation risks.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_EN[2]}\n\n` +
-      `What weakens the reading is personalization. If the analysis stops at two leaders, it misses the machinery that makes a decision possible or impossible: intelligence services, military command, political institutions, regional diplomacy, strategic markets, allies, and adversary capabilities.\n\n` +
+      `What weakens the reading is the gap between declarations, operational capacity, diplomatic constraints, and public proof. If the analysis stops at stated intentions, it misses the machinery that makes a decision possible or impossible: intelligence services, military command, political institutions, regional diplomacy, strategic markets, allies, and adversary capabilities.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_EN[3]}\n\n` +
-      `Escalation begins when the decisive actor is forced to move from political support to operational commitment. The signal may be an attack on its forces, a threat to critical infrastructure, published intelligence, electoral pressure, or an explicit demand for military cover.\n\n` +
+      `Escalation begins when a decisive actor has to move from posture to public or operational commitment. The signal may be an attack on its forces, a threat to critical infrastructure, published intelligence, electoral pressure, a legal justification, or an explicit demand for military cover.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_EN[4]}\n\n` +
-      `The shift occurs when influence becomes a constraint on action: when refusing to intervene becomes more costly politically, strategically, or symbolically than joining. In that case, the decision-maker would not simply be dragged by an ally; they would be caught in a configuration where alliance, credibility, deterrence, opinion, and timing make military action more likely.\n\n` +
+      `The shift occurs when an act makes ambiguity impossible to maintain: a claimed strike, official decision, negotiation break, mobilization, sanction, vote, channel closure, or public legal justification. At that point, the crisis is no longer only interpretable tension; it becomes a sequence of obligations, costs, and thresholds.\n\n` +
       `${DIAMOND_DEEP_HEADINGS_EN[5]}\n\n` +
-      `Watch observable signals: official language, deployments, legal justification, intelligence claims, adversary responses, allied statements, and stress on strategic markets. The robust answer is not an immediate yes or no; it depends on evidence of coordination and on the point where the cost of not following becomes higher than the cost of following.`
+      `Watch observable signals: official language, deployments, legal justification, intelligence claims, adversary responses, allied statements, and stress on strategic markets. A robust reading depends on dated traces, official statements, military moves, legal justifications, adversary reactions, and the moment when one option becomes more costly to avoid than to assume.`
     ),
     sources: [],
   }
