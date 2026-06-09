@@ -92,6 +92,33 @@ export const DIAMOND_REGRESSION_CASES: DiamondRegressionCase[] = [
     },
   },
   {
+    id: 'current-geopolitical-status-08-06-requires-public-evidence',
+    domain: 'geopolitics',
+    input: 'Une crise géopolitique en développement ou en est la guerre entre Iran et usa au 08/06',
+    expectations: {
+      headerDomain: 'Géopolitique',
+      forbiddenTerms: [
+        'La carte ne peut pas etablir l etat du jour',
+        'La carte ne peut pas établir l’état du jour',
+        'Quelle source publique datée faut-il joindre',
+        'Générer une carte exploratoire',
+        'Aucune source affichable',
+        'Lecture provisoire : la carte situe les seuils à vérifier, pas l’état factuel du jour',
+        'Iran peuvent absorber',
+        'Iran rendent la situation visible',
+        'Faits rapides retenus : DUBAI',
+        'DUBAI, June',
+        'Reuters transforme',
+      ],
+      requiredTerms: ['Iran', 'États-Unis', 'source', 'publique'],
+      maxModerateBranches: 3,
+      maxDominantBranches: 2,
+      visibleAxisVI: 'Incertitudes',
+      notes:
+        'Une question actuelle de crise doit tenter les ressources rapides et produire une lecture sourcée ou qualifiée, sans renvoyer la charge à l’utilisateur ni perdre les acteurs.',
+    },
+  },
+  {
     id: 'flexup-site-analysis',
     domain: 'startup_vc',
     input: 'Que fait https://www.flexup.org/fr et est-ce intéressant ?',
@@ -194,6 +221,31 @@ export const DIAMOND_REGRESSION_CASES: DiamondRegressionCase[] = [
       visibleAxisVI: 'Incertitudes',
       notes:
         'La carte doit laisser le référent comprendre la question et le site avant structuration. Si la compréhension site échoue, la matière heuristique reste hors colonne diamant.',
+    },
+  },
+  {
+    id: 'voltaiculture-government-product-priority',
+    domain: 'startup_vc',
+    input: 'Une décision stratégique avec plusieurs options pour voltaiculture.fr, quels serait la solution a promouvoir en priorité vu les dernières décisions ou orientations gouvernementales',
+    expectations: {
+      headerDomain: 'Entreprise',
+      forbiddenTerms: [
+        'Je peux avancer, mais il manque un point d’appui',
+        'Voulez-vous lancer une enquête plus large sur le site',
+        'fournir une page précise à lire',
+        'Générer une carte exploratoire',
+        'Compréhension ChatGPT du site : indisponible',
+        'fiche heuristique',
+        'Fiche site',
+        'état des lieux',
+        'options réelles non encore établies',
+      ],
+      requiredTerms: ['voltaiculture.fr', 'solution', 'priorité', 'gouvernementales'],
+      maxModerateBranches: 3,
+      maxDominantBranches: 2,
+      visibleAxisVI: 'Incertitudes',
+      notes:
+        'La carte doit traiter une décision prospective avec cadre public : prioriser une option testable selon décisions/orientations gouvernementales, sans transformer le site en formulaire.',
     },
   },
   {

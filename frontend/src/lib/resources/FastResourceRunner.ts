@@ -543,7 +543,7 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
   ].filter(Boolean).join(' ')
 
   if (!process.env.TAVILY_API_KEY) {
-    const fallback = await legacyFastFallback(query, timeoutMs, maxSources)
+    const fallback = await legacyFastFallback(primaryPlan.query, timeoutMs, maxSources)
     if (fallback === 'timeout') {
       return {
         resources: [],
@@ -558,7 +558,7 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     }
 
     const resources = fallback
-      .map((item, index) => toResourceContract(item, input.interpretation, index, query))
+      .map((item, index) => toResourceContract(item, input.interpretation, index, primaryPlan.query))
       .filter((item): item is ResourceContract => Boolean(item))
       .slice(0, maxSources)
 
@@ -591,7 +591,7 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
     const result = fast.length > 0 || !usedLegacyFallback
       ? fast
-      : await legacyFastFallback(query, timeoutMs, maxSources)
+      : await legacyFastFallback(primaryPlan.query, timeoutMs, maxSources)
 
     if (result === 'timeout') {
       return {
@@ -608,12 +608,17 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
 
     const relevantResult = Array.isArray(result)
       ? usedLegacyFallback
-        ? filterRelevantResources(result, query)
+        ? filterRelevantResources(result, primaryPlan.query)
         : result
       : result
 
     const resources = relevantResult
-      .map((item, index) => toResourceContract(item, input.interpretation, index, query))
+      .map((item, index) => toResourceContract(
+        item,
+        input.interpretation,
+        index,
+        usedLegacyFallback ? primaryPlan.query : query,
+      ))
       .filter((item): item is ResourceContract => Boolean(item))
       .slice(0, maxSources)
 

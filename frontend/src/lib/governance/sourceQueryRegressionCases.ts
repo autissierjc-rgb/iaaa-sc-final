@@ -342,6 +342,28 @@ function interpretationForCurrentQuestion(): InterpretationContract {
   }
 }
 
+function interpretationForCurrentQuestionVariant(input: {
+  raw: string
+  submitted: string
+  subject: string
+  actors: string[]
+  date?: string
+}): InterpretationContract {
+  return {
+    ...interpretationForCurrentQuestion(),
+    raw_input: input.raw,
+    situation_soumise: input.submitted,
+    header_subject: input.subject,
+    object_of_analysis: input.subject,
+    signals: ['current_status', 'external_facts'],
+    entity_explanations: input.actors.map((actor) => ({
+      label: actor,
+      explanation: `Acteur public explicitement compris par le référent pour la question${input.date ? ` du ${input.date}` : ''}.`,
+      certainty: 'known',
+    })),
+  }
+}
+
 function interpretationForPatentChoice(): InterpretationContract {
   return {
     ...interpretationForCurrentQuestion(),
@@ -662,6 +684,36 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     theatre: uppercaseRawTheatre,
     resources: baseResourcePlan(),
   })
+  const releaseCurrentPlanIssues: SourceQueryRegressionResult['issues'] = []
+  const releaseCurrentInterpretations = [
+    interpretationForCurrentQuestionVariant({
+      raw: 'Ou en sommes nous sur la guerre usa Iran au 02/06',
+      submitted: 'Quelle est la situation actuelle de la guerre entre les États-Unis et l’Iran au 2 juin ?',
+      subject: 'guerre États-Unis Iran',
+      actors: ['Iran', 'États-Unis'],
+      date: '2 juin',
+    }),
+    interpretationForCurrentQuestionVariant({
+      raw: 'Où en sommes nous avec la guerre en entre Iran us israel 04/06',
+      submitted: 'Quelle est la situation actuelle du conflit entre l’Iran, les États-Unis et Israël au 4 juin ?',
+      subject: 'conflit Iran États-Unis Israël',
+      actors: ['Iran', 'États-Unis', 'Israël'],
+      date: '4 juin',
+    }),
+    interpretationForCurrentQuestionVariant({
+      raw: 'Une crise géopolitique en développement ou en est la guerre entre Iran et usa au 08/06',
+      submitted: 'Quelle est la situation actuelle de la guerre entre l’Iran et les États-Unis au 8 juin ?',
+      subject: 'guerre Iran États-Unis',
+      actors: ['Iran', 'États-Unis'],
+      date: '8 juin',
+    }),
+  ]
+  const releasePlans = releaseCurrentInterpretations.map((interpretation) =>
+    buildFastResourceSearchPlansForDiagnostics({
+      interpretation,
+      resource_plan: baseResourcePlan(),
+    }),
+  )
 
   if (relevance.some((item) =>
     includesLoose(item.title ?? '', 'Bolivia') ||
@@ -943,6 +995,47 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     }
   }
 
+  releasePlans.forEach((plan, index) => {
+    const interpretation = releaseCurrentInterpretations[index]
+    const publicQuery = `${plan.subject} ${plan.targeted.query} ${plan.broad.query}`
+    for (const requiredActor of interpretation.entity_explanations.map((entity) => entity.label)) {
+      if (!includesLoose(publicQuery, requiredActor) &&
+        !(includesLoose(requiredActor, 'États-Unis') && (includesLoose(publicQuery, 'usa') || includesLoose(publicQuery, 'us')))) {
+        releaseCurrentPlanIssues.push({
+          level: 'error',
+          code: 'release_current_plan_lost_actor',
+          message: `Fast source plan lost actor "${requiredActor}" for current release case "${interpretation.raw_input}".`,
+        })
+      }
+    }
+    if (includesLoose(publicQuery, 'trajectoire de la crise évoquée') ||
+      includesLoose(publicQuery, 'situation évoquée') ||
+      includesLoose(publicQuery, 'contexte évoqué')) {
+      releaseCurrentPlanIssues.push({
+        level: 'error',
+        code: 'release_current_plan_uses_generic_subject',
+        message: `Fast source plan used a generic subject for current release case "${interpretation.raw_input}".`,
+      })
+    }
+    if (plan.execution[0]?.label !== 'targeted') {
+      releaseCurrentPlanIssues.push({
+        level: 'error',
+        code: 'release_current_targeted_plan_not_first',
+        message: `Fast source runner must execute the current-question targeted plan first for "${interpretation.raw_input}".`,
+      })
+    }
+    const domains = plan.targeted.include_domains ?? []
+    for (const expectedDomain of ['reuters.com', 'aljazeera.com', 'state.gov']) {
+      if (!domains.includes(expectedDomain)) {
+        releaseCurrentPlanIssues.push({
+          level: 'error',
+          code: 'release_current_missing_domain_channel',
+          message: `Geopolitical fast source plan should keep ${expectedDomain} in the routed source channels.`,
+        })
+      }
+    }
+  })
+
   const planSpecificResource: ResourceItem = {
     title: 'Official decision confirms public threshold',
     url: 'https://official.example/public-decision',
@@ -1192,6 +1285,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: uppercaseRawTheatre.actors.join(', '),
     subject: uppercaseRawInterpretation.situation_soumise,
     issues: canonicalTheatreIssues,
+  }, {
+    id: 'release-current-questions-keep-routed-source-plans',
+    ok: releaseCurrentPlanIssues.length === 0,
+    query: releasePlans.map((plan) => plan.targeted.query).join(' | '),
+    subject: releasePlans.map((plan) => plan.targeted.include_domains?.join(',') ?? '').join(' | '),
+    issues: releaseCurrentPlanIssues,
   }, {
     id: 'fast-runner-keeps-plan-specific-results',
     ok: planSpecificIssues.length === 0,

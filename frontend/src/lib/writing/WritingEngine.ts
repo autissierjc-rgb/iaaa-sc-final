@@ -1067,8 +1067,8 @@ function composeStrategicOptionsWriting(input: WritingEngineInput, started: numb
   const relevanceQuery = writingRelevanceQuery(input)
   const lecture =
     (hasGroundedOptions
-      ? `${subject} ne demande pas seulement un état des lieux. La situation doit être lue comme une décision entre ${optionList}. Le bon premier mouvement est celui qui produit le signal le plus rapide sans fermer les autres pistes.\n\n`
-      : `${subject} ne demande pas seulement un état des lieux. Mais tant que les options réelles ne sont pas établies par la matière comprise, SC doit cadrer l’arbitrage sans inventer les pistes métier. Le bon premier mouvement consiste à identifier les options depuis la matière, puis seulement à les classer.\n\n`) +
+      ? `${subject} appelle un choix prospectif entre ${optionList}. Le bon premier mouvement est celui qui produit le signal le plus rapide sans fermer les autres pistes.\n\n`
+      : `${subject} appelle un arbitrage prospectif. Tant que les options réelles ne sont pas établies par la matière comprise, SC doit cadrer les critères de priorité sans inventer les pistes métier. Le bon premier mouvement consiste à identifier les options depuis la matière, puis seulement à les classer.\n\n`) +
     `La contradiction centrale tient à ceci : plusieurs options peuvent sembler défendables, mais elles n’exigent pas les mêmes preuves. L’arbitrage doit donc comparer réversibilité, coût d’essai, accès au décideur, preuve d’usage et dépendance externe.\n\n` +
     `Le point de bascule sera concret : accord pilote, retour qualifié, paiement, refus explicite, décision publique, coût évité ou preuve que l’une des options ouvre un chemin que les autres ne peuvent pas ouvrir à court terme.`
   const probability = probabilityFromResources(input.resources, relevanceQuery) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
