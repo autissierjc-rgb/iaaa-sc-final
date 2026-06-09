@@ -967,6 +967,16 @@ function SituationCardPanel({ sc, lang, onExpand }: {
       .replace(/\s+/g, ' ')
       .trim()
 
+  const cleanUiMultilineText = (value: string) =>
+    cleanUiText(
+      value
+        .replace(/\r\n/g, '\n')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n[ \t]+/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/\n/g, ' __SC_NL__ ')
+    ).replace(/\s*__SC_NL__\s*/g, '\n')
+
   const cleanHeaderText = (value: string) =>
     cleanUiText(value)
       .replace(/\s*\([^)]{8,}\)/g, '')
@@ -1146,7 +1156,7 @@ function SituationCardPanel({ sc, lang, onExpand }: {
     const normalizedText = allHeadings.reduce((acc, heading) => {
       const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       return acc.replace(new RegExp(`(^|\\r?\\n)\\s*(${escaped})\\s*(?=\\r?\\n|:|$)`, 'gi'), '\n\n$2\n\n')
-    }, cleanUiText(text).replace(/\s+([?!.])/g, '$1').replace(/\?\s+[”"]/g, '?”'))
+    }, cleanUiMultilineText(text).replace(/\s+([?!.])/g, '$1').replace(/\?\s+[”"]/g, '?”'))
 
     const paragraphs = normalizedText
       .split(/\n{2,}|\r?\n/)
