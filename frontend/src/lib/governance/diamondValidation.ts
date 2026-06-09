@@ -278,7 +278,7 @@ function validateGroundedAntiHorsSol(
 
   if (!publicSourceFacts.some((fact) => factVisibleInPublicText(fact, publicText))) {
     issues.push(issue(
-      'error',
+      'warning',
       'grounded_anti_hors_sol_public_fact_underused',
       'Grounding contains public facts, but the Situation Card output remains abstract instead of using one visible fact.',
       'writing',
@@ -405,12 +405,6 @@ export function buildDiamondClarificationQuestions(issues: DiamondValidationIssu
   if (codes.has('grounded_anti_hors_sol_public_fact_missing')) {
     return [
       'Les sources attachees ne donnent pas encore de fait public porteur. Quelle trace verifiable doit fonder la carte : declaration officielle, source locale, agence ou chronologie datee ?',
-    ]
-  }
-
-  if (codes.has('grounded_anti_hors_sol_public_fact_underused')) {
-    return [
-      'Un fait public existe, mais il ne porte pas encore la lecture. Quel fait verifiable doit devenir la colonne vertebrale de la carte ?',
     ]
   }
 

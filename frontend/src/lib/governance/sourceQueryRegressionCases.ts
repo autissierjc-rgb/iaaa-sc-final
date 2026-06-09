@@ -21,7 +21,7 @@ import type { SituationCard } from '@/lib/resources/resourceContract'
 import { buildResonanceTrace } from '@/lib/resonance'
 import { buildConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWriting } from '@/lib/writing'
-import { validateDiamondContract } from './diamondValidation'
+import { buildDiamondClarificationQuestions, validateDiamondContract } from './diamondValidation'
 
 export type SourceQueryRegressionResult = {
   id: string
@@ -342,6 +342,25 @@ function interpretationForCurrentQuestion(): InterpretationContract {
   }
 }
 
+function underusedPublicFactGroundingContract(): GroundingContract {
+  return {
+    ...notReadyGroundingContract(),
+    source_status: 'available',
+    current_facts: [{
+      label_fr: 'une réunion publique datée confirme le seuil diplomatique entre les acteurs',
+      source: 'resources',
+      evidence_level: 'plausible',
+      source_ids: ['underused-public-fact'],
+    }],
+    permissions: {
+      ...notReadyGroundingContract().permissions,
+      can_write_current_state: true,
+      can_write_source_backed_claims: true,
+      must_mark_provisional: false,
+    },
+  }
+}
+
 function interpretationForCurrentQuestionVariant(input: {
   raw: string
   submitted: string
@@ -652,6 +671,28 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       },
     },
   )
+  const underusedPublicFactValidation = validateDiamondContract(
+    genericCurrentCardForValidation(),
+    'geopolitics',
+    {
+      grounding: underusedPublicFactGroundingContract(),
+      resources: {
+        ...resourcePlanWithCleanPublicEvidence(),
+        public_sources: [{
+          id: 'underused-public-fact',
+          title: 'Official warning follows emergency session',
+          url: 'https://official.example/emergency-session',
+          source: 'official.example',
+          channel: 'official',
+          domain_relevance: ['geopolitics'],
+          excerpt: 'A dated public meeting confirmed the diplomatic threshold between the actors.',
+          retrieved_at: '2026-06-08T00:00:00.000Z',
+          reliability: 'primary',
+        }],
+      },
+    },
+  )
+  const underusedPublicFactClarifications = buildDiamondClarificationQuestions(underusedPublicFactValidation.issues)
   const patentChoiceResonance = buildResonanceTrace({
     interpretation: interpretationForPatentChoice(),
     theatre: patentChoiceTheatre(),
@@ -927,6 +968,23 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       level: 'error',
       code: 'grounded_anti_hors_sol_non_probative_sources_not_blocked',
       message: 'DiamondValidation must reject cards with attached public sources when none becomes a clean public fact, even if needs_web is false.',
+    })
+  }
+  if (!underusedPublicFactValidation.ok ||
+    !underusedPublicFactValidation.issues.some((issue) =>
+      issue.code === 'grounded_anti_hors_sol_public_fact_underused' && issue.level === 'warning'
+    )) {
+    diamondReadinessIssues.push({
+      level: 'error',
+      code: 'grounded_anti_hors_sol_underused_fact_blocks_generation',
+      message: 'DiamondValidation may warn when a public fact is underused, but it must not block generation or ask the user to provide the spine.',
+    })
+  }
+  if (underusedPublicFactClarifications.some((question) => includesLoose(question, 'colonne vertebrale'))) {
+    diamondReadinessIssues.push({
+      level: 'error',
+      code: 'underused_fact_builds_blocking_clarification',
+      message: 'Underused public facts are an internal writing/quality issue, not a user clarification about the card spine.',
     })
   }
 
