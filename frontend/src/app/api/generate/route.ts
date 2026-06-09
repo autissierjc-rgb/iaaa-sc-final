@@ -3678,8 +3678,20 @@ function buildFallbackCard(
     reversibility: 45,
   }
   const interpreted = intentContext?.interpreted_request
+  const evidenceNeedText = [
+    situation,
+    interpreted?.user_question,
+    interpreted?.missing_evidence_policy,
+    interpreted?.expected_answer_shape,
+    ...(interpreted?.signals ?? []),
+    ...(intentContext?.signals ?? []),
+  ].filter(Boolean).join(' ')
+  const requiresPublicEvidence = shouldUseWeb(evidenceNeedText) ||
+    (interpreted?.signals ?? []).some((signal) => signal.startsWith('source_need:')) ||
+    (intentContext?.signals ?? []).some((signal) => signal.startsWith('source_need:'))
   const understands =
     interpreted?.intent_type === 'understand' &&
+    !requiresPublicEvidence &&
     !isPersonalRelationship &&
     !isManagementContext &&
     intentContext?.dominant_frame !== 'site_analysis' &&

@@ -21,6 +21,7 @@ import type { SituationCard } from '@/lib/resources/resourceContract'
 import { buildResonanceTrace } from '@/lib/resonance'
 import { buildConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWriting } from '@/lib/writing'
+import { runQualityGate } from '@/lib/quality'
 import { buildDiamondClarificationQuestions, validateDiamondContract } from './diamondValidation'
 
 export type SourceQueryRegressionResult = {
@@ -613,6 +614,38 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     scoring: scoringForRegression(),
   })
   const noSourceIssues: SourceQueryRegressionResult['issues'] = []
+  const abstractFallbackQuality = runQualityGate({
+    interpretation: input.interpretation,
+    theatre: theatreForCurrentQuestion(),
+    resources: baseResourcePlan(),
+    resonance: buildResonanceTrace({
+      interpretation: input.interpretation,
+      theatre: theatreForCurrentQuestion(),
+      resources: baseResourcePlan(),
+    }),
+    scoring: scoringForRegression(),
+    writing: {
+      ...noSourceWriting,
+      situation_card: {
+        ...noSourceWriting.situation_card,
+        main_vulnerability_fr: 'Le point fragile est le passage entre crainte, intention, capacité réelle et acte vérifiable.',
+        asymmetry_fr: 'La tension peut être largement commentée, mais elle ne devient lisible qu’en identifiant qui peut réellement agir, bloquer ou légitimer.',
+        key_signal_fr: 'Le signal clé serait un acte vérifiable : décision, refus, procédure, pression organisée, changement de calendrier ou prise de position qui modifie les marges d’action.',
+      },
+      lecture: {
+        ...noSourceWriting.lecture,
+        text_fr: 'La tension peut être largement commentée, mais elle ne devient lisible qu’en identifiant qui peut réellement agir, bloquer ou légitimer. Le point fragile est le passage entre crainte, intention, capacité réelle et acte vérifiable. Le signal clé serait un acte vérifiable : décision, refus, procédure, pression organisée, changement de calendrier ou prise de position qui modifie les marges d’action.',
+      },
+    },
+  })
+  const abstractFallbackIssues: SourceQueryRegressionResult['issues'] = []
+  if (!abstractFallbackQuality.issues.some((issue) => issue.code === 'ABSTRACT_UNDERSTANDING_FALLBACK_IN_PUBLIC_WRITING')) {
+    abstractFallbackIssues.push({
+      level: 'error',
+      code: 'abstract_understanding_fallback_not_rejected',
+      message: 'QualityGate must reject the abstract understand fallback when it reaches public writing.',
+    })
+  }
   const noisySourceResources = resourcePlanWithNoisyReutersExcerpt()
   const noisySourceWriting = composeDiamondWriting({
     interpretation: input.interpretation,
@@ -1362,6 +1395,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: noSourceWriting.lecture.text_fr,
     subject: noSourceWriting.probability_assessments[0]?.probability_label_fr ?? '',
     issues: noSourceIssues,
+  }, {
+    id: 'quality-gate-rejects-abstract-understand-fallback',
+    ok: abstractFallbackIssues.length === 0,
+    query: abstractFallbackQuality.issues.map((issue) => issue.code).join(' | '),
+    subject: 'writing/quality situated lecture',
+    issues: abstractFallbackIssues,
   }, {
     id: 'raw-source-excerpts-do-not-drive-public-writing',
     ok: noisySourceIssues.length === 0,

@@ -211,6 +211,12 @@ const DEFENSIVE_PUBLIC_OPENING_PATTERNS = [
   /\bne doit pas être remplacé par\b/i,
 ]
 
+const ABSTRACT_UNDERSTANDING_FALLBACK_PATTERNS = [
+  /la tension peut etre largement commentee/i,
+  /passage entre crainte,\s*intention,\s*capacite reelle et acte verifiable/i,
+  /un acte verifiable\s*:\s*decision,\s*refus,\s*procedure,\s*pression organisee,\s*changement de calendrier/i,
+]
+
 function countPublicUrls(value: string): number {
   return value.match(/https?:\/\//gi)?.length ?? 0
 }
@@ -506,6 +512,9 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     pattern.test(input.writing.lecture.text_fr.slice(0, 320)) ||
     pattern.test(input.writing.situation_card.insight_fr.slice(0, 320)),
   )
+  const abstractUnderstandingFallbackPattern = ABSTRACT_UNDERSTANDING_FALLBACK_PATTERNS.find((pattern) =>
+    pattern.test(normalizedText),
+  )
   const repeatedSection = input.writing.approfondir.sections_fr.find((section) =>
     bodyRepeatsTitle(section.title, section.body),
   )
@@ -573,6 +582,15 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       'DEFENSIVE_PUBLIC_OPENING',
       `Public writing starts by explaining what it is not doing instead of entering the situation: ${defensiveOpeningPattern.source}.`,
       'writing.lecture',
+    ))
+  }
+
+  if (abstractUnderstandingFallbackPattern) {
+    issues.push(issue(
+      'error',
+      'ABSTRACT_UNDERSTANDING_FALLBACK_IN_PUBLIC_WRITING',
+      `Public writing reused the abstract understand fallback instead of a situated diamond reading: ${abstractUnderstandingFallbackPattern.source}.`,
+      'writing',
     ))
   }
 
