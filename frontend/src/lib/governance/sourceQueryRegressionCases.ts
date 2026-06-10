@@ -677,6 +677,36 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       message: 'QualityGate must reject source-domain lists such as "sources mobilisées" in public writing.',
     })
   }
+  const rawExternalExcerptQuality = runQualityGate({
+    interpretation: input.interpretation,
+    theatre: theatreForCurrentQuestion(),
+    resources: baseResourcePlan(),
+    resonance: buildResonanceTrace({
+      interpretation: input.interpretation,
+      theatre: theatreForCurrentQuestion(),
+      resources: baseResourcePlan(),
+    }),
+    scoring: scoringForRegression(),
+    writing: {
+      ...noSourceWriting,
+      situation_card: {
+        ...noSourceWriting.situation_card,
+        insight_fr: 'Le premier appui public disponible indique : The Iranian fire comes after Israel launched strikes on Iran early Monday in the most-serious crossfire since an April 8 ceasefire was reached in the Iran war.',
+      },
+      lecture: {
+        ...noSourceWriting.lecture,
+        text_fr: 'For days, negotiations between Iran and the United States over the fragile ceasefire in the war had been stalled by the fighting between Israel and the region.',
+      },
+    },
+  })
+  const rawExternalExcerptIssues: SourceQueryRegressionResult['issues'] = []
+  if (!rawExternalExcerptQuality.issues.some((issue) => issue.code === 'RAW_EXTERNAL_EXCERPT_IN_PUBLIC_WRITING')) {
+    rawExternalExcerptIssues.push({
+      level: 'error',
+      code: 'raw_external_excerpt_not_rejected',
+      message: 'QualityGate must reject raw English source excerpts in public writing.',
+    })
+  }
   const noisySourceResources = resourcePlanWithNoisyReutersExcerpt()
   const noisySourceWriting = composeDiamondWriting({
     interpretation: input.interpretation,
@@ -985,16 +1015,21 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     cleanEvidenceWriting.lecture.text_fr,
     cleanEvidenceWriting.approfondir.analysis_fr,
     ...cleanEvidenceWriting.approfondir.sections_fr.map((section) => section.body),
-    ...cleanEvidenceWriting.probability_assessments.flatMap((assessment) =>
-      assessment.examples.map((example) => example.text_fr),
-    ),
   ].join(' ')
-  if (!includesLoose(cleanEvidencePublicText, 'emergency session') ||
-    !includesLoose(cleanEvidencePublicText, 'official warnings')) {
+  if (!includesLoose(cleanEvidencePublicText, 'avertissement officiel') ||
+    !includesLoose(cleanEvidencePublicText, 'seuils militaires')) {
     cleanEvidenceIssues.push({
       level: 'error',
       code: 'clean_public_evidence_underused',
-      message: 'A clean public evidence excerpt must become a concrete writing anchor instead of falling back to generic proof wording.',
+      message: 'A clean public evidence excerpt must become a qualified French public signal instead of leaking raw source wording.',
+    })
+  }
+  if (includesLoose(cleanEvidencePublicText, 'An emergency session') ||
+    includesLoose(cleanEvidencePublicText, 'official warnings between')) {
+    cleanEvidenceIssues.push({
+      level: 'error',
+      code: 'clean_public_evidence_raw_english_leaked',
+      message: 'Public writing must not leak raw English evidence excerpts.',
     })
   }
   if (!includesLoose(cleanEvidenceWriting.probability_assessments[0]?.probability_label_fr ?? '', 'Plausible')) {
@@ -1438,6 +1473,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: sourceMobilizedQuality.issues.map((issue) => issue.code).join(' | '),
     subject: 'writing/quality source facts not source domains',
     issues: sourceMobilizedIssues,
+  }, {
+    id: 'quality-gate-rejects-raw-external-excerpt-writing',
+    ok: rawExternalExcerptIssues.length === 0,
+    query: rawExternalExcerptQuality.issues.map((issue) => issue.code).join(' | '),
+    subject: 'writing/quality source facts not raw excerpts',
+    issues: rawExternalExcerptIssues,
   }, {
     id: 'raw-source-excerpts-do-not-drive-public-writing',
     ok: noisySourceIssues.length === 0,

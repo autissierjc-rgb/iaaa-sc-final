@@ -218,6 +218,12 @@ const ABSTRACT_UNDERSTANDING_FALLBACK_PATTERNS = [
   /un acte verifiable\s*:\s*decision,\s*refus,\s*procedure,\s*pression organisee,\s*changement de calendrier/i,
 ]
 
+const RAW_EXTERNAL_EXCERPT_PATTERNS = [
+  /\bThe\s+[A-Z][a-z]+[^.?!]{30,}\b(?:after|between|over|war|ceasefire|reported|launched|strikes?)\b/i,
+  /\bFor\s+days,\s+[^.?!]{30,}\b(?:negotiations?|ceasefire|fighting|stalled)\b/i,
+  /\bAn\s+[a-z]+[^.?!]{30,}\b(?:official warnings?|military thresholds?|ceasefire|strikes?)\b/i,
+]
+
 function countPublicUrls(value: string): number {
   return value.match(/https?:\/\//gi)?.length ?? 0
 }
@@ -516,6 +522,9 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const abstractUnderstandingFallbackPattern = ABSTRACT_UNDERSTANDING_FALLBACK_PATTERNS.find((pattern) =>
     pattern.test(normalizedText),
   )
+  const rawExternalExcerptPattern = RAW_EXTERNAL_EXCERPT_PATTERNS.find((pattern) =>
+    pattern.test(text),
+  )
   const repeatedSection = input.writing.approfondir.sections_fr.find((section) =>
     bodyRepeatsTitle(section.title, section.body),
   )
@@ -591,6 +600,15 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       'error',
       'ABSTRACT_UNDERSTANDING_FALLBACK_IN_PUBLIC_WRITING',
       `Public writing reused the abstract understand fallback instead of a situated diamond reading: ${abstractUnderstandingFallbackPattern.source}.`,
+      'writing',
+    ))
+  }
+
+  if (rawExternalExcerptPattern) {
+    issues.push(issue(
+      'error',
+      'RAW_EXTERNAL_EXCERPT_IN_PUBLIC_WRITING',
+      `Public writing leaked a raw external excerpt instead of translating it into a qualified public signal: ${rawExternalExcerptPattern.source}.`,
       'writing',
     ))
   }

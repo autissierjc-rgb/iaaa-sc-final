@@ -351,7 +351,7 @@ function publicEvidenceAnchors(resources?: ResourceServiceContract, relevanceQue
 function publicEvidenceFactAnchors(resources?: ResourceServiceContract, relevanceQuery?: string): string[] {
   return publicProbativeEvidence(resources, 3, relevanceQuery)
     .filter((evidence) => evidence.can_drive_probability)
-    .map((evidence) => compactSentence(polishPublicProofText(evidence.public_label_fr), 180))
+    .map((evidence) => publicEvidenceAnchorForWriting(evidence.public_label_fr))
     .filter((evidence) => evidence.length > 0 && !looksLikeProbativeEvidenceNoise(evidence))
 }
 
@@ -365,14 +365,27 @@ function publicEvidenceSignalAnchors(resources?: ResourceServiceContract, releva
 function publicFactSignal(value: string): string {
   const text = normalizeAnchor(value)
   const signals: string[] = []
+  const hasNegotiation = /\b(agreement|deal|ceasefire|halt|talks?|negotiat|accord|cessez|negociation)\b/i.test(text)
+  const hasHostility = /\b(attack|attacks|strike|strikes|hostilit|flare|damag|injur|missile|crossfire|frappe|attaque|hostilite)\b/i.test(text)
+  const hasOfficial = /\b(official|warning|statement|decision|reported|confirmed|source|declaration|communique|decision|avertissement)\b/i.test(text)
+  const hasThreshold = /\b(threshold|thresholds|seuil|seuils|military|militaire)\b/i.test(text)
 
-  if (/\b(agreement|deal|ceasefire|halt|talks?|negotiat|accord|cessez|negociation)\b/i.test(text)) {
+  if (hasHostility && /\b(ceasefire|cessez)\b/i.test(text)) {
+    signals.push('un enchaînement hostilités/cessez-le-feu qui peut déplacer les marges de riposte')
+  }
+  if (hasNegotiation && /\b(stall|stalled|blocked|bloqu|paralyse)\b/i.test(text)) {
+    signals.push('des négociations bloquées par les combats qui fragilisent le cadre de sortie')
+  }
+  if (hasOfficial && hasThreshold) {
+    signals.push('un avertissement officiel sur des seuils militaires à vérifier')
+  }
+  if (hasNegotiation) {
     signals.push('une piste d’accord ou de négociation à vérifier')
   }
-  if (/\b(attack|attacks|strike|strikes|hostilit|flare|damag|injur|missile|frappe|attaque|hostilite)\b/i.test(text)) {
+  if (hasHostility) {
     signals.push('un signal d’hostilités ou d’escalade à vérifier')
   }
-  if (/\b(official|statement|decision|reported|confirmed|source|declaration|communique|decision)\b/i.test(text)) {
+  if (hasOfficial) {
     signals.push('une trace publique à confronter à une source primaire')
   }
 
@@ -381,10 +394,24 @@ function publicFactSignal(value: string): string {
     : 'un fait public à vérifier'
 }
 
+function looksLikeRawExternalExcerpt(value: string): boolean {
+  const normalized = normalizeAnchor(value)
+  if (countWords(value) > 16) return true
+  return /\b(?:the|after|before|between|over|war|ceasefire|reported|launched|strikes?|talks?|negotiations?|officials?|according|warnings?|thresholds?)\b/i.test(normalized)
+}
+
+function publicEvidenceAnchorForWriting(value: string): string {
+  const polished = compactSentence(polishPublicProofText(value), 180)
+  if (!polished) return ''
+  return looksLikeRawExternalExcerpt(polished)
+    ? publicFactSignal(polished)
+    : polished
+}
+
 function groundedFactOpeningSentence(grounding?: GroundingContract): string | undefined {
   const facts = (grounding?.current_facts ?? [])
     .filter((fact) => fact.source === 'resources')
-    .map((fact) => compactSentence(fact.label_fr, 160))
+    .map((fact) => publicEvidenceAnchorForWriting(fact.label_fr))
     .filter((fact) => fact.length > 0 && !looksLikeProbativeEvidenceNoise(fact))
     .slice(0, 2)
 
