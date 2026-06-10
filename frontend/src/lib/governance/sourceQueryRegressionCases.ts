@@ -11,6 +11,7 @@ import type {
 import {
   buildFastResourceSearchPlansForDiagnostics,
   filterFastResourceResultsByPlanForDiagnostics,
+  legacyFallbackPlanQueriesForDiagnostics,
 } from '@/lib/resources/FastResourceRunner'
 import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSourceCoverage'
 import type { ResourceItem } from '@/lib/resources/resourceContract'
@@ -1219,6 +1220,43 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       message: 'Fast resource runner must filter each plan result with its own plan query, not with the composite query from unrelated plans.',
     })
   }
+  const legacyFallbackPlanQueries = legacyFallbackPlanQueriesForDiagnostics({
+    interpretation: input.interpretation,
+    resource_plan: {
+      ...baseResourcePlan(),
+      functional_needs: [{
+        family: 'protection_conflict',
+        label_fr: 'Conflict',
+        question_fr: 'Conflict frame',
+        channels: ['news_agency', 'local_media', 'official'],
+        suggested_queries: ['Iran Israel United States latest military diplomatic warnings'],
+        expected_evidence_fr: ['conflict signal'],
+        priority: 'high',
+      }],
+    },
+  })
+  const legacyFallbackPlanIssues: SourceQueryRegressionResult['issues'] = []
+  if (legacyFallbackPlanQueries.length < 2) {
+    legacyFallbackPlanIssues.push({
+      level: 'error',
+      code: 'legacy_fallback_single_plan_only',
+      message: 'Legacy resource fallback must use the existing execution plans, not only the first targeted query.',
+    })
+  }
+  if (!legacyFallbackPlanQueries.some((candidate) => includesLoose(candidate, 'latest reliable sources'))) {
+    legacyFallbackPlanIssues.push({
+      level: 'error',
+      code: 'legacy_fallback_missing_broad_plan',
+      message: 'Legacy resource fallback must keep the broad current-source plan when fast sources are needed.',
+    })
+  }
+  if (!legacyFallbackPlanQueries.some((candidate) => includesLoose(candidate, 'military diplomatic warnings'))) {
+    legacyFallbackPlanIssues.push({
+      level: 'error',
+      code: 'legacy_fallback_missing_functional_plan',
+      message: 'Legacy resource fallback must keep functional source plans after the targeted current-source plan.',
+    })
+  }
 
   const longExcerptResource: ResourceItem = {
     title: 'Iran, Israel and United States trade warnings as talks stall',
@@ -1531,6 +1569,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: planSpecificResults.map((item) => item.title).join(' | '),
     subject: 'plan-specific filtering',
     issues: planSpecificIssues,
+  }, {
+    id: 'fast-runner-legacy-fallback-uses-execution-plans',
+    ok: legacyFallbackPlanIssues.length === 0,
+    query: legacyFallbackPlanQueries.join(' | '),
+    subject: 'resources fallback plan coverage',
+    issues: legacyFallbackPlanIssues,
   }, {
     id: 'fast-runner-extracts-probative-excerpt',
     ok: longExcerptIssues.length === 0,

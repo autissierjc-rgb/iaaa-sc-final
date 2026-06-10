@@ -390,6 +390,14 @@ function broadFastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
   }
 }
 
+function executionPlans(input: FastResourceRunnerInput): FastSearchPlan[] {
+  return uniquePlans([
+    fastSearchPlan(input),
+    broadFastSearchPlan(input),
+    ...functionalNeedPlans(input),
+  ]).slice(0, 4)
+}
+
 export function buildFastResourceSearchPlansForDiagnostics(input: FastResourceRunnerInput): {
   targeted: FastSearchPlan
   broad: FastSearchPlan
@@ -404,13 +412,13 @@ export function buildFastResourceSearchPlansForDiagnostics(input: FastResourceRu
     targeted,
     broad,
     functional,
-    execution: uniquePlans([
-      targeted,
-      broad,
-      ...functional,
-    ]).slice(0, 4),
+    execution: executionPlans(input),
     subject: sourceSubject(input),
   }
+}
+
+export function legacyFallbackPlanQueriesForDiagnostics(input: FastResourceRunnerInput): string[] {
+  return executionPlans(input).map((plan) => plan.query)
 }
 
 async function fetchTavilyFastPlan(plan: FastSearchPlan, maxSources: number, timeoutMs: number): Promise<ResourceItem[]> {
@@ -495,6 +503,39 @@ async function legacyFastFallback(
   return uniqueResourceItems(filterRelevantResources(result, query)).slice(0, maxSources)
 }
 
+async function legacyFastFallbackForPlans(
+  plans: FastSearchPlan[],
+  timeoutMs: number,
+  maxSources: number,
+): Promise<{ resources: ResourceItem[]; firstHitPlan: FastSearchPlan } | 'timeout'> {
+  const usablePlans = plans.filter((plan) => plan.query.trim().length > 0)
+  const firstPlan = usablePlans[0] ?? { query: '', label: 'empty' }
+  const planResults = await Promise.all(
+    usablePlans.map(async (plan) => ({
+      plan,
+      result: await legacyFastFallback(plan.query, timeoutMs, maxSources),
+    })),
+  )
+  const nonTimeoutResults = planResults.filter(
+    (entry): entry is { plan: FastSearchPlan; result: ResourceItem[] } => entry.result !== 'timeout',
+  )
+
+  if (planResults.length > 0 && nonTimeoutResults.length === 0) return 'timeout'
+
+  const firstHit = nonTimeoutResults.find((entry) => entry.result.length > 0)
+  const fallbackQuery = usablePlans.map((plan) => plan.query).join(' ')
+
+  return {
+    resources: filterFastResourceResultsByPlanForDiagnostics(
+      nonTimeoutResults.map((entry) => entry.result),
+      nonTimeoutResults.map((entry) => entry.plan.query),
+      fallbackQuery,
+      maxSources,
+    ),
+    firstHitPlan: firstHit?.plan ?? firstPlan,
+  }
+}
+
 export function filterFastResourceResultsByPlanForDiagnostics(
   planResults: ResourceItem[][],
   planQueries: string[],
@@ -529,12 +570,7 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
   }
 
   const fallbackPlan = fastSearchPlan(input)
-  const broadPlan = broadFastSearchPlan(input)
-  const plans = uniquePlans([
-    fallbackPlan,
-    broadPlan,
-    ...functionalNeedPlans(input),
-  ]).slice(0, 4)
+  const plans = executionPlans(input)
   const primaryPlan = plans[0] ?? fallbackPlan
   const query = [
     input.interpretation.situation_soumise,
@@ -543,7 +579,7 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
   ].filter(Boolean).join(' ')
 
   if (!process.env.TAVILY_API_KEY) {
-    const fallback = await legacyFastFallback(primaryPlan.query, timeoutMs, maxSources)
+    const fallback = await legacyFastFallbackForPlans(plans, timeoutMs, maxSources)
     if (fallback === 'timeout') {
       return {
         resources: [],
@@ -557,8 +593,8 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       }
     }
 
-    const resources = fallback
-      .map((item, index) => toResourceContract(item, input.interpretation, index, primaryPlan.query))
+    const resources = fallback.resources
+      .map((item, index) => toResourceContract(item, input.interpretation, index, query))
       .filter((item): item is ResourceContract => Boolean(item))
       .slice(0, maxSources)
 
@@ -570,8 +606,8 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
         ? `Sources rapides attachees via fallback : ${resources.length}.`
         : 'Aucune source rapide exploitable trouvee dans le budget court.',
       provider: 'legacy_fetch_resources',
-      query: primaryPlan.query,
-      include_domains: primaryPlan.include_domains,
+      query: fallback.firstHitPlan.query,
+      include_domains: fallback.firstHitPlan.include_domains,
       timeout_ms: timeoutMs,
     }
   }
@@ -590,8 +626,8 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     )
     const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
     const result = fast.length > 0 || !usedLegacyFallback
-      ? fast
-      : await legacyFastFallback(primaryPlan.query, timeoutMs, maxSources)
+      ? { resources: fast, firstHitPlan }
+      : await legacyFastFallbackForPlans(plans, timeoutMs, maxSources)
 
     if (result === 'timeout') {
       return {
@@ -606,18 +642,12 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       }
     }
 
-    const relevantResult = Array.isArray(result)
-      ? usedLegacyFallback
-        ? filterRelevantResources(result, primaryPlan.query)
-        : result
-      : result
-
-    const resources = relevantResult
+    const resources = result.resources
       .map((item, index) => toResourceContract(
         item,
         input.interpretation,
         index,
-        usedLegacyFallback ? primaryPlan.query : query,
+        usedLegacyFallback ? result.firstHitPlan.query : query,
       ))
       .filter((item): item is ResourceContract => Boolean(item))
       .slice(0, maxSources)
@@ -630,8 +660,8 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
         ? `Sources rapides attachees : ${resources.length}.`
         : 'Aucune source rapide exploitable trouvee dans le budget court.',
       provider: usedLegacyFallback ? 'legacy_fetch_resources' : 'tavily_fast',
-      query: firstHitPlan.query,
-      include_domains: firstHitPlan.include_domains,
+      query: result.firstHitPlan.query,
+      include_domains: result.firstHitPlan.include_domains,
       timeout_ms: timeoutMs,
     }
   } catch {
