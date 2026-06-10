@@ -1053,20 +1053,24 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       message: 'Dateline cleaning must preserve the underlying public fact.',
     })
   }
-  if (notReadyDiamondValidation.ok ||
-    !notReadyDiamondValidation.issues.some((issue) => issue.code === 'grounded_anti_hors_sol_current_facts_missing')) {
+  if (!notReadyDiamondValidation.ok ||
+    !notReadyDiamondValidation.issues.some((issue) =>
+      issue.code === 'grounded_anti_hors_sol_current_facts_missing' && issue.level === 'warning'
+    )) {
     diamondReadinessIssues.push({
       level: 'error',
-      code: 'grounded_anti_hors_sol_missing_fact_not_blocked',
-      message: 'DiamondValidation must reject current/source-dependent cards when GroundingContract has no public current facts.',
+      code: 'grounded_anti_hors_sol_missing_fact_blocks_generation',
+      message: 'DiamondValidation must warn, not block, when a clear current/source-dependent card has no public current facts.',
     })
   }
-  if (nonProbativeDiamondValidation.ok ||
-    !nonProbativeDiamondValidation.issues.some((issue) => issue.code === 'grounded_anti_hors_sol_public_fact_missing')) {
+  if (!nonProbativeDiamondValidation.ok ||
+    !nonProbativeDiamondValidation.issues.some((issue) =>
+      issue.code === 'grounded_anti_hors_sol_public_fact_missing' && issue.level === 'warning'
+    )) {
     diamondReadinessIssues.push({
       level: 'error',
-      code: 'grounded_anti_hors_sol_non_probative_sources_not_blocked',
-      message: 'DiamondValidation must reject cards with attached public sources when none becomes a clean public fact, even if needs_web is false.',
+      code: 'grounded_anti_hors_sol_non_probative_sources_block_generation',
+      message: 'DiamondValidation must warn, not block, when attached public sources do not become clean public facts.',
     })
   }
   if (!underusedPublicFactValidation.ok ||

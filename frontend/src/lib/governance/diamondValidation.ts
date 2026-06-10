@@ -258,9 +258,9 @@ function validateGroundedAntiHorsSol(
 
   if (!grounding?.permissions.can_write_current_state || resources?.public_sources.length === 0) {
     issues.push(issue(
-      'error',
+      'warning',
       'grounded_anti_hors_sol_current_facts_missing',
-      'A current or source-dependent card cannot pass anti-hors-sol without public facts attached to the grounding contract.',
+      'A current or source-dependent card has no public facts attached; it must stay provisional instead of asking the user for the source.',
       'grounding.current_facts',
     ))
     return issues
@@ -268,9 +268,9 @@ function validateGroundedAntiHorsSol(
 
   if (publicSourceFacts.length === 0) {
     issues.push(issue(
-      'error',
+      'warning',
       'grounded_anti_hors_sol_public_fact_missing',
-      'Sources are attached, but no clean public fact is available to carry the public card.',
+      'Sources are attached, but no clean public fact is available; public writing must stay qualified and avoid factual certainty.',
       'grounding.current_facts',
     ))
     return issues
@@ -398,13 +398,13 @@ export function buildDiamondClarificationQuestions(issues: DiamondValidationIssu
 
   if (codes.has('grounded_anti_hors_sol_current_facts_missing')) {
     return [
-      'La carte ne peut pas etablir l etat du jour sans fait public attache. Quelle source publique datee faut-il joindre, ou faut-il lancer Recherche+ avant de rediger la carte ?',
+      'Les sources rapides n’ont pas donné de fait public suffisant. La carte doit rester provisoire et Recherche+ peut servir à vérifier la chronologie.',
     ]
   }
 
   if (codes.has('grounded_anti_hors_sol_public_fact_missing')) {
     return [
-      'Les sources attachees ne donnent pas encore de fait public porteur. Quelle trace verifiable doit fonder la carte : declaration officielle, source locale, agence ou chronologie datee ?',
+      'Les sources attachées ne donnent pas encore de fait public porteur. La carte doit qualifier son statut et indiquer quelle trace vérifier ensuite.',
     ]
   }
 
