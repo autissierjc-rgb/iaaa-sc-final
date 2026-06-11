@@ -14,6 +14,7 @@ import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { cleanModelText, parseModelJSON } from '../ai/json'
 import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
 import { looksLikeProbativeEvidenceNoise, publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
+import { buildResourceRegimeSignals } from '../resources/regimeSignals'
 import { buildResonanceTrace } from '../resonance'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
 
@@ -362,6 +363,12 @@ function publicEvidenceSignalAnchors(resources?: ResourceServiceContract, releva
     .filter((signal) => signal.length > 0)
 }
 
+function publicRegimeSignalsForWriting(resources?: ResourceServiceContract): string[] {
+  return unique(buildResourceRegimeSignals(resources, 3)
+    .map((signal) => publicFactSignal(signal.signal_fr))
+    .filter((signal) => signal.length > 0 && signal !== 'un fait public à vérifier'))
+}
+
 function publicFactSignal(value: string): string {
   const text = normalizeAnchor(value)
   const signals: string[] = []
@@ -408,16 +415,21 @@ function publicEvidenceAnchorForWriting(value: string): string {
     : polished
 }
 
-function groundedFactOpeningSentence(grounding?: GroundingContract): string | undefined {
+function groundedFactOpeningSentence(
+  grounding?: GroundingContract,
+  resources?: ResourceServiceContract,
+): string | undefined {
   const facts = (grounding?.current_facts ?? [])
     .filter((fact) => fact.source === 'resources')
     .map((fact) => publicEvidenceAnchorForWriting(fact.label_fr))
     .filter((fact) => fact.length > 0 && !looksLikeProbativeEvidenceNoise(fact))
     .slice(0, 2)
 
-  if (facts.length === 0) return undefined
+  const signals = facts.length > 0 ? facts : publicRegimeSignalsForWriting(resources).slice(0, 2)
 
-  return `Le premier appui public disponible indique : ${facts.join(' ; ')}. Ce socle reste à confronter à la chronologie et aux sources primaires.`
+  if (signals.length === 0) return undefined
+
+  return `Les premiers signaux publics pointent vers ${signals.join(' ; ')}. Ce socle reste à confronter à la chronologie et aux sources primaires.`
 }
 
 function resourceProofLabel(resources?: ResourceServiceContract): string | undefined {
@@ -1427,7 +1439,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const missingExternalEvidence = needsExternalEvidenceWithoutSources(input.resources)
   const probability = probabilityFromResources(input.resources, relevanceQuery) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
-  const groundedFactOpening = groundedFactOpeningSentence(input.grounding)
+  const groundedFactOpening = groundedFactOpeningSentence(input.grounding, input.resources)
   const diamondText = polishPublicProofText(compactSentence(
     resonance.diamond_thesis_fr || grammar.diamond(tension, institutions, firstProcedure),
     320,

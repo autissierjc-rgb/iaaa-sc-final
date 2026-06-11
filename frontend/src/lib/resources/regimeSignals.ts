@@ -32,6 +32,29 @@ function words(value: string): string[] {
     .filter(Boolean)
 }
 
+function semanticCandidatesFrom(value: string): string[] {
+  const text = normalize(value)
+  const candidates: string[] = []
+
+  if (/\b(agreement|deal|ceasefire|halt|talks?|negotiat|accord|cessez|negociation)\b/i.test(text)) {
+    candidates.push('accord', 'negociation', 'cessez le feu')
+  }
+  if (/\b(attack|attacks|strike|strikes|hostilit|flare|damag|injur|missile|crossfire|frappe|attaque|hostilite)\b/i.test(text)) {
+    candidates.push('hostilites', 'escalade', 'frappe', 'attaque')
+  }
+  if (/\b(official|warning|statement|decision|reported|confirmed|source|declaration|communique|avertissement)\b/i.test(text)) {
+    candidates.push('trace publique', 'avertissement', 'decision')
+  }
+  if (/\b(threshold|thresholds|seuil|seuils|military|militaire)\b/i.test(text)) {
+    candidates.push('seuil militaire', 'seuil', 'militaire')
+  }
+  if (/\b(blockade|port|ports|shipping|merchant|vessel|energy|oil|airport|infrastructure)\b/i.test(text)) {
+    candidates.push('infrastructure', 'port', 'aeroport', 'blocage')
+  }
+
+  return Array.from(new Set(candidates))
+}
+
 function discriminantTermsFrom(value: string, baseline: string): string[] {
   const baselineWords = new Set(words(baseline))
   const seen = new Set<string>()
@@ -94,7 +117,9 @@ export function countRegimeSignalsUsed(
   const normalizedText = normalize(publicText)
   return signals.filter((signal) => {
     const candidates = discriminantTermsFrom(`${signal.signal_fr} ${signal.source_title}`, baselineText)
+    const semanticCandidates = semanticCandidatesFrom(signal.signal_fr)
+    const semanticHits = semanticCandidates.filter((candidate) => normalizedText.includes(candidate)).length
 
-    return candidates.some((part) => normalizedText.includes(part))
+    return candidates.some((part) => normalizedText.includes(part)) || semanticHits >= 2
   }).length
 }

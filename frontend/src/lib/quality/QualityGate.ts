@@ -403,6 +403,9 @@ function countAnchorsUsed(anchors: string[], normalizedText: string): number {
 }
 
 function publicEvidenceVisible(resources: ResourceServiceContract | undefined, normalizedNarrativeText: string, baseline = ''): boolean {
+  const regimeSignals = buildResourceRegimeSignals(resources, 4)
+  if (countRegimeSignalsUsed(regimeSignals, normalizedNarrativeText, baseline) > 0) return true
+
   const baselineTokens = new Set(normalize(baseline).split(/[^a-z0-9]+/).filter(Boolean))
   const genericEvidenceTokens = new Set([
     'source',
