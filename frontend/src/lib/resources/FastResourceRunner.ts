@@ -30,7 +30,7 @@ export type FastResourceRunnerInput = {
   max_sources?: number
 }
 
-export const MIN_FAST_RESOURCE_TIMEOUT_MS = 1800
+export const MIN_FAST_RESOURCE_TIMEOUT_MS = 3000
 
 type FastSearchPlan = {
   query: string
