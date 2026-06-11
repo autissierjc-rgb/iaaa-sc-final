@@ -5669,7 +5669,7 @@ export async function POST(req: NextRequest) {
         resourcesCount: diamondResourcePlan.resources.length,
         modelPath: 'local',
       })
-      writingContract = diamondArchitectWriter?.accepted && localWritingContract
+      writingContract = localWritingContract
         ? {
           ...localWritingContract,
           trace: {
@@ -5677,7 +5677,9 @@ export async function POST(req: NextRequest) {
             status: localWritingContract.trace.status === 'error' ? 'partial' : localWritingContract.trace.status,
             notes: [
               ...(localWritingContract.trace.notes ?? []),
-              'diamond_architect_writer_rejected_by_quality_keep_local_contract',
+              diamondArchitectWriter?.accepted
+                ? 'diamond_architect_writer_rejected_by_quality_keep_local_contract'
+                : 'quality_rejected_public_fallback_keep_local_contract',
             ],
           },
         }
