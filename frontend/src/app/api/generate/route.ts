@@ -891,6 +891,7 @@ function cleanPublicText(text: string): string {
     .replace(/acteurs et s[eé]quences disponibles dans la situation fournie/gi, '')
     .replace(/ressources web absentes ou non stabilis[eé]es/gi, '')
     .replace(/ressources absentes|ressources web absentes|web absent/gi, '')
+    .replace(/\s*[;,.]?\s*sources?\s+mobilis[ée]es?\s*:[^.?!;\n]+[.?!]?/gi, '')
     .replace(/non stabilis[eé]es?/gi, '')
     .replace(/premi[eè]re lecture structurelle/gi, '')
     .replace(/[aà] partir des signaux disponibles/gi, '')
@@ -1711,7 +1712,7 @@ function listFromAxis(value: unknown, fallback: string[], situation = ''): strin
 }
 
 function rejectsDiamondGuardText(text: string): boolean {
-  return /la situation ne se joue pas seulement|distribution des leviers r[eé]els|qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer|la fa[cç]ade peut encore fonctionner|ce qui para[iî]t stable d[eé]pend d[’']un levier discret|ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible|ne se tranche pas par une formule g[eé]n[eé]rale|la lecture doit partir des acteurs et passages oblig[eé]s|acteurs visibles,\s*contraintes mat[eé]rielles,\s*r[eè]gles et institutions,\s*r[eé]cit dominant|tant que ce point n[’']est pas reli[eé] [aà] une trace v[eé]rifiable|hypoth[eè]se de travail, pas une conclusion ferm[eé]e|passer d[’']une impression g[eé]n[eé]rale|un fait, une d[eé]cision, un document ou un changement de calendrier v[eé]rifiable|rythmes,\s*d[eé]lais,\s*fen[eê]tres d[’']action et risque de retard|plusieurs options restent ouvertes,\s*mais elles ne prot[eè]gent pas les m[eê]mes risques|fa[cç]ade de contr[oô]le|structural reading from available signals|choose_action/i.test(text)
+  return /la situation ne se joue pas seulement|distribution des leviers r[eé]els|qui peut agir, bloquer, l[eé]gitimer, financer, user ou faire basculer|la fa[cç]ade peut encore fonctionner|ce qui para[iî]t stable d[eé]pend d[’']un levier discret|ce que le syst[eè]me ne prot[eè]ge plus pendant qu[’']il g[eè]re l[’']urgence visible|ne se tranche pas par une formule g[eé]n[eé]rale|la lecture doit partir des acteurs et passages oblig[eé]s|acteurs visibles,\s*contraintes mat[eé]rielles,\s*r[eè]gles et institutions,\s*r[eé]cit dominant|tant que ce point n[’']est pas reli[eé] [aà] une trace v[eé]rifiable|hypoth[eè]se de travail, pas une conclusion ferm[eé]e|passer d[’']une impression g[eé]n[eé]rale|sources?\s+mobilis[ée]es?\s*:|un fait, une d[eé]cision, un document ou un changement de calendrier v[eé]rifiable|rythmes,\s*d[eé]lais,\s*fen[eê]tres d[’']action et risque de retard|plusieurs options restent ouvertes,\s*mais elles ne prot[eè]gent pas les m[eê]mes risques|fa[cç]ade de contr[oô]le|structural reading from available signals|choose_action/i.test(text)
 }
 
 function rejectsPublicCapText(text: string): boolean {
