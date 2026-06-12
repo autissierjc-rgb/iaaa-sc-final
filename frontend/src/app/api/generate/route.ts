@@ -1442,6 +1442,10 @@ function isDominantArchitectWriting(writing: WritingContract): boolean {
   return (writing.trace.notes ?? []).some((note) => note === 'diamond_architect_writer=dominant_generate_full')
 }
 
+function isProvisionalFullDiamondFallback(writing: WritingContract): boolean {
+  return (writing.trace.notes ?? []).some((note) => note === 'full_diamond_writer_unavailable_provisional_local')
+}
+
 function hasResonanceDiamondSpine(writing: WritingContract): boolean {
   const notes = (writing.trace.notes ?? []).join(' ')
   const text = [
@@ -1469,6 +1473,14 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
   if (!writing || writing.trace.status === 'error') return card
 
   const sc = writing.situation_card
+  if (isProvisionalFullDiamondFallback(writing)) {
+    return {
+      ...card,
+      generation_status: 'partial',
+      generation_error_public: 'La carte complète diamant n’a pas été validée ; cette sortie reste une lecture provisoire.',
+      writing_contract: writing,
+    }
+  }
   const forceWritingContract = isTargetChoiceMaterialWriting(writing) || isDominantArchitectWriting(writing) || hasResonanceDiamondSpine(writing)
   const preferCompletedCard = shouldPreferCompletedCardAfterWriting(card)
   const vulnerabilityFrCandidates = preferCompletedCard
@@ -1529,6 +1541,30 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
     approfondir_fr: firstPublicFrenchText([approfondirFr, card.approfondir_fr], situation, String(card.approfondir_fr ?? '')),
     approfondir_en: firstSafeText([writing.approfondir.analysis_en, card.approfondir_en], situation, String(card.approfondir_en ?? card.approfondir_fr ?? '')),
     writing_contract: writing,
+  }
+}
+
+function markFullDiamondFallbackAsProvisional(
+  writing: WritingContract | null,
+  reason: string,
+): WritingContract | null {
+  if (!writing) return null
+
+  return {
+    ...writing,
+    public_warnings: Array.from(new Set([
+      ...(writing.public_warnings ?? []),
+      'La carte complète diamant n’a pas été validée ; cette sortie reste une lecture provisoire.',
+    ])),
+    trace: {
+      ...writing.trace,
+      status: writing.trace.status === 'error' ? 'error' : 'partial',
+      notes: Array.from(new Set([
+        ...(writing.trace.notes ?? []),
+        'full_diamond_writer_unavailable_provisional_local',
+        reason,
+      ])),
+    },
   }
 }
 
@@ -5502,10 +5538,10 @@ export async function POST(req: NextRequest) {
           max_tokens: 4200,
         })
         const resourceSignalsUnderused = diamondWriter.errors.includes('RESOURCE_REGIME_SIGNALS_UNDERUSED')
-        const diamondWriterClean = diamondWriter.status === 'ok' && diamondWriter.quality?.trace.status === 'ok'
+        const diamondWriterAcceptedByQuality = diamondWriter.status === 'ok' && diamondWriter.quality?.ok === true
         diamondArchitectWriter = {
           status: diamondWriter.status,
-          accepted: Boolean(diamondWriter.writing) && diamondWriterClean && !resourceSignalsUnderused,
+          accepted: Boolean(diamondWriter.writing) && diamondWriterAcceptedByQuality && !resourceSignalsUnderused,
           model: diamondWriter.model,
           duration_ms: diamondWriter.duration_ms,
           errors: diamondWriter.errors,
@@ -5526,7 +5562,7 @@ export async function POST(req: NextRequest) {
           resourcesCount: diamondResourcePlan.resources.length,
           modelPath: 'openai',
         })
-        if (diamondWriter.writing && diamondWriterClean && !resourceSignalsUnderused) {
+        if (diamondWriter.writing && diamondWriterAcceptedByQuality && !resourceSignalsUnderused) {
           writingContract = {
             ...diamondWriter.writing,
             trace: {
@@ -5539,7 +5575,7 @@ export async function POST(req: NextRequest) {
               ],
             },
           }
-        } else if (resourceSignalsUnderused || !diamondWriterClean) {
+        } else if (resourceSignalsUnderused || !diamondWriterAcceptedByQuality) {
           recordGenerationTrace({
             status: 'partial',
             gate: 'GENERATE',
@@ -5547,8 +5583,8 @@ export async function POST(req: NextRequest) {
             canonicalLayer: 'writing',
             pipelineStep: 'LLMDiamondWriter:fallback',
             diagnostic: resourceSignalsUnderused
-              ? 'resource_regime_signals_underused_keep_local_contract'
-              : `diamond_writer_quality_${diamondWriter.quality?.trace.status ?? diamondWriter.status}_keep_local_contract`,
+              ? 'resource_regime_signals_underused_provisional_local_contract'
+              : `diamond_writer_quality_${diamondWriter.quality?.trace.status ?? diamondWriter.status}_provisional_local_contract`,
             durationMs: 0,
             inputChars: generationAnalysisText.length,
             domain: generationInterpretation.domain,
@@ -5583,6 +5619,12 @@ export async function POST(req: NextRequest) {
           errorKind: error instanceof Error ? error.name : 'UnknownError',
         })
       }
+    }
+    if (shouldTryDiamondArchitectWriter && !diamondArchitectWriter?.accepted && writingContract === localWritingContract) {
+      writingContract = markFullDiamondFallbackAsProvisional(
+        localWritingContract,
+        `diamond_architect_writer_status=${diamondArchitectWriter?.status ?? 'not_accepted'}`,
+      )
     }
     if (writingContract) {
       recordGenerationTrace({
@@ -5669,17 +5711,25 @@ export async function POST(req: NextRequest) {
         resourcesCount: diamondResourcePlan.resources.length,
         modelPath: 'local',
       })
-      writingContract = localWritingContract
+      const fallbackWriting = mode === 'generate_full'
+        ? markFullDiamondFallbackAsProvisional(
+            localWritingContract,
+            diamondArchitectWriter?.accepted
+              ? 'diamond_architect_writer_rejected_by_quality'
+              : 'quality_rejected_public_fallback',
+          )
+        : localWritingContract
+      writingContract = fallbackWriting
         ? {
-          ...localWritingContract,
+          ...fallbackWriting,
           trace: {
-            ...localWritingContract.trace,
-            status: localWritingContract.trace.status === 'error' ? 'partial' : localWritingContract.trace.status,
+            ...fallbackWriting.trace,
+            status: fallbackWriting.trace.status === 'error' ? 'partial' : fallbackWriting.trace.status,
             notes: [
-              ...(localWritingContract.trace.notes ?? []),
+              ...(fallbackWriting.trace.notes ?? []),
               diamondArchitectWriter?.accepted
-                ? 'diamond_architect_writer_rejected_by_quality_keep_local_contract'
-                : 'quality_rejected_public_fallback_keep_local_contract',
+                ? 'diamond_architect_writer_rejected_by_quality_provisional_local'
+                : 'quality_rejected_public_fallback_provisional_local',
             ],
           },
         }
