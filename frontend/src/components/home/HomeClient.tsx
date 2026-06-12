@@ -1042,6 +1042,44 @@ function SituationCardPanel({ sc, lang, onExpand }: {
       .replace(/\n{3,}/g, '\n\n')
       .trim()
 
+  const summaryParagraphs = (value: string): string[] => {
+    const cleaned = cleanLectureText(value)
+    if (!cleaned) return []
+
+    const existing = cleaned
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean)
+    if (existing.length === 3) return existing
+    if (existing.length > 3) {
+      return [
+        existing[0],
+        existing.slice(1, -1).join(' '),
+        existing[existing.length - 1],
+      ].filter(Boolean)
+    }
+
+    const sentences = cleaned
+      .replace(/\n+/g, ' ')
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter(Boolean)
+    if (sentences.length <= 3) {
+      return [
+        sentences[0] ?? cleaned,
+        sentences[1] ?? '',
+        sentences.slice(2).join(' '),
+      ].filter(Boolean)
+    }
+
+    const target = Math.ceil(sentences.length / 3)
+    return [
+      sentences.slice(0, target).join(' '),
+      sentences.slice(target, target * 2).join(' '),
+      sentences.slice(target * 2).join(' '),
+    ].filter(Boolean)
+  }
+
   function renderAnalysisList(title: string, items: string[]) {
     const cleanItems = items.map(cleanUiText).filter(Boolean).slice(0, 4)
     if (cleanItems.length === 0) return null
@@ -1665,8 +1703,12 @@ function SituationCardPanel({ sc, lang, onExpand }: {
                 {lang === 'FR' ? 'RÉSUMÉ' : 'SUMMARY'}
               </div>
               {lectureText && (
-                <div style={{ fontSize: 18, color: TXT, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.72, whiteSpace: 'pre-line' }}>
-                  {cleanLectureText(lectureText)}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 18, color: TXT, fontStyle: 'italic', fontFamily: "'Cormorant Garamond',serif", lineHeight: 1.72 }}>
+                  {summaryParagraphs(lectureText).map((paragraph, index) => (
+                    <p key={index} style={{ margin: 0 }}>
+                      {paragraph}
+                    </p>
+                  ))}
                 </div>
               )}
               <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
