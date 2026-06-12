@@ -151,7 +151,13 @@ function publicAnchors(items: string[], fallback: string, max = 4): string {
 }
 
 function sourceSignalAnchors(resonance: ResonanceTraceContract): string[] {
-  return unique(resonance.source_signals.map((signal) => signal.signal_fr))
+  const concreteTransition = /un acte,\s*une preuve ou un seuil observable/i.test(resonance.transition_signal_fr)
+    ? ''
+    : resonance.transition_signal_fr
+  return unique([
+    ...resonance.source_signals.map((signal) => signal.signal_fr),
+    concreteTransition,
+  ])
     .filter((item) => !isPublicPlaceholder(item) && !isPublicSpineNoise(item))
     .slice(0, 3)
 }
@@ -1609,7 +1615,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       sections_fr: canonicalApprofondirSections({
         really: `${missingExternalEvidence ? 'Lecture structurelle provisoire : aucun signal public n’a été retenu comme preuve suffisante. ' : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
         holds: sourcedContradictionText || resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
-        weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un constat vérifiable.`,
+        weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce passage n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un constat vérifiable.`,
         escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
         shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr} ${probabilityChange}`,
         watch: `${conciseWatchSignal(firstEvidence)} ${probabilityChange} À vérifier : ${blindSpot}.`,

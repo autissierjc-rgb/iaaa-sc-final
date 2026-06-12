@@ -245,7 +245,7 @@ function buildStructuralContradiction(actors: string[], institutions: string[]):
 function defaultStructuralGap(input: ResonanceTraceInput): string {
   const corpus = corpusText(input)
   if (/\b(guerre|frappe|cessez[-\s]?le[-\s]?feu|ceasefire|iran|isra[ëe]l|[ée]tats[-\s]?unis|usa|u\.s\.)\b/i.test(corpus)) {
-    return 'le mécanisme qui transforme la frappe, la riposte ou la négociation en seuil officiel'
+    return 'le passage entre signaux publics, décision assumée et seuil opposable'
   }
 
   if (/\b(vendre|exploiter|exploitation|licence|licensing|cession|cessionner|monetiser|monétiser|valoriser|partenariat|partenaire|investir|internaliser|externaliser|option|options)\b/i.test(corpus)) {
@@ -256,7 +256,7 @@ function defaultStructuralGap(input: ResonanceTraceInput): string {
     return 'le passage entre intérêt exprimé et usage répété'
   }
 
-  return 'le mécanisme qui transforme la tension visible en contrainte effective'
+  return 'le passage entre tension visible, acteur habilité et contrainte effective'
 }
 
 function tantQue(signal: string): string {
@@ -272,16 +272,12 @@ function buildStructuralVulnerability(structuralGap: string, transitionSignal: s
     return `Le point fragile est ${structuralGap} : tant qu’il ne se traduit pas par un usage répété, une demande explicite ou un paiement, la cible reste une hypothèse.`
   }
 
-  return `Le point fragile est ${structuralGap} : ${tantQue(transitionSignal)} ne le rend pas opposable, la situation peut rester lisible sans devenir décidable.`
+  return `Le point fragile est ${structuralGap} : ${tantQue(transitionSignal)} ne force pas un acteur habilité à décider, refuser ou formaliser un seuil, les faits restent interprétables sans organiser les choix.`
 }
 
 function buildDiamondThesis(actors: string[], structuralGap: string, transitionSignal: string): string {
   const actorLine = visibleList(actors, 'les acteurs concernés')
-  if (/frappe|riposte|n[ée]gociation|militaire|diplomatique/i.test(structuralGap)) {
-    return `La situation tient tant que ${actorLine} peuvent absorber l’écart entre récit, coût et décision ; elle bascule quand ${transitionSignal} transforme la riposte ou la négociation en seuil public.`
-  }
-
-  return `La situation tient tant que ${actorLine} peuvent absorber l’écart entre récit, coût et décision ; elle bascule quand ${transitionSignal} rend ${structuralGap} impossible à contourner.`
+  return `Le point décisif n’est pas la tension visible entre ${actorLine}, mais ${structuralGap} : ${transitionSignal} ne change le régime que s’il oblige un acteur habilité à assumer publiquement le seuil.`
 }
 
 function corpusText(input: ResonanceTraceInput): string {
