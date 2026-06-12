@@ -184,7 +184,7 @@ function transitionSignalAnchor(value: string, sourceHosts: string[], sourceLabe
   if (item.length > 160) return false
   if (/^(?:ce que fait|ce que le site permet|workflow produit|cas d[’']usage visibles?|preuves? ou signaux visibles?)\b/i.test(item)) return false
 
-  return /\b(?:acte|arbitrage|choix|contrat|d[ée]cision|d[ée]claration|demande|document|int[ée]gration|paiement|preuve|proc[ée]dure|refus|r[èe]gle|r[ée]tention|seuil|signal|usage|v[ée]rification)\b/i.test(item)
+  return /\b(?:accord|acte|arbitrage|attaque|blocage|cessez[-\s]?le[-\s]?feu|choix|contrat|d[ée]cision|d[ée]claration|demande|document|frappe|hostilit[ée]s?|int[ée]gration|n[ée]gociation|officiel|paiement|preuve|proc[ée]dure|refus|r[èe]gle|r[ée]tention|seuil|signal|usage|v[ée]rification)\b/i.test(item)
 }
 
 function firstUseful(items: string[], fallback: string): string {
@@ -209,6 +209,31 @@ function relevantSourceSignal(signal: { signal_fr: string; source_title: string;
   }
 
   return overlap.length >= 1
+}
+
+function sourceSignalAsTransition(value: string): string {
+  const text = normalize(value)
+  const hasNegotiation = /\b(agreement|deal|ceasefire|halt|talks?|negotiat|accord|cessez|negociation)\b/i.test(text)
+  const hasStalled = /\b(stall|stalled|blocked|bloqu|paralyse|fragile)\b/i.test(text)
+  const hasHostility = /\b(attack|attacks|strike|strikes|hostilit|flare|damag|injur|missile|crossfire|frappe|attaque|hostilite)\b/i.test(text)
+  const hasOfficial = /\b(official|warning|statement|decision|reported|confirmed|source|declaration|communique|avertissement)\b/i.test(text)
+  const hasThreshold = /\b(threshold|thresholds|seuil|seuils|military|militaire)\b/i.test(text)
+  const hasInfrastructure = /\b(blockade|port|ports|shipping|merchant|vessel|energy|oil|airport|infrastructure)\b/i.test(text)
+
+  if (hasHostility && hasNegotiation) return 'un enchaînement hostilités/cessez-le-feu documenté'
+  if (hasNegotiation && hasStalled) return 'un blocage de négociation devenu public'
+  if (hasOfficial && hasThreshold) return 'un avertissement officiel sur un seuil militaire'
+  if (hasHostility && hasInfrastructure) return 'une atteinte à une infrastructure stratégique'
+  if (hasNegotiation) return 'une piste d’accord ou de cessez-le-feu rendue publique'
+  if (hasHostility) return 'un signal d’hostilités documenté'
+  if (hasOfficial) return 'une prise de position officielle vérifiable'
+  return 'un fait public qualifié'
+}
+
+function sourceTransitionsFromSignals(signals: Array<{ signal_fr: string }>): string[] {
+  return unique(signals.map((signal) => sourceSignalAsTransition(signal.signal_fr)))
+    .filter((signal) => signal !== 'un fait public qualifié')
+    .slice(0, 3)
 }
 
 function buildStructuralContradiction(actors: string[], institutions: string[]): string {
@@ -357,6 +382,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
   )
   const transitionSignal = firstUseful(
     unique([
+      ...sourceTransitionsFromSignals(sourceSignals),
       ...input.theatre.evidence.map((item) => item.label),
       ...input.theatre.visible_actions,
     ]).filter((item) => transitionSignalAnchor(item, sourceHosts, sourceLabels)),

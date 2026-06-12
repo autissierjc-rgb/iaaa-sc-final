@@ -366,39 +366,26 @@ function publicEvidenceSignalAnchors(resources?: ResourceServiceContract, releva
 function publicRegimeSignalsForWriting(resources?: ResourceServiceContract): string[] {
   return unique(buildResourceRegimeSignals(resources, 3)
     .map((signal) => publicFactSignal(signal.signal_fr))
-    .filter((signal) => signal.length > 0 && signal !== 'un fait public à vérifier'))
+    .filter((signal) => signal.length > 0 && signal !== 'un fait public qualifié'))
 }
 
 function publicFactSignal(value: string): string {
   const text = normalizeAnchor(value)
-  const signals: string[] = []
   const hasNegotiation = /\b(agreement|deal|ceasefire|halt|talks?|negotiat|accord|cessez|negociation)\b/i.test(text)
+  const hasStalled = /\b(stall|stalled|blocked|bloqu|paralyse|fragile)\b/i.test(text)
   const hasHostility = /\b(attack|attacks|strike|strikes|hostilit|flare|damag|injur|missile|crossfire|frappe|attaque|hostilite)\b/i.test(text)
   const hasOfficial = /\b(official|warning|statement|decision|reported|confirmed|source|declaration|communique|decision|avertissement)\b/i.test(text)
   const hasThreshold = /\b(threshold|thresholds|seuil|seuils|military|militaire)\b/i.test(text)
+  const hasInfrastructure = /\b(blockade|port|ports|shipping|merchant|vessel|energy|oil|airport|infrastructure)\b/i.test(text)
 
-  if (hasHostility && /\b(ceasefire|cessez)\b/i.test(text)) {
-    signals.push('un enchaînement hostilités/cessez-le-feu qui peut déplacer les marges de riposte')
-  }
-  if (hasNegotiation && /\b(stall|stalled|blocked|bloqu|paralyse)\b/i.test(text)) {
-    signals.push('des négociations bloquées par les combats qui fragilisent le cadre de sortie')
-  }
-  if (hasOfficial && hasThreshold) {
-    signals.push('un avertissement officiel sur des seuils militaires à vérifier')
-  }
-  if (hasNegotiation) {
-    signals.push('une piste d’accord ou de négociation à vérifier')
-  }
-  if (hasHostility) {
-    signals.push('un signal d’hostilités ou d’escalade à vérifier')
-  }
-  if (hasOfficial) {
-    signals.push('une trace publique à confronter à une source primaire')
-  }
-
-  return signals.length > 0
-    ? unique(signals).slice(0, 2).join(' et ')
-    : 'un fait public à vérifier'
+  if (hasHostility && hasNegotiation) return 'un enchaînement hostilités/cessez-le-feu documenté'
+  if (hasNegotiation && hasStalled) return 'un blocage de négociation devenu public'
+  if (hasOfficial && hasThreshold) return 'un avertissement officiel sur un seuil militaire'
+  if (hasHostility && hasInfrastructure) return 'une atteinte à une infrastructure stratégique'
+  if (hasNegotiation) return 'une piste d’accord ou de cessez-le-feu rendue publique'
+  if (hasHostility) return 'un signal d’hostilités documenté'
+  if (hasOfficial) return 'une prise de position officielle vérifiable'
+  return 'un fait public qualifié'
 }
 
 function looksLikeRawExternalExcerpt(value: string): boolean {
