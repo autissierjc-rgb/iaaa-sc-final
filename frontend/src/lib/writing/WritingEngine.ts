@@ -150,6 +150,57 @@ function publicAnchors(items: string[], fallback: string, max = 4): string {
   return (cleaned.length > 0 ? cleaned : [fallback]).slice(0, max).join(', ')
 }
 
+function sourceSignalAnchors(resonance: ResonanceTraceContract): string[] {
+  return unique(resonance.source_signals.map((signal) => signal.signal_fr))
+    .filter((item) => !isPublicPlaceholder(item) && !isPublicSpineNoise(item))
+    .slice(0, 3)
+}
+
+function sourceGroundedDiamondText({
+  resonance,
+  actors,
+  institutions,
+}: {
+  resonance: ResonanceTraceContract
+  actors: string
+  institutions: string
+}): string {
+  const signals = sourceSignalAnchors(resonance)
+  if (signals.length === 0) return ''
+
+  const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
+  return `Les faits publics retenus déplacent la lecture : ${signalLine}. ${actors} portent la tension visible, mais le point décisif est désormais la capacité de ${institutions} à convertir ces signaux en décision, refus, médiation ou seuil assumé.`
+}
+
+function sourceGroundedVulnerabilityText({
+  resonance,
+  institutions,
+}: {
+  resonance: ResonanceTraceContract
+  institutions: string
+}): string {
+  const signals = sourceSignalAnchors(resonance)
+  if (signals.length === 0) return ''
+
+  return `La vulnérabilité centrale est le passage entre signaux publics et décision assumée : tant que ${institutions} ne fixent pas le seuil, les faits restent interprétables sans devenir pleinement opposables.`
+}
+
+function sourceGroundedContradictionText({
+  resonance,
+  actors,
+  institutions,
+}: {
+  resonance: ResonanceTraceContract
+  actors: string
+  institutions: string
+}): string {
+  const signals = sourceSignalAnchors(resonance)
+  if (signals.length === 0) return ''
+
+  const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
+  return `${actors} exposent la tension ; ${institutions} gardent la main sur le cadrage public des signaux déjà visibles : ${signalLine}.`
+}
+
 function theatreEvidenceLabels(theatre: ConcreteTheatreContract): string[] {
   return theatre.evidence.map((item) => item.label)
 }
@@ -1427,8 +1478,11 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const probability = probabilityFromResources(input.resources, relevanceQuery) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
   const groundedFactOpening = groundedFactOpeningSentence(input.grounding, input.resources)
+  const sourcedDiamondText = sourceGroundedDiamondText({ resonance, actors, institutions })
+  const sourcedVulnerabilityText = sourceGroundedVulnerabilityText({ resonance, institutions })
+  const sourcedContradictionText = sourceGroundedContradictionText({ resonance, actors, institutions })
   const diamondText = polishPublicProofText(compactSentence(
-    resonance.diamond_thesis_fr || grammar.diamond(tension, institutions, firstProcedure),
+    sourcedDiamondText || resonance.diamond_thesis_fr || grammar.diamond(tension, institutions, firstProcedure),
     320,
   ))
 
@@ -1445,7 +1499,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     360,
   ))
   const vulnerability = polishPublicProofText(compactSentence(
-    resonance.structural_vulnerability_fr || grammar.vulnerability(blindSpot),
+    sourcedVulnerabilityText || resonance.structural_vulnerability_fr || grammar.vulnerability(blindSpot),
     320,
   ))
   const asymmetry = polishPublicProofText(compactSentence(grammar.asymmetry(actors, institutions)))
@@ -1486,7 +1540,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     evidenceGapOpening,
     groundedFactOpening,
     diamondText,
-    resonance.structural_contradiction_fr || `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
+    sourcedContradictionText || resonance.structural_contradiction_fr || `La scene utile n est donc pas le bruit public, mais la chaine qui relie ${actors}, ${firstProcedure} et ${evidence}.`,
     vulnerability,
   ].filter(Boolean).join(' ')
   const lectureFr = polishPublicProofText(compactSentence(lecture, 820))
@@ -1494,7 +1548,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     groundedFactOpening,
     diamondText,
     grammar.approfondirEntry,
-    resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
+    sourcedContradictionText || resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
     `Ce qu il faut etablir n est pas seulement l intention, mais le lien entre ${firstProcedure}, ${evidence} et ${blindSpot}.`,
     resourcesWarning ? resourcesWarning : '',
     trajectoryText,
@@ -1554,7 +1608,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       analysis_fr: polishPublicProofText(approfondirAnalysis),
       sections_fr: canonicalApprofondirSections({
         really: `${missingExternalEvidence ? 'Lecture structurelle provisoire : aucun signal public n’a été retenu comme preuve suffisante. ' : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
-        holds: resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
+        holds: sourcedContradictionText || resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
         weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce mécanisme n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un constat vérifiable.`,
         escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
         shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr} ${probabilityChange}`,
