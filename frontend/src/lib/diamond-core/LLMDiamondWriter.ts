@@ -3,9 +3,11 @@ import 'server-only'
 import { parseModelJSON } from '../ai/json'
 import type {
   DiamondSentence,
+  ProbabilityAssessment,
   QualityGateContract,
   SubstanceFormContract,
   TraceMeta,
+  TrajectoryContract,
   WritingContract,
 } from '../contracts'
 import { runQualityGate } from '../quality'
@@ -120,6 +122,129 @@ function normalizeStringArray(value: unknown, fallback: string[]): string[] {
   return single ? [single] : fallback
 }
 
+function assertionStatus(value: unknown): ProbabilityAssessment['status'] {
+  const status = asString(value)
+  const allowed: ProbabilityAssessment['status'][] = ['established', 'probable', 'plausible', 'hypothesis', 'unknown']
+  return allowed.includes(status as ProbabilityAssessment['status']) ? status as ProbabilityAssessment['status'] : 'hypothesis'
+}
+
+function probabilityLabel(status: ProbabilityAssessment['status']): string {
+  const labels: Record<ProbabilityAssessment['status'], string> = {
+    established: 'Établi',
+    probable: 'Probable',
+    plausible: 'Plausible',
+    hypothesis: 'Hypothèse à vérifier',
+    unknown: 'Inconnu',
+  }
+  return labels[status]
+}
+
+function normalizeProbabilityAssessments(value: unknown): ProbabilityAssessment[] {
+  return asArray(value)
+    .map((item) => {
+      const record = asRecord(item)
+      const status = assertionStatus(record.status)
+      const examples = asArray(record.examples)
+        .map((example) => {
+          const exampleRecord = asRecord(example)
+          const exampleText = firstString(exampleRecord.text_fr, exampleRecord.text)
+          if (!exampleText) return null
+          return {
+            text_fr: exampleText,
+            text_en: firstString(exampleRecord.text_en),
+            status: assertionStatus(exampleRecord.status),
+            source_ids: normalizeStringArray(exampleRecord.source_ids, []),
+          }
+        })
+        .filter((example): example is NonNullable<typeof example> => Boolean(example))
+      return {
+        claim_fr: firstString(record.claim_fr, record.claim),
+        claim_en: firstString(record.claim_en),
+        status,
+        probability_label_fr: firstString(record.probability_label_fr, record.label_fr, probabilityLabel(status)),
+        probability_label_en: firstString(record.probability_label_en),
+        confidence: typeof record.confidence === 'number' ? Math.max(0, Math.min(1, record.confidence)) : 0.45,
+        examples,
+        missing_proof_fr: firstString(record.missing_proof_fr),
+        missing_proof_en: firstString(record.missing_proof_en),
+      }
+    })
+    .filter((item) => item.claim_fr || item.probability_label_fr)
+}
+
+function trajectoryType(value: unknown, index: number): TrajectoryContract['type'] {
+  const type = asString(value)
+  const allowed: TrajectoryContract['type'][] = ['stabilization', 'escalation', 'regime_shift']
+  if (allowed.includes(type as TrajectoryContract['type'])) return type as TrajectoryContract['type']
+  return index === 1 ? 'escalation' : index === 2 ? 'regime_shift' : 'stabilization'
+}
+
+function normalizeTrajectories(value: unknown): TrajectoryContract[] {
+  return asArray(value)
+    .map((item, index) => {
+      const record = asRecord(item)
+      return {
+        type: trajectoryType(record.type, index),
+        title_fr: firstString(record.title_fr, record.title),
+        title_en: firstString(record.title_en),
+        description_fr: firstString(record.description_fr, record.description),
+        description_en: firstString(record.description_en),
+        signal_fr: firstString(record.signal_fr, record.signal),
+        signal_en: firstString(record.signal_en),
+      }
+    })
+    .filter((item) => item.title_fr || item.description_fr || item.signal_fr)
+}
+
+function normalizeSituationCardView(value: unknown, fallback: Record<string, unknown>): Record<string, unknown> {
+  const record = asRecord(value)
+  return {
+    ...record,
+    title_fr: firstString(record.title_fr, fallback.title_fr),
+    title_en: firstString(record.title_en),
+    submitted_situation_fr: firstString(record.submitted_situation_fr, fallback.submitted_situation_fr),
+    submitted_situation_en: firstString(record.submitted_situation_en),
+    insight_fr: firstString(record.insight_fr, fallback.insight_fr),
+    insight_en: firstString(record.insight_en),
+    main_vulnerability_fr: firstString(record.main_vulnerability_fr, fallback.main_vulnerability_fr),
+    main_vulnerability_en: firstString(record.main_vulnerability_en),
+    asymmetry_fr: firstString(record.asymmetry_fr, fallback.asymmetry_fr),
+    asymmetry_en: firstString(record.asymmetry_en),
+    key_signal_fr: firstString(record.key_signal_fr, fallback.key_signal_fr),
+    key_signal_en: firstString(record.key_signal_en),
+  }
+}
+
+function normalizeLecture(value: unknown): Record<string, unknown> {
+  const record = asRecord(value)
+  const textFr = firstString(record.text_fr, record.text)
+  return {
+    ...record,
+    text_fr: textFr,
+    text_en: firstString(record.text_en),
+    word_count_fr: typeof record.word_count_fr === 'number'
+      ? record.word_count_fr
+      : textFr.split(/\s+/).filter(Boolean).length,
+  }
+}
+
+function normalizeApprofondir(value: unknown): Record<string, unknown> {
+  const record = asRecord(value)
+  return {
+    ...record,
+    analysis_fr: firstString(record.analysis_fr, record.analysis),
+    analysis_en: firstString(record.analysis_en),
+    sections_fr: asArray(record.sections_fr).map((section, index) => {
+      const sectionRecord = asRecord(section)
+      return {
+        id: firstString(sectionRecord.id, `section-${index + 1}`),
+        title: firstString(sectionRecord.title),
+        body: firstString(sectionRecord.body, sectionRecord.text),
+      }
+    }).filter((section) => section.title || section.body),
+  }
+}
+
 function normalizeSubstanceForm(
   value: unknown,
   diamondSentences: DiamondSentence[],
@@ -144,7 +269,8 @@ function normalizeSubstanceForm(
 }
 
 function coerceWritingContractShape(value: Record<string, unknown>): Record<string, unknown> {
-  const situationCard = asRecord(value.situation_card)
+  const rawSituationCard = asRecord(value.situation_card)
+  const situationCard = normalizeSituationCardView(rawSituationCard, {})
   const substanceForm = asRecord(value.substance_form)
   const diamondSentences = normalizeDiamondSentences(value.diamond_sentences, situationCard, substanceForm)
   const normalizedSubstanceForm = normalizeSubstanceForm(value.substance_form, diamondSentences, situationCard)
@@ -153,6 +279,12 @@ function coerceWritingContractShape(value: Record<string, unknown>): Record<stri
     ...value,
     substance_form: normalizedSubstanceForm,
     diamond_sentences: diamondSentences,
+    probability_assessments: normalizeProbabilityAssessments(value.probability_assessments),
+    situation_card: situationCard,
+    trajectories: normalizeTrajectories(value.trajectories),
+    lecture: normalizeLecture(value.lecture),
+    approfondir: normalizeApprofondir(value.approfondir),
+    public_warnings: normalizeStringArray(value.public_warnings, []),
   }
 }
 

@@ -22,50 +22,58 @@ export type QualityGateInput = {
   resonance?: ResonanceTraceContract
 }
 
+function textValue(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function arrayValue<T>(value: T[] | undefined): T[] {
+  return Array.isArray(value) ? value : []
+}
+
 function publicText(writing: WritingContract): string {
   return [
-    writing.situation_card.title_fr,
-    writing.situation_card.submitted_situation_fr,
-    writing.situation_card.insight_fr,
-    writing.situation_card.main_vulnerability_fr,
-    writing.situation_card.asymmetry_fr,
-    writing.situation_card.key_signal_fr,
-    writing.lecture.text_fr,
-    writing.approfondir.analysis_fr,
-    ...writing.approfondir.sections_fr.map((section) => `${section.title} ${section.body}`),
+    textValue(writing.situation_card?.title_fr),
+    textValue(writing.situation_card?.submitted_situation_fr),
+    textValue(writing.situation_card?.insight_fr),
+    textValue(writing.situation_card?.main_vulnerability_fr),
+    textValue(writing.situation_card?.asymmetry_fr),
+    textValue(writing.situation_card?.key_signal_fr),
+    textValue(writing.lecture?.text_fr),
+    textValue(writing.approfondir?.analysis_fr),
+    ...arrayValue(writing.approfondir?.sections_fr).map((section) => `${textValue(section.title)} ${textValue(section.body)}`),
   ].join(' ')
 }
 
 function lectureAndApprofondirText(writing: WritingContract): string {
   return [
-    writing.lecture.text_fr,
-    writing.approfondir.analysis_fr,
-    ...writing.approfondir.sections_fr.map((section) => `${section.title} ${section.body}`),
+    textValue(writing.lecture?.text_fr),
+    textValue(writing.approfondir?.analysis_fr),
+    ...arrayValue(writing.approfondir?.sections_fr).map((section) => `${textValue(section.title)} ${textValue(section.body)}`),
   ].join(' ')
 }
 
 function diamondNarrativeText(writing: WritingContract): string {
   return [
-    writing.situation_card.insight_fr,
-    writing.situation_card.main_vulnerability_fr,
-    writing.situation_card.asymmetry_fr,
-    writing.situation_card.key_signal_fr,
-    writing.lecture.text_fr,
-    writing.approfondir.analysis_fr,
-    ...writing.approfondir.sections_fr
+    textValue(writing.situation_card?.insight_fr),
+    textValue(writing.situation_card?.main_vulnerability_fr),
+    textValue(writing.situation_card?.asymmetry_fr),
+    textValue(writing.situation_card?.key_signal_fr),
+    textValue(writing.lecture?.text_fr),
+    textValue(writing.approfondir?.analysis_fr),
+    ...arrayValue(writing.approfondir?.sections_fr)
       .filter((section) => section.id !== 'resources' && section.id !== 'ressources')
-      .map((section) => section.body),
+      .map((section) => textValue(section.body)),
   ].join(' ')
 }
 
 function canonicalQuestionText(interpretation: InterpretationContract): string {
   return [
-    interpretation.raw_input,
-    interpretation.situation_soumise,
-    interpretation.object_of_analysis,
-    interpretation.header_subject,
-    interpretation.angle,
-    interpretation.user_need,
+    textValue(interpretation.raw_input),
+    textValue(interpretation.situation_soumise),
+    textValue(interpretation.object_of_analysis),
+    textValue(interpretation.header_subject),
+    textValue(interpretation.angle),
+    textValue(interpretation.user_need),
   ].join(' ')
 }
 
@@ -247,13 +255,13 @@ function hasRepeatedSubmittedSentence(value: string): boolean {
 }
 
 function hasSharpDiamond(writing: WritingContract): boolean {
-  return writing.diamond_sentences.some((sentence) => sentence.style === 'diamant_tranchant' && sentence.must_be_public)
+  return arrayValue(writing.diamond_sentences).some((sentence) => sentence.style === 'diamant_tranchant' && sentence.must_be_public)
 }
 
 function diamondText(writing: WritingContract): string {
-  return writing.diamond_sentences
+  return arrayValue(writing.diamond_sentences)
     .filter((sentence) => sentence.must_be_public)
-    .map((sentence) => sentence.text_fr)
+    .map((sentence) => textValue(sentence.text_fr))
     .join(' ')
 }
 
@@ -302,7 +310,8 @@ function hasExplicitTargetRanking(normalizedPublicText: string): boolean {
   return hasPriority && hasSecond && hasDeferred
 }
 
-function normalize(value: string): string {
+function normalize(value: unknown): string {
+  if (typeof value !== 'string') return ''
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -452,13 +461,14 @@ function publicEvidenceVisible(resources: ResourceServiceContract | undefined, n
 }
 
 function trajectoryVisibilityCount(input: QualityGateInput, normalizedPublicText: string): number {
-  if (input.writing.trajectories.length === 0) return 0
+  const trajectories = arrayValue(input.writing.trajectories)
+  if (trajectories.length === 0) return 0
   const byType = [
     normalizedPublicText.includes('stabilisation') || normalizedPublicText.includes('clarification'),
     normalizedPublicText.includes('escalade') || normalizedPublicText.includes('tension accrue'),
     normalizedPublicText.includes('bascule') || normalizedPublicText.includes('regime shift') || normalizedPublicText.includes('rupture'),
   ].filter(Boolean).length
-  const byTitle = input.writing.trajectories.filter((trajectory) => {
+  const byTitle = trajectories.filter((trajectory) => {
     const title = normalize(trajectory.title_fr)
     return title && normalizedPublicText.includes(title)
   }).length
@@ -466,7 +476,7 @@ function trajectoryVisibilityCount(input: QualityGateInput, normalizedPublicText
 }
 
 function probabilityVisible(input: QualityGateInput, normalizedPublicText: string): boolean {
-  const probability = input.writing.probability_assessments[0]
+  const probability = arrayValue(input.writing.probability_assessments)[0]
   if (!probability) return false
   const label = normalize(probability.probability_label_fr)
   return Boolean(
@@ -519,8 +529,8 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const gluedTrajectoryPattern = GLUED_TRAJECTORY_PATTERNS.find((pattern) => pattern.test(text))
   const repeatedSignal = repeatedSignalPhrase(normalizedNarrativeText)
   const defensiveOpeningPattern = DEFENSIVE_PUBLIC_OPENING_PATTERNS.find((pattern) =>
-    pattern.test(input.writing.lecture.text_fr.slice(0, 320)) ||
-    pattern.test(input.writing.situation_card.insight_fr.slice(0, 320)),
+    pattern.test(textValue(input.writing.lecture?.text_fr).slice(0, 320)) ||
+    pattern.test(textValue(input.writing.situation_card?.insight_fr).slice(0, 320)),
   )
   const abstractUnderstandingFallbackPattern = ABSTRACT_UNDERSTANDING_FALLBACK_PATTERNS.find((pattern) =>
     pattern.test(normalizedText),
@@ -528,14 +538,14 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const rawExternalExcerptPattern = RAW_EXTERNAL_EXCERPT_PATTERNS.find((pattern) =>
     pattern.test(text),
   )
-  const repeatedSection = input.writing.approfondir.sections_fr.find((section) =>
-    bodyRepeatsTitle(section.title, section.body),
+  const repeatedSection = arrayValue(input.writing.approfondir?.sections_fr).find((section) =>
+    bodyRepeatsTitle(textValue(section.title), textValue(section.body)),
   )
   const leakedCausalFrame = !isCausalAttributionFrame(input)
     ? CAUSAL_FRAME_PUBLIC_PATTERNS.find((pattern) => pattern.test(normalizedText))
     : undefined
 
-  if (hasRepeatedSubmittedSentence(input.writing.situation_card.submitted_situation_fr)) {
+  if (hasRepeatedSubmittedSentence(textValue(input.writing.situation_card?.submitted_situation_fr))) {
     issues.push(issue(
       'error',
       'REPEATED_SUBMITTED_SITUATION',
@@ -746,7 +756,7 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     ))
   }
 
-  if (input.writing.diamond_sentences.length === 0) {
+  if (arrayValue(input.writing.diamond_sentences).length === 0) {
     issues.push(issue('error', 'MISSING_DIAMOND_SENTENCE', 'Writing must include at least one diamond sentence.', 'writing.diamond_sentences'))
   }
 
@@ -765,11 +775,11 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     }
   }
 
-  if (input.writing.probability_assessments.length === 0) {
+  if (arrayValue(input.writing.probability_assessments).length === 0) {
     issues.push(issue('warning', 'MISSING_PROBABILITY', 'Writing should state assertion status when evidence is incomplete.', 'writing.probability_assessments'))
   }
 
-  if (input.writing.trajectories.length >= 3) {
+  if (arrayValue(input.writing.trajectories).length >= 3) {
     const visibleTrajectories = trajectoryVisibilityCount(input, normalizedNarrativeText)
     if (visibleTrajectories < 3) {
       issues.push(issue(
@@ -781,7 +791,7 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     }
   }
 
-  if (input.writing.probability_assessments.length > 0 && !probabilityVisible(input, normalizedNarrativeText)) {
+  if (arrayValue(input.writing.probability_assessments).length > 0 && !probabilityVisible(input, normalizedNarrativeText)) {
     issues.push(issue(
       'warning',
       'PROBABILITY_UNDERUSED_IN_NARRATIVE',
@@ -877,13 +887,13 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     ))
   }
 
-  if (input.writing.situation_card.main_vulnerability_fr.length < 30) {
+  if (textValue(input.writing.situation_card?.main_vulnerability_fr).length < 30) {
     issues.push(issue('warning', 'WEAK_MAIN_VULNERABILITY', 'Main vulnerability looks too short or generic.', 'writing.situation_card.main_vulnerability_fr'))
   }
 
   const weakVulnerabilityPattern = WEAK_VULNERABILITY_PATTERNS.find((pattern) =>
-    pattern.test(input.writing.situation_card.main_vulnerability_fr) ||
-    pattern.test(input.writing.approfondir.sections_fr.map((section) => section.body).join(' ')),
+    pattern.test(textValue(input.writing.situation_card?.main_vulnerability_fr)) ||
+    pattern.test(arrayValue(input.writing.approfondir?.sections_fr).map((section) => textValue(section.body)).join(' ')),
   )
   if (weakVulnerabilityPattern) {
     issues.push(issue(
