@@ -220,6 +220,22 @@ const DEFENSIVE_PUBLIC_OPENING_PATTERNS = [
   /\bne doit pas être remplacé par\b/i,
 ]
 
+const PRESS_SUMMARY_OPENING_PATTERNS = [
+  /\bla situation actuelle est marqu[ée]e par\b/i,
+  /\bla situation est marqu[ée]e par\b/i,
+  /\bles tensions? (?:sont|restent) (?:fortes?|vives?|croissantes?)\b/i,
+  /\bun signal cl[ée] [aà] surveiller est\b/i,
+]
+
+const PROBABILITY_STATUS_SECTION_TITLES = [
+  'ce qui est etabli',
+  'ce qui est etablie',
+  'ce qui est probable',
+  'ce qui est plausible',
+  'ce qui est hypothetique',
+  'ce qui est inconnu',
+]
+
 const ABSTRACT_UNDERSTANDING_FALLBACK_PATTERNS = [
   /la tension peut etre largement commentee/i,
   /passage entre crainte,\s*intention,\s*capacite reelle et acte verifiable/i,
@@ -490,6 +506,15 @@ function probabilityVisible(input: QualityGateInput, normalizedPublicText: strin
   )
 }
 
+function probabilityStatusSectionTitles(writing: WritingContract): string[] {
+  return arrayValue(writing.approfondir?.sections_fr)
+    .map((section) => textValue(section.title))
+    .filter((title) => {
+      const normalizedTitle = normalize(title).replace(/[^a-z0-9]+/g, ' ').trim()
+      return PROBABILITY_STATUS_SECTION_TITLES.includes(normalizedTitle)
+    })
+}
+
 function isCausalAttributionFrame(input: QualityGateInput): boolean {
   return (
     input.interpretation.question_type === 'causal_attribution' ||
@@ -532,6 +557,11 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     pattern.test(textValue(input.writing.lecture?.text_fr).slice(0, 320)) ||
     pattern.test(textValue(input.writing.situation_card?.insight_fr).slice(0, 320)),
   )
+  const pressSummaryOpeningPattern = PRESS_SUMMARY_OPENING_PATTERNS.find((pattern) =>
+    pattern.test(textValue(input.writing.lecture?.text_fr).slice(0, 360)) ||
+    pattern.test(textValue(input.writing.situation_card?.insight_fr).slice(0, 360)),
+  )
+  const probabilityStatusTitles = probabilityStatusSectionTitles(input.writing)
   const abstractUnderstandingFallbackPattern = ABSTRACT_UNDERSTANDING_FALLBACK_PATTERNS.find((pattern) =>
     pattern.test(normalizedText),
   )
@@ -605,6 +635,24 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       'DEFENSIVE_PUBLIC_OPENING',
       `Public writing starts by explaining what it is not doing instead of entering the situation: ${defensiveOpeningPattern.source}.`,
       'writing.lecture',
+    ))
+  }
+
+  if (pressSummaryOpeningPattern) {
+    issues.push(issue(
+      'error',
+      'PRESS_SUMMARY_INSTEAD_OF_DIAMOND',
+      `Public writing opens as a press summary instead of a diamond contradiction: ${pressSummaryOpeningPattern.source}.`,
+      'writing.lecture',
+    ))
+  }
+
+  if (probabilityStatusTitles.length >= 3) {
+    issues.push(issue(
+      'error',
+      'PROBABILITY_STATUSES_AS_PUBLIC_SECTIONS',
+      `Approfondir uses proof statuses as public section titles instead of structural diamond sections: ${probabilityStatusTitles.join(', ')}.`,
+      'writing.approfondir.sections_fr',
     ))
   }
 
