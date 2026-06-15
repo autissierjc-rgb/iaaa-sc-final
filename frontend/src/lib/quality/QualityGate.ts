@@ -184,6 +184,7 @@ const PUBLIC_RESOURCE_NOISE_PATTERNS = [
   /\[[^\]]+]\(https?:\/\//i,
   /(?:^|\s)(?:image|img)\s*\d{1,4}\b/i,
   /\.(?:avif|png|jpe?g|gif|webp|svg)(?:\)|\s|$)/i,
+  /\b(?:[a-z0-9-]+\.)+(?:com|org|net|fr|co|io|gov|edu|info)\b/i,
   /\s[-–]\s(?:reuters|politico|associated press|ap news|apnews|bbc|cnn|nyt|new york times|washington post|haaretz|times of israel|bloomberg|financial times|ft\.com|axios|the guardian|le monde|afp|france 24)\b/i,
 ]
 
@@ -268,6 +269,10 @@ function hasRepeatedSubmittedSentence(value: string): boolean {
     .map((part) => normalizedSentenceKey(part))
     .filter((part) => part.length >= 18)
   return parts.some((part, index) => parts.indexOf(part) !== index)
+}
+
+function wordCount(value: string): number {
+  return value.split(/\s+/).filter(Boolean).length
 }
 
 function hasSharpDiamond(writing: WritingContract): boolean {
@@ -571,6 +576,7 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const repeatedSection = arrayValue(input.writing.approfondir?.sections_fr).find((section) =>
     bodyRepeatsTitle(textValue(section.title), textValue(section.body)),
   )
+  const lectureWordCount = wordCount(textValue(input.writing.lecture?.text_fr))
   const leakedCausalFrame = !isCausalAttributionFrame(input)
     ? CAUSAL_FRAME_PUBLIC_PATTERNS.find((pattern) => pattern.test(normalizedText))
     : undefined
@@ -590,6 +596,15 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       'PUBLIC_PROBATIVE_EVIDENCE_NOISE',
       `Public writing contains raw resource noise instead of qualified evidence: ${noisyResourcePattern.source}.`,
       'writing',
+    ))
+  }
+
+  if (lectureWordCount > 170) {
+    issues.push(issue(
+      'error',
+      'LECTURE_TOO_LONG_FOR_PUBLIC_CARD',
+      `Lecture has ${lectureWordCount} words; public card lecture must stay compact and leave the long form to Approfondir.`,
+      'writing.lecture.text_fr',
     ))
   }
 
