@@ -1950,6 +1950,24 @@ function canonicalSituationFromResponse(data: any, fallback: string): string {
   return canonical || fallback
 }
 
+function publicResourceCount(sc: any): number {
+  return Array.isArray(sc?.resources) ? sc.resources.length : 0
+}
+
+function shouldReplaceProgressiveCard(current: any, next: any): boolean {
+  if (!next || typeof next !== 'object') return false
+
+  const currentResources = publicResourceCount(current)
+  const nextResources = publicResourceCount(next)
+  if (currentResources > 0 && nextResources === 0) return false
+
+  const currentStatus = String(current?.generation_status ?? 'ok')
+  const nextStatus = String(next?.generation_status ?? 'ok')
+  if (currentStatus === 'ok' && /^(?:degraded|blocked)$/i.test(nextStatus)) return false
+
+  return true
+}
+
 function sanitizeSituationDraft(value: string): string {
   const markers = [
     /\n\s*Restreint\s*\n\s*Public/i,
@@ -2324,9 +2342,13 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           window.clearTimeout(fullTimeout)
           const payload = await fullResponse.json()
           if (payload?.gate === 'GENERATE' && payload.sc) {
-            setScData(payload.sc)
-            setActiveSituation(canonicalSituationFromResponse(payload.sc, canonicalText))
-            setChatMsgs(prev => syncRefineMessages(prev, collaborativeQuestionsFromSc(payload.sc), 'post_complete'))
+            if (shouldReplaceProgressiveCard(scData2.sc, payload.sc)) {
+              setScData(payload.sc)
+              setActiveSituation(canonicalSituationFromResponse(payload.sc, canonicalText))
+              setChatMsgs(prev => syncRefineMessages(prev, collaborativeQuestionsFromSc(payload.sc), 'post_complete'))
+            } else {
+              setChatMsgs(prev => syncRefineMessages(prev, fastBridgeQuestions, 'bridge_to_complete'))
+            }
           } else if (payload?.gate === 'CLARIFY' || payload?.gate === 'REFINE_OPTIONAL') {
             const bridgeQuestions = Array.isArray(payload.questions) && payload.questions.length > 0
               ? payload.questions
