@@ -1544,6 +1544,36 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
   }
 }
 
+function exposeWritingApprofondir(card: SituationCard, writing: WritingContract | null): SituationCard {
+  if (!writing || writing.trace.status === 'error') return card
+
+  const sectionsFr = writing.approfondir.sections_fr
+    .map((section) => ({
+      title: cleanPublicText(section.title),
+      body: cleanPublicText(section.body),
+    }))
+    .filter((section) => section.title && section.body)
+  const sectionsTextFr = sectionsFr.map((section) => `${section.title}\n${section.body}`).join('\n\n')
+  const approfondirFr = [
+    cleanPublicText(writing.approfondir.analysis_fr ?? ''),
+    sectionsTextFr,
+  ].filter(Boolean).join('\n\n')
+  const approfondirEn = cleanPublicText(writing.approfondir.analysis_en ?? '')
+
+  if (!approfondirFr && sectionsFr.length === 0) return card
+
+  return {
+    ...card,
+    approfondir_fr: cleanPublicText(String(card.approfondir_fr ?? '')) || approfondirFr,
+    approfondir_en: cleanPublicText(String(card.approfondir_en ?? '')) || approfondirEn || approfondirFr,
+    approfondir: {
+      analysis_fr: cleanPublicText(writing.approfondir.analysis_fr ?? ''),
+      analysis_en: cleanPublicText(writing.approfondir.analysis_en ?? ''),
+      sections_fr: sectionsFr,
+    },
+  }
+}
+
 function markFullDiamondFallbackAsProvisional(
   writing: WritingContract | null,
   reason: string,
@@ -5017,7 +5047,7 @@ export async function POST(req: NextRequest) {
       ? await runFastResourceRunner({
           interpretation: canonicalInterpretation,
           resource_plan: fastResourcePlan,
-          timeout_ms: hasUrlInFlow ? MIN_FAST_RESOURCE_TIMEOUT_MS : mode === 'generate_full' ? 2500 : MIN_FAST_RESOURCE_TIMEOUT_MS,
+          timeout_ms: MIN_FAST_RESOURCE_TIMEOUT_MS,
           max_sources: 3,
         })
       : undefined
@@ -5733,7 +5763,10 @@ export async function POST(req: NextRequest) {
         }
         : null
     }
-    baseSc = applyWritingContractToCard(baseSc, writingContract, generationDisplayText)
+    baseSc = exposeWritingApprofondir(
+      applyWritingContractToCard(baseSc, writingContract, generationDisplayText),
+      writingContract
+    )
     if (qualityHasError && !diamondArchitectWriter?.accepted) {
       baseSc = {
         ...baseSc,

@@ -2337,6 +2337,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
               refine_acknowledged: true,
               conversation_contract: scData2.sc.conversation_contract ?? scData?.conversation_contract,
               dialogue_events: dialogueEvents,
+              resources: Array.isArray(scData2.sc.resources) ? scData2.sc.resources : [],
             }),
           })
           window.clearTimeout(fullTimeout)
@@ -2518,7 +2519,17 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
   async function handleFlashExpand(text: string) {
     setScLoading(true); setCompassMode('full')
     try {
-      const scRes = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ situation: text, mode: 'generate_full', lang: contentLang.toLowerCase(), conversation_contract: scData?.conversation_contract }) })
+      const scRes = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          situation: text,
+          mode: 'generate_full',
+          lang: contentLang.toLowerCase(),
+          conversation_contract: scData?.conversation_contract,
+          resources: Array.isArray(scData?.resources) ? scData.resources : [],
+        }),
+      })
       const scData2 = await scRes.json()
       if (scData2.sc) { setScData(scData2.sc) }
     } catch (e) { console.error(e) }
