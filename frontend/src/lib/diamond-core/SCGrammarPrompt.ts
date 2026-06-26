@@ -239,7 +239,7 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       'Never open with generic scaffolding such as "La situation ne se réduit pas...", "distribution de leviers", "ce qui garde encore la face" or "un acteur qui change de rythme".',
       'A diamond sentence must name the contradiction directly: actor + mechanism/threshold + proof/status. No abstract preamble.',
       'situation_card.main_vulnerability_fr must be specific, structural and testable.',
-      'situation_card.asymmetry_fr must name the asymmetry of power, proof, role, timing or adoption; never append source domains, media names or citation fragments.',
+      'situation_card.asymmetry_fr must name the asymmetry of power, proof, role, timing or adoption.',
       'situation_card.key_signal_fr must name the observable signal that would change the regime of the situation.',
       'Every public card must make the user see the system, feel the fragile point, and know what to watch.',
       ...(hasRegimeSignals
@@ -267,7 +267,7 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
           ]
         : []),
       'trajectories must include exactly one stabilization, one escalation and one regime_shift.',
-      'lecture.text_fr must be a short summary: 2 short paragraphs maximum, ideally under 160 words, not a mini-Approfondir.',
+      'lecture.text_fr must be a short summary: 2 short paragraphs maximum, not a mini-Approfondir.',
       'lecture.text_fr must not carry the full trajectory spine or the detailed probability demonstration when approfondir.sections_fr carries them.',
       'approfondir.sections_fr must keep the public structural spine: what the situation is, what holds, what weakens, what could escalate, what could shift, and what to watch.',
       'Use established/probable/plausible/hypothesis/unknown as proof status inside the reasoning and probability_assessments, never as public section titles.',
