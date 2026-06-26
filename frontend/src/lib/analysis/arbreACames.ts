@@ -128,9 +128,6 @@ function withPowersContext(analysis: ArbreACamesAnalysis, powers: PowersContext)
 }
 
 function geopoliticalFrame(situation: string, resources: ResourceItem[], powers: PowersContext): ArbreACamesAnalysis {
-  const sourceHint = resources.length > 0
-    ? `sources mobilisées: ${resources.slice(0, 3).map((resource) => resource.source || resource.title).join(', ')}`
-    : 'acteurs et séquences disponibles dans la situation fournie'
   const base = compact(situation)
   const questionOnly = isQuestionOnly(situation)
   const globalQuestion = isGlobalQuestion(situation)
@@ -187,7 +184,7 @@ function geopoliticalFrame(situation: string, resources: ResourceItem[], powers:
     main_vulnerability_candidate:
       'La dissociation entre contrôle politique affiché et capacité concrète à absorber les pertes, les déplacements et la dégradation économique',
     load_bearing_contradiction:
-      `${subject || 'La situation'} : elle peut encore afficher de la tenue, mais dépend d’infrastructures, de perceptions publiques et de canaux diplomatiques fragilisés ; ${sourceHint}`,
+      `${subject || 'La situation'} : elle peut encore afficher de la tenue, mais dépend d’infrastructures, de perceptions publiques et de canaux diplomatiques fragilisés.`,
   }
 }
 
