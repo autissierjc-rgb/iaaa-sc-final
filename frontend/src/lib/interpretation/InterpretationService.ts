@@ -27,6 +27,7 @@ const DEFAULT_REFERENCE_MODEL = {
 }
 
 const SIGNIFICANT_WORD_MINIMUM = 3
+const OBJECT_HEADER_WORD_MINIMUM = 2
 
 const STOP_WORDS = new Set([
   'a',
@@ -131,10 +132,9 @@ function meaningfulWords(text: string): string[] {
 }
 
 function ensureHeaderSubject(interpreted: InterpretedRequest): string {
-  const source = interpreted.object_of_analysis || interpreted.user_question
-  const words = meaningfulWords(source)
+  const words = meaningfulWords(interpreted.object_of_analysis || '')
 
-  if (words.length >= SIGNIFICANT_WORD_MINIMUM) {
+  if (words.length >= OBJECT_HEADER_WORD_MINIMUM) {
     return words.slice(0, 5).join(' ')
   }
 

@@ -18,7 +18,6 @@ import { situationReadinessGate } from '@/lib/input/situationReadinessGate'
 import { clarifyBeforeGenerate } from '@/lib/intent/clarifyBeforeGenerate'
 import { applyConversationContractToIntent, buildConversationContract, shouldCarryConversationContract } from '@/lib/intent/conversationContract'
 import { buildCanonicalSituationFromDialogue, buildLocalCanonicalSituationFromDialogue } from '@/lib/intent/dialogueCanonicalizer'
-import { interpretRequest } from '@/lib/intent/interpretRequest'
 import { interpretRequestWithModel } from '@/lib/intent/modelIntentInterpreter'
 import { situationIntentRouter } from '@/lib/intent/situationIntentRouter'
 import { buildBlindSpotInquiry } from '@/lib/inquiry'
@@ -195,8 +194,9 @@ async function interpretRequestForPublicRoute(input: string, isPublicFast: boole
     return interpretRequestWithModel(input)
   }
 
+  const modelInterpretationPromise = interpretRequestWithModel(input)
   const modelInterpretation = await Promise.race([
-    interpretRequestWithModel(input),
+    modelInterpretationPromise,
     new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS)),
   ])
 
@@ -204,13 +204,13 @@ async function interpretRequestForPublicRoute(input: string, isPublicFast: boole
     return modelInterpretation
   }
 
-  const fallback = interpretRequest(input)
-  fallback.signals = [
-    ...(fallback.signals ?? []),
+  const delayedInterpretation = await modelInterpretationPromise
+  delayedInterpretation.signals = [
+    ...(delayedInterpretation.signals ?? []),
     `referent_llm_timeout=${PUBLIC_FAST_INTERPRETATION_TIMEOUT_MS}`,
-    'public_fast_local_interpretation_fallback',
+    'public_fast_referent_waited_after_timeout',
   ]
-  return fallback
+  return delayedInterpretation
 }
 
 function stripExplicitUrls(value: string): string {
@@ -1047,7 +1047,7 @@ function atlasDomainLabel(sc: SituationCard): string {
 function ensureMinimumSubjectWords(subject: string, fallback: string): string {
   const cleanSubject = stripEntityExplanations(subject)
   const meaningful = meaningfulHeaderWords(cleanSubject)
-  if (meaningful.length >= 3) return cleanSubject
+  if (meaningful.length >= 2) return cleanSubject
   const fallbackWords = meaningfulHeaderWords(fallback)
   return [...cleanSubject.split(/\s+/).filter(Boolean), ...fallbackWords]
     .filter((word, index, list) => list.findIndex((item) => item.toLowerCase() === word.toLowerCase()) === index)
@@ -4449,8 +4449,6 @@ export async function POST(req: NextRequest) {
       ? conversation_contract as ConversationContract
       : undefined
     const modelInterpreted = await interpretRequestForPublicRoute(interpretationText, isPublicFast)
-    const interpretationUsedLocalFallback = (modelInterpreted.signals ?? [])
-      .some((signal) => signal === 'public_fast_local_interpretation_fallback')
     modelInterpreted.signals = [
       ...(modelInterpreted.signals ?? []),
       `resource_role:${userMaterialRole.role}`,
@@ -4466,7 +4464,7 @@ export async function POST(req: NextRequest) {
     )
     const canonicalInterpretation = await interpretSituation({
       raw_input: interpretationText,
-      mode: isPublicFast && interpretationUsedLocalFallback ? 'local_contract' : 'referent_llm',
+      mode: 'referent_llm',
       preinterpreted: interpretedRequest,
     })
     const canonicalDialogueGate = runDialogueGate({ interpretation: canonicalInterpretation })
