@@ -1473,14 +1473,7 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
   if (!writing || writing.trace.status === 'error') return card
 
   const sc = writing.situation_card
-  if (isProvisionalFullDiamondFallback(writing)) {
-    return {
-      ...card,
-      generation_status: 'partial',
-      generation_error_public: 'La carte complète diamant n’a pas été validée ; cette sortie reste une lecture provisoire.',
-      writing_contract: writing,
-    }
-  }
+  const provisionalFullFallback = isProvisionalFullDiamondFallback(writing)
   const forceWritingContract = isTargetChoiceMaterialWriting(writing) || isDominantArchitectWriting(writing) || hasResonanceDiamondSpine(writing)
   const preferCompletedCard = shouldPreferCompletedCardAfterWriting(card)
   const vulnerabilityFrCandidates = preferCompletedCard
@@ -1519,6 +1512,7 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
       lecture_systeme_en: firstSafeText([writing.lecture.text_en, card.lecture_systeme_en], situation, card.lecture_systeme_en ?? card.lecture_systeme_fr ?? ''),
       approfondir_fr: contractPublicText(approfondirFr, String(card.approfondir_fr ?? '')),
       approfondir_en: firstSafeText([writing.approfondir.analysis_en, card.approfondir_en], situation, String(card.approfondir_en ?? card.approfondir_fr ?? '')),
+      generation_status: provisionalFullFallback ? 'partial' : card.generation_status,
       writing_contract: writing,
     }
   }
@@ -1540,6 +1534,7 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
     lecture_systeme_en: firstSafeText([writing.lecture.text_en, card.lecture_systeme_en], situation, card.lecture_systeme_en ?? card.lecture_systeme_fr ?? ''),
     approfondir_fr: firstPublicFrenchText([approfondirFr, card.approfondir_fr], situation, String(card.approfondir_fr ?? '')),
     approfondir_en: firstSafeText([writing.approfondir.analysis_en, card.approfondir_en], situation, String(card.approfondir_en ?? card.approfondir_fr ?? '')),
+    generation_status: provisionalFullFallback ? 'partial' : card.generation_status,
     writing_contract: writing,
   }
 }
@@ -5680,7 +5675,7 @@ export async function POST(req: NextRequest) {
           inquiry,
         })
       : null
-    const writingQuality = canonicalScoringForWriting && writingContract
+    let writingQuality = canonicalScoringForWriting && writingContract
       ? runQualityGate({
           interpretation: generationInterpretation,
           theatre: canonicalTheatre,
@@ -5690,18 +5685,18 @@ export async function POST(req: NextRequest) {
           resonance: resonanceTrace,
         })
       : null
-    const qualityIssues = [
+    let qualityIssues = [
       ...(contractQuality?.issues ?? []),
       ...(writingQuality?.issues ?? []),
     ]
-    const qualityActionableIssues = qualityIssues.filter((issue) => issue.level !== 'info')
-    const qualityHasError = qualityIssues.some((issue) => issue.level === 'error')
-    const qualityStatus = qualityHasError
+    let qualityActionableIssues = qualityIssues.filter((issue) => issue.level !== 'info')
+    let qualityHasError = qualityIssues.some((issue) => issue.level === 'error')
+    let qualityStatus = qualityHasError
       ? 'error'
       : qualityActionableIssues.length > 0
         ? 'partial'
         : 'ok'
-    const canonicalQuality = writingQuality ?? contractQuality
+    let canonicalQuality = writingQuality ?? contractQuality
     if (contractQuality || writingQuality) {
       recordGenerationTrace({
         status: qualityHasError ? 'error' : qualityActionableIssues.length > 0 ? 'partial' : 'ok',
@@ -5747,7 +5742,42 @@ export async function POST(req: NextRequest) {
               : 'quality_rejected_public_fallback',
           )
         : localWritingContract
-      writingContract = fallbackWriting
+      const fallbackQuality = canonicalScoringForWriting && fallbackWriting
+        ? runQualityGate({
+            interpretation: generationInterpretation,
+            theatre: canonicalTheatre,
+            scoring: canonicalScoringForWriting,
+            writing: fallbackWriting,
+            resources: diamondResourcePlan,
+            resonance: resonanceTrace,
+          })
+        : null
+      const fallbackHasError = !fallbackQuality || fallbackQuality.issues.some((issue) => issue.level === 'error')
+
+      recordGenerationTrace({
+        status: fallbackHasError
+          ? 'error'
+          : fallbackQuality?.trace.status === 'ok'
+            ? 'ok'
+            : 'partial',
+        gate: 'GENERATE',
+        route: '/api/generate',
+        canonicalLayer: 'quality',
+        pipelineStep: 'DiamondDisplayGate:fallback_quality',
+        diagnostic: fallbackQuality
+          ? fallbackQuality.issues.map((issue) => issue.code).join(' | ').slice(0, 240) || 'fallback_quality_ok'
+          : 'fallback_quality_not_run',
+        durationMs: fallbackQuality?.trace.duration_ms ?? 0,
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+        resourcesStatus: diamondResourcePlan.status,
+        resourcesCount: diamondResourcePlan.resources.length,
+        modelPath: 'local',
+      })
+
+      writingContract = fallbackWriting && fallbackQuality && !fallbackHasError
         ? {
           ...fallbackWriting,
           trace: {
@@ -5762,6 +5792,18 @@ export async function POST(req: NextRequest) {
           },
         }
         : null
+
+      if (fallbackQuality && !fallbackHasError) {
+        writingQuality = fallbackQuality
+        qualityIssues = [
+          ...(contractQuality?.issues ?? []),
+          ...(writingQuality?.issues ?? []),
+        ]
+        qualityActionableIssues = qualityIssues.filter((issue) => issue.level !== 'info')
+        qualityHasError = false
+        qualityStatus = qualityActionableIssues.length > 0 ? 'partial' : 'ok'
+        canonicalQuality = writingQuality ?? contractQuality
+      }
     }
     baseSc = exposeWritingApprofondir(
       applyWritingContractToCard(baseSc, writingContract, generationDisplayText),
