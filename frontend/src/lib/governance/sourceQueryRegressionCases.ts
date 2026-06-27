@@ -850,6 +850,28 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     },
   )
   const underusedPublicFactClarifications = buildDiamondClarificationQuestions(underusedPublicFactValidation.issues)
+  const mechanicalFinalResources = resourcePlanWithSourceTitle(
+    'Live Updates: Majority see public memorandum as security loss; ceasefire prompts doctrine rethink',
+  )
+  const mechanicalFinalCardValidation = validateDiamondContract(
+    {
+      ...genericCurrentCardForValidation(),
+      insight_fr:
+        'Dispositif exposent la tension, mais autorités compétentes décident si elle reste contenue, négociée ou convertie en nouveau seuil.',
+      main_vulnerability_fr:
+        'Le point fragile est La vulnérabilité centrale est le passage entre signaux publics et décision assumée.',
+      asymmetry_fr:
+        'Dispositif exposent la tension, mais autorités compétentes décident si elle reste contenue, négociée ou convertie.',
+      lecture_systeme_fr:
+        'Les faits publics retenus déplacent la lecture : Live Updates: Majority see public memorandum as security loss; ceasefire prompts doctrine rethink.',
+      approfondir_fr:
+        'Ce que la situation est réellement\nLes faits publics retenus déplacent la lecture : Live Updates: Majority see public memorandum as security loss; ceasefire prompts doctrine rethink.',
+    },
+    'geopolitics',
+    {
+      resources: mechanicalFinalResources,
+    },
+  )
   const patentChoiceResonance = buildResonanceTrace({
     interpretation: interpretationForPatentChoice(),
     theatre: patentChoiceTheatre(),
@@ -1151,6 +1173,22 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       level: 'error',
       code: 'underused_fact_builds_blocking_clarification',
       message: 'Underused public facts are an internal writing/quality issue, not a user clarification about the card spine.',
+    })
+  }
+
+  const mechanicalFinalCardIssues: SourceQueryRegressionResult['issues'] = []
+  if (!mechanicalFinalCardValidation.issues.some((issue) => issue.code === 'mechanical_public_spine')) {
+    mechanicalFinalCardIssues.push({
+      level: 'error',
+      code: 'mechanical_final_card_not_rejected',
+      message: 'DiamondValidation must reject a final public card that exposes the mechanical spine after assembly.',
+    })
+  }
+  if (!mechanicalFinalCardValidation.issues.some((issue) => issue.code === 'source_title_copied_into_public_card')) {
+    mechanicalFinalCardIssues.push({
+      level: 'error',
+      code: 'copied_source_title_not_rejected',
+      message: 'DiamondValidation must reject a final public card that copies a source title as the public fact.',
     })
   }
 
@@ -1619,6 +1657,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: notReadyDiamondValidation.issues.map((issue) => issue.code).join(' | '),
     subject: 'DiamondValidation + GroundingContract',
     issues: diamondReadinessIssues,
+  }, {
+    id: 'diamond-validation-rejects-mechanical-final-card',
+    ok: mechanicalFinalCardIssues.length === 0,
+    query: mechanicalFinalCardValidation.issues.map((issue) => issue.code).join(' | '),
+    subject: 'DiamondValidation final public card',
+    issues: mechanicalFinalCardIssues,
   }, {
     id: 'patent-choice-resource-labels-do-not-drive-spine',
     ok: patentChoiceIssues.length === 0,

@@ -121,6 +121,14 @@ const GENERIC_PHRASES = [
   /fait opposable/i,
 ]
 
+const FINAL_PUBLIC_MECHANICAL_PATTERNS = [
+  /\b[^.?!\n]{2,120}\s+exposent la tension,\s*mais\b/i,
+  /\brendent la situation visible,\s*mais\b/i,
+  /\bsi elle reste contenue,\s*n[eé]goci[eé]e ou convertie\b/i,
+  /\ble point fragile est\s+la vuln[eé]rabilit[eé] centrale est\b/i,
+  /\bles faits publics retenus d[eé]placent la lecture\s*:\s*[A-ZÉÈÀÂÎÏÔÛÇ][^.?!\n]{20,}/i,
+]
+
 const PUBLIC_SCAFFOLDING_PATTERNS = [
   /pr[eé]cisions?\s*:/i,
   /vous [eé]voquez plusieurs options/i,
@@ -223,6 +231,26 @@ function significantFactTokens(value: string): string[] {
     .slice(0, 10)
 }
 
+function copiedSourceTitleInPublicText(
+  resources: ResourceServiceContract | undefined,
+  publicText: string,
+): string | null {
+  if (!resources?.public_sources.length) return null
+
+  const normalizedText = normalizeForReadiness(publicText).replace(/[^a-z0-9]+/g, ' ')
+  for (const source of resources.public_sources) {
+    const tokens = significantFactTokens(source.title)
+    if (tokens.length < 3) continue
+
+    for (let index = 0; index <= tokens.length - 3; index += 1) {
+      const phrase = tokens.slice(index, index + 3).join(' ')
+      if (normalizedText.includes(phrase)) return source.title
+    }
+  }
+
+  return null
+}
+
 function factVisibleInPublicText(fact: GroundedFact, normalizedText: string): boolean {
   const tokens = significantFactTokens(fact.label_fr)
   if (tokens.length === 0) return false
@@ -312,6 +340,26 @@ export function validateAntiHorsSol(
     if (pattern.test(text)) {
       issues.push(issue('error', 'generic_phrase', `Generic or fallback phrase detected: ${pattern.source}`))
     }
+  }
+
+  for (const pattern of FINAL_PUBLIC_MECHANICAL_PATTERNS) {
+    if (pattern.test(text)) {
+      issues.push(issue(
+        'error',
+        'mechanical_public_spine',
+        `Final public card still exposes a mechanical spine instead of diamond writing: ${pattern.source}`,
+      ))
+    }
+  }
+
+  const copiedSourceTitle = copiedSourceTitleInPublicText(context?.resources, text)
+  if (copiedSourceTitle) {
+    issues.push(issue(
+      'error',
+      'source_title_copied_into_public_card',
+      `Final public card copied a source title instead of translating it into a qualified fact: ${copiedSourceTitle}`,
+      'writing',
+    ))
   }
 
   for (const pattern of PUBLIC_SCAFFOLDING_PATTERNS) {
