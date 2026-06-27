@@ -173,6 +173,19 @@ function buildRaindropCardOutput(sc: SituationCard): string {
   })
 }
 
+function isInternalDiamondQualityBlock(issues: Array<{ level?: string; code?: string }>): boolean {
+  const internalErrorCodes = new Set([
+    'mechanical_public_spine',
+    'source_title_copied_into_public_card',
+    'generic_phrase',
+    'public_scaffolding',
+  ])
+  return issues.some((issue) =>
+    issue.level === 'error' &&
+    internalErrorCodes.has(String(issue.code ?? ''))
+  )
+}
+
 function hasExplicitUrl(value: string): boolean {
   return /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i.test(value)
 }
@@ -5441,9 +5454,10 @@ export async function POST(req: NextRequest) {
         ))
         const fallbackValidation = validateDiamondContract(fallbackSc, effectiveCoverageForGeneration.domain)
         if (!fallbackValidation.ok) {
+          const internalQualityBlock = isInternalDiamondQualityBlock(fallbackValidation.issues)
           recordGenerationTrace({
             status: 'partial',
-            gate: 'CLARIFY',
+            gate: internalQualityBlock ? 'ERROR' : 'CLARIFY',
             route: '/api/generate',
             canonicalLayer: 'quality',
             pipelineStep: 'DiamondValidation',
@@ -5458,6 +5472,15 @@ export async function POST(req: NextRequest) {
             modelPath: 'fallback',
             errorKind: error instanceof Error ? error.name : 'UnknownError',
           })
+          if (internalQualityBlock) {
+            return NextResponse.json({
+              gate: 'BLOCK',
+              reason: 'La carte produite a été bloquée par le contrôle diamant : la sortie restait trop mécanique ou recopiait une source au lieu de produire une lecture située. Ce n’est pas une précision utilisateur à demander.',
+              quality_issues: fallbackValidation.issues,
+              coverage_check: effectiveCoverageForGeneration,
+              resources_status: resourcesStatus,
+            })
+          }
           return NextResponse.json({
             gate: 'CLARIFY',
             questions: buildDiamondClarificationQuestions(fallbackValidation.issues),
@@ -6137,6 +6160,7 @@ export async function POST(req: NextRequest) {
       issues: diamondValidation.issues,
     }
     if (!diamondValidation.ok) {
+      const internalQualityBlock = isInternalDiamondQualityBlock(diamondValidation.issues)
       const raindropLayerDiagnostics = buildRaindropLayerDiagnostics({
         interpretation: generationInterpretation,
         initialResourcePlan,
@@ -6154,7 +6178,7 @@ export async function POST(req: NextRequest) {
       })
       recordGenerationTrace({
         status: 'partial',
-        gate: 'CLARIFY',
+        gate: internalQualityBlock ? 'ERROR' : 'CLARIFY',
         route: '/api/generate',
         canonicalLayer: 'quality',
         pipelineStep: 'DiamondValidation',
@@ -6169,16 +6193,16 @@ export async function POST(req: NextRequest) {
         modelPath: prebuiltSiteCard ? 'local' : 'openai',
       })
       raindropOutput = truncateRaindropText({
-        gate: 'CLARIFY',
-        route_result: 'diamond_validation_clarify',
+        gate: internalQualityBlock ? 'BLOCK' : 'CLARIFY',
+        route_result: internalQualityBlock ? 'diamond_validation_quality_block' : 'diamond_validation_clarify',
         situation_soumise: sc.situation_soumise_fr,
         quality_issues: diamondValidation.issues.map((issue) => issue.code),
       })
       raindropProperties = {
         ...raindropProperties,
         ...raindropLayerDiagnostics,
-        gate: 'CLARIFY',
-        route_result: 'diamond_validation_clarify',
+        gate: internalQualityBlock ? 'BLOCK' : 'CLARIFY',
+        route_result: internalQualityBlock ? 'diamond_validation_quality_block' : 'diamond_validation_clarify',
         generation_status: sc.generation_status ?? 'partial',
         domain: effectiveCoverageForGeneration.domain,
         intent_type: intentContext.interpreted_request?.intent_type,
@@ -6189,6 +6213,21 @@ export async function POST(req: NextRequest) {
         generation_event_id: generationArchive?.event.id ?? '',
         model_path: prebuiltSiteCard ? 'local' : 'openai',
         model: prebuiltSiteCard ? 'local' : RAINDROP_GENERATE_MODEL,
+      }
+      if (internalQualityBlock) {
+        return NextResponse.json({
+          gate: 'BLOCK',
+          reason: 'La carte produite a été bloquée par le contrôle diamant : la sortie restait trop mécanique ou recopiait une source au lieu de produire une lecture située. Ce n’est pas une précision utilisateur à demander.',
+          quality_issues: diamondValidation.issues,
+          coverage_check: {
+            ...effectiveCoverageForGeneration,
+            quality: {
+              ...(sc.quality && typeof sc.quality === 'object' ? sc.quality : {}),
+              diamond_validation: diamondQuality,
+            },
+          },
+          resources_status: resourcesStatus,
+        })
       }
       return NextResponse.json({
         gate: 'CLARIFY',

@@ -443,6 +443,18 @@ export function validateDiamondContract(
 
 export function buildDiamondClarificationQuestions(issues: DiamondValidationIssue[]): string[] {
   const codes = new Set(issues.map((item) => item.code))
+  const errorCodes = new Set(issues.filter((item) => item.level === 'error').map((item) => item.code))
+
+  if (
+    errorCodes.has('mechanical_public_spine') ||
+    errorCodes.has('source_title_copied_into_public_card') ||
+    errorCodes.has('generic_phrase') ||
+    errorCodes.has('public_scaffolding')
+  ) {
+    return [
+      'La carte produite a été bloquée par le contrôle diamant. SC doit régénérer une lecture plus située ; ce n’est pas une précision à demander à l’utilisateur.',
+    ]
+  }
 
   if (codes.has('grounded_anti_hors_sol_current_facts_missing')) {
     return [

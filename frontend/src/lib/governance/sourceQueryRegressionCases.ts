@@ -872,6 +872,7 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       resources: mechanicalFinalResources,
     },
   )
+  const mechanicalFinalCardQuestions = buildDiamondClarificationQuestions(mechanicalFinalCardValidation.issues)
   const patentChoiceResonance = buildResonanceTrace({
     interpretation: interpretationForPatentChoice(),
     theatre: patentChoiceTheatre(),
@@ -1189,6 +1190,20 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       level: 'error',
       code: 'copied_source_title_not_rejected',
       message: 'DiamondValidation must reject a final public card that copies a source title as the public fact.',
+    })
+  }
+  if (mechanicalFinalCardQuestions.some((question) => includesLoose(question, 'sources rapides'))) {
+    mechanicalFinalCardIssues.push({
+      level: 'error',
+      code: 'mechanical_error_returns_source_clarification',
+      message: 'A mechanical final-card quality error must not be presented as a missing fast-source clarification.',
+    })
+  }
+  if (!mechanicalFinalCardQuestions.some((question) => includesLoose(question, 'controle diamant') || includesLoose(question, 'contrôle diamant'))) {
+    mechanicalFinalCardIssues.push({
+      level: 'error',
+      code: 'mechanical_error_missing_quality_block_message',
+      message: 'A mechanical final-card quality error must be identified as a diamond quality block.',
     })
   }
 
