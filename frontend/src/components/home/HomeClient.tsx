@@ -2041,17 +2041,10 @@ function diamondIssueCodesFromPayload(payload: any): string[] {
 function shouldRetryPrudentGeneration(payload: any, alreadyPrudent: boolean): boolean {
   if (alreadyPrudent || (payload?.gate !== 'BLOCK' && payload?.gate !== 'CLARIFY')) return false
   const codes = new Set(diamondIssueCodesFromPayload(payload))
-  const internalQualityBlock = [
-    'mechanical_public_spine',
-    'source_title_copied_into_public_card',
-    'generic_phrase',
-    'public_scaffolding',
-  ].some((code) => codes.has(code))
   const sourceGroundingClarify = Array.from(codes).some((code) =>
     code.startsWith('grounded_anti_hors_sol_')
   )
-  if (payload?.gate === 'BLOCK') return internalQualityBlock
-  return sourceGroundingClarify
+  return payload?.gate === 'CLARIFY' && sourceGroundingClarify
 }
 
 type VisibilityState = 'private' | 'public' | 'collab'

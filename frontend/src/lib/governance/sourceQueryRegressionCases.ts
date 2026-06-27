@@ -1131,6 +1131,13 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       message: 'Public writing must not leak raw English evidence excerpts.',
     })
   }
+  if (includesLoose(cleanEvidencePublicText, 'Les faits publics retenus déplacent la lecture')) {
+    cleanEvidenceIssues.push({
+      level: 'error',
+      code: 'source_grounded_writing_kept_mechanical_spine',
+      message: 'Source-grounded writing must transform facts into a situated contradiction, not expose a mechanical source preface.',
+    })
+  }
   if (!includesLoose(cleanEvidenceWriting.probability_assessments[0]?.probability_label_fr ?? '', 'Plausible')) {
     cleanEvidenceIssues.push({
       level: 'error',

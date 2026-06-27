@@ -175,7 +175,7 @@ function sourceGroundedDiamondText({
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
-  return `Les faits publics retenus déplacent la lecture : ${signalLine}. Le coût visible se concentre sur ${actors}, mais la bascule dépend de la capacité de ${institutions} à convertir ces signaux en décision, refus, médiation ou seuil assumé.`
+  return `Quand ${signalLine}, la crise cesse d’être seulement une tension commentée : elle teste si ${institutions} peuvent transformer le coût porté par ${actors} en règle, médiation ou seuil assumé.`
 }
 
 function sourceGroundedVulnerabilityText({
@@ -188,7 +188,8 @@ function sourceGroundedVulnerabilityText({
   const signals = sourceSignalAnchors(resonance)
   if (signals.length === 0) return ''
 
-  return `La vulnérabilité centrale est le passage entre signaux publics et décision assumée : tant que ${institutions} ne fixent pas le seuil, les faits restent interprétables sans devenir pleinement opposables.`
+  const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
+  return `La vulnérabilité centrale est l’écart entre ${signalLine} et la décision que ${institutions} doivent assumer pour rendre le seuil opposable.`
 }
 
 function sourceGroundedContradictionText({
@@ -204,7 +205,7 @@ function sourceGroundedContradictionText({
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
-  return `Le coût visible se concentre sur ${actors} ; le cadrage public dépend de ${institutions} et des signaux déjà visibles : ${signalLine}.`
+  return `La contradiction tient ici : ${actors} portent le coût immédiat, mais ${institutions} ne transforment ${signalLine} en trajectoire lisible que s’ils en font un seuil public.`
 }
 
 function theatreEvidenceLabels(theatre: ConcreteTheatreContract): string[] {
