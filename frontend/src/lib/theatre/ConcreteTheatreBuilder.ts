@@ -130,7 +130,7 @@ function evidenceFromResources(resources?: ResourceServiceContract, relevanceQue
     .slice(0, 8)
     .map((resource): TheatreEvidence | null => {
       const evidence = sanitizeResourceAsProbativeEvidence(resource)
-      if (!evidence.can_be_public) return null
+      if (!evidence.can_drive_probability) return null
       return {
         label: evidence.public_label_fr,
         level: resource.reliability === 'primary'

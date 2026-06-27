@@ -13,10 +13,12 @@ import {
   filterFastResourceResultsByPlanForDiagnostics,
   legacyFallbackPlanQueriesForDiagnostics,
 } from '@/lib/resources/FastResourceRunner'
+import { buildGroundingContract } from '@/lib/grounding'
 import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSourceCoverage'
 import type { ResourceItem } from '@/lib/resources/resourceContract'
 import { buildGeneralDiamondDeepFallback } from '@/lib/editorial/diamond'
 import { publicProbativeEvidence } from '@/lib/resources/probativeEvidenceSanitizer'
+import { buildResourceRegimeSignals } from '@/lib/resources/regimeSignals'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
 import type { SituationCard } from '@/lib/resources/resourceContract'
 import { buildResonanceTrace } from '@/lib/resonance'
@@ -86,6 +88,27 @@ function resourcePlanWithSourceTitle(title: string): ResourceServiceContract {
       retrieved_at: '2026-05-28T00:00:00.000Z',
       reliability: 'secondary',
     }],
+  }
+}
+
+function resourcePlanWithDisplayOnlySource(title: string): ResourceServiceContract {
+  const source: ResourceContract = {
+    id: 'display-only-source-regression',
+    title,
+    url: 'https://www.example.com/current-question',
+    source: 'example.com',
+    channel: 'news_agency',
+    domain_relevance: ['geopolitics'],
+    excerpt: title,
+    retrieved_at: '2026-06-27T00:00:00.000Z',
+    reliability: 'secondary',
+  }
+
+  return {
+    ...baseResourcePlan(),
+    status: 'available',
+    resources: [source],
+    public_sources: [source],
   }
 }
 
@@ -873,6 +896,43 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     },
   )
   const mechanicalFinalCardQuestions = buildDiamondClarificationQuestions(mechanicalFinalCardValidation.issues)
+  const displayOnlyResources = resourcePlanWithDisplayOnlySource(
+    'So, what’s behind the US strikes on Iranian territory and where has Tehran returned fire?',
+  )
+  const displayOnlyRegimeSignals = buildResourceRegimeSignals(displayOnlyResources)
+  const displayOnlyTheatre = buildConcreteTheatre({
+    interpretation: input.interpretation,
+    resources: displayOnlyResources,
+    expertises: expertisesForCurrentQuestion(),
+  })
+  const displayOnlyResonance = buildResonanceTrace({
+    interpretation: input.interpretation,
+    theatre: displayOnlyTheatre,
+    resources: displayOnlyResources,
+  })
+  const displayOnlyGrounding = buildGroundingContract({
+    interpretation: input.interpretation,
+    resources: displayOnlyResources,
+    theatre: displayOnlyTheatre,
+    resonance: displayOnlyResonance,
+  })
+  const displayOnlyFinalValidation = validateDiamondContract(
+    {
+      ...genericCurrentCardForValidation(),
+      insight_fr:
+        'Si So, what’s behind the US strikes on Iranian territory and where has Tehran returned fire?, un signal d’hostilités documenté apparaît, la crise cesse d’être seulement commentée : elle teste la capacité de les autorités iraniennes à transformer le coût porté par l’Iran.',
+      main_vulnerability_fr:
+        'La vulnérabilité centrale est l’écart entre So, what’s behind the US strikes on Iranian territory and where has Tehran returned fire?, un signal d’hostilités documenté et la décision publique à assumer par les autorités iraniennes.',
+      asymmetry_fr:
+        'La pression visible dépend de les autorités iraniennes.',
+    },
+    'geopolitics',
+    {
+      resources: displayOnlyResources,
+      grounding: displayOnlyGrounding,
+    },
+  )
+  const displayOnlyContractIssues: SourceQueryRegressionResult['issues'] = []
   const patentChoiceResonance = buildResonanceTrace({
     interpretation: interpretationForPatentChoice(),
     theatre: patentChoiceTheatre(),
@@ -1255,6 +1315,49 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       level: 'error',
       code: 'mechanical_error_missing_quality_block_message',
       message: 'A mechanical final-card quality error must be identified as a diamond quality block.',
+    })
+  }
+
+  if (displayOnlyRegimeSignals.length > 0) {
+    displayOnlyContractIssues.push({
+      level: 'error',
+      code: 'display_source_drove_regime_signal',
+      message: 'A display-only source title must not become a ResourceRegimeSignal.',
+    })
+  }
+  if (displayOnlyTheatre.evidence.length > 0) {
+    displayOnlyContractIssues.push({
+      level: 'error',
+      code: 'display_source_drove_theatre_evidence',
+      message: 'A display-only source title must not become theatre evidence.',
+    })
+  }
+  if (displayOnlyGrounding.current_facts.some((fact) => fact.source === 'resources')) {
+    displayOnlyContractIssues.push({
+      level: 'error',
+      code: 'display_source_drove_grounding_fact',
+      message: 'A display-only source title must not become a grounded public fact.',
+    })
+  }
+  if (displayOnlyGrounding.permissions.can_write_current_state || !displayOnlyGrounding.permissions.must_mark_provisional) {
+    displayOnlyContractIssues.push({
+      level: 'error',
+      code: 'display_source_unlocked_current_state',
+      message: 'Grounding must not unlock current-state writing when no probative public fact exists.',
+    })
+  }
+  if (!displayOnlyFinalValidation.issues.some((issue) => issue.code === 'source_title_copied_into_public_card')) {
+    displayOnlyContractIssues.push({
+      level: 'error',
+      code: 'display_source_title_copy_not_rejected',
+      message: 'DiamondValidation must reject a display source title copied into public writing.',
+    })
+  }
+  if (!displayOnlyFinalValidation.issues.some((issue) => issue.code === 'mechanical_public_spine')) {
+    displayOnlyContractIssues.push({
+      level: 'error',
+      code: 'display_source_mechanical_spine_not_rejected',
+      message: 'DiamondValidation must reject mixed source-title, generic-signal, or broken article public writing.',
     })
   }
 
@@ -1729,6 +1832,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: mechanicalFinalCardValidation.issues.map((issue) => issue.code).join(' | '),
     subject: 'DiamondValidation final public card',
     issues: mechanicalFinalCardIssues,
+  }, {
+    id: 'display-source-does-not-drive-diamond-contract',
+    ok: displayOnlyContractIssues.length === 0,
+    query: displayOnlyFinalValidation.issues.map((issue) => issue.code).join(' | '),
+    subject: 'resources display source vs probative fact contract',
+    issues: displayOnlyContractIssues,
   }, {
     id: 'patent-choice-resource-labels-do-not-drive-spine',
     ok: patentChoiceIssues.length === 0,

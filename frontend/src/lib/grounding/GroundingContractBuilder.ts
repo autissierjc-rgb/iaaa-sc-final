@@ -93,7 +93,6 @@ export function buildGroundingContract(input: {
     Boolean(input.resources?.needs_web) ||
     input.resources?.policy === 'fast_sources_required' ||
     input.resources?.policy === 'url_extract_required'
-  const sourceAvailable = status === 'available' || status === 'partial'
   const relevanceQuery = resourceRelevanceQuery(input.interpretation)
   const optionCandidates = [...optionsFromResources(input.resources), ...optionsFromMaterial(input.material)]
   const optionLabels = new Set<string>()
@@ -112,6 +111,7 @@ export function buildGroundingContract(input: {
       source_ids: evidence.source_ids,
     })),
   ].slice(0, 10)
+  const hasPublicResourceFact = facts.some((fact) => fact.source === 'resources')
   const actors = unique([
     ...(input.theatre?.named_actors ?? []),
     ...(input.theatre?.actors ?? []),
@@ -145,11 +145,11 @@ export function buildGroundingContract(input: {
     constraints,
     missing_evidence_fr: missingEvidence,
     permissions: {
-      can_write_current_state: !hasSourceNeed || sourceAvailable,
-      can_write_strategy: options.length >= 2 || !hasSourceNeed || sourceAvailable,
+      can_write_current_state: !hasSourceNeed || hasPublicResourceFact,
+      can_write_strategy: options.length >= 2 || !hasSourceNeed || hasPublicResourceFact,
       can_write_options: options.length >= 2,
-      can_write_source_backed_claims: !hasSourceNeed || sourceAvailable,
-      must_mark_provisional: hasSourceNeed && !sourceAvailable,
+      can_write_source_backed_claims: !hasSourceNeed || hasPublicResourceFact,
+      must_mark_provisional: hasSourceNeed && !hasPublicResourceFact,
     },
     trace: {
       service: 'GroundingContractBuilder',

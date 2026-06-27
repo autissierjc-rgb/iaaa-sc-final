@@ -127,6 +127,8 @@ const FINAL_PUBLIC_MECHANICAL_PATTERNS = [
   /\bsi elle reste contenue,\s*n[eé]goci[eé]e ou convertie\b/i,
   /\ble point fragile est\s+la vuln[eé]rabilit[eé] centrale est\b/i,
   /\bles faits publics retenus d[eé]placent la lecture\s*:\s*[A-ZÉÈÀÂÎÏÔÛÇ][^.?!\n]{20,}/i,
+  /\b(?:de|[aà])\s+les\s+(?:autorit[eé]s|institutions|canaux|march[eé]s|gouvernements|dirigeants|alliances)\b/i,
+  /\b(?:si|quand)\s+[A-ZÉÈÀÂÎÏÔÛÇ][^.!?\n]{20,}\?,\s+un\s+signal\b/i,
 ]
 
 const PUBLIC_SCAFFOLDING_PATTERNS = [
@@ -241,6 +243,11 @@ function copiedSourceTitleInPublicText(
   for (const source of resources.public_sources) {
     const tokens = significantFactTokens(source.title)
     if (tokens.length < 3) continue
+
+    const normalizedTitle = normalizeForReadiness(source.title).replace(/[^a-z0-9]+/g, ' ').trim()
+    if (normalizedTitle.length >= 28 && normalizedText.includes(normalizedTitle.slice(0, Math.min(80, normalizedTitle.length)))) {
+      return source.title
+    }
 
     for (let index = 0; index <= tokens.length - 3; index += 1) {
       const phrase = tokens.slice(index, index + 3).join(' ')

@@ -72,7 +72,7 @@ function discriminantTermsFrom(value: string, baseline: string): string[] {
 
 function signalFromSource(source: ResourceServiceContract['public_sources'][number]): ResourceRegimeSignal | null {
   const evidence = sanitizeResourceAsProbativeEvidence(source)
-  if (!evidence.can_be_public) return null
+  if (!evidence.can_drive_probability) return null
 
   const signal = compact(evidence.public_label_fr)
   const sourceTitle = compact(source.title, 180)

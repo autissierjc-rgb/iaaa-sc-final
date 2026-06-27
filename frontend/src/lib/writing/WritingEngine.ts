@@ -175,12 +175,12 @@ function publicPhrase(value: string): string {
 function sourceSignalAnchors(resonance: ResonanceTraceContract): string[] {
   const concreteTransition = /un acte,\s*une preuve ou un seuil observable/i.test(resonance.transition_signal_fr)
     ? ''
-    : resonance.transition_signal_fr
+    : publicEvidenceAnchorForWriting(resonance.transition_signal_fr)
   return unique([
-    ...resonance.source_signals.map((signal) => signal.signal_fr),
+    ...resonance.source_signals.map((signal) => publicEvidenceAnchorForWriting(signal.signal_fr)),
     concreteTransition,
   ])
-    .filter((item) => !isPublicPlaceholder(item) && !isPublicSpineNoise(item))
+    .filter((item) => !isPublicPlaceholder(item) && !isPublicSpineNoise(item) && !isGenericPublicSignal(item))
     .slice(0, 3)
 }
 
@@ -862,6 +862,13 @@ function polishPublicProofText(value: string): string {
     .replace(/\bcapacité de administration\b/g, 'capacité de l’administration')
     .replace(/\bcapacité de gouvernement\b/g, 'capacité du gouvernement')
     .replace(/\bcapacité de autorités\b/g, 'capacité des autorités')
+    .replace(/\bde les\b/g, 'des')
+    .replace(/\bde le\b/g, 'du')
+    .replace(/\bde la les\b/g, 'des')
+    .replace(/\bà les\b/g, 'aux')
+    .replace(/\ba les\b/g, 'aux')
+    .replace(/\bà le\b/g, 'au')
+    .replace(/\ba le\b/g, 'au')
     .replace(/\ba maintenir\b/g, 'à maintenir')
     .replace(/\bsequence\b/g, 'séquence')
     .replace(/\bescalade\b/g, 'escalade')
