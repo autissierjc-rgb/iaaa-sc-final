@@ -1499,9 +1499,11 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const proofAnchors = unique([
     ...publicEvidenceAnchors(input.resources, relevanceQuery),
     ...publicEvidenceSignalAnchors(input.resources, relevanceQuery),
-    resonance.transition_signal_fr,
+    publicEvidenceAnchorForWriting(resonance.transition_signal_fr),
     ...theatreProofAnchors(input.theatre, input.expertises_metiers),
-  ])
+  ]
+    .map((anchor) => publicEvidenceAnchorForWriting(anchor))
+    .filter((anchor) => anchor.length > 0 && !isGenericPublicSignal(anchor) && !isPublicSpineNoise(anchor)))
   const fragilityAnchors = unique([
     resonance.structural_gap_fr,
     ...theatreFragilityAnchors(input.theatre, input.expertises_metiers),

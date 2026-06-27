@@ -916,6 +916,16 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     theatre: displayOnlyTheatre,
     resonance: displayOnlyResonance,
   })
+  const displayOnlyWriting = composeDiamondWriting({
+    interpretation: input.interpretation,
+    theatre: displayOnlyTheatre,
+    resources: displayOnlyResources,
+    resonance: displayOnlyResonance,
+    grounding: displayOnlyGrounding,
+    safety: safetyForRegression(),
+    expertises_metiers: expertisesForCurrentQuestion(),
+    scoring: scoringForRegression(),
+  })
   const displayOnlyFinalValidation = validateDiamondContract(
     {
       ...genericCurrentCardForValidation(),
@@ -1359,6 +1369,24 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       code: 'display_source_mechanical_spine_not_rejected',
       message: 'DiamondValidation must reject mixed source-title, generic-signal, or broken article public writing.',
     })
+  }
+  const displayOnlyWritingText = [
+    displayOnlyWriting.situation_card.insight_fr,
+    displayOnlyWriting.situation_card.main_vulnerability_fr,
+    displayOnlyWriting.situation_card.asymmetry_fr,
+    displayOnlyWriting.situation_card.key_signal_fr,
+    displayOnlyWriting.lecture.text_fr,
+    displayOnlyWriting.approfondir.analysis_fr,
+    ...displayOnlyWriting.approfondir.sections_fr.map((section) => section.body),
+  ].join(' ')
+  for (const forbidden of ['So, what’s behind', 'where has Tehran returned fire']) {
+    if (includesLoose(displayOnlyWritingText, forbidden)) {
+      displayOnlyContractIssues.push({
+        level: 'error',
+        code: 'display_source_title_leaked_into_writing',
+        message: `Display-only source titles must not leak into public writing or Approfondir: ${forbidden}.`,
+      })
+    }
   }
 
   if (patentChoiceResonance.real_actors.some((actor) => actor === 'Une' || actor === 'Un')) {
