@@ -239,7 +239,7 @@ function sourceTransitionsFromSignals(signals: Array<{ signal_fr: string }>): st
 function buildStructuralContradiction(actors: string[], institutions: string[]): string {
   const actorLine = visibleList(actors, 'les acteurs directement concernés')
   const institutionLine = visibleList(institutions, 'les instances capables de cadrer ou bloquer la suite')
-  return `${actorLine} rendent la situation visible, mais ${institutionLine} décident si cette tension devient une contrainte, un arbitrage ou un changement de régime.`
+  return `Le coût visible se concentre sur ${actorLine} ; la formalisation du seuil dépend de ${institutionLine}.`
 }
 
 function defaultStructuralGap(input: ResonanceTraceInput): string {

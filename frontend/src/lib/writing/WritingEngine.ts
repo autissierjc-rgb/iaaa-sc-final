@@ -175,7 +175,7 @@ function sourceGroundedDiamondText({
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
-  return `Les faits publics retenus déplacent la lecture : ${signalLine}. ${actors} portent la tension visible, mais le point décisif est désormais la capacité de ${institutions} à convertir ces signaux en décision, refus, médiation ou seuil assumé.`
+  return `Les faits publics retenus déplacent la lecture : ${signalLine}. Le coût visible se concentre sur ${actors}, mais la bascule dépend de la capacité de ${institutions} à convertir ces signaux en décision, refus, médiation ou seuil assumé.`
 }
 
 function sourceGroundedVulnerabilityText({
@@ -204,7 +204,7 @@ function sourceGroundedContradictionText({
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
-  return `${actors} exposent la tension ; ${institutions} gardent la main sur le cadrage public des signaux déjà visibles : ${signalLine}.`
+  return `Le coût visible se concentre sur ${actors} ; le cadrage public dépend de ${institutions} et des signaux déjà visibles : ${signalLine}.`
 }
 
 function theatreEvidenceLabels(theatre: ConcreteTheatreContract): string[] {
@@ -1413,7 +1413,7 @@ function writingGrammar(input: WritingEngineInput) {
       vulnerability: (blindSpot: string) =>
         `La vulnerabilite centrale est ${blindSpot} : tant que ce point reste non verifie, la crise peut paraitre contenue alors que ses seuils reels se deplacent.`,
       asymmetry: (actors: string, institutions: string) =>
-        `${actors} exposent la tension, mais ${institutions} decident si elle reste contenue, negociee ou convertie en nouveau seuil de conflit.`,
+        `La pression visible se concentre sur ${actors} ; la formalisation du seuil dépend de ${institutions}, qui peuvent ouvrir une retenue, une négociation ou un nouveau seuil de conflit.`,
       keySignal: (evidence: string) =>
         signalSentence(evidence, 'modifie les marges militaires, diplomatiques ou économiques des acteurs engagés'),
     }

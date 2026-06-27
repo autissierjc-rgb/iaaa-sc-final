@@ -1064,6 +1064,19 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       message: 'A current/external question without usable fast sources must not claim first factual support.',
     })
   }
+  for (const forbidden of [
+    'exposent la tension',
+    'rendent la situation visible',
+    'si elle reste contenue',
+  ]) {
+    if (includesLoose(noSourcePublicText, forbidden)) {
+      noSourceIssues.push({
+        level: 'error',
+        code: 'current_without_sources_mechanical_spine',
+        message: `A current/external question without usable fast sources must produce provisional diamond writing, not a mechanical public spine: ${forbidden}.`,
+      })
+    }
+  }
 
   const noisySourcePublicText = [
     noisySourceWriting.situation_card.insight_fr,
