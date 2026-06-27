@@ -146,8 +146,30 @@ function isPublicSpineNoise(item: string): boolean {
 }
 
 function publicAnchors(items: string[], fallback: string, max = 4): string {
-  const cleaned = unique(items).filter((item) => !isPublicPlaceholder(item) && !isPublicSpineNoise(item))
+  const cleaned = unique(items).filter((item) => !isPublicPlaceholder(item) && !isPublicSpineNoise(item) && !isGenericPublicSignal(item))
   return (cleaned.length > 0 ? cleaned : [fallback]).slice(0, max).join(', ')
+}
+
+function isGenericPublicSignal(item: string): boolean {
+  const normalized = normalizeAnchor(item)
+  return /^(?:un|une|le|la)?\s*(?:fait public qualifie|signal public qualifie|trace publique qualifiee|signal qualifie)$/i.test(normalized)
+}
+
+function publicPhrase(value: string): string {
+  const clean = value.replace(/\s+/g, ' ').trim()
+  if (!clean) return clean
+  if (/^(?:l[’']|le\s|la\s|les\s|un\s|une\s|des\s|du\s|de la\s|de l[’'])/i.test(clean)) return clean
+  if (clean.includes(',')) {
+    const parts = clean.split(',').map((part) => publicPhrase(part)).filter(Boolean)
+    if (parts.length <= 1) return parts[0] ?? clean
+    return `${parts.slice(0, -1).join(', ')} et ${parts[parts.length - 1]}`
+  }
+  if (/^Iran\b/i.test(clean)) return `l’${clean}`
+  if (/^(?:États-Unis|Etats-Unis|USA|Union européenne)\b/i.test(clean)) return `les ${clean}`
+  if (/^(?:autorités|canaux|marchés|forces|institutions|gouvernements|dirigeants|alliances)\b/i.test(clean)) return `les ${clean}`
+  if (/^(?:administration|armée|AIEA|ONU|OTAN)\b/i.test(clean)) return `l’${clean}`
+  if (/^(?:gouvernement|conseil|congrès|congres|commandement)\b/i.test(clean)) return `le ${clean}`
+  return clean
 }
 
 function sourceSignalAnchors(resonance: ResonanceTraceContract): string[] {
@@ -175,7 +197,7 @@ function sourceGroundedDiamondText({
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
-  return `Quand ${signalLine}, la crise cesse d’être seulement une tension commentée : elle teste si ${institutions} peuvent transformer le coût porté par ${actors} en règle, médiation ou seuil assumé.`
+  return `Si ${signalLine} apparaît, la crise cesse d’être seulement commentée : elle teste la capacité de ${institutions} à transformer le coût porté par ${actors} en règle, médiation ou seuil assumé.`
 }
 
 function sourceGroundedVulnerabilityText({
@@ -189,7 +211,7 @@ function sourceGroundedVulnerabilityText({
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
-  return `La vulnérabilité centrale est l’écart entre ${signalLine} et la décision que ${institutions} doivent assumer pour rendre le seuil opposable.`
+  return `La vulnérabilité centrale est l’écart entre ${signalLine} et la décision publique à assumer par ${institutions} pour rendre le seuil opposable.`
 }
 
 function sourceGroundedContradictionText({
@@ -205,7 +227,7 @@ function sourceGroundedContradictionText({
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
-  return `La contradiction tient ici : ${actors} portent le coût immédiat, mais ${institutions} ne transforment ${signalLine} en trajectoire lisible que s’ils en font un seuil public.`
+  return `La contradiction tient ici : le coût immédiat pèse sur ${actors}, mais la trajectoire ne devient lisible que si ${institutions} transforment ${signalLine} en seuil public.`
 }
 
 function theatreEvidenceLabels(theatre: ConcreteTheatreContract): string[] {
@@ -1461,9 +1483,10 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const subject = publicSubject(input)
   const rawTitle = input.interpretation.header_subject
   const grammar = writingGrammar(input)
-  const actors = publicAnchors(resonance.real_actors, grammar.actorsFallback)
-  const title = isGenericPublicSubject(rawTitle) ? `situation ${actors}` : rawTitle
-  const institutions = publicAnchors(resonance.institutions, grammar.institutionsFallback)
+  const actorsLabel = publicAnchors(resonance.real_actors, grammar.actorsFallback)
+  const actors = publicPhrase(actorsLabel)
+  const title = isGenericPublicSubject(rawTitle) ? `situation ${actorsLabel}` : rawTitle
+  const institutions = publicPhrase(publicAnchors(resonance.institutions, grammar.institutionsFallback))
   const actionAnchors = theatreActionAnchors(input.theatre)
   const relevanceQuery = writingRelevanceQuery(input)
   const proofAnchors = unique([

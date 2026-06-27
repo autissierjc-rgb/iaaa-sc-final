@@ -1138,6 +1138,37 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       message: 'Source-grounded writing must transform facts into a situated contradiction, not expose a mechanical source preface.',
     })
   }
+  const sourceGroundedGrammarLeaks = [
+    {
+      pattern: /\bun fait public qualifi[ée]\b/i,
+      code: 'source_grounded_generic_public_fact_label',
+      message: 'Source-grounded writing must not expose the generic label "fait public qualifié" as a public anchor.',
+    },
+    {
+      pattern: /\b(?:de|que)\s+(?:autorités|autorites|administration|gouvernement|canaux|marchés|marches)\b/i,
+      code: 'source_grounded_missing_public_article',
+      message: 'Source-grounded writing must keep public French articles before institutions.',
+    },
+    {
+      pattern: /\bIran\s+portent\b/i,
+      code: 'source_grounded_actor_number_disagreement',
+      message: 'Source-grounded writing must not create actor/verb number disagreement.',
+    },
+    {
+      pattern: /\bQuand\s+un\s+signal[^.?!]*,/i,
+      code: 'source_grounded_nominal_signal_without_predicate',
+      message: 'Source-grounded writing must turn a nominal signal into a grammatical clause.',
+    },
+  ]
+  for (const leak of sourceGroundedGrammarLeaks) {
+    if (leak.pattern.test(cleanEvidencePublicText)) {
+      cleanEvidenceIssues.push({
+        level: 'error',
+        code: leak.code,
+        message: leak.message,
+      })
+    }
+  }
   if (!includesLoose(cleanEvidenceWriting.probability_assessments[0]?.probability_label_fr ?? '', 'Plausible')) {
     cleanEvidenceIssues.push({
       level: 'error',
