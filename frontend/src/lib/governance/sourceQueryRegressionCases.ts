@@ -708,6 +708,68 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       message: 'QualityGate must reject raw English source excerpts in public writing.',
     })
   }
+  const pressSummaryQuality = runQualityGate({
+    interpretation: input.interpretation,
+    theatre: theatreForCurrentQuestion(),
+    resources: baseResourcePlan(),
+    resonance: buildResonanceTrace({
+      interpretation: input.interpretation,
+      theatre: theatreForCurrentQuestion(),
+      resources: baseResourcePlan(),
+    }),
+    scoring: scoringForRegression(),
+    writing: {
+      ...noSourceWriting,
+      situation_card: {
+        ...noSourceWriting.situation_card,
+        insight_fr: "Le dispositif est à un point critique où ses actions pourraient redéfinir son influence. Les décisions prises seront cruciales pour déterminer si la situation se stabilise.",
+      },
+      lecture: {
+        ...noSourceWriting.lecture,
+        text_fr: "Le dispositif est à un point critique où ses actions pourraient redéfinir son influence. Les décisions prises seront cruciales pour déterminer si la situation se stabilise.",
+      },
+    },
+  })
+  const pressSummaryIssues: SourceQueryRegressionResult['issues'] = []
+  if (!pressSummaryQuality.issues.some((issue) => issue.code === 'PRESS_SUMMARY_INSTEAD_OF_DIAMOND')) {
+    pressSummaryIssues.push({
+      level: 'error',
+      code: 'press_summary_opening_not_rejected',
+      message: 'QualityGate must reject generic press-summary openings instead of treating them as diamond writing.',
+    })
+  }
+  const thinApprofondirQuality = runQualityGate({
+    interpretation: input.interpretation,
+    theatre: theatreForCurrentQuestion(),
+    resources: baseResourcePlan(),
+    resonance: buildResonanceTrace({
+      interpretation: input.interpretation,
+      theatre: theatreForCurrentQuestion(),
+      resources: baseResourcePlan(),
+    }),
+    scoring: scoringForRegression(),
+    writing: {
+      ...noSourceWriting,
+      approfondir: {
+        ...noSourceWriting.approfondir,
+        sections_fr: [
+          { id: 'reel', title: 'Ce que la situation est réellement', body: 'Ce qui tient' },
+          { id: 'holds', title: 'Ce qui tient le système', body: 'Ce qui faiblit' },
+          { id: 'weakens', title: 'Ce qui l’affaiblit', body: 'Ce qui pourrait escalader' },
+          { id: 'escalates', title: 'Ce qui pourrait déclencher une escalade', body: 'Ce qui pourrait changer' },
+          { id: 'shifts', title: 'Ce qui pourrait produire une bascule', body: 'Ce qu il faut surveiller' },
+        ],
+      },
+    },
+  })
+  const thinApprofondirIssues: SourceQueryRegressionResult['issues'] = []
+  if (!thinApprofondirQuality.issues.some((issue) => issue.code === 'APPROFONDIR_SECTIONS_TOO_THIN')) {
+    thinApprofondirIssues.push({
+      level: 'error',
+      code: 'thin_approfondir_not_rejected',
+      message: 'QualityGate must reject title-only or empty Approfondir sections before public display.',
+    })
+  }
   const noisySourceResources = resourcePlanWithNoisyReutersExcerpt()
   const noisySourceWriting = composeDiamondWriting({
     interpretation: input.interpretation,
@@ -1521,6 +1583,18 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: rawExternalExcerptQuality.issues.map((issue) => issue.code).join(' | '),
     subject: 'writing/quality source facts not raw excerpts',
     issues: rawExternalExcerptIssues,
+  }, {
+    id: 'quality-gate-rejects-press-summary-opening',
+    ok: pressSummaryIssues.length === 0,
+    query: pressSummaryQuality.issues.map((issue) => issue.code).join(' | '),
+    subject: 'writing/quality diamond opening',
+    issues: pressSummaryIssues,
+  }, {
+    id: 'quality-gate-rejects-thin-approfondir',
+    ok: thinApprofondirIssues.length === 0,
+    query: thinApprofondirQuality.issues.map((issue) => issue.code).join(' | '),
+    subject: 'writing/quality approfondir completeness',
+    issues: thinApprofondirIssues,
   }, {
     id: 'raw-source-excerpts-do-not-drive-public-writing',
     ok: noisySourceIssues.length === 0,

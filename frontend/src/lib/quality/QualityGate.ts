@@ -223,8 +223,10 @@ const DEFENSIVE_PUBLIC_OPENING_PATTERNS = [
 const PRESS_SUMMARY_OPENING_PATTERNS = [
   /\bla situation actuelle est marqu[ée]e par\b/i,
   /\bla situation est marqu[ée]e par\b/i,
+  /\b(?:l['’]?)?[A-ZÉÈÀÂÎÏÔÛÇ][A-Za-zÀ-ÿ'’ -]{2,80}\s+est\s+[àa]\s+un point critique\b/i,
   /\bles tensions? (?:sont|restent) (?:fortes?|vives?|croissantes?)\b/i,
   /\bun signal cl[ée] [aà] surveiller est\b/i,
+  /\bser(?:a|ont|aient)?\s+crucial(?:e|es|s)?\s+pour\s+d[ée]terminer\b/i,
 ]
 
 const PROBABILITY_STATUS_SECTION_TITLES = [
@@ -338,6 +340,31 @@ function bodyRepeatsTitle(title: string, body: string): boolean {
   const titleKey = normalize(title).replace(/[^a-z0-9]+/g, ' ').trim()
   const bodyStart = normalize(body).replace(/[^a-z0-9]+/g, ' ').trim().slice(0, titleKey.length + 8)
   return Boolean(titleKey && bodyStart.startsWith(titleKey))
+}
+
+function wordCount(value: string): number {
+  return normalize(value)
+    .split(/[^a-z0-9]+/)
+    .filter((part) => part.length > 0)
+    .length
+}
+
+function bodyWithoutTitle(title: string, body: string): string {
+  const normalizedTitle = normalize(title).replace(/[^a-z0-9]+/g, ' ').trim()
+  const normalizedBody = normalize(body).replace(/[^a-z0-9]+/g, ' ').trim()
+  if (!normalizedTitle) return body.trim()
+  if (!normalizedBody.startsWith(normalizedTitle)) return body.trim()
+  return normalizedBody.slice(normalizedTitle.length).trim()
+}
+
+function thinApprofondirSection(title: string, body: string): boolean {
+  const cleanBody = body.trim()
+  const remaining = bodyWithoutTitle(title, body)
+  return (
+    cleanBody.length < 80 ||
+    wordCount(remaining || cleanBody) < 12 ||
+    bodyRepeatsTitle(title, body)
+  )
 }
 
 function sourceTitleLeak(resources: ResourceServiceContract | undefined, writing: WritingContract, baseline: string): string | null {
@@ -568,8 +595,12 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
   const rawExternalExcerptPattern = RAW_EXTERNAL_EXCERPT_PATTERNS.find((pattern) =>
     pattern.test(text),
   )
-  const repeatedSection = arrayValue(input.writing.approfondir?.sections_fr).find((section) =>
+  const approfondirSections = arrayValue(input.writing.approfondir?.sections_fr)
+  const repeatedSection = approfondirSections.find((section) =>
     bodyRepeatsTitle(textValue(section.title), textValue(section.body)),
+  )
+  const thinSections = approfondirSections.filter((section) =>
+    thinApprofondirSection(textValue(section.title), textValue(section.body)),
   )
   const leakedCausalFrame = !isCausalAttributionFrame(input)
     ? CAUSAL_FRAME_PUBLIC_PATTERNS.find((pattern) => pattern.test(normalizedText))
@@ -676,9 +707,18 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
 
   if (repeatedSection) {
     issues.push(issue(
-      'warning',
+      'error',
       'APPROFONDIR_SECTION_REPEATS_TITLE',
       `Approfondir section body repeats its title: ${repeatedSection.title}.`,
+      'writing.approfondir.sections_fr',
+    ))
+  }
+
+  if (thinSections.length >= 2) {
+    issues.push(issue(
+      'error',
+      'APPROFONDIR_SECTIONS_TOO_THIN',
+      `Approfondir has ${thinSections.length} sections that are empty, title-only or too thin to demonstrate the situation.`,
       'writing.approfondir.sections_fr',
     ))
   }
