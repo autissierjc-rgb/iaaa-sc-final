@@ -2028,6 +2028,32 @@ function syncClarifyMessages(
   return [...withoutClarify, { kind: 'clarify', questions: cleanQuestions, canGeneratePrudently }]
 }
 
+function diamondIssueCodesFromPayload(payload: any): string[] {
+  const directIssues = Array.isArray(payload?.quality_issues) ? payload.quality_issues : []
+  const coverageIssues = Array.isArray(payload?.coverage_check?.quality?.diamond_validation?.issues)
+    ? payload.coverage_check.quality.diamond_validation.issues
+    : []
+  return [...directIssues, ...coverageIssues]
+    .map((issue) => String(issue?.code ?? '').trim())
+    .filter(Boolean)
+}
+
+function shouldRetryPrudentGeneration(payload: any, alreadyPrudent: boolean): boolean {
+  if (alreadyPrudent || (payload?.gate !== 'BLOCK' && payload?.gate !== 'CLARIFY')) return false
+  const codes = new Set(diamondIssueCodesFromPayload(payload))
+  const internalQualityBlock = [
+    'mechanical_public_spine',
+    'source_title_copied_into_public_card',
+    'generic_phrase',
+    'public_scaffolding',
+  ].some((code) => codes.has(code))
+  const sourceGroundingClarify = Array.from(codes).some((code) =>
+    code.startsWith('grounded_anti_hors_sol_')
+  )
+  if (payload?.gate === 'BLOCK') return internalQualityBlock
+  return sourceGroundingClarify
+}
+
 type VisibilityState = 'private' | 'public' | 'collab'
 
 type HistoryItem = {
@@ -2285,7 +2311,37 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
         }),
       })
       window.clearTimeout(timeout)
-      const scData2 = await scRes.json()
+      let scData2 = await scRes.json()
+      let completeGenerationPrudently = exploratoryGeneration
+      if (shouldRetryPrudentGeneration(scData2, exploratoryGeneration)) {
+        try {
+          const retryController = new AbortController()
+          const retryTimeout = window.setTimeout(() => retryController.abort(), 12000)
+          const retryRes = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: retryController.signal,
+            body: JSON.stringify({
+              situation: generationSituation,
+              original_situation: text,
+              lang: contentLang.toLowerCase(),
+              mode: 'public_fast',
+              generate_prudently: true,
+              refine_acknowledged: true,
+              conversation_contract: scData?.conversation_contract,
+              dialogue_events: dialogueEvents,
+            }),
+          })
+          window.clearTimeout(retryTimeout)
+          const prudentData = await retryRes.json()
+          if (prudentData?.gate === 'GENERATE' && prudentData.sc) {
+            scData2 = prudentData
+            completeGenerationPrudently = true
+          }
+        } catch (error) {
+          console.warn('prudent generation retry failed:', error)
+        }
+      }
       if (scData2.gate === 'CLARIFY') {
         setCompassMode('idle')
         const qualityIssues = Array.isArray(scData2.quality_issues) ? scData2.quality_issues : []
@@ -2333,7 +2389,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
               original_situation: text,
               lang: contentLang.toLowerCase(),
               mode: 'generate_full',
-              generate_prudently: exploratoryGeneration,
+              generate_prudently: completeGenerationPrudently,
               refine_acknowledged: true,
               conversation_contract: scData2.sc.conversation_contract ?? scData?.conversation_contract,
               dialogue_events: dialogueEvents,
