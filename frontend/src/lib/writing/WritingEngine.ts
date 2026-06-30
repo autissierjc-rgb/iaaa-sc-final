@@ -1370,6 +1370,26 @@ function isGeopoliticalWritingDomain(domain: string) {
   return ['geopolitics', 'geopolitique', 'war_security', 'security', 'guerre_securite', 'crisis_institutional'].includes(domain)
 }
 
+function writingContextCorpus(input: WritingEngineInput): string {
+  return [
+    input.interpretation.raw_input,
+    input.interpretation.situation_soumise,
+    input.interpretation.object_of_analysis,
+    input.interpretation.header_subject,
+    input.interpretation.user_need,
+  ].filter(Boolean).join(' ')
+}
+
+function isSecurityCrisisWritingContext(input: WritingEngineInput): boolean {
+  const corpus = writingContextCorpus(input)
+  return /\b(guerre|war|frappe|frappes|strike|strikes|attaque|attacks?|hostilit[eé]|hostilit|cessez[-\s]?le[-\s]?feu|ceasefire|missile|militaire|military|nucl[eé]aire|nuclear|riposte|escalade|blockade|blocus)\b/i.test(corpus)
+}
+
+function isPoliticalInstitutionalWritingContext(input: WritingEngineInput): boolean {
+  const corpus = writingContextCorpus(input)
+  return /\b(politique|gouvernement|gouvernemental|r[eé]gime|autorit[eé]s?|parlement|election|[ée]lection|opposition|manifestation|contestation|r[eé]pression|nomination|d[eé]mission|vote|sanction|diplomatie|diplomatique)\b/i.test(corpus)
+}
+
 function writingGrammar(input: WritingEngineInput) {
   if (input.expertises_metiers.domain_playbook.domain === 'management') {
     return {
@@ -1424,28 +1444,50 @@ function writingGrammar(input: WritingEngineInput) {
   }
 
   if (isGeopoliticalWritingDomain(input.expertises_metiers.domain_playbook.domain)) {
+    const isInstitutional = isPoliticalInstitutionalWritingContext(input) && !isSecurityCrisisWritingContext(input)
     return {
-      actorsFallback: 'les Etats et forces engagees',
-      institutionsFallback: 'les gouvernements, canaux diplomatiques et commandements militaires concernes',
-      actionFallback: 'une decision militaire, diplomatique ou economique verifiable',
-      evidenceFallback: 'une annonce officielle, une violation documentee, une sanction, une frappe ou un cessez-le-feu confirme',
-      tensionNoun: 'la sequence militaire et diplomatique',
+      actorsFallback: isInstitutional ? 'les autorites et forces politiques concernees' : 'les Etats et forces engagees',
+      institutionsFallback: isInstitutional
+        ? 'les autorites, institutions, partis, corps de securite et canaux diplomatiques concernes'
+        : 'les gouvernements, canaux diplomatiques et commandements militaires concernes',
+      actionFallback: isInstitutional
+        ? 'une decision politique, institutionnelle ou diplomatique verifiable'
+        : 'une decision militaire, diplomatique ou economique verifiable',
+      evidenceFallback: isInstitutional
+        ? 'une declaration officielle, un vote, une nomination, une sanction, une mobilisation ou une decision datee'
+        : 'une annonce officielle, une violation documentee, une sanction, une frappe ou un cessez-le-feu confirme',
+      tensionNoun: isInstitutional ? 'la sequence politique et institutionnelle' : 'la sequence militaire et diplomatique',
       diamond: (tension: string, institutions: string, action: string) =>
-        `Le risque ne tient pas seulement a ${tension} ; il commence quand ${institutions} transforment ${action} en seuil public difficile a reprendre.`,
+        isInstitutional
+          ? `Le risque ne tient pas seulement a ${tension} ; il commence quand ${institutions} transforment ${action} en orientation publique difficile a reprendre.`
+          : `Le risque ne tient pas seulement a ${tension} ; il commence quand ${institutions} transforment ${action} en seuil public difficile a reprendre.`,
       insight: (subject: string, tension: string, action: string, institutions: string) =>
-        `${subject} se lit dans le passage entre ${tension}, ${action} et la capacite de ${institutions} a contenir ou formaliser l escalade.`,
+        isInstitutional
+          ? `${subject} se lit dans le passage entre ${tension}, ${action} et la capacite de ${institutions} a stabiliser, bloquer ou formaliser une orientation.`
+          : `${subject} se lit dans le passage entre ${tension}, ${action} et la capacite de ${institutions} a contenir ou formaliser l escalade.`,
       lectureEntry: (subject: string, institutions: string) =>
-        `${subject} se joue dans l ecart entre pression militaire, cout politique et capacite de ${institutions} a maintenir un cadre de sortie.`,
+        isInstitutional
+          ? `${subject} se joue dans l ecart entre pression publique, controle institutionnel et capacite de ${institutions} a rendre une orientation lisible.`
+          : `${subject} se joue dans l ecart entre pression militaire, cout politique et capacite de ${institutions} a maintenir un cadre de sortie.`,
       approfondirEntry:
-        'Le fond de la situation tient a la transformation possible d une pression militaire ou diplomatique en seuil public, cout durable ou obligation de riposte.',
+        isInstitutional
+          ? 'Le fond de la situation tient a la transformation possible d une pression politique en decision publique, contrainte institutionnelle ou reconfiguration diplomatique.'
+          : 'Le fond de la situation tient a la transformation possible d une pression militaire ou diplomatique en seuil public, cout durable ou obligation de riposte.',
       supportSentence: (actors: string, institutions: string) =>
         `Les acteurs visibles sont ${actors}, mais la dynamique depend de ${institutions}.`,
       vulnerability: (blindSpot: string) =>
         `La vulnerabilite centrale est ${blindSpot} : tant que ce point reste non verifie, la crise peut paraitre contenue alors que ses seuils reels se deplacent.`,
       asymmetry: (actors: string, institutions: string) =>
-        `La pression visible se concentre sur ${actors} ; la formalisation du seuil dépend de ${institutions}, qui peuvent ouvrir une retenue, une négociation ou un nouveau seuil de conflit.`,
+        isInstitutional
+          ? `La pression visible se concentre sur ${actors} ; l orientation publique depend de ${institutions}, qui peuvent stabiliser, bloquer ou formaliser la suite.`
+          : `La pression visible se concentre sur ${actors} ; la formalisation du seuil dépend de ${institutions}, qui peuvent ouvrir une retenue, une négociation ou un nouveau seuil de conflit.`,
       keySignal: (evidence: string) =>
-        signalSentence(evidence, 'modifie les marges militaires, diplomatiques ou économiques des acteurs engagés'),
+        signalSentence(
+          evidence,
+          isInstitutional
+            ? 'modifie les marges politiques, institutionnelles ou diplomatiques des acteurs concernes'
+            : 'modifie les marges militaires, diplomatiques ou économiques des acteurs engagés',
+        ),
     }
   }
 

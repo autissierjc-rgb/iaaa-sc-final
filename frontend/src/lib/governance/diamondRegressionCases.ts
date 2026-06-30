@@ -119,6 +119,33 @@ export const DIAMOND_REGRESSION_CASES: DiamondRegressionCase[] = [
     },
   },
   {
+    id: 'current-political-iran-30-06-requires-public-evidence',
+    domain: 'geopolitics',
+    input: 'Quelle est la situation politique en Iran au 30/06',
+    expectations: {
+      headerDomain: 'Géopolitique',
+      forbiddenTerms: [
+        'Aucune source affichable',
+        'La carte ne peut pas etablir l etat du jour',
+        'Quelle source publique datée faut-il joindre',
+        'Générer une carte exploratoire',
+        'Lecture provisoire : la carte situe les seuils à vérifier, pas l’état factuel du jour',
+        'frappe',
+        'riposte',
+        'seuil militaire',
+        'nouveau seuil de conflit',
+        'un acte, une preuve ou un seuil observable qui modifie les marges d’action',
+        'les faits restent interprétables sans organiser les.',
+      ],
+      requiredTerms: ['Iran', 'politique', 'source', 'publique'],
+      maxModerateBranches: 3,
+      maxDominantBranches: 2,
+      visibleAxisVI: 'Incertitudes',
+      notes:
+        'Une question politique actuelle doit déclencher les ressources rapides et rester dans un cadre institutionnel/politique, sans recycler la matrice guerre/frappe.',
+    },
+  },
+  {
     id: 'flexup-site-analysis',
     domain: 'startup_vc',
     input: 'Que fait https://www.flexup.org/fr et est-ce intéressant ?',

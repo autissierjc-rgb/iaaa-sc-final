@@ -242,10 +242,22 @@ function buildStructuralContradiction(actors: string[], institutions: string[]):
   return `Le coût visible se concentre sur ${actorLine} ; la formalisation du seuil dépend de ${institutionLine}.`
 }
 
+function isSecurityCrisisContext(corpus: string): boolean {
+  return /\b(guerre|war|frappe|frappes|strike|strikes|attaque|attacks?|hostilit[eé]|hostilit|cessez[-\s]?le[-\s]?feu|ceasefire|missile|militaire|military|nucl[eé]aire|nuclear|riposte|escalade|blockade|blocus)\b/i.test(corpus)
+}
+
+function isPoliticalInstitutionalContext(corpus: string): boolean {
+  return /\b(politique|gouvernement|gouvernemental|r[eé]gime|autorit[eé]s?|parlement|election|[ée]lection|opposition|manifestation|contestation|r[eé]pression|nomination|d[eé]mission|vote|sanction|diplomatie|diplomatique)\b/i.test(corpus)
+}
+
 function defaultStructuralGap(input: ResonanceTraceInput): string {
   const corpus = corpusText(input)
-  if (/\b(guerre|frappe|cessez[-\s]?le[-\s]?feu|ceasefire|iran|isra[ëe]l|[ée]tats[-\s]?unis|usa|u\.s\.)\b/i.test(corpus)) {
+  if (isSecurityCrisisContext(corpus)) {
     return 'la chronologie publique qui distingue menace, frappe, négociation et seuil officiel'
+  }
+
+  if (isPoliticalInstitutionalContext(corpus)) {
+    return 'le passage entre contrôle politique affiché, contrainte publique et décision institutionnelle vérifiable'
   }
 
   if (/\b(vendre|exploiter|exploitation|licence|licensing|cession|cessionner|monetiser|monétiser|valoriser|partenariat|partenaire|investir|internaliser|externaliser|option|options)\b/i.test(corpus)) {
@@ -257,6 +269,19 @@ function defaultStructuralGap(input: ResonanceTraceInput): string {
   }
 
   return 'le passage entre tension visible, acteur habilité et contrainte effective'
+}
+
+function defaultTransitionSignal(input: ResonanceTraceInput): string {
+  const corpus = corpusText(input)
+  if (isSecurityCrisisContext(corpus)) {
+    return 'une déclaration officielle, une frappe revendiquée, une rupture de négociation ou un déploiement confirmé'
+  }
+
+  if (isPoliticalInstitutionalContext(corpus)) {
+    return 'une déclaration officielle, un vote, une nomination, une répression documentée ou une ouverture diplomatique datée'
+  }
+
+  return 'une décision, un coût visible, un refus public ou une trace datée'
 }
 
 function tantQue(signal: string): string {
@@ -382,7 +407,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       ...input.theatre.evidence.map((item) => item.label),
       ...input.theatre.visible_actions,
     ]).filter((item) => transitionSignalAnchor(item, sourceHosts, sourceLabels)),
-    'un acte, une preuve ou un seuil observable qui modifie les marges d’action',
+    defaultTransitionSignal(input),
   )
   const structuralContradiction = buildStructuralContradiction(realActors, institutions)
   const structuralVulnerability = buildStructuralVulnerability(structuralGap, transitionSignal)
