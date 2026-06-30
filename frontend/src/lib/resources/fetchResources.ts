@@ -10,6 +10,7 @@ import {
   isRelevantResource,
   normalizeSearchText,
 } from './resourceRelevance'
+import { shouldUseWeb } from './shouldUseWeb'
 
 type TavilySearchPlan = {
   query: string
@@ -20,6 +21,12 @@ type TavilySearchPlan = {
 
 function isGeopoliticalQuery(query: string): boolean {
   return /\b(guerre|war|conflit|crise|cessez[-\s]?le[-\s]?feu|ceasefire|sanction|militaire|military|frappe|strike|diplomatie|diplomacy|geopolitique|geopolitical|nucl[eé]aire|nuclear)\b/i.test(query)
+}
+
+function shouldUsePublicAffairsPlans(query: string): boolean {
+  return extractRequestedDomains(query).length === 0 &&
+    !namedSiteSearchQuery(query) &&
+    (isGeopoliticalQuery(query) || shouldUseWeb(query))
 }
 
 function isCausalInfluenceQuery(query: string): boolean {
@@ -427,7 +434,7 @@ function inferSearchPlans(query: string): TavilySearchPlan[] {
     return plans
   }
 
-  if (isGeopoliticalQuery(query)) {
+  if (shouldUsePublicAffairsPlans(query)) {
     const causalQuery = isCausalInfluenceQuery(query)
     const geopoliticalQuery = causalQuery
       ? `${query} influence decision responsibility official statements timeline`
@@ -495,6 +502,17 @@ function inferSearchPlans(query: string): TavilySearchPlan[] {
   return plans.slice(0, 5)
 }
 
+export function buildFetchResourceSearchPlansForDiagnostics(query: string): {
+  use_broad_web: boolean
+  plans: TavilySearchPlan[]
+} {
+  const normalizedQuery = query.trim().slice(0, 180)
+  return {
+    use_broad_web: shouldUsePublicAffairsPlans(normalizedQuery),
+    plans: inferSearchPlans(normalizedQuery),
+  }
+}
+
 function rankDiverseResources(resources: ResourceItem[], query: string): ResourceItem[] {
   const typeRank: Record<string, number> = {
     'institutional': 0,
@@ -521,7 +539,7 @@ function rankDiverseResources(resources: ResourceItem[], query: string): Resourc
     }
   })
 
-  const geopolitical = isGeopoliticalQuery(query)
+  const geopolitical = shouldUsePublicAffairsPlans(query)
   const trustedCount = sanitized.filter((resource) =>
     ['institutional', 'major-media', 'research', 'local-regional'].includes(resource.type)
   ).length
@@ -777,7 +795,7 @@ export async function fetchResources(situation: string): Promise<ResourceItem[]>
   const query = situation.trim().slice(0, 180)
   if (!query) return []
 
-  const useBroadWeb = isGeopoliticalQuery(query)
+  const useBroadWeb = shouldUsePublicAffairsPlans(query)
   const [directResources, tavilyResources, openAIResources, braveResources] = await Promise.all([
     fetchRequestedUrlResources(query),
     fetchTavily(query),

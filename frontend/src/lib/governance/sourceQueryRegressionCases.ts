@@ -13,6 +13,7 @@ import {
   filterFastResourceResultsByPlanForDiagnostics,
   legacyFallbackPlanQueriesForDiagnostics,
 } from '@/lib/resources/FastResourceRunner'
+import { buildFetchResourceSearchPlansForDiagnostics } from '@/lib/resources/fetchResources'
 import { buildGroundingContract } from '@/lib/grounding'
 import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSourceCoverage'
 import type { ResourceItem } from '@/lib/resources/resourceContract'
@@ -1554,6 +1555,29 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
       message: 'Legacy resource fallback must keep functional source plans after the targeted current-source plan.',
     })
   }
+  const politicalCurrentFallback = buildFetchResourceSearchPlansForDiagnostics(
+    'Quelle est la situation politique en Iran au 30/06',
+  )
+  const politicalCurrentFallbackIssues: SourceQueryRegressionResult['issues'] = []
+  if (!politicalCurrentFallback.use_broad_web) {
+    politicalCurrentFallbackIssues.push({
+      level: 'error',
+      code: 'current_political_question_not_broad_web',
+      message: 'A clear current political question must activate broad public-source fallback, not only the narrow legacy search path.',
+    })
+  }
+  const politicalCurrentPlanText = politicalCurrentFallback.plans
+    .map((plan) => `${plan.label}:${plan.query}:${plan.include_domains?.join(',') ?? ''}`)
+    .join(' | ')
+  for (const required of ['institutional', 'local-regional', 'major-media']) {
+    if (!includesLoose(politicalCurrentPlanText, required)) {
+      politicalCurrentFallbackIssues.push({
+        level: 'error',
+        code: 'current_political_question_missing_public_plan',
+        message: `Current political fallback must keep the ${required} public-source plan.`,
+      })
+    }
+  }
 
   const longExcerptResource: ResourceItem = {
     title: 'Iran, Israel and United States trade warnings as talks stall',
@@ -1896,6 +1920,12 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: legacyFallbackPlanQueries.join(' | '),
     subject: 'resources fallback plan coverage',
     issues: legacyFallbackPlanIssues,
+  }, {
+    id: 'fetch-resources-current-political-question-uses-public-plans',
+    ok: politicalCurrentFallbackIssues.length === 0,
+    query: politicalCurrentPlanText,
+    subject: 'resources broad public-source fallback',
+    issues: politicalCurrentFallbackIssues,
   }, {
     id: 'fast-runner-extracts-probative-excerpt',
     ok: longExcerptIssues.length === 0,
