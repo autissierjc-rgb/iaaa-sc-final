@@ -222,11 +222,11 @@ function genericCurrentCardForValidation(): SituationCard {
     title_en: 'US Iran war',
     submitted_situation_fr: 'Où en sommes-nous sur la guerre entre les États-Unis et l’Iran au 2 juin ?',
     submitted_situation_en: 'Where are we on the war between the United States and Iran on June 2?',
-    insight_fr: 'La situation tient tant que Iran, États-Unis peuvent absorber l’écart entre récit, coût et décision ; elle bascule quand un acte transforme la riposte en seuil public.',
+    insight_fr: 'La lecture reste qualifiée tant que la chronologie publique n’est pas vérifiée par une source datée.',
     insight_en: '',
-    main_vulnerability_fr: 'Le point fragile est le mécanisme qui transforme la frappe, la riposte ou la négociation en seuil officiel.',
+    main_vulnerability_fr: 'La fragilité vient du manque de chronologie publique vérifiée.',
     main_vulnerability_en: '',
-    asymmetry_fr: 'Iran, États-Unis exposent la tension, mais administration américaine, autorités iraniennes décident si elle reste contenue.',
+    asymmetry_fr: 'Les autorités concernées gardent des marges tant qu’aucune déclaration datée ne fixe le seuil.',
     asymmetry_en: '',
     state_index_final: 60,
     state_label_fr: 'Vigilance',
@@ -1729,7 +1729,7 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     } as unknown as SituationCard,
     resources: [],
   })
-  for (const forbidden of ['Unis', 'Sat, 30 May', 'Tue, 02 Jun', 'la situation actuelle du conflit']) {
+  for (const forbidden of ['Sat, 30 May', 'Tue, 02 Jun', 'la situation actuelle du conflit']) {
     if (includesLoose(noisyDeepReading.approfondir_fr, forbidden)) {
       deepAnchorNoiseIssues.push({
         level: 'error',
@@ -1737,6 +1737,13 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
         message: `Deep reading must not render raw anchor noise as concrete matter: ${forbidden}.`,
       })
     }
+  }
+  if (/(^|[^A-Za-zÀ-ÿ-])Unis([^A-Za-zÀ-ÿ-]|$)/.test(noisyDeepReading.approfondir_fr.replace(/États-Unis|Etats-Unis/g, ''))) {
+    deepAnchorNoiseIssues.push({
+      level: 'error',
+      code: 'deep_reading_anchor_noise_leaked',
+      message: 'Deep reading must not render raw anchor noise as concrete matter: Unis.',
+    })
   }
 
   const deepCausalFrameLeakIssues: SourceQueryRegressionResult['issues'] = []

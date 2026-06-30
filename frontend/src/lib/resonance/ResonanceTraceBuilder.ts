@@ -222,7 +222,7 @@ function sourceSignalAsTransition(value: string): string {
 
   if (hasHostility && hasNegotiation) return 'un enchaînement hostilités/cessez-le-feu documenté'
   if (hasNegotiation && hasStalled) return 'un blocage de négociation devenu public'
-  if (hasOfficial && hasThreshold) return 'un avertissement officiel sur un seuil militaire'
+  if (hasOfficial && hasThreshold) return 'un avertissement officiel sur des seuils militaires'
   if (hasHostility && hasInfrastructure) return 'une atteinte à une infrastructure stratégique'
   if (hasNegotiation) return 'une piste d’accord ou de cessez-le-feu rendue publique'
   if (hasHostility) return 'un signal d’hostilités documenté'
@@ -245,7 +245,7 @@ function buildStructuralContradiction(actors: string[], institutions: string[]):
 function defaultStructuralGap(input: ResonanceTraceInput): string {
   const corpus = corpusText(input)
   if (/\b(guerre|frappe|cessez[-\s]?le[-\s]?feu|ceasefire|iran|isra[ëe]l|[ée]tats[-\s]?unis|usa|u\.s\.)\b/i.test(corpus)) {
-    return 'le passage entre signaux publics, décision assumée et seuil opposable'
+    return 'la chronologie publique qui distingue menace, frappe, négociation et seuil officiel'
   }
 
   if (/\b(vendre|exploiter|exploitation|licence|licensing|cession|cessionner|monetiser|monétiser|valoriser|partenariat|partenaire|investir|internaliser|externaliser|option|options)\b/i.test(corpus)) {

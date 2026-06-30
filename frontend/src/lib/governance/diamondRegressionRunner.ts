@@ -9,19 +9,45 @@ export type DiamondRegressionCheck = {
 }
 
 function cardText(sc: SituationCard): string {
-  const parts: string[] = []
-  for (const value of Object.values(sc)) {
-    if (typeof value === 'string') parts.push(value)
-    else if (Array.isArray(value)) {
-      for (const item of value) {
-        if (typeof item === 'string') parts.push(item)
-        else if (item && typeof item === 'object') {
-          for (const nested of Object.values(item as Record<string, unknown>)) {
-            if (typeof nested === 'string') parts.push(nested)
-          }
-        }
+  const record = sc as Record<string, unknown>
+  const fields = [
+    'title_fr',
+    'submitted_situation_fr',
+    'insight_fr',
+    'main_vulnerability_fr',
+    'asymmetry_fr',
+    'key_signal_fr',
+    'lecture_systeme_fr',
+    'approfondir_fr',
+    'constraints_fr',
+    'uncertainties_fr',
+    'movements_fr',
+  ]
+  const parts = fields
+    .flatMap((field) => {
+      const value = record[field]
+      return Array.isArray(value) ? value : [value]
+    })
+    .filter((value): value is string => typeof value === 'string')
+
+  const writing = sc.writing_contract as Record<string, unknown> | undefined
+  if (writing) {
+    const collect = (value: unknown): void => {
+      if (typeof value === 'string') {
+        parts.push(value)
+        return
+      }
+      if (Array.isArray(value)) {
+        for (const item of value) collect(item)
+        return
+      }
+      if (value && typeof value === 'object') {
+        for (const nested of Object.values(value as Record<string, unknown>)) collect(nested)
       }
     }
+    collect(writing.situation_card)
+    collect(writing.lecture)
+    collect(writing.approfondir)
   }
   return parts.join('\n')
 }

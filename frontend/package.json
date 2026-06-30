@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "codex:preflight": "node scripts/codex-preflight.mjs",
+    "sc:e2e": "node scripts/sc-e2e-gate.mjs",
     "lint": "next lint"
   },
   "dependencies": {

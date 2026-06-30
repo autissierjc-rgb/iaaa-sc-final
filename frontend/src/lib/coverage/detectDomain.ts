@@ -41,6 +41,13 @@ export function detectDomain(input: string): SituationDomain {
   }
 
   if (
+    hasAny(text, ['http://', 'https://', 'www.', '.com', '.fr', '.io', '.ai']) &&
+    hasAny(text, ['decision', 'strategie', 'strategique', 'options', 'solution', 'prioriser', 'priorite', 'promouvoir', 'orientation', 'orientations'])
+  ) {
+    return 'startup_vc'
+  }
+
+  if (
     hasAny(text, ['communaute d utilisateurs', 'communaute utilisateur', 'communaute utilisateurs', 'utilisateur', 'utilisateurs', 'audience', 'acquisition', 'retention', 'activation', 'onboarding', 'go to market', 'go-to-market']) &&
     hasAny(text, ['cible', 'segment', 'options', 'strategie', 'strategique', 'developper', 'croissance', 'produit', 'plateforme', 'app', 'saas', 'situation card', 'situationcard', 'situation car d'])
   ) {
