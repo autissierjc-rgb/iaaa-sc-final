@@ -230,8 +230,17 @@ function sourceSignalAsTransition(value: string): string {
   return 'un fait public qualifié'
 }
 
-function sourceTransitionsFromSignals(signals: Array<{ signal_fr: string }>): string[] {
+function sourceTransitionCompatibleWithContext(signal: string, input: ResonanceTraceInput): boolean {
+  const corpus = corpusText(input)
+  const politicalInstitutional = isPoliticalInstitutionalContext(corpus) && !isSecurityCrisisContext(corpus)
+  if (!politicalInstitutional) return true
+
+  return !/\b(hostilit[eé]s?|cessez[-\s]?le[-\s]?feu|frappe|frappes|riposte|militaires?|military|guerre|conflit)\b/i.test(signal)
+}
+
+function sourceTransitionsFromSignals(signals: Array<{ signal_fr: string }>, input: ResonanceTraceInput): string[] {
   return unique(signals.map((signal) => sourceSignalAsTransition(signal.signal_fr)))
+    .filter((signal) => sourceTransitionCompatibleWithContext(signal, input))
     .filter((signal) => signal !== 'un fait public qualifié')
     .slice(0, 3)
 }
@@ -403,7 +412,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
   )
   const transitionSignal = firstUseful(
     unique([
-      ...sourceTransitionsFromSignals(sourceSignals),
+      ...sourceTransitionsFromSignals(sourceSignals, input),
       ...input.theatre.evidence.map((item) => item.label),
       ...input.theatre.visible_actions,
     ]).filter((item) => transitionSignalAnchor(item, sourceHosts, sourceLabels)),

@@ -172,7 +172,14 @@ function publicPhrase(value: string): string {
   return clean
 }
 
-function sourceSignalAnchors(resonance: ResonanceTraceContract): string[] {
+function writingSignalCompatibleWithContext(signal: string, input: WritingEngineInput): boolean {
+  const politicalInstitutional = isPoliticalInstitutionalWritingContext(input) && !isSecurityCrisisWritingContext(input)
+  if (!politicalInstitutional) return true
+
+  return !/\b(hostilit[eé]s?|cessez[-\s]?le[-\s]?feu|frappe|frappes|riposte|militaires?|military|guerre|conflit)\b/i.test(signal)
+}
+
+function sourceSignalAnchors(resonance: ResonanceTraceContract, input: WritingEngineInput): string[] {
   const concreteTransition = /un acte,\s*une preuve ou un seuil observable/i.test(resonance.transition_signal_fr)
     ? ''
     : publicEvidenceAnchorForWriting(resonance.transition_signal_fr)
@@ -180,7 +187,12 @@ function sourceSignalAnchors(resonance: ResonanceTraceContract): string[] {
     ...resonance.source_signals.map((signal) => publicEvidenceAnchorForWriting(signal.signal_fr)),
     concreteTransition,
   ])
-    .filter((item) => !isPublicPlaceholder(item) && !isPublicSpineNoise(item) && !isGenericPublicSignal(item))
+    .filter((item) =>
+      !isPublicPlaceholder(item) &&
+      !isPublicSpineNoise(item) &&
+      !isGenericPublicSignal(item) &&
+      writingSignalCompatibleWithContext(item, input)
+    )
     .slice(0, 3)
 }
 
@@ -188,29 +200,43 @@ function sourceGroundedDiamondText({
   resonance,
   actors,
   institutions,
+  input,
 }: {
   resonance: ResonanceTraceContract
   actors: string
   institutions: string
+  input: WritingEngineInput
 }): string {
-  const signals = sourceSignalAnchors(resonance)
+  const signals = sourceSignalAnchors(resonance, input)
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
+  const politicalInstitutional = isPoliticalInstitutionalWritingContext(input) && !isSecurityCrisisWritingContext(input)
+  if (politicalInstitutional) {
+    return `Si ${signalLine} apparaît, la situation cesse d’être seulement commentée : elle teste la capacité de ${institutions} à transformer le signal porté par ${actors} en décision, cadrage ou contrainte publique.`
+  }
+
   return `Si ${signalLine} apparaît, la crise cesse d’être seulement commentée : elle teste la capacité de ${institutions} à transformer le coût porté par ${actors} en règle, médiation ou seuil assumé.`
 }
 
 function sourceGroundedVulnerabilityText({
   resonance,
   institutions,
+  input,
 }: {
   resonance: ResonanceTraceContract
   institutions: string
+  input: WritingEngineInput
 }): string {
-  const signals = sourceSignalAnchors(resonance)
+  const signals = sourceSignalAnchors(resonance, input)
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
+  const politicalInstitutional = isPoliticalInstitutionalWritingContext(input) && !isSecurityCrisisWritingContext(input)
+  if (politicalInstitutional) {
+    return `La vulnérabilité centrale est l’écart entre ${signalLine} et la décision publique à assumer par ${institutions} pour rendre la situation vérifiable.`
+  }
+
   return `La vulnérabilité centrale est l’écart entre ${signalLine} et la décision publique à assumer par ${institutions} pour rendre le seuil opposable.`
 }
 
@@ -218,15 +244,22 @@ function sourceGroundedContradictionText({
   resonance,
   actors,
   institutions,
+  input,
 }: {
   resonance: ResonanceTraceContract
   actors: string
   institutions: string
+  input: WritingEngineInput
 }): string {
-  const signals = sourceSignalAnchors(resonance)
+  const signals = sourceSignalAnchors(resonance, input)
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
+  const politicalInstitutional = isPoliticalInstitutionalWritingContext(input) && !isSecurityCrisisWritingContext(input)
+  if (politicalInstitutional) {
+    return `La contradiction tient ici : la pression publique pèse sur ${actors}, mais la trajectoire ne devient lisible que si ${institutions} transforment ${signalLine} en orientation publique.`
+  }
+
   return `La contradiction tient ici : le coût immédiat pèse sur ${actors}, mais la trajectoire ne devient lisible que si ${institutions} transforment ${signalLine} en seuil public.`
 }
 
@@ -483,16 +516,25 @@ function publicEvidenceAnchorForWriting(value: string): string {
 }
 
 function groundedFactOpeningSentence(
+  input: WritingEngineInput,
   grounding?: GroundingContract,
   resources?: ResourceServiceContract,
 ): string | undefined {
   const facts = (grounding?.current_facts ?? [])
     .filter((fact) => fact.source === 'resources')
     .map((fact) => publicEvidenceAnchorForWriting(fact.label_fr))
-    .filter((fact) => fact.length > 0 && !looksLikeProbativeEvidenceNoise(fact))
+    .filter((fact) =>
+      fact.length > 0 &&
+      !looksLikeProbativeEvidenceNoise(fact) &&
+      writingSignalCompatibleWithContext(fact, input)
+    )
     .slice(0, 2)
 
-  const signals = facts.length > 0 ? facts : publicRegimeSignalsForWriting(resources).slice(0, 2)
+  const signals = facts.length > 0
+    ? facts
+    : publicRegimeSignalsForWriting(resources)
+        .filter((signal) => writingSignalCompatibleWithContext(signal, input))
+        .slice(0, 2)
 
   if (signals.length === 0) return undefined
 
@@ -1545,7 +1587,12 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     ...theatreProofAnchors(input.theatre, input.expertises_metiers),
   ]
     .map((anchor) => publicEvidenceAnchorForWriting(anchor))
-    .filter((anchor) => anchor.length > 0 && !isGenericPublicSignal(anchor) && !isPublicSpineNoise(anchor)))
+    .filter((anchor) =>
+      anchor.length > 0 &&
+      !isGenericPublicSignal(anchor) &&
+      !isPublicSpineNoise(anchor) &&
+      writingSignalCompatibleWithContext(anchor, input)
+    ))
   const fragilityAnchors = unique([
     resonance.structural_gap_fr,
     ...theatreFragilityAnchors(input.theatre, input.expertises_metiers),
@@ -1558,10 +1605,10 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const missingExternalEvidence = needsExternalEvidenceWithoutSources(input.resources)
   const probability = probabilityFromResources(input.resources, relevanceQuery) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
-  const groundedFactOpening = groundedFactOpeningSentence(input.grounding, input.resources)
-  const sourcedDiamondText = sourceGroundedDiamondText({ resonance, actors, institutions })
-  const sourcedVulnerabilityText = sourceGroundedVulnerabilityText({ resonance, institutions })
-  const sourcedContradictionText = sourceGroundedContradictionText({ resonance, actors, institutions })
+  const groundedFactOpening = groundedFactOpeningSentence(input, input.grounding, input.resources)
+  const sourcedDiamondText = sourceGroundedDiamondText({ resonance, actors, institutions, input })
+  const sourcedVulnerabilityText = sourceGroundedVulnerabilityText({ resonance, institutions, input })
+  const sourcedContradictionText = sourceGroundedContradictionText({ resonance, actors, institutions, input })
   const diamondText = polishPublicProofText(compactSentence(
     sourcedDiamondText || resonance.diamond_thesis_fr || grammar.diamond(tension, institutions, firstProcedure),
     320,
