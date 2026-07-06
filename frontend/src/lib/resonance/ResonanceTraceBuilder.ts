@@ -196,7 +196,11 @@ function visibleList(items: string[], fallback: string): string {
   return items.length > 0 ? items.slice(0, 4).join(', ') : fallback
 }
 
-function relevantSourceSignal(signal: { signal_fr: string; source_title: string; source_name: string }, corpus: string): boolean {
+function relevantSourceSignal(
+  signal: { signal_fr: string; source_title: string; source_name: string },
+  corpus: string,
+  knownEntities: string[],
+): boolean {
   const corpusWords = new Set(words(corpus).filter((word) => !RELEVANCE_STOPWORDS.has(word)))
   if (corpusWords.size === 0) return true
 
@@ -205,8 +209,12 @@ function relevantSourceSignal(signal: { signal_fr: string; source_title: string;
   const overlap = signalWords.filter((word) => corpusWords.has(word))
 
   if (overlap.length >= 2) return true
-  if (/\biran|iranien|isra[ëe]l|[ée]tats[-\s]?unis|usa|u\.s\.|trump|washington|teheran|t[ée]h[ée]ran\b/i.test(corpus)) {
-    return /\biran|iranien|isra[ëe]l|[ée]tats[-\s]?unis|usa|u\.s\.|trump|washington|teheran|t[ée]h[ée]ran\b/i.test(sourceText)
+
+  const entityKeys = unique(knownEntities.flatMap((entity) => normalizedWords(entity)))
+    .filter((key) => key.length >= 3 && !RELEVANCE_STOPWORDS.has(key))
+  if (entityKeys.length > 0) {
+    const normalizedSource = normalize(sourceText)
+    return entityKeys.some((key) => new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i').test(normalizedSource))
   }
 
   return overlap.length >= 1
@@ -353,51 +361,22 @@ function evidenceRelevanceQuery(input: ResonanceTraceInput): string {
   ]).join(' ')
 }
 
-function lexicalActorsFromCorpus(text: string): string[] {
-  const normalizedText = normalize(text)
-  const actors: string[] = []
-  const addIf = (pattern: RegExp, label: string) => {
-    if (pattern.test(normalizedText)) actors.push(label)
-  }
-
-  addIf(/\biran|iranien|iranienne|teheran\b/i, 'Iran')
-  addIf(/\bisrael|israelien|jerusalem\b/i, 'Israël')
-  addIf(/\b(?:usa|u\.s\.|us\b|united states|etats[-\s]?unis|americain|washington|trump)\b/i, 'États-Unis')
-  addIf(/\bhezbollah\b/i, 'Hezbollah')
-  addIf(/\bhamas\b/i, 'Hamas')
-  addIf(/\bhouthi|houthis|yemen\b/i, 'Houthis')
-  addIf(/\brussie|russia|moscou|moscow\b/i, 'Russie')
-  addIf(/\bukraine|kyiv|kiev\b/i, 'Ukraine')
-  addIf(/\bchine|china|pekin|beijing\b/i, 'Chine')
-  addIf(/\bunion europeenne|\bue\b|european union|\beu\b/i, 'Union européenne')
-  addIf(/\botan|nato\b/i, 'OTAN')
-  addIf(/\bonu|united nations\b/i, 'ONU')
-  return unique(actors)
+function knownEntitiesFromContracts(input: ResonanceTraceInput): string[] {
+  return unique([
+    ...input.interpretation.entity_explanations.map((entity) => entity.label),
+    ...(input.theatre.named_actors ?? []),
+  ])
 }
 
-function lexicalInstitutionsFromCorpus(text: string): string[] {
-  const normalizedText = normalize(text)
-  const institutions: string[] = []
-  const addIf = (pattern: RegExp, label: string) => {
-    if (pattern.test(normalizedText)) institutions.push(label)
-  }
+function institutionAnchoredInContracts(institution: string, normalizedSupport: string): boolean {
+  const namedTokens = institution
+    .split(/[^A-Za-zÀ-ÖØ-öø-ÿ0-9]+/)
+    .filter((token) => /^[A-ZÀ-Ö]/.test(token))
+    .map((token) => normalize(token))
+    .filter((token) => token.length >= 2)
 
-  addIf(/\b(?:usa|u\.s\.|us\b|united states|etats[-\s]?unis|washington|trump|white house|maison[-\s]?blanche)\b/i, 'administration américaine')
-  addIf(/\bcongress|congres\b/i, 'Congrès américain')
-  addIf(/\bisrael|israelien|netanyahu|jerusalem\b/i, 'gouvernement israélien')
-  addIf(/\biran|iranien|iranienne|teheran|irgc|gardiens de la revolution\b/i, 'autorités iraniennes')
-  addIf(/\baiea|iaea|nucleaire|nuclear\b/i, 'AIEA')
-  addIf(/\bonu|united nations|security council|conseil de securite\b/i, 'Conseil de sécurité de l’ONU')
-  addIf(/\bcessez[-\s]?le[-\s]?feu|ceasefire|truce|mediation|mediator|qatar|oman\b/i, 'canaux de médiation')
-  addIf(/\bpetrole|oil|energy|energie|hormuz\b/i, 'marchés de l’énergie')
-  return unique(institutions)
-}
-
-function institutionSupportedByQuestion(institution: string, corpus: string): boolean {
-  if (/onu|nations unies|conseil de s[ée]curit[ée]|security council/i.test(institution)) {
-    return /\bonu\b|united nations|nations unies|security council|conseil de s[ée]curit[ée]/i.test(corpus)
-  }
-  return true
+  if (namedTokens.length === 0) return true
+  return namedTokens.some((token) => normalizedSupport.includes(token))
 }
 
 export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceContract {
@@ -409,8 +388,9 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     host(source.url),
   ]))
   const sourceLabels = unique((input.resources?.public_sources ?? []).map((source) => source.title))
+  const knownEntities = knownEntitiesFromContracts(input)
   const sourceSignals = buildResourceRegimeSignals(input.resources, 4)
-    .filter((signal) => relevantSourceSignal(signal, corpus))
+    .filter((signal) => relevantSourceSignal(signal, corpus, knownEntities))
     .map((signal) => ({
       source_id: signal.source_id,
       signal_fr: signal.signal_fr,
@@ -428,19 +408,20 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       can_drive_probability: evidence.can_drive_probability,
     }))
   const realActors = removeCompositeActors([
-    ...input.interpretation.entity_explanations.map((entity) => entity.label),
-    ...lexicalActorsFromCorpus(corpus),
-    ...(input.theatre.named_actors ?? []),
+    ...knownEntities,
     ...input.theatre.actors,
   ])
     .filter((actor) => publicAnchor(actor, sourceHosts, sourceLabels))
     .slice(0, 8)
-  const institutions = unique([
-    ...lexicalInstitutionsFromCorpus(corpus),
-    ...input.theatre.institutions,
-  ])
+  const institutionSupport = normalize([
+    corpus,
+    ...knownEntities,
+    ...sourceSignals.map((signal) => `${signal.signal_fr} ${signal.source_title}`),
+    ...qualifiedEvidence.map((evidence) => evidence.public_label_fr),
+  ].join(' '))
+  const institutions = unique(input.theatre.institutions)
     .filter((institution) => publicAnchor(institution, sourceHosts, sourceLabels))
-    .filter((institution) => institutionSupportedByQuestion(institution, corpus))
+    .filter((institution) => institutionAnchoredInContracts(institution, institutionSupport))
     .slice(0, 8)
   const structuralGap = firstUseful(
     unique([
