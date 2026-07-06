@@ -5051,7 +5051,9 @@ export async function POST(req: NextRequest) {
             },
           }
         : initialResourcePlan
-    const fastRunnerResult = fastResourcePlan.needs_web && providedResources.length === 0 && !exploratoryWithoutMaterial
+    const exploratoryBlocksPublicWeb =
+      exploratoryWithoutMaterial && fastResourcePlan.policy === 'url_extract_required'
+    const fastRunnerResult = fastResourcePlan.needs_web && providedResources.length === 0 && !exploratoryBlocksPublicWeb
       ? await runFastResourceRunner({
           interpretation: canonicalInterpretation,
           resource_plan: fastResourcePlan,
@@ -5078,7 +5080,7 @@ export async function POST(req: NextRequest) {
     }
     const fastRunnerResources = resourceItemsFromContracts(fastRunnerResult?.resources ?? [])
     const shouldRunFetchResourcesFallback =
-      !exploratoryWithoutMaterial &&
+      !exploratoryBlocksPublicWeb &&
       providedResources.length === 0 &&
       webNeeded &&
       fastRunnerResources.length === 0
@@ -5103,7 +5105,7 @@ export async function POST(req: NextRequest) {
       })
     }
     const rawFetchedResources =
-      exploratoryWithoutMaterial
+      exploratoryBlocksPublicWeb
         ? []
       : isPublicFast || fastRunnerResources.length > 0 || fetchedFallbackResources.length > 0
         ? uniqueResourceItemsForGenerate([...providedResources, ...fastRunnerResources, ...fetchedFallbackResources])
@@ -5161,7 +5163,7 @@ export async function POST(req: NextRequest) {
       patterns: humanCollectivePatterns,
       supplied_resources: resourceContractsFromItems(resources),
     })
-    if (exploratoryWithoutMaterial) {
+    if (exploratoryBlocksPublicWeb) {
       canonicalResourcePlan = {
         ...canonicalResourcePlan,
         status: 'partial',
