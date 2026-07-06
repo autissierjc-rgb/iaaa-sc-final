@@ -1,5 +1,4 @@
 import type { WritingContract } from '../contracts'
-import { buildResourceRegimeSignals } from '../resources/regimeSignals'
 import type { DiamondDossier } from './DiamondDossier'
 
 export type SCGrammarPromptMessage = {
@@ -34,9 +33,10 @@ function section(title: string, body: unknown): string {
 }
 
 function resourceSummary(dossier: DiamondDossier) {
-  const regimeSignals = buildResourceRegimeSignals(dossier.resources.plan, 4)
+  const regimeSignals = dossier.resonance.source_signals
 
   return {
+    context_frame: dossier.resonance.context_frame,
     role: dossier.resources.user_material.role,
     role_reason_fr: dossier.resources.user_material.reason_fr,
     requested_urls: dossier.resources.requested_urls,
@@ -59,19 +59,17 @@ function resourceSummary(dossier: DiamondDossier) {
       source_title: option.source_title,
       evidence_fr: list(option.evidence_fr, 4),
     })),
-    public_evidence: dossier.resources.public_evidence.map((evidence) => ({
+    public_evidence: dossier.resonance.qualified_evidence.map((evidence) => ({
       status: evidence.status,
       public_label_fr: evidence.public_label_fr,
+      public_signal_fr: evidence.public_signal_fr,
       source_id: evidence.source_id,
-      reason: evidence.reason,
-      can_be_public: evidence.can_be_public,
       can_drive_probability: evidence.can_drive_probability,
     })),
     regime_signals: regimeSignals.map((signal) => ({
       signal_fr: signal.signal_fr,
-      source_title: signal.source_title,
+      public_signal_fr: signal.public_signal_fr,
       source_name: signal.source_name,
-      reliability: signal.reliability,
       discriminant_terms: signal.discriminant_terms,
     })),
     functional_needs: dossier.resources.plan.functional_needs.map((need) => ({
@@ -143,8 +141,8 @@ function responseShape(): SCGrammarPrompt['required_json_shape'] {
 
 function qualityTargets(dossier: DiamondDossier): string[] {
   const hasExtractedOptions = (dossier.resources.plan.extracted_options ?? []).length >= 2
-  const hasRegimeSignals = buildResourceRegimeSignals(dossier.resources.plan, 2).length >= 2
-  const hasPublicEvidence = dossier.resources.public_evidence.some((evidence) => evidence.can_drive_probability)
+  const hasRegimeSignals = dossier.resonance.source_signals.length >= 2
+  const hasPublicEvidence = dossier.resonance.qualified_evidence.some((evidence) => evidence.can_drive_probability)
   return [
     'Insight: faire voir la structure cachee, pas seulement reformuler la question.',
     'Main Vulnerability: nommer le point de rupture precis, testable et non banal.',
@@ -175,8 +173,8 @@ function qualityTargets(dossier: DiamondDossier): string[] {
 
 export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
   const hasExtractedOptions = (dossier.resources.plan.extracted_options ?? []).length >= 2
-  const hasRegimeSignals = buildResourceRegimeSignals(dossier.resources.plan, 2).length >= 2
-  const hasPublicEvidence = dossier.resources.public_evidence.some((evidence) => evidence.can_drive_probability)
+  const hasRegimeSignals = dossier.resonance.source_signals.length >= 2
+  const hasPublicEvidence = dossier.resonance.qualified_evidence.some((evidence) => evidence.can_drive_probability)
   const system = [
     'You are the Situation Card Diamond Writer.',
     'You do not reinterpret the user request. The canonical interpretation is already decided.',
