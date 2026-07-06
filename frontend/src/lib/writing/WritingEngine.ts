@@ -13,7 +13,7 @@ import type {
 import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { cleanModelText, parseModelJSON } from '../ai/json'
 import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
-import { looksLikeProbativeEvidenceNoise, publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
+import { looksLikeProbativeEvidenceNoise } from '../resources/probativeEvidenceSanitizer'
 import { buildResourceRegimeSignals } from '../resources/regimeSignals'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
 
@@ -75,18 +75,6 @@ function publicSubject(input: WritingEngineInput): string {
 
 function unique(items: string[]): string[] {
   return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)))
-}
-
-function writingRelevanceQuery(input: WritingEngineInput): string {
-  return unique([
-    input.interpretation.raw_input,
-    input.interpretation.situation_soumise,
-    input.interpretation.object_of_analysis,
-    input.interpretation.header_subject,
-    input.interpretation.angle,
-    input.interpretation.user_need,
-    input.interpretation.primary_hypothesis ?? '',
-  ]).join(' ')
 }
 
 function isPublicPlaceholder(item: string): boolean {
@@ -396,8 +384,8 @@ function hasProductOptionEvidence(resources?: ResourceServiceContract): boolean 
 }
 
 function probabilityFromResources(
+  resonance: ResonanceTraceContract,
   resources?: ResourceServiceContract,
-  relevanceQuery?: string,
 ): ProbabilityAssessment | null {
   if (!resources || resources.public_sources.length === 0) return null
 
@@ -422,8 +410,8 @@ function probabilityFromResources(
   }
 
   const proof = resourceProofLabel(resources)
-  const publicEvidence = publicProbativeEvidence(resources, 3, relevanceQuery)
-  const usableEvidence = publicEvidence.filter((evidence) => evidence.can_drive_probability)
+  const publicEvidence = resonance.qualified_evidence
+  const usableEvidence = qualifiedProbativeEvidence(resonance)
   if (usableEvidence.length === 0) {
     return {
       claim_fr: 'Des sources rapides sont attachées, mais elles ne fournissent pas encore de fait public suffisamment propre pour durcir la lecture.',
@@ -457,20 +445,22 @@ function probabilityFromResources(
   }
 }
 
-function publicEvidenceAnchors(resources?: ResourceServiceContract, relevanceQuery?: string): string[] {
-  return publicEvidenceFactAnchors(resources, relevanceQuery)
+function qualifiedProbativeEvidence(resonance: ResonanceTraceContract): ResonanceTraceContract['qualified_evidence'] {
+  return resonance.qualified_evidence.filter((evidence) => evidence.can_drive_probability)
 }
 
-function publicEvidenceFactAnchors(resources?: ResourceServiceContract, relevanceQuery?: string): string[] {
-  return publicProbativeEvidence(resources, 3, relevanceQuery)
-    .filter((evidence) => evidence.can_drive_probability)
+function publicEvidenceAnchors(resonance: ResonanceTraceContract): string[] {
+  return publicEvidenceFactAnchors(resonance)
+}
+
+function publicEvidenceFactAnchors(resonance: ResonanceTraceContract): string[] {
+  return qualifiedProbativeEvidence(resonance)
     .map((evidence) => publicEvidenceAnchorForWriting(evidence.public_label_fr))
     .filter((evidence) => evidence.length > 0 && !looksLikeProbativeEvidenceNoise(evidence))
 }
 
-function publicEvidenceSignalAnchors(resources?: ResourceServiceContract, relevanceQuery?: string): string[] {
-  return publicProbativeEvidence(resources, 3, relevanceQuery)
-    .filter((evidence) => evidence.can_drive_probability)
+function publicEvidenceSignalAnchors(resonance: ResonanceTraceContract): string[] {
+  return qualifiedProbativeEvidence(resonance)
     .map((evidence) => publicFactSignal(evidence.public_label_fr))
     .filter((signal) => signal.length > 0)
 }
@@ -1058,7 +1048,6 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
   const keySignal = hasSegments
     ? `Signal clé : vérifier si ${priority.label} passe en moins de quelques cycles de l’intérêt à ${decisionProof}.`
     : 'Signal clé : obtenir une liste explicite de publics, d’usages ou d’offres, puis observer lequel produit un premier usage répété.'
-  const relevanceQuery = writingRelevanceQuery(input)
   const lecture = hasSegments
     ? `Le vrai arbitrage n’est pas entre trois publics, mais entre trois types de preuve : ${compactSegmentList}. ${priority.label} ressort comme cible prioritaire probable, parce qu’elle peut tester plus vite si la promesse devient un usage répété.\n\nLa séquence recommandée est claire : commencer par ${priority.label}, utiliser ${secondary?.label ?? 'la cible secondaire'} comme laboratoire d’activation et différer ${deferred?.label ?? 'la cible la plus lourde'} tant que la confiance, l’intégration ou le paiement ne sont pas prouvés.\n\nLe test décisif est simple : ${priority.test_fr}. Si ce signal n’apparaît pas, le classement doit être révisé.`
     : `Le choix de cible reste à ouvrir comme une décision de lancement : les informations disponibles indiquent qu’il faut comparer des publics, mais elles ne donnent pas encore assez de segments exploitables pour établir un rang robuste.\n\nLa prochaine preuve utile tient en quatre éléments : publics visés, cas d’usage, offre associée et signal attendu pour chaque public. Dès que ces éléments apparaissent dans la ressource, SC peut classer les options sans les inventer.`
@@ -1066,7 +1055,7 @@ function composeTargetChoiceWriting(input: WritingEngineInput, started: number):
     ? `Le fond de la situation tient au choix du premier terrain d’apprentissage. ${compactSegmentList} ne donnent pas la même preuve : ${priority.label} doit prouver l’usage et la valeur, ${secondary?.label ?? 'la cible suivante'} peut élargir l’apprentissage, et ${deferred?.label ?? 'la dernière cible'} ne doit monter que si le coût de vente ou d’intégration devient justifié. Le pari implicite est clair : mieux vaut une petite preuve de workflow qu’une grande preuve d’intérêt.`
     : 'Le fond de la situation tient à une absence d’informations qualifiées. La ressource doit être relue non comme une vitrine, mais comme un inventaire de publics, usages, offres et preuves. Tant que ces éléments restent implicites, la carte doit afficher sa prudence plutôt que trancher par formule.'
   const missingExternalEvidence = needsExternalEvidenceWithoutSources(input.resources)
-  const probability = probabilityFromResources(input.resources, relevanceQuery) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
+  const probability = probabilityFromResources(input.resonance, input.resources) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const trajectories: WritingContract['trajectories'] = [
     {
       type: 'stabilization',
@@ -1226,14 +1215,13 @@ function composeStrategicOptionsWriting(input: WritingEngineInput, started: numb
     ? `Plusieurs options peuvent rester rationnelles, mais elles ne produisent pas le même signal : ${priority} peut ouvrir un test court, ${secondary} peut servir de comparaison, et ${deferred} ne doit monter que si les preuves changent.`
     : 'Plusieurs options peuvent être possibles, mais SC ne doit pas les nommer tant que la matière comprise ne les a pas établies.'
   const keySignal = `Signal clé : chercher le premier fait qui rend une option plus défendable que les autres : ${proof}.`
-  const relevanceQuery = writingRelevanceQuery(input)
   const lecture =
     (hasGroundedOptions
       ? `${subject} appelle un choix prospectif entre ${optionList}. Le bon premier mouvement est celui qui produit le signal le plus rapide sans fermer les autres pistes.\n\n`
       : `${subject} appelle un arbitrage prospectif. Tant que les options réelles ne sont pas établies par la matière comprise, SC doit cadrer les critères de priorité sans inventer les pistes métier. Le bon premier mouvement consiste à identifier les options depuis la matière, puis seulement à les classer.\n\n`) +
     `La contradiction centrale tient à ceci : plusieurs options peuvent sembler défendables, mais elles n’exigent pas les mêmes preuves. L’arbitrage doit donc comparer réversibilité, coût d’essai, accès au décideur, preuve d’usage et dépendance externe.\n\n` +
     `Le point de bascule sera concret : accord pilote, retour qualifié, paiement, refus explicite, décision publique, coût évité ou preuve que l’une des options ouvre un chemin que les autres ne peuvent pas ouvrir à court terme.`
-  const probability = probabilityFromResources(input.resources, relevanceQuery) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
+  const probability = probabilityFromResources(input.resonance, input.resources) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const trajectories: WritingContract['trajectories'] = [
     {
       type: 'stabilization',
@@ -1574,10 +1562,9 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const title = isGenericPublicSubject(rawTitle) ? `situation ${actorsLabel}` : rawTitle
   const institutions = publicPhrase(publicAnchors(resonance.institutions, grammar.institutionsFallback))
   const actionAnchors = theatreActionAnchors(input.theatre)
-  const relevanceQuery = writingRelevanceQuery(input)
   const proofAnchors = unique([
-    ...publicEvidenceAnchors(input.resources, relevanceQuery),
-    ...publicEvidenceSignalAnchors(input.resources, relevanceQuery),
+    ...publicEvidenceAnchors(resonance),
+    ...publicEvidenceSignalAnchors(resonance),
     publicEvidenceAnchorForWriting(resonance.transition_signal_fr),
     ...theatreProofAnchors(input.theatre, input.expertises_metiers),
   ]
@@ -1598,7 +1585,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const firstEvidence = namedAction(proofAnchors, grammar.evidenceFallback)
   const tension = grammar.tensionNoun ?? tensionLabel(input)
   const missingExternalEvidence = needsExternalEvidenceWithoutSources(input.resources)
-  const probability = probabilityFromResources(input.resources, relevanceQuery) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
+  const probability = probabilityFromResources(input.resonance, input.resources) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
   const groundedFactOpening = groundedFactOpeningSentence(input, input.grounding, input.resources)
   const sourcedDiamondText = sourceGroundedDiamondText({ resonance, actors, institutions, input })
@@ -1807,7 +1794,7 @@ function buildWritingPrompt(input: WritingEngineInput, local: WritingContract): 
           policy_reason_fr: input.resources.policy_reason_fr,
           fallback_searches: input.resources.fallback_searches,
           public_sources_count: input.resources.public_sources.length,
-          clean_public_evidence: publicProbativeEvidence(input.resources, 3, writingRelevanceQuery(input)).map((evidence) => ({
+          clean_public_evidence: input.resonance.qualified_evidence.map((evidence) => ({
             fact_fr: evidence.public_label_fr,
             status: evidence.status,
             can_drive_probability: evidence.can_drive_probability,

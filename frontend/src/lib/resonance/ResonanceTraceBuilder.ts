@@ -4,7 +4,7 @@ import type {
   ResonanceTraceContract,
   ResourceServiceContract,
 } from '../contracts'
-import { looksLikeProbativeEvidenceNoise } from '../resources/probativeEvidenceSanitizer'
+import { looksLikeProbativeEvidenceNoise, publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 import { buildResourceRegimeSignals } from '../resources/regimeSignals'
 
 export type ResonanceTraceInput = {
@@ -324,6 +324,14 @@ function corpusText(input: ResonanceTraceInput): string {
   ].filter(Boolean).join(' ')
 }
 
+function evidenceRelevanceQuery(input: ResonanceTraceInput): string {
+  return unique([
+    corpusText(input),
+    input.interpretation.user_need,
+    input.interpretation.primary_hypothesis ?? '',
+  ]).join(' ')
+}
+
 function lexicalActorsFromCorpus(text: string): string[] {
   const normalizedText = normalize(text)
   const actors: string[] = []
@@ -388,6 +396,13 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       source_name: signal.source_name,
       discriminant_terms: signal.discriminant_terms,
     }))
+  const qualifiedEvidence = publicProbativeEvidence(input.resources, 3, evidenceRelevanceQuery(input))
+    .map((evidence) => ({
+      source_id: evidence.source_id,
+      public_label_fr: evidence.public_label_fr,
+      status: evidence.status,
+      can_drive_probability: evidence.can_drive_probability,
+    }))
   const realActors = removeCompositeActors([
     ...input.interpretation.entity_explanations.map((entity) => entity.label),
     ...lexicalActorsFromCorpus(corpus),
@@ -430,6 +445,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
 
   return {
     source_signals: sourceSignals,
+    qualified_evidence: qualifiedEvidence,
     source_hosts: sourceHosts,
     real_actors: realActors,
     institutions,
@@ -449,6 +465,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       status: forbidden.length > 0 ? 'partial' : 'ok',
       notes: [
         `source_signals=${sourceSignals.length}`,
+        `qualified_evidence=${qualifiedEvidence.length}`,
         `real_actors=${realActors.length}`,
         `institutions=${institutions.length}`,
         `forbidden_public_confusions=${forbidden.length}`,
