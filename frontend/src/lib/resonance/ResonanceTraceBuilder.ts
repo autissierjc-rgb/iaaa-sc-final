@@ -376,6 +376,18 @@ function knownEntitiesFromContracts(input: ResonanceTraceInput): string[] {
   ])
 }
 
+function namedActorAnchoredInCanonicalText(actor: string, normalizedCanonical: string): boolean {
+  if (!normalizedCanonical) return true
+  const namedTokens = actor
+    .split(/[^A-Za-zÀ-ÖØ-öø-ÿ0-9]+/)
+    .filter((token) => /^[A-ZÀ-Ö]/.test(token))
+    .map((token) => normalize(token))
+    .filter((token) => token.length >= 2)
+
+  if (namedTokens.length === 0) return true
+  return namedTokens.some((token) => normalizedCanonical.includes(token))
+}
+
 function institutionAnchoredInContracts(institution: string, normalizedSupport: string): boolean {
   const namedTokens = institution
     .split(/[^A-Za-zÀ-ÖØ-öø-ÿ0-9]+/)
@@ -415,11 +427,13 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       status: evidence.status,
       can_drive_probability: evidence.can_drive_probability,
     }))
+  const canonicalQuestion = normalize(input.interpretation.situation_soumise || '')
   const realActors = removeCompositeActors([
     ...knownEntities,
     ...input.theatre.actors,
   ])
     .filter((actor) => publicAnchor(actor, sourceHosts, sourceLabels))
+    .filter((actor) => namedActorAnchoredInCanonicalText(actor, canonicalQuestion))
     .slice(0, 8)
   const institutionSupport = normalize([
     corpus,
