@@ -51,6 +51,18 @@ function semanticCandidatesFrom(value: string): string[] {
   if (/\b(blockade|port|ports|shipping|merchant|vessel|energy|oil|airport|infrastructure)\b/i.test(text)) {
     candidates.push('infrastructure', 'port', 'aeroport', 'blocage')
   }
+  if (/\b(court|tribunal|ruling|jugement|verdict|lawsuit|plainte|proces|condamnation|injonction|appeal|recours|justice)\b/i.test(text)) {
+    candidates.push('justice', 'tribunal', 'jugement', 'procedure')
+  }
+  if (/\b(payment|paiement|contract|contrat|acquisition|funding|invest|investissement|partnership|partenariat|subscription|abonnement|pricing|revenue|engagement)\b/i.test(text)) {
+    candidates.push('paiement', 'contrat', 'engagement', 'investissement')
+  }
+  if (/\b(report|rapport|study|etude|survey|publication|donnees|statistics|statistiques|indice)\b/i.test(text)) {
+    candidates.push('rapport', 'publication', 'donnees')
+  }
+  if (/\b(launch|lancement|release|deploiement|deployment|adoption|users|utilisateurs|clients|traction|usage)\b/i.test(text)) {
+    candidates.push('usage', 'adoption', 'lancement')
+  }
 
   return Array.from(new Set(candidates))
 }

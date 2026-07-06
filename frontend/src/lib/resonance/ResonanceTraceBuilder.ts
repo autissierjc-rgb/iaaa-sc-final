@@ -228,13 +228,21 @@ function sourceSignalAsTransition(value: string): string {
   const hasOfficial = /\b(official|warning|statement|decision|reported|confirmed|source|declaration|communique|avertissement)\b/i.test(text)
   const hasThreshold = /\b(threshold|thresholds|seuil|seuils|military|militaire)\b/i.test(text)
   const hasInfrastructure = /\b(blockade|port|ports|shipping|merchant|vessel|energy|oil|airport|infrastructure)\b/i.test(text)
+  const hasLegal = /\b(court|tribunal|ruling|jugement|verdict|lawsuit|plainte|proces|condamnation|injonction|appeal|recours|mise en demeure)\b/i.test(text)
+  const hasCommercial = /\b(payment|paiement|contract|contrat|acquisition|funding|invest|investissement|levee de fonds|partnership|partenariat|subscription|abonnement|pricing|revenue|chiffre d affaires)\b/i.test(text)
+  const hasPublication = /\b(report|rapport|study|etude|survey|publication|donnees|statistics|statistiques|indice)\b/i.test(text)
+  const hasUsage = /\b(launch|lancement|release|deploiement|deployment|adoption|users|utilisateurs|clients|traction|usage)\b/i.test(text)
 
   if (hasHostility && hasNegotiation) return 'un enchaînement hostilités/cessez-le-feu documenté'
   if (hasNegotiation && hasStalled) return 'un blocage de négociation devenu public'
   if (hasOfficial && hasThreshold) return 'un avertissement officiel sur des seuils militaires'
   if (hasHostility && hasInfrastructure) return 'une atteinte à une infrastructure stratégique'
+  if (hasLegal) return 'une décision de justice ou une procédure engagée'
+  if (hasCommercial) return 'un engagement commercial ou financier documenté'
   if (hasNegotiation) return 'une piste d’accord ou de cessez-le-feu rendue publique'
   if (hasHostility) return 'un signal d’hostilités documenté'
+  if (hasUsage) return 'un signal d’usage ou d’adoption documenté'
+  if (hasPublication) return 'un rapport ou des données publiées'
   if (hasOfficial) return 'une prise de position officielle vérifiable'
   return 'un fait public qualifié'
 }
