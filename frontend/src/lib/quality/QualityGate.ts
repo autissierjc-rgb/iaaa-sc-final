@@ -227,6 +227,77 @@ const PRESS_SUMMARY_OPENING_PATTERNS = [
   /\bser(?:a|ont|aient)?\s+crucial(?:e|es|s)?\s+pour\s+d[ée]terminer\b/i,
 ]
 
+function dropPressSummaryOpening(text: string): { text: string; changed: boolean } {
+  let current = text.trim()
+  let changed = false
+  for (let pass = 0; pass < 2; pass += 1) {
+    const opening = current.slice(0, 360)
+    if (!PRESS_SUMMARY_OPENING_PATTERNS.some((pattern) => pattern.test(opening))) break
+    const rest = current.replace(/^[^.!?]*[.!?]\s*/, '').trim()
+    if (rest.length < 40 || rest === current) break
+    current = rest
+    changed = true
+  }
+  return { text: current, changed }
+}
+
+export function repairPressSummaryOpenings(writing: WritingContract): WritingContract | null {
+  const insight = dropPressSummaryOpening(textValue(writing.situation_card?.insight_fr))
+  const lecture = dropPressSummaryOpening(textValue(writing.lecture?.text_fr))
+  if (!insight.changed && !lecture.changed) return null
+
+  return {
+    ...writing,
+    situation_card: {
+      ...writing.situation_card,
+      insight_fr: insight.text,
+    },
+    lecture: {
+      ...writing.lecture,
+      text_fr: lecture.text,
+      word_count_fr: lecture.text.split(/\s+/).filter(Boolean).length,
+    },
+    trace: {
+      ...writing.trace,
+      notes: [
+        ...(writing.trace.notes ?? []),
+        'press_summary_opening_repaired_without_regeneration',
+      ],
+    },
+  }
+}
+
+export function repairUnderusedSourceSignals(
+  writing: WritingContract,
+  resonance: ResonanceTraceContract,
+): WritingContract | null {
+  const anchors = Array.from(new Set(
+    resonance.source_signals.map((signal) => signal.public_signal_fr.trim()).filter(Boolean),
+  )).slice(0, 2)
+  if (anchors.length === 0) return null
+
+  const lectureText = textValue(writing.lecture?.text_fr)
+  const normalizedLecture = normalize(lectureText)
+  if (anchors.some((anchor) => normalizedLecture.includes(normalize(anchor)))) return null
+
+  const nextLecture = `Les signaux publics déjà attachés pointent vers ${anchors.join(' ; ')}. ${lectureText}`.trim()
+  return {
+    ...writing,
+    lecture: {
+      ...writing.lecture,
+      text_fr: nextLecture,
+      word_count_fr: nextLecture.split(/\s+/).filter(Boolean).length,
+    },
+    trace: {
+      ...writing.trace,
+      notes: [
+        ...(writing.trace.notes ?? []),
+        'underused_source_signals_anchored_without_regeneration',
+      ],
+    },
+  }
+}
+
 const PROBABILITY_STATUS_SECTION_TITLES = [
   'ce qui est etabli',
   'ce qui est etablie',

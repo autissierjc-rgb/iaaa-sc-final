@@ -42,7 +42,7 @@ import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSou
 import { detectScopeContext } from '@/lib/scope/scopeContext'
 import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWritingWithMode } from '@/lib/writing'
-import { runContractQualityGate, runQualityGate } from '@/lib/quality'
+import { repairPressSummaryOpenings, repairUnderusedSourceSignals, runContractQualityGate, runQualityGate } from '@/lib/quality'
 import { buildResonanceTrace } from '@/lib/resonance'
 import { buildGroundingContract } from '@/lib/grounding'
 import {
@@ -5059,7 +5059,7 @@ export async function POST(req: NextRequest) {
       ? await runFastResourceRunner({
           interpretation: canonicalInterpretation,
           resource_plan: fastResourcePlan,
-          timeout_ms: MIN_FAST_RESOURCE_TIMEOUT_MS,
+          timeout_ms: mode === 'generate_full' ? 8000 : MIN_FAST_RESOURCE_TIMEOUT_MS,
           max_sources: 3,
         })
       : undefined
@@ -5587,7 +5587,67 @@ export async function POST(req: NextRequest) {
           temperature: 0.2,
           max_tokens: 4200,
         })
-        if (diamondWriter.status === 'quality_failed' && diamondWriter.errors.length > 0 && diamondWriter.duration_ms < 15000) {
+        const repairableWriterCodes = new Set([
+          'PRESS_SUMMARY_INSTEAD_OF_DIAMOND',
+          'RESOURCE_REGIME_SIGNALS_UNDERUSED',
+          'SOURCE_PUBLIC_EVIDENCE_UNDERUSED',
+        ])
+        if (
+          diamondWriter.status === 'quality_failed' &&
+          diamondWriter.writing &&
+          canonicalScoringForWriting &&
+          diamondWriter.errors.some((code) => repairableWriterCodes.has(code))
+        ) {
+          let repairedWriting: WritingContract | null = diamondWriter.writing
+          if (diamondWriter.errors.includes('PRESS_SUMMARY_INSTEAD_OF_DIAMOND')) {
+            repairedWriting = repairPressSummaryOpenings(repairedWriting) ?? repairedWriting
+          }
+          if (
+            diamondWriter.errors.includes('RESOURCE_REGIME_SIGNALS_UNDERUSED') ||
+            diamondWriter.errors.includes('SOURCE_PUBLIC_EVIDENCE_UNDERUSED')
+          ) {
+            repairedWriting = repairUnderusedSourceSignals(repairedWriting, resonanceTrace) ?? repairedWriting
+          }
+          if (repairedWriting === diamondWriter.writing) {
+            repairedWriting = null
+          }
+          if (repairedWriting) {
+            const repairedQuality = runQualityGate({
+              interpretation: generationInterpretation,
+              theatre: canonicalTheatre,
+              scoring: canonicalScoringForWriting,
+              writing: repairedWriting,
+              resources: diamondResourcePlan,
+              resonance: resonanceTrace,
+            })
+            if (!repairedQuality.issues.some((issue) => issue.level === 'error')) {
+              diamondWriter = {
+                ...diamondWriter,
+                status: 'ok',
+                writing: repairedWriting,
+                quality: repairedQuality,
+                errors: [],
+              }
+              recordGenerationTrace({
+                status: 'ok',
+                gate: 'GENERATE',
+                route: '/api/generate',
+                canonicalLayer: 'quality',
+                pipelineStep: 'LLMDiamondWriter:section_repair',
+                diagnostic: 'writer_card_repaired_without_regeneration',
+                durationMs: 0,
+                inputChars: generationAnalysisText.length,
+                domain: generationInterpretation.domain,
+                intentType: generationIntentContext.interpreted_request?.intent_type,
+                questionType: generationIntentContext.interpreted_request?.question_type,
+                resourcesStatus: diamondResourcePlan.status,
+                resourcesCount: diamondResourcePlan.resources.length,
+                modelPath: 'local',
+              })
+            }
+          }
+        }
+        if (diamondWriter.status === 'quality_failed' && diamondWriter.errors.length > 0 && diamondWriter.duration_ms < 8000) {
           recordGenerationTrace({
             status: 'partial',
             gate: 'GENERATE',
@@ -5606,7 +5666,7 @@ export async function POST(req: NextRequest) {
           })
           const retry = await runLLMDiamondWriter({
             dossier: diamondDossier.dossier,
-            timeout_ms: Math.min(Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000), 15000),
+            timeout_ms: Math.min(Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000), 10000),
             temperature: 0.3,
             max_tokens: 4200,
             corrective_issue_codes: diamondWriter.errors,
