@@ -160,7 +160,7 @@ function publicPhrase(value: string): string {
 }
 
 function sourceSignalAnchors(resonance: ResonanceTraceContract): string[] {
-  const concreteTransition = /un acte,\s*une preuve ou un seuil observable/i.test(resonance.transition_signal_fr)
+  const concreteTransition = resonance.transition_signal_source === 'default'
     ? ''
     : publicEvidenceAnchorForWriting(resonance.transition_signal_fr)
   return unique([
@@ -205,7 +205,7 @@ function sourceGroundedVulnerabilityText({
   const signals = sourceSignalAnchors(resonance)
   if (signals.length === 0) return ''
 
-  const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
+  const signalLine = publicAnchors(signals.slice(0, 1), resonance.transition_signal_fr, 1)
   if (resonance.context_frame === 'political_institutional') {
     return `La vulnérabilité centrale est l’écart entre ${signalLine} et la décision publique à assumer par ${institutions} pour rendre la situation vérifiable.`
   }
@@ -225,7 +225,7 @@ function sourceGroundedContradictionText({
   const signals = sourceSignalAnchors(resonance)
   if (signals.length === 0) return ''
 
-  const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
+  const signalLine = publicAnchors(signals.slice(-1), resonance.transition_signal_fr, 1)
   if (resonance.context_frame === 'political_institutional') {
     return `La contradiction tient ici : la pression publique pèse sur ${actors}, mais la trajectoire ne devient lisible que si ${institutions} transforment ${signalLine} en orientation publique.`
   }

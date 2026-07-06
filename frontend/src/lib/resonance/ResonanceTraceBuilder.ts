@@ -438,14 +438,20 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     ]).filter((item) => structuralGapAnchor(item, sourceHosts, sourceLabels)),
     defaultStructuralGap(input),
   )
-  const transitionSignal = firstUseful(
+  const sourceTransition = firstUseful(sourceTransitionsFromSignals(sourceSignals, contextFrame), '')
+  const theatreTransition = firstUseful(
     unique([
-      ...sourceTransitionsFromSignals(sourceSignals, contextFrame),
       ...input.theatre.evidence.map((item) => item.label),
       ...input.theatre.visible_actions,
     ]).filter((item) => transitionSignalAnchor(item, sourceHosts, sourceLabels)),
-    defaultTransitionSignal(input),
+    '',
   )
+  const transitionSignal = sourceTransition || theatreTransition || defaultTransitionSignal(input)
+  const transitionSignalSource: ResonanceTraceContract['transition_signal_source'] = sourceTransition
+    ? 'sources'
+    : theatreTransition
+      ? 'theatre'
+      : 'default'
   const structuralContradiction = buildStructuralContradiction(realActors, institutions)
   const structuralVulnerability = buildStructuralVulnerability(structuralGap, transitionSignal)
   const diamondThesis = buildDiamondThesis(realActors, structuralGap, transitionSignal)
@@ -471,6 +477,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       ? 'Les sources rapides doivent précéder la lecture de régime : elles fixent ce qui est observable avant l’interprétation.'
       : 'Le régime reste une hypothèse structurelle tant que les signaux observables sont incomplets.',
     transition_signal_fr: transitionSignal,
+    transition_signal_source: transitionSignalSource,
     forbidden_public_confusions: forbidden,
     trace: {
       service: 'ResonanceTraceBuilder',

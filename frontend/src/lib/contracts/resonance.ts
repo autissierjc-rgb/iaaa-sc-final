@@ -32,6 +32,7 @@ export type ResonanceTraceContract = {
   diamond_thesis_fr: string
   regime_hypothesis_fr: string
   transition_signal_fr: string
+  transition_signal_source: 'sources' | 'theatre' | 'default'
   forbidden_public_confusions: string[]
   trace: TraceMeta
 }
