@@ -61,6 +61,10 @@ export function compactSentence(text: string, maxLength = 220): string {
   const safe = wordBoundary >= Math.floor(maxLength * 0.55)
     ? clipped.slice(0, wordBoundary).trim()
     : clipped
-  const cleanEnd = safe.replace(/[,:;–—-]+$/g, '').trim()
+  const cleanEnd = safe
+    .replace(/[,:;–—-]+$/g, '')
+    .replace(/(?:\s+(?:et|ou|un|une|le|la|les|de|des|du|au|aux|à|que|qui|dans|sur|par|pour|en|d|l|qu))+$/i, '')
+    .replace(/[,:;–—-]+$/g, '')
+    .trim()
   return cleanEnd.endsWith('.') ? cleanEnd : `${cleanEnd}.`
 }
