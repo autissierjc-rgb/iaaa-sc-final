@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
+
+export const maxDuration = 60
 import type { Interaction, Raindrop, RaindropProperties } from 'raindrop-ai'
 import {
   getStateLabel,
@@ -5585,7 +5587,7 @@ export async function POST(req: NextRequest) {
           temperature: 0.2,
           max_tokens: 4200,
         })
-        if (diamondWriter.status === 'quality_failed' && diamondWriter.errors.length > 0) {
+        if (diamondWriter.status === 'quality_failed' && diamondWriter.errors.length > 0 && diamondWriter.duration_ms < 15000) {
           recordGenerationTrace({
             status: 'partial',
             gate: 'GENERATE',
@@ -5604,7 +5606,7 @@ export async function POST(req: NextRequest) {
           })
           const retry = await runLLMDiamondWriter({
             dossier: diamondDossier.dossier,
-            timeout_ms: Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000),
+            timeout_ms: Math.min(Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000), 15000),
             temperature: 0.3,
             max_tokens: 4200,
             corrective_issue_codes: diamondWriter.errors,
