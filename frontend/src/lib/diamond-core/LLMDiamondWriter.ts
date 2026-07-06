@@ -476,6 +476,7 @@ export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise
     scoring: input.dossier.scoring,
     writing,
     resources: input.dossier.resources.plan,
+    resonance: input.dossier.resonance,
   })
 
   return {

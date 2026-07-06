@@ -17,6 +17,7 @@ import { buildCanonicalSituationFromDialogue, buildLocalCanonicalSituationFromDi
 import { interpretSituation } from '../interpretation'
 import { runContractQualityGate } from '../quality'
 import { planResources } from '../resources'
+import { buildResonanceTrace } from '../resonance'
 import { runFastResourceRunner, type FastResourceRunnerResult } from '../resources/FastResourceRunner'
 import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
 import { publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
@@ -428,6 +429,11 @@ export async function buildDiamondDossier(input: DiamondDossierInput): Promise<D
     interpretation: interpretationWithMaterialSignals,
     theatre,
   })
+  const resonance = buildResonanceTrace({
+    interpretation: interpretationWithMaterialSignals,
+    theatre,
+    resources,
+  })
   const counts = {
     actors: theatre.actors.length,
     unknowns: theatre.unknowns.length,
@@ -489,6 +495,7 @@ export async function buildDiamondDossier(input: DiamondDossierInput): Promise<D
       resource_input_text: materialText,
     },
     theatre,
+    resonance,
     scoring,
     inquiry,
     quality_precheck: qualityPrecheck ?? emptyQualityPrecheck(),

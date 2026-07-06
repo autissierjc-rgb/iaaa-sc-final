@@ -7,6 +7,7 @@ import type {
   LanguageCode,
   QualityGateContract,
   RadarScoreV2,
+  ResonanceTraceContract,
   ResourceContract,
   ResourceServiceContract,
   RiskAdviceGuardContract,
@@ -81,6 +82,7 @@ export type DiamondDossier = {
   patterns: HumanCollectivePatternContext
   resources: DiamondDossierResourceView
   theatre: ConcreteTheatreContract
+  resonance: ResonanceTraceContract
   scoring: ScoringContract
   inquiry: InquiryContract
   quality_precheck: QualityGateContract

@@ -5,6 +5,7 @@ import { interpretSituation } from '@/lib/interpretation'
 import { buildPipelineRunTrace } from '@/lib/pipeline/PipelineTelemetry'
 import { SITUATION_CARD_V2_PIPELINE } from '@/lib/pipeline/V2PipelineBlueprint'
 import { planResources } from '@/lib/resources'
+import { buildResonanceTrace } from '@/lib/resonance'
 import { MIN_FAST_RESOURCE_TIMEOUT_MS, runFastResourceRunner } from '@/lib/resources/FastResourceRunner'
 import { runRiskAdviceGuard } from '@/lib/safety'
 import { computeStateV2 } from '@/lib/scoringV2'
@@ -286,6 +287,7 @@ export async function runGenerateV2Contract(body: GenerateV2Body, route = '/api/
     radar: buildDraftRadar(counts),
     trace_notes: ['dry_run_generate_v2=true'],
   })
+  const resonance = buildResonanceTrace({ interpretation, theatre, resources })
   const writing = await composeDiamondWritingWithMode(
     {
       interpretation,
@@ -295,11 +297,12 @@ export async function runGenerateV2Contract(body: GenerateV2Body, route = '/api/
       scoring,
       resources,
       patterns,
+      resonance,
     },
     generation_mode.writing_mode,
   )
   const contractQuality = runContractQualityGate({ interpretation, theatre, scoring, inquiry })
-  const writingQuality = runQualityGate({ interpretation, theatre, scoring, writing, resources })
+  const writingQuality = runQualityGate({ interpretation, theatre, scoring, writing, resources, resonance })
   const writing_benchmark = benchmarkWritingQuality(writing, resources)
   const quality = {
     ...writingQuality,

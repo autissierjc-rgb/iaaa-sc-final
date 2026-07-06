@@ -15,7 +15,6 @@ import { cleanModelText, parseModelJSON } from '../ai/json'
 import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
 import { looksLikeProbativeEvidenceNoise, publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 import { buildResourceRegimeSignals } from '../resources/regimeSignals'
-import { buildResonanceTrace } from '../resonance'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
 
 export type WritingEngineInput = {
@@ -26,7 +25,7 @@ export type WritingEngineInput = {
   scoring: ScoringContract
   resources?: ResourceServiceContract
   patterns?: HumanCollectivePatternContext
-  resonance?: ResonanceTraceContract
+  resonance: ResonanceTraceContract
   grounding?: GroundingContract
 }
 
@@ -1566,11 +1565,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     return composeStrategicOptionsWriting(input, started)
   }
 
-  const resonance = input.resonance ?? buildResonanceTrace({
-    interpretation: input.interpretation,
-    theatre: input.theatre,
-    resources: input.resources,
-  })
+  const resonance = input.resonance
   const subject = publicSubject(input)
   const rawTitle = input.interpretation.header_subject
   const grammar = writingGrammar(input)

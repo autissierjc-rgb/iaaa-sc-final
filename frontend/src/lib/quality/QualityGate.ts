@@ -10,7 +10,6 @@ import type {
 } from '../contracts'
 import { publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 import { buildResourceRegimeSignals, countRegimeSignalsUsed } from '../resources/regimeSignals'
-import { buildResonanceTrace } from '../resonance'
 import { containsForbiddenPublicPhrase } from '../writing/diamondRules'
 
 export type QualityGateInput = {
@@ -19,7 +18,7 @@ export type QualityGateInput = {
   scoring: ScoringContract
   writing: WritingContract
   resources?: ResourceServiceContract
-  resonance?: ResonanceTraceContract
+  resonance: ResonanceTraceContract
 }
 
 function textValue(value: unknown): string {
@@ -566,11 +565,7 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-  const resonance = input.resonance ?? buildResonanceTrace({
-    interpretation: input.interpretation,
-    theatre: input.theatre,
-    resources: input.resources,
-  })
+  const resonance = input.resonance
   const theatreAnchors = meaningfulTheatreAnchors(input.theatre)
   const resonanceAnchors = meaningfulResonanceAnchors(resonance)
   const publicAnchorContract = resonanceAnchors.length > 0 ? resonanceAnchors : theatreAnchors
