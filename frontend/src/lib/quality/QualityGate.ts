@@ -391,22 +391,10 @@ function repeatedSignalPhrase(normalizedText: string): string | null {
     .split(/\s+/)
     .filter(Boolean)
   const phraseCounts = new Map<string, number>()
-  const signalWords = new Set([
-    'acte',
-    'preuve',
-    'seuil',
-    'observable',
-    'decision',
-    'trace',
-    'marges',
-    'hypothese',
-    'opposable',
-    'verifiable',
-  ])
 
   for (let index = 0; index <= tokens.length - 8; index += 1) {
     const window = tokens.slice(index, index + 8)
-    if (!window.some((token) => signalWords.has(token))) continue
+    if (!window.some((token) => token.length >= 5)) continue
     const phrase = window.join(' ')
     phraseCounts.set(phrase, (phraseCounts.get(phrase) ?? 0) + 1)
   }
