@@ -5579,12 +5579,40 @@ export async function POST(req: NextRequest) {
           fast_resource_timeout_ms: 0,
           supplied_resources: diamondResourcePlan.resources,
         })
-        const diamondWriter = await runLLMDiamondWriter({
+        let diamondWriter = await runLLMDiamondWriter({
           dossier: diamondDossier.dossier,
           timeout_ms: Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000),
           temperature: 0.2,
           max_tokens: 4200,
         })
+        if (diamondWriter.status === 'quality_failed' && diamondWriter.errors.length > 0) {
+          recordGenerationTrace({
+            status: 'partial',
+            gate: 'GENERATE',
+            route: '/api/generate',
+            canonicalLayer: 'writing',
+            pipelineStep: 'LLMDiamondWriter:retry',
+            diagnostic: `section_regeneration_after:${diamondWriter.errors.join(' | ')}`.slice(0, 240),
+            durationMs: diamondWriter.duration_ms,
+            inputChars: generationAnalysisText.length,
+            domain: generationInterpretation.domain,
+            intentType: generationIntentContext.interpreted_request?.intent_type,
+            questionType: generationIntentContext.interpreted_request?.question_type,
+            resourcesStatus: diamondResourcePlan.status,
+            resourcesCount: diamondResourcePlan.resources.length,
+            modelPath: 'openai',
+          })
+          const retry = await runLLMDiamondWriter({
+            dossier: diamondDossier.dossier,
+            timeout_ms: Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000),
+            temperature: 0.3,
+            max_tokens: 4200,
+            corrective_issue_codes: diamondWriter.errors,
+          })
+          if (retry.status === 'ok' || (retry.writing && !diamondWriter.writing)) {
+            diamondWriter = retry
+          }
+        }
         const resourceSignalsUnderused = diamondWriter.errors.includes('RESOURCE_REGIME_SIGNALS_UNDERUSED')
         const diamondWriterAcceptedByQuality = diamondWriter.status === 'ok' && diamondWriter.quality?.ok === true
         diamondArchitectWriter = {

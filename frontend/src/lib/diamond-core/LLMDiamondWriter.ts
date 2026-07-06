@@ -27,6 +27,7 @@ export type LLMDiamondWriterInput = {
   temperature?: number
   timeout_ms?: number
   max_tokens?: number
+  corrective_issue_codes?: string[]
 }
 
 export type LLMDiamondWriterResult = {
@@ -230,16 +231,21 @@ function normalizeLecture(value: unknown): Record<string, unknown> {
 
 function normalizeApprofondir(value: unknown): Record<string, unknown> {
   const record = asRecord(value)
+  const rawSections = Array.isArray(value)
+    ? value
+    : asArray(record.sections_fr).length > 0
+      ? asArray(record.sections_fr)
+      : asArray(record.sections)
   return {
     ...record,
-    analysis_fr: firstString(record.analysis_fr, record.analysis),
+    analysis_fr: firstString(record.analysis_fr, record.analysis, record.analyse_fr),
     analysis_en: firstString(record.analysis_en),
-    sections_fr: asArray(record.sections_fr).map((section, index) => {
+    sections_fr: rawSections.map((section, index) => {
       const sectionRecord = asRecord(section)
       return {
         id: firstString(sectionRecord.id, `section-${index + 1}`),
-        title: firstString(sectionRecord.title),
-        body: firstString(sectionRecord.body, sectionRecord.text),
+        title: firstString(sectionRecord.title, sectionRecord.title_fr, sectionRecord.titre, sectionRecord.titre_fr),
+        body: firstString(sectionRecord.body, sectionRecord.text, sectionRecord.body_fr, sectionRecord.text_fr, sectionRecord.content, sectionRecord.contenu),
       }
     }).filter((section) => section.title || section.body),
   }
@@ -407,6 +413,21 @@ async function requestOpenAIWriting({
 export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise<LLMDiamondWriterResult> {
   const started = Date.now()
   const prompt = buildSCGrammarPrompt(input.dossier)
+  if ((input.corrective_issue_codes ?? []).length > 0) {
+    prompt.messages = [
+      ...prompt.messages,
+      {
+        role: 'user',
+        content: [
+          'A previous draft of this card was rejected by the quality gate for these issue codes:',
+          ...(input.corrective_issue_codes ?? []).map((code) => `- ${code}`),
+          'Rewrite the full JSON and fix these defects without weakening the diamond contract.',
+          'If PRESS_SUMMARY_INSTEAD_OF_DIAMOND is present: never open lecture.text_fr or insight_fr with journalistic scaffolding ("la situation actuelle est marquée par", "est à un point critique", "les tensions sont fortes", "sera crucial pour déterminer"). Open with the concrete regime fact and the contradiction it creates.',
+          'If PUBLIC_SIGNAL_PHRASE_REPEATED is present: never reuse the same phrase across sections; each section must carry its own anchor.',
+        ].join('\n'),
+      },
+    ]
+  }
   const model = input.model || process.env.OPENAI_DIAMOND_WRITER_MODEL || process.env.OPENAI_WRITING_MODEL || 'gpt-4o'
   const temperature = input.temperature ?? 0.25
   const timeoutMs = input.timeout_ms ?? 25000

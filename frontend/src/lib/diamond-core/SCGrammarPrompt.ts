@@ -10,7 +10,7 @@ export type SCGrammarPrompt = {
   model_role: 'llm_diamond_writer'
   response_contract: 'WritingContract'
   messages: SCGrammarPromptMessage[]
-  required_json_shape: Record<keyof WritingContract, string>
+  required_json_shape: Record<keyof WritingContract, unknown>
   quality_targets_fr: string[]
 }
 
@@ -127,15 +127,49 @@ function scoringSummary(dossier: DiamondDossier) {
 
 function responseShape(): SCGrammarPrompt['required_json_shape'] {
   return {
-    substance_form: 'SubstanceFormContract',
-    diamond_sentences: 'DiamondSentence[]',
-    probability_assessments: 'ProbabilityAssessment[]',
-    situation_card: 'SituationCardViewContract',
-    trajectories: 'TrajectoryContract[]',
-    lecture: 'LectureContract',
-    approfondir: 'ApprofondirContract',
-    public_warnings: 'string[]',
-    trace: 'TraceMeta',
+    substance_form: {
+      substance_fr: ['string'],
+      form_fr: ['string'],
+      diamond_sentence: { text_fr: 'string', role: 'thesis', style: 'diamant_tranchant', must_be_public: true },
+    },
+    diamond_sentences: [
+      { text_fr: 'string', role: 'thesis | vulnerability | tipping_point | key_signal', style: 'diamant_tranchant', must_be_public: true },
+    ],
+    probability_assessments: [
+      {
+        claim_fr: 'string',
+        status: 'established | probable | plausible | hypothesis | unknown',
+        probability_label_fr: 'string',
+        confidence: 0.5,
+        examples: [{ text_fr: 'string', status: 'established | plausible | hypothesis', source_ids: ['string'] }],
+        missing_proof_fr: 'string',
+      },
+    ],
+    situation_card: {
+      title_fr: 'string',
+      submitted_situation_fr: 'string',
+      insight_fr: 'string',
+      main_vulnerability_fr: 'string',
+      asymmetry_fr: 'string',
+      key_signal_fr: 'string',
+    },
+    trajectories: [
+      { type: 'stabilization | escalation | regime_shift', title_fr: 'string', description_fr: 'string', signal_fr: 'string' },
+    ],
+    lecture: { text_fr: 'string', word_count_fr: 0 },
+    approfondir: {
+      analysis_fr: 'string',
+      sections_fr: [
+        { id: 'situation-reelle', title: 'Ce que la situation est réellement', body: 'string' },
+        { id: 'systeme-tient', title: 'Ce qui tient le système', body: 'string' },
+        { id: 'systeme-affaiblit', title: 'Ce qui l’affaiblit', body: 'string' },
+        { id: 'escalade', title: 'Ce qui pourrait déclencher une escalade', body: 'string' },
+        { id: 'bascule', title: 'Ce qui pourrait produire une bascule', body: 'string' },
+        { id: 'surveiller', title: 'Ce qu’il faut surveiller maintenant', body: 'string' },
+      ],
+    },
+    public_warnings: ['string'],
+    trace: { service: 'LLMDiamondWriter', version: 'v1', duration_ms: 0, status: 'ok | partial', notes: ['string'] },
   }
 }
 
@@ -235,6 +269,7 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       'situation_card.insight_fr must contain the core reading, not a disclaimer.',
       'situation_card.insight_fr must open a diamond reading: a central contradiction carried by actors, constraints and proof, not an administrative summary.',
       'Never open with generic scaffolding such as "La situation ne se réduit pas...", "distribution de leviers", "ce qui garde encore la face" or "un acteur qui change de rythme".',
+      'Never open insight_fr or lecture.text_fr with journalistic scaffolding: "la situation actuelle est marquée par", "est à un point critique", "les tensions sont fortes/vives/croissantes", "un signal clé à surveiller est", "sera crucial pour déterminer".',
       'A diamond sentence must name the contradiction directly: actor + mechanism/threshold + proof/status. No abstract preamble.',
       'situation_card.main_vulnerability_fr must be specific, structural and testable.',
       'situation_card.asymmetry_fr must name the asymmetry of power, proof, role, timing or adoption.',
