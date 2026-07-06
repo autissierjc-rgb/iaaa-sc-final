@@ -11,7 +11,6 @@ import type {
   ResourceServiceContract,
 } from '../contracts'
 import type { SCMaterialUnderstanding } from '../material/scMaterialInterpreter'
-import { publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 
 function unique(items: string[], limit = 12): string[] {
   return Array.from(new Set(items.map((item) => item.replace(/\s+/g, ' ').trim()).filter(Boolean))).slice(0, limit)
@@ -33,20 +32,8 @@ function sourceStatus(resources?: ResourceServiceContract, material?: SCMaterial
   return 'missing'
 }
 
-function resourceRelevanceQuery(interpretation: InterpretationContract): string {
-  return unique([
-    interpretation.raw_input,
-    interpretation.situation_soumise,
-    interpretation.object_of_analysis,
-    interpretation.header_subject,
-    interpretation.angle,
-    interpretation.user_need,
-    interpretation.primary_hypothesis ?? '',
-  ], 24).join(' ')
-}
-
-function factsFromResources(resources?: ResourceServiceContract, relevanceQuery?: string): GroundedFact[] {
-  return publicProbativeEvidence(resources, 6, relevanceQuery)
+function factsFromResonance(resonance: ResonanceTraceContract): GroundedFact[] {
+  return resonance.qualified_evidence
     .filter((evidence) => evidence.can_drive_probability)
     .map((evidence) => ({
       label_fr: evidence.public_label_fr,
@@ -84,7 +71,7 @@ export function buildGroundingContract(input: {
   resources?: ResourceServiceContract
   material?: SCMaterialUnderstanding
   theatre?: ConcreteTheatreContract
-  resonance?: ResonanceTraceContract
+  resonance: ResonanceTraceContract
   inquiry?: InquiryContract
 }): GroundingContract {
   const started = Date.now()
@@ -93,7 +80,6 @@ export function buildGroundingContract(input: {
     Boolean(input.resources?.needs_web) ||
     input.resources?.policy === 'fast_sources_required' ||
     input.resources?.policy === 'url_extract_required'
-  const relevanceQuery = resourceRelevanceQuery(input.interpretation)
   const optionCandidates = [...optionsFromResources(input.resources), ...optionsFromMaterial(input.material)]
   const optionLabels = new Set<string>()
   const options = optionCandidates.filter((option) => {
@@ -103,7 +89,7 @@ export function buildGroundingContract(input: {
     return true
   }).slice(0, 8)
   const facts = [
-    ...factsFromResources(input.resources, relevanceQuery),
+    ...factsFromResonance(input.resonance),
     ...(input.theatre?.evidence ?? []).map((evidence) => ({
       label_fr: evidence.label,
       source: 'theatre' as const,
@@ -116,11 +102,11 @@ export function buildGroundingContract(input: {
     ...(input.theatre?.named_actors ?? []),
     ...(input.theatre?.actors ?? []),
     ...(input.material?.actors ?? []),
-    ...(input.resonance?.real_actors ?? []),
+    ...input.resonance.real_actors,
   ])
   const institutions = unique([
     ...(input.theatre?.institutions ?? []),
-    ...(input.resonance?.institutions ?? []),
+    ...input.resonance.institutions,
   ])
   const constraints = unique([
     ...(input.theatre?.constraints ?? []),
