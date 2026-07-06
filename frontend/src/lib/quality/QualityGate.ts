@@ -8,8 +8,7 @@ import type {
   ScoringContract,
   WritingContract,
 } from '../contracts'
-import { publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
-import { buildResourceRegimeSignals, countRegimeSignalsUsed } from '../resources/regimeSignals'
+import { buildResourceRegimeSignals, countRegimeSignalsUsed, discriminantTermsFrom } from '../resources/regimeSignals'
 import { containsForbiddenPublicPhrase } from '../writing/diamondRules'
 
 export type QualityGateInput = {
@@ -453,9 +452,15 @@ function countAnchorsUsed(anchors: string[], normalizedText: string): number {
   )).length
 }
 
-function publicEvidenceVisible(resources: ResourceServiceContract | undefined, normalizedNarrativeText: string, baseline = ''): boolean {
-  const regimeSignals = buildResourceRegimeSignals(resources, 4)
-  if (countRegimeSignalsUsed(regimeSignals, normalizedNarrativeText, baseline) > 0) return true
+function qualifiedRegimeSignalsForGate(resonance: ResonanceTraceContract): Array<{ signal_fr: string; source_title: string }> {
+  return resonance.source_signals.map((signal) => ({
+    signal_fr: signal.public_signal_fr || signal.signal_fr,
+    source_title: '',
+  }))
+}
+
+function publicEvidenceVisible(resonance: ResonanceTraceContract, normalizedNarrativeText: string, baseline = ''): boolean {
+  if (countRegimeSignalsUsed(qualifiedRegimeSignalsForGate(resonance), normalizedNarrativeText, baseline) > 0) return true
 
   const baselineTokens = new Set(normalize(baseline).split(/[^a-z0-9]+/).filter(Boolean))
   const genericEvidenceTokens = new Set([
@@ -483,7 +488,7 @@ function publicEvidenceVisible(resources: ResourceServiceContract | undefined, n
     'published',
     'available',
   ])
-  return publicProbativeEvidence(resources, 4)
+  return resonance.qualified_evidence
     .filter((evidence) => evidence.can_drive_probability)
     .some((evidence) => {
       const tokens = normalize(evidence.public_label_fr)
@@ -898,8 +903,8 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       source.reliability === 'primary' || source.reliability === 'secondary',
     )
     const sourcesWithExcerpt = input.resources.public_sources.filter((source) => Boolean(source.excerpt)).length
-    const regimeSignals = buildResourceRegimeSignals(input.resources, 4)
-    const hasPublicEvidence = publicProbativeEvidence(input.resources, 4)
+    const regimeSignals = qualifiedRegimeSignalsForGate(input.resonance)
+    const hasPublicEvidence = input.resonance.qualified_evidence
       .some((evidence) => evidence.can_drive_probability)
     const regimeSignalsUsed = countRegimeSignalsUsed(
       regimeSignals,
@@ -939,24 +944,45 @@ export function runQualityGate(input: QualityGateInput): QualityGateContract {
       issues.push(issue(
         'error',
         'RESOURCE_REGIME_SIGNALS_UNDERUSED',
-        'Fast sources produced regime signals, but public writing stays abstract instead of using source-derived facts or signals.',
+        'The resonance trace qualified regime signals, but public writing stays abstract instead of using them.',
         'writing.lecture',
       ))
     } else if (regimeSignals.length >= 3 && regimeSignalsUsed < 2) {
       issues.push(issue(
         'warning',
         'RESOURCE_REGIME_SIGNALS_TOO_WEAK',
-        'Fast sources produced several regime signals, but public writing uses too few of them.',
+        'The resonance trace qualified several regime signals, but public writing uses too few of them.',
         'writing.lecture',
       ))
     }
 
-    if (hasPublicEvidence && !publicEvidenceVisible(input.resources, normalizedNarrativeText, canonicalQuestionText(input.interpretation))) {
+    if (hasPublicEvidence && !publicEvidenceVisible(input.resonance, normalizedNarrativeText, canonicalQuestionText(input.interpretation))) {
       issues.push(issue(
         'error',
         'SOURCE_PUBLIC_EVIDENCE_UNDERUSED',
-        'Fast sources produced cleaned public evidence, but public writing only names sources or remains abstract instead of using the fact or its direct consequence.',
+        'The resonance trace qualified public evidence, but public writing only names sources or remains abstract instead of using the fact or its direct consequence.',
         'writing.approfondir',
+      ))
+    }
+
+    const qualifiedSourceIds = new Set([
+      ...input.resonance.source_signals.map((signal) => signal.source_id).filter(Boolean),
+      ...input.resonance.qualified_evidence.map((evidence) => evidence.source_id).filter(Boolean),
+    ])
+    const questionBaseline = canonicalQuestionText(input.interpretation)
+    const rejectedSourceLeak = buildResourceRegimeSignals(input.resources, 8)
+      .filter((signal) => !signal.source_id || !qualifiedSourceIds.has(signal.source_id))
+      .find((signal) => {
+        const terms = discriminantTermsFrom(`${signal.signal_fr} ${signal.source_title}`, questionBaseline)
+        const hits = terms.filter((term) => normalizedNarrativeText.includes(term))
+        return hits.length >= 2
+      })
+    if (rejectedSourceLeak) {
+      issues.push(issue(
+        'error',
+        'REJECTED_SOURCE_SIGNAL_IN_PUBLIC_WRITING',
+        `Public writing carries vocabulary from a source the resonance trace did not qualify: ${rejectedSourceLeak.source_title || rejectedSourceLeak.source_name}.`,
+        'writing.lecture',
       ))
     }
   }

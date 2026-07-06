@@ -55,7 +55,7 @@ function semanticCandidatesFrom(value: string): string[] {
   return Array.from(new Set(candidates))
 }
 
-function discriminantTermsFrom(value: string, baseline: string): string[] {
+export function discriminantTermsFrom(value: string, baseline: string): string[] {
   const baselineWords = new Set(words(baseline))
   const seen = new Set<string>()
 
@@ -110,7 +110,7 @@ export function buildResourceRegimeSignals(
 }
 
 export function countRegimeSignalsUsed(
-  signals: ResourceRegimeSignal[],
+  signals: Array<Pick<ResourceRegimeSignal, 'signal_fr' | 'source_title'>>,
   publicText: string,
   baselineText = '',
 ): number {
