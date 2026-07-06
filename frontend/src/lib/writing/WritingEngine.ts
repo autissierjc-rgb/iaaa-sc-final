@@ -14,7 +14,7 @@ import type { HumanCollectivePatternContext } from '../patterns/humanCollective'
 import { cleanModelText, parseModelJSON } from '../ai/json'
 import { extractTargetAudienceFamiliesFromResources } from '../resources/functionalResourceQualification'
 import { looksLikeProbativeEvidenceNoise } from '../resources/probativeEvidenceSanitizer'
-import { buildResourceRegimeSignals } from '../resources/regimeSignals'
+import { looksLikeRawExternalExcerpt, signalCompatibleWithContextFrame } from '../resonance'
 import { ASSERTION_LABELS_FR, compactSentence, containsForbiddenPublicPhrase, countWords } from './diamondRules'
 
 export type WritingEngineInput = {
@@ -159,26 +159,18 @@ function publicPhrase(value: string): string {
   return clean
 }
 
-function writingSignalCompatibleWithContext(signal: string, input: WritingEngineInput): boolean {
-  const politicalInstitutional = isPoliticalInstitutionalWritingContext(input) && !isSecurityCrisisWritingContext(input)
-  if (!politicalInstitutional) return true
-
-  return !/\b(hostilit[eé]s?|cessez[-\s]?le[-\s]?feu|frappe|frappes|riposte|militaires?|military|guerre|conflit)\b/i.test(signal)
-}
-
-function sourceSignalAnchors(resonance: ResonanceTraceContract, input: WritingEngineInput): string[] {
+function sourceSignalAnchors(resonance: ResonanceTraceContract): string[] {
   const concreteTransition = /un acte,\s*une preuve ou un seuil observable/i.test(resonance.transition_signal_fr)
     ? ''
     : publicEvidenceAnchorForWriting(resonance.transition_signal_fr)
   return unique([
-    ...resonance.source_signals.map((signal) => publicEvidenceAnchorForWriting(signal.signal_fr)),
+    ...resonance.source_signals.map((signal) => polishedPublicAnchor(signal.public_signal_fr)),
     concreteTransition,
   ])
     .filter((item) =>
       !isPublicPlaceholder(item) &&
       !isPublicSpineNoise(item) &&
-      !isGenericPublicSignal(item) &&
-      writingSignalCompatibleWithContext(item, input)
+      !isGenericPublicSignal(item)
     )
     .slice(0, 3)
 }
@@ -187,19 +179,16 @@ function sourceGroundedDiamondText({
   resonance,
   actors,
   institutions,
-  input,
 }: {
   resonance: ResonanceTraceContract
   actors: string
   institutions: string
-  input: WritingEngineInput
 }): string {
-  const signals = sourceSignalAnchors(resonance, input)
+  const signals = sourceSignalAnchors(resonance)
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
-  const politicalInstitutional = isPoliticalInstitutionalWritingContext(input) && !isSecurityCrisisWritingContext(input)
-  if (politicalInstitutional) {
+  if (resonance.context_frame === 'political_institutional') {
     return `Si ${signalLine} apparaît, la situation cesse d’être seulement commentée : elle teste la capacité de ${institutions} à transformer le signal porté par ${actors} en décision, cadrage ou contrainte publique.`
   }
 
@@ -209,18 +198,15 @@ function sourceGroundedDiamondText({
 function sourceGroundedVulnerabilityText({
   resonance,
   institutions,
-  input,
 }: {
   resonance: ResonanceTraceContract
   institutions: string
-  input: WritingEngineInput
 }): string {
-  const signals = sourceSignalAnchors(resonance, input)
+  const signals = sourceSignalAnchors(resonance)
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
-  const politicalInstitutional = isPoliticalInstitutionalWritingContext(input) && !isSecurityCrisisWritingContext(input)
-  if (politicalInstitutional) {
+  if (resonance.context_frame === 'political_institutional') {
     return `La vulnérabilité centrale est l’écart entre ${signalLine} et la décision publique à assumer par ${institutions} pour rendre la situation vérifiable.`
   }
 
@@ -231,19 +217,16 @@ function sourceGroundedContradictionText({
   resonance,
   actors,
   institutions,
-  input,
 }: {
   resonance: ResonanceTraceContract
   actors: string
   institutions: string
-  input: WritingEngineInput
 }): string {
-  const signals = sourceSignalAnchors(resonance, input)
+  const signals = sourceSignalAnchors(resonance)
   if (signals.length === 0) return ''
 
   const signalLine = publicAnchors(signals, resonance.transition_signal_fr, 2)
-  const politicalInstitutional = isPoliticalInstitutionalWritingContext(input) && !isSecurityCrisisWritingContext(input)
-  if (politicalInstitutional) {
+  if (resonance.context_frame === 'political_institutional') {
     return `La contradiction tient ici : la pression publique pèse sur ${actors}, mais la trajectoire ne devient lisible que si ${institutions} transforment ${signalLine} en orientation publique.`
   }
 
@@ -461,53 +444,24 @@ function publicEvidenceFactAnchors(resonance: ResonanceTraceContract): string[] 
 
 function publicEvidenceSignalAnchors(resonance: ResonanceTraceContract): string[] {
   return qualifiedProbativeEvidence(resonance)
-    .map((evidence) => publicFactSignal(evidence.public_label_fr))
+    .map((evidence) => polishedPublicAnchor(evidence.public_signal_fr))
     .filter((signal) => signal.length > 0)
 }
 
-function publicRegimeSignalsForWriting(resources?: ResourceServiceContract): string[] {
-  return unique(buildResourceRegimeSignals(resources, 3)
-    .map((signal) => publicFactSignal(signal.signal_fr))
-    .filter((signal) => signal.length > 0 && signal !== 'un fait public qualifié'))
-}
-
-function publicFactSignal(value: string): string {
-  const text = normalizeAnchor(value)
-  const hasNegotiation = /\b(agreement|deal|ceasefire|halt|talks?|negotiat|accord|cessez|negociation)\b/i.test(text)
-  const hasStalled = /\b(stall|stalled|blocked|bloqu|paralyse|fragile)\b/i.test(text)
-  const hasHostility = /\b(attack|attacks|strike|strikes|hostilit|flare|damag|injur|missile|crossfire|frappe|attaque|hostilite)\b/i.test(text)
-  const hasOfficial = /\b(official|warning|statement|decision|reported|confirmed|source|declaration|communique|decision|avertissement)\b/i.test(text)
-  const hasThreshold = /\b(threshold|thresholds|seuil|seuils|military|militaire)\b/i.test(text)
-  const hasInfrastructure = /\b(blockade|port|ports|shipping|merchant|vessel|energy|oil|airport|infrastructure)\b/i.test(text)
-
-  if (hasHostility && hasNegotiation) return 'un enchaînement hostilités/cessez-le-feu documenté'
-  if (hasNegotiation && hasStalled) return 'un blocage de négociation devenu public'
-  if (hasOfficial && hasThreshold) return 'un avertissement officiel sur des seuils militaires'
-  if (hasHostility && hasInfrastructure) return 'une atteinte à une infrastructure stratégique'
-  if (hasNegotiation) return 'une piste d’accord ou de cessez-le-feu rendue publique'
-  if (hasHostility) return 'un signal d’hostilités documenté'
-  if (hasOfficial) return 'une prise de position officielle vérifiable'
-  return 'un fait public qualifié'
-}
-
-function looksLikeRawExternalExcerpt(value: string): boolean {
-  const normalized = normalizeAnchor(value)
-  if (countWords(value) > 16) return true
-  return /\b(?:the|after|before|between|over|war|ceasefire|reported|launched|strikes?|talks?|negotiations?|officials?|according|warnings?|thresholds?)\b/i.test(normalized)
+function polishedPublicAnchor(value: string): string {
+  if (!value.trim()) return ''
+  return compactSentence(polishPublicProofText(value), 180)
 }
 
 function publicEvidenceAnchorForWriting(value: string): string {
-  const polished = compactSentence(polishPublicProofText(value), 180)
-  if (!polished) return ''
-  return looksLikeRawExternalExcerpt(polished)
-    ? publicFactSignal(polished)
-    : polished
+  const polished = polishedPublicAnchor(value)
+  if (!polished || looksLikeRawExternalExcerpt(polished)) return ''
+  return polished
 }
 
 function groundedFactOpeningSentence(
-  input: WritingEngineInput,
+  resonance: ResonanceTraceContract,
   grounding?: GroundingContract,
-  resources?: ResourceServiceContract,
 ): string | undefined {
   const facts = (grounding?.current_facts ?? [])
     .filter((fact) => fact.source === 'resources')
@@ -515,14 +469,14 @@ function groundedFactOpeningSentence(
     .filter((fact) =>
       fact.length > 0 &&
       !looksLikeProbativeEvidenceNoise(fact) &&
-      writingSignalCompatibleWithContext(fact, input)
+      signalCompatibleWithContextFrame(fact, resonance.context_frame)
     )
     .slice(0, 2)
 
   const signals = facts.length > 0
     ? facts
-    : publicRegimeSignalsForWriting(resources)
-        .filter((signal) => writingSignalCompatibleWithContext(signal, input))
+    : unique(resonance.source_signals.map((signal) => polishedPublicAnchor(signal.public_signal_fr)))
+        .filter((signal) => signal.length > 0 && !isGenericPublicSignal(signal))
         .slice(0, 2)
 
   if (signals.length === 0) return undefined
@@ -1399,26 +1353,6 @@ function isGeopoliticalWritingDomain(domain: string) {
   return ['geopolitics', 'geopolitique', 'war_security', 'security', 'guerre_securite', 'crisis_institutional'].includes(domain)
 }
 
-function writingContextCorpus(input: WritingEngineInput): string {
-  return [
-    input.interpretation.raw_input,
-    input.interpretation.situation_soumise,
-    input.interpretation.object_of_analysis,
-    input.interpretation.header_subject,
-    input.interpretation.user_need,
-  ].filter(Boolean).join(' ')
-}
-
-function isSecurityCrisisWritingContext(input: WritingEngineInput): boolean {
-  const corpus = writingContextCorpus(input)
-  return /\b(guerre|war|frappe|frappes|strike|strikes|attaque|attacks?|hostilit[eé]|hostilit|cessez[-\s]?le[-\s]?feu|ceasefire|missile|militaire|military|nucl[eé]aire|nuclear|riposte|escalade|blockade|blocus)\b/i.test(corpus)
-}
-
-function isPoliticalInstitutionalWritingContext(input: WritingEngineInput): boolean {
-  const corpus = writingContextCorpus(input)
-  return /\b(politique|gouvernement|gouvernemental|r[eé]gime|autorit[eé]s?|parlement|election|[ée]lection|opposition|manifestation|contestation|r[eé]pression|nomination|d[eé]mission|vote|sanction|diplomatie|diplomatique)\b/i.test(corpus)
-}
-
 function writingGrammar(input: WritingEngineInput) {
   if (input.expertises_metiers.domain_playbook.domain === 'management') {
     return {
@@ -1473,7 +1407,7 @@ function writingGrammar(input: WritingEngineInput) {
   }
 
   if (isGeopoliticalWritingDomain(input.expertises_metiers.domain_playbook.domain)) {
-    const isInstitutional = isPoliticalInstitutionalWritingContext(input) && !isSecurityCrisisWritingContext(input)
+    const isInstitutional = input.resonance.context_frame === 'political_institutional'
     return {
       actorsFallback: isInstitutional ? 'les autorites et forces politiques concernees' : 'les Etats et forces engagees',
       institutionsFallback: isInstitutional
@@ -1573,7 +1507,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       anchor.length > 0 &&
       !isGenericPublicSignal(anchor) &&
       !isPublicSpineNoise(anchor) &&
-      writingSignalCompatibleWithContext(anchor, input)
+      signalCompatibleWithContextFrame(anchor, resonance.context_frame)
     ))
   const fragilityAnchors = unique([
     resonance.structural_gap_fr,
@@ -1587,10 +1521,10 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const missingExternalEvidence = needsExternalEvidenceWithoutSources(input.resources)
   const probability = probabilityFromResources(input.resonance, input.resources) ?? probabilityFromMissingResources(input.resources) ?? probabilityFromTheatre(input.theatre)
   const resourcesWarning = resourceWarning(input.resources)
-  const groundedFactOpening = groundedFactOpeningSentence(input, input.grounding, input.resources)
-  const sourcedDiamondText = sourceGroundedDiamondText({ resonance, actors, institutions, input })
-  const sourcedVulnerabilityText = sourceGroundedVulnerabilityText({ resonance, institutions, input })
-  const sourcedContradictionText = sourceGroundedContradictionText({ resonance, actors, institutions, input })
+  const groundedFactOpening = groundedFactOpeningSentence(resonance, input.grounding)
+  const sourcedDiamondText = sourceGroundedDiamondText({ resonance, actors, institutions })
+  const sourcedVulnerabilityText = sourceGroundedVulnerabilityText({ resonance, institutions })
+  const sourcedContradictionText = sourceGroundedContradictionText({ resonance, actors, institutions })
   const diamondText = polishPublicProofText(compactSentence(
     sourcedDiamondText || resonance.diamond_thesis_fr || grammar.diamond(tension, institutions, firstProcedure),
     320,

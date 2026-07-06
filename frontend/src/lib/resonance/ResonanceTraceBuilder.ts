@@ -1,6 +1,7 @@
 import type {
   ConcreteTheatreContract,
   InterpretationContract,
+  ResonanceContextFrame,
   ResonanceTraceContract,
   ResourceServiceContract,
 } from '../contracts'
@@ -230,17 +231,31 @@ function sourceSignalAsTransition(value: string): string {
   return 'un fait public qualifié'
 }
 
-function sourceTransitionCompatibleWithContext(signal: string, input: ResonanceTraceInput): boolean {
-  const corpus = corpusText(input)
-  const politicalInstitutional = isPoliticalInstitutionalContext(corpus) && !isSecurityCrisisContext(corpus)
-  if (!politicalInstitutional) return true
+export function signalCompatibleWithContextFrame(signal: string, frame: ResonanceContextFrame): boolean {
+  if (frame !== 'political_institutional') return true
 
   return !/\b(hostilit[eé]s?|cessez[-\s]?le[-\s]?feu|frappe|frappes|riposte|militaires?|military|guerre|conflit)\b/i.test(signal)
 }
 
-function sourceTransitionsFromSignals(signals: Array<{ signal_fr: string }>, input: ResonanceTraceInput): string[] {
+export function looksLikeRawExternalExcerpt(value: string): boolean {
+  const normalized = normalize(value)
+  if (normalized.split(/\s+/).filter(Boolean).length > 16) return true
+  return /\b(?:the|after|before|between|over|war|ceasefire|reported|launched|strikes?|talks?|negotiations?|officials?|according|warnings?|thresholds?)\b/i.test(normalized)
+}
+
+function publicSignalForm(value: string, frame: ResonanceContextFrame): string {
+  const compactValue = value.replace(/\s+/g, ' ').trim()
+  if (!compactValue) return ''
+  const candidate = looksLikeRawExternalExcerpt(compactValue)
+    ? sourceSignalAsTransition(compactValue)
+    : compactValue
+  if (candidate === 'un fait public qualifié') return ''
+  return signalCompatibleWithContextFrame(candidate, frame) ? candidate : ''
+}
+
+function sourceTransitionsFromSignals(signals: Array<{ signal_fr: string }>, frame: ResonanceContextFrame): string[] {
   return unique(signals.map((signal) => sourceSignalAsTransition(signal.signal_fr)))
-    .filter((signal) => sourceTransitionCompatibleWithContext(signal, input))
+    .filter((signal) => signalCompatibleWithContextFrame(signal, frame))
     .filter((signal) => signal !== 'un fait public qualifié')
     .slice(0, 3)
 }
@@ -257,6 +272,12 @@ function isSecurityCrisisContext(corpus: string): boolean {
 
 function isPoliticalInstitutionalContext(corpus: string): boolean {
   return /\b(politique|gouvernement|gouvernemental|r[eé]gime|autorit[eé]s?|parlement|election|[ée]lection|opposition|manifestation|contestation|r[eé]pression|nomination|d[eé]mission|vote|sanction|diplomatie|diplomatique)\b/i.test(corpus)
+}
+
+function contextFrameFromCorpus(corpus: string): ResonanceContextFrame {
+  if (isSecurityCrisisContext(corpus)) return 'security_crisis'
+  if (isPoliticalInstitutionalContext(corpus)) return 'political_institutional'
+  return 'general'
 }
 
 function defaultStructuralGap(input: ResonanceTraceInput): string {
@@ -382,6 +403,7 @@ function institutionSupportedByQuestion(institution: string, corpus: string): bo
 export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceContract {
   const started = Date.now()
   const corpus = corpusText(input)
+  const contextFrame = contextFrameFromCorpus(`${corpus} ${input.interpretation.user_need ?? ''}`)
   const sourceHosts = unique((input.resources?.public_sources ?? []).flatMap((source) => [
     source.source,
     host(source.url),
@@ -392,6 +414,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     .map((signal) => ({
       source_id: signal.source_id,
       signal_fr: signal.signal_fr,
+      public_signal_fr: publicSignalForm(signal.signal_fr, contextFrame),
       source_title: signal.source_title,
       source_name: signal.source_name,
       discriminant_terms: signal.discriminant_terms,
@@ -400,6 +423,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     .map((evidence) => ({
       source_id: evidence.source_id,
       public_label_fr: evidence.public_label_fr,
+      public_signal_fr: publicSignalForm(evidence.public_label_fr, contextFrame),
       status: evidence.status,
       can_drive_probability: evidence.can_drive_probability,
     }))
@@ -427,7 +451,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
   )
   const transitionSignal = firstUseful(
     unique([
-      ...sourceTransitionsFromSignals(sourceSignals, input),
+      ...sourceTransitionsFromSignals(sourceSignals, contextFrame),
       ...input.theatre.evidence.map((item) => item.label),
       ...input.theatre.visible_actions,
     ]).filter((item) => transitionSignalAnchor(item, sourceHosts, sourceLabels)),
@@ -444,6 +468,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
   ])
 
   return {
+    context_frame: contextFrame,
     source_signals: sourceSignals,
     qualified_evidence: qualifiedEvidence,
     source_hosts: sourceHosts,
