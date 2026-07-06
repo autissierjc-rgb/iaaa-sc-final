@@ -57,10 +57,13 @@ export function compactSentence(text: string, maxLength = 220): string {
     return /[:;]$/.test(bounded) ? `${bounded.replace(/[:;]+$/g, '').trim()}.` : bounded
   }
 
+  const commaBoundary = clipped.lastIndexOf(', ')
   const wordBoundary = clipped.lastIndexOf(' ')
-  const safe = wordBoundary >= Math.floor(maxLength * 0.55)
-    ? clipped.slice(0, wordBoundary).trim()
-    : clipped
+  const safe = commaBoundary >= Math.floor(maxLength * 0.55)
+    ? clipped.slice(0, commaBoundary).trim()
+    : wordBoundary >= Math.floor(maxLength * 0.55)
+      ? clipped.slice(0, wordBoundary).trim()
+      : clipped
   const cleanEnd = safe
     .replace(/[,:;–—-]+$/g, '')
     .replace(/(?:\s+(?:et|ou|un|une|le|la|les|de|des|du|au|aux|à|que|qui|dans|sur|par|pour|en|d|l|qu))+$/i, '')
