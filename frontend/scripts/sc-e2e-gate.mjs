@@ -55,11 +55,15 @@ async function main() {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), Number(process.env.SC_E2E_TIMEOUT_MS || 600000))
 
+  const headers = { 'content-type': 'application/json' }
+  const token = process.env.SC_E2E_TOKEN || process.env.SC_REGRESSIONS_TOKEN
+  if (token) headers['x-sc-regressions-token'] = token
+
   let response
   try {
     response = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
       signal: controller.signal,
     })

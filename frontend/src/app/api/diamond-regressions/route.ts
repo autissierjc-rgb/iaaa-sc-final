@@ -70,8 +70,15 @@ function cardFromGenerateV2(payload: GenerateV2Payload): SituationCard {
   } as SituationCard
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   const started = Date.now()
+  const requiredToken = process.env.SC_REGRESSIONS_TOKEN
+  if (requiredToken && req.headers.get('x-sc-regressions-token') !== requiredToken) {
+    return NextResponse.json(
+      { ok: false, error: 'regressions_token_required' },
+      { status: 401 },
+    )
+  }
   const results = []
 
   for (const testCase of DIAMOND_REGRESSION_CASES) {
