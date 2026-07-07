@@ -1,0 +1,39 @@
+name: SC CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  build-and-local-gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start server
+        run: |
+          PORT=3105 npm run start &
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3105/ || true)
+            if [ "$code" = "200" ]; then echo ready; break; fi
+            sleep 2
+          done
+
+      - name: Local regression suites (no external calls)
+        run: node scripts/sc-e2e-gate.mjs --base-url=http://localhost:3105 --case-ids=__local_suites_only__

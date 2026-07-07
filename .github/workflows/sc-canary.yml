@@ -1,0 +1,25 @@
+name: SC production canary
+
+on:
+  schedule:
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  e2e-against-production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Full e2e gate on dated source cases
+        env:
+          SC_E2E_TOKEN: ${{ secrets.SC_E2E_TOKEN }}
+          SC_E2E_TIMEOUT_MS: '420000'
+        run: >
+          node frontend/scripts/sc-e2e-gate.mjs
+          --base-url=https://situationcard.com
+          --case-ids=dated-geopolitical-status-ready-to-generate,current-geopolitical-status-08-06-requires-public-evidence,current-political-iran-30-06-requires-public-evidence,current-political-iran-01-07-keeps-political-spine
