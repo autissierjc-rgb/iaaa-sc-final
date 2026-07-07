@@ -377,6 +377,7 @@ async function requestOpenAIWriting({
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  const reasoningModel = /^(?:gpt-5|o\d)/i.test(model)
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -387,8 +388,15 @@ async function requestOpenAIWriting({
       signal: controller.signal,
       body: JSON.stringify({
         model,
-        temperature,
-        max_tokens: maxTokens,
+        ...(reasoningModel
+          ? {
+              max_completion_tokens: maxTokens,
+              reasoning_effort: process.env.SC_DIAMOND_WRITER_REASONING_EFFORT || 'minimal',
+            }
+          : {
+              temperature,
+              max_tokens: maxTokens,
+            }),
         response_format: { type: 'json_object' },
         messages: prompt.messages,
       }),
@@ -428,7 +436,7 @@ export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise
       },
     ]
   }
-  const model = input.model || process.env.OPENAI_DIAMOND_WRITER_MODEL || process.env.OPENAI_WRITING_MODEL || 'gpt-4o'
+  const model = input.model || process.env.OPENAI_DIAMOND_WRITER_MODEL || process.env.OPENAI_WRITING_MODEL || 'gpt-5-mini'
   const temperature = input.temperature ?? 0.25
   const timeoutMs = input.timeout_ms ?? 25000
   const maxTokens = input.max_tokens ?? 4500
