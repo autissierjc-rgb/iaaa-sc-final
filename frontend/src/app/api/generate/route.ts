@@ -42,7 +42,7 @@ import { assessCompleteFactualSourceCoverage } from '@/lib/resources/completeSou
 import { detectScopeContext } from '@/lib/scope/scopeContext'
 import { buildConcreteTheatre as buildCanonicalConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWritingWithMode } from '@/lib/writing'
-import { repairPressSummaryOpenings, repairUnderusedSourceSignals, runContractQualityGate, runQualityGate } from '@/lib/quality'
+import { repairPressSummaryOpenings, repairThinApprofondirSections, repairUnderusedSourceSignals, runContractQualityGate, runQualityGate } from '@/lib/quality'
 import { buildResonanceTrace } from '@/lib/resonance'
 import { buildGroundingContract } from '@/lib/grounding'
 import {
@@ -5591,6 +5591,7 @@ export async function POST(req: NextRequest) {
           'PRESS_SUMMARY_INSTEAD_OF_DIAMOND',
           'RESOURCE_REGIME_SIGNALS_UNDERUSED',
           'SOURCE_PUBLIC_EVIDENCE_UNDERUSED',
+          'APPROFONDIR_SECTIONS_TOO_THIN',
         ])
         if (
           diamondWriter.status === 'quality_failed' &&
@@ -5607,6 +5608,9 @@ export async function POST(req: NextRequest) {
             diamondWriter.errors.includes('SOURCE_PUBLIC_EVIDENCE_UNDERUSED')
           ) {
             repairedWriting = repairUnderusedSourceSignals(repairedWriting, resonanceTrace) ?? repairedWriting
+          }
+          if (diamondWriter.errors.includes('APPROFONDIR_SECTIONS_TOO_THIN')) {
+            repairedWriting = repairThinApprofondirSections(repairedWriting, localWritingContract) ?? repairedWriting
           }
           if (repairedWriting === diamondWriter.writing) {
             repairedWriting = null

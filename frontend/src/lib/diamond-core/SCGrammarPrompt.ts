@@ -300,9 +300,11 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
           ]
         : []),
       'trajectories must include exactly one stabilization, one escalation and one regime_shift.',
-      'lecture.text_fr must be a short summary: 2 short paragraphs maximum, not a mini-Approfondir.',
+      'lecture.text_fr must be exactly 2 short paragraphs: first the concrete regime diagnosis anchored in the public facts, then what would make the reading tip and what to watch. One thin paragraph is a contract violation.',
       'lecture.text_fr must not carry the full trajectory spine or the detailed probability demonstration when approfondir.sections_fr carries them.',
       'approfondir.sections_fr must keep the public structural spine: what the situation is, what holds, what weakens, what could escalate, what could shift, and what to watch.',
+      'Each approfondir section body must demonstrate, not assert: 2 to 4 compact sentences linking a public fact, the mechanism it reveals and the observable signal that would change the reading. One-sentence section bodies are a contract violation.',
+      'approfondir.analysis_fr must be 3 to 5 sentences that develop the central contradiction beyond the lecture summary.',
       'Use established/probable/plausible/hypothesis/unknown as proof status inside the reasoning and probability_assessments, never as public section titles.',
       'Do not create public sections titled "Ce qui est etabli", "Ce qui est probable", "Ce qui est plausible", "Ce qui est hypothetique" or "Ce qui est inconnu".',
       'approfondir.sections_fr must explain what holds, weakens, escalates, shifts and what to watch without starting a section body by repeating its title.',

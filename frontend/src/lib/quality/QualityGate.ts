@@ -298,6 +298,50 @@ export function repairUnderusedSourceSignals(
   }
 }
 
+export function repairThinApprofondirSections(
+  writing: WritingContract,
+  localWriting: WritingContract | null,
+): WritingContract | null {
+  const localSections = arrayValue(localWriting?.approfondir?.sections_fr)
+  if (localSections.length === 0) return null
+
+  let changed = false
+  const sections = arrayValue(writing.approfondir?.sections_fr).map((section) => {
+    const title = textValue(section.title)
+    const body = textValue(section.body)
+    if (!thinApprofondirSection(title, body)) return section
+
+    const localMatch = localSections.find((local) =>
+      normalize(textValue(local.title)) === normalize(title) ||
+      textValue(local.id) === textValue(section.id),
+    )
+    const localBody = textValue(localMatch?.body)
+    if (!localBody || normalize(body).includes(normalize(localBody).slice(0, 40))) return section
+
+    changed = true
+    return {
+      ...section,
+      body: [body, localBody].filter(Boolean).join(' ').trim(),
+    }
+  })
+
+  if (!changed) return null
+  return {
+    ...writing,
+    approfondir: {
+      ...writing.approfondir,
+      sections_fr: sections,
+    },
+    trace: {
+      ...writing.trace,
+      notes: [
+        ...(writing.trace.notes ?? []),
+        'thin_approfondir_sections_completed_from_local_contract',
+      ],
+    },
+  }
+}
+
 const PROBABILITY_STATUS_SECTION_TITLES = [
   'ce qui est etabli',
   'ce qui est etablie',
@@ -430,8 +474,8 @@ function thinApprofondirSection(title: string, body: string): boolean {
   const cleanBody = body.trim()
   const remaining = bodyWithoutTitle(title, body)
   return (
-    cleanBody.length < 80 ||
-    wordCount(remaining || cleanBody) < 12 ||
+    cleanBody.length < 120 ||
+    wordCount(remaining || cleanBody) < 20 ||
     bodyRepeatsTitle(title, body)
   )
 }
