@@ -2292,7 +2292,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
     setSituation('')
     try {
       const controller = new AbortController()
-      const timeout = window.setTimeout(() => controller.abort(), 12000)
+      const timeout = window.setTimeout(() => controller.abort(), 20000)
       const scRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2314,7 +2314,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
       if (shouldRetryPrudentGeneration(scData2, exploratoryGeneration)) {
         try {
           const retryController = new AbortController()
-          const retryTimeout = window.setTimeout(() => retryController.abort(), 12000)
+          const retryTimeout = window.setTimeout(() => retryController.abort(), 20000)
           const retryRes = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
