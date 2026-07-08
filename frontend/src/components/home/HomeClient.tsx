@@ -1276,7 +1276,12 @@ function SituationCardPanel({ sc, lang, onExpand }: {
   }
 
   async function fetchResourcesData() {
-    if (isGenerationDegraded) return
+    if (isGenerationDegraded) {
+      if ((sourceItems?.length ?? 0) === 0 && sources.length > 0) {
+        setSourceItems(sources)
+      }
+      return
+    }
     if ((sourceItems?.length ?? 0) > 0 || sourcesLoading) return
 
     setSourcesLoading(true)
