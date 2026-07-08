@@ -9,6 +9,7 @@ export type ResourceRegimeSignal = {
   reliability: string
   discriminant_terms: string[]
   source_id?: string
+  published_at?: string
 }
 
 function compact(value: string, max = 320): string {
@@ -99,6 +100,7 @@ function signalFromSource(source: ResourceServiceContract['public_sources'][numb
     reliability: source.reliability ?? 'unknown',
     discriminant_terms: discriminantTermsFrom(`${signal} ${sourceTitle}`, ''),
     source_id: source.id,
+    published_at: source.published_at,
   }
 }
 

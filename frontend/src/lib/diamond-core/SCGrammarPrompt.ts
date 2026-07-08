@@ -32,8 +32,19 @@ function section(title: string, body: unknown): string {
   return `## ${title}\n${typeof body === 'string' ? body : JSON.stringify(body, null, 2)}`
 }
 
+function byFreshness<T extends { published_at?: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const dateA = a.published_at ? Date.parse(a.published_at) : NaN
+    const dateB = b.published_at ? Date.parse(b.published_at) : NaN
+    if (Number.isNaN(dateA) && Number.isNaN(dateB)) return 0
+    if (Number.isNaN(dateA)) return 1
+    if (Number.isNaN(dateB)) return -1
+    return dateB - dateA
+  })
+}
+
 function resourceSummary(dossier: DiamondDossier) {
-  const regimeSignals = dossier.resonance.source_signals
+  const regimeSignals = byFreshness(dossier.resonance.source_signals)
 
   return {
     context_frame: dossier.resonance.context_frame,
@@ -59,18 +70,20 @@ function resourceSummary(dossier: DiamondDossier) {
       source_title: option.source_title,
       evidence_fr: list(option.evidence_fr, 4),
     })),
-    public_evidence: dossier.resonance.qualified_evidence.map((evidence) => ({
+    public_evidence: byFreshness(dossier.resonance.qualified_evidence).map((evidence) => ({
       status: evidence.status,
       public_label_fr: evidence.public_label_fr,
       public_signal_fr: evidence.public_signal_fr,
       source_id: evidence.source_id,
       can_drive_probability: evidence.can_drive_probability,
+      published_at: evidence.published_at,
     })),
     regime_signals: regimeSignals.map((signal) => ({
       signal_fr: signal.signal_fr,
       public_signal_fr: signal.public_signal_fr,
       source_name: signal.source_name,
       discriminant_terms: signal.discriminant_terms,
+      published_at: signal.published_at,
     })),
     functional_needs: dossier.resources.plan.functional_needs.map((need) => ({
       family: need.family,
@@ -276,6 +289,8 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       'situation_card.key_signal_fr must name the observable signal that would change the regime of the situation.',
       'Every public card must make the user see the system, feel the fragile point, and know what to watch.',
       'Name the real theatre: the named persons, institutions and dated events present in the dossier (actors, regime signals, public evidence) must appear in the public text. A card about a public situation that names no person, no institution and no dated fact is a contract violation.',
+      'The date in the canonical situation is the reference point. Anchor the regime diagnosis on the MOST RECENT dated facts in the dossier (published_at); older events are background context and must never lead the reading. If a fact is months older than the question date, say so explicitly instead of presenting it as the current state.',
+      'The primary theatre is where the most recent facts put the named actors of the question, not the most detailed source.',
       'Give at least one dated fact from the dossier as an example, with its proof status (etabli, probable or plausible) stated in the same sentence.',
       'The proof status of the reading (etabli/probable/plausible/hypothese) must appear explicitly in the section "Ce que la situation est réellement", with the proof that would change it.',
       ...(hasRegimeSignals

@@ -9,6 +9,7 @@ export type ResonanceSourceSignal = {
   source_title: string
   source_name: string
   discriminant_terms: string[]
+  published_at?: string
 }
 
 export type ResonanceQualifiedEvidence = {
@@ -17,6 +18,7 @@ export type ResonanceQualifiedEvidence = {
   public_signal_fr: string
   status: 'usable' | 'weak' | 'rejected'
   can_drive_probability: boolean
+  published_at?: string
 }
 
 export type ResonanceTraceContract = {

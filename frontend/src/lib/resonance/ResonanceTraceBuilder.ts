@@ -452,7 +452,13 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       source_title: signal.source_title,
       source_name: signal.source_name,
       discriminant_terms: signal.discriminant_terms,
+      published_at: signal.published_at,
     }))
+  const publishedBySourceId = new Map(
+    (input.resources?.public_sources ?? [])
+      .filter((source) => source.id && source.published_at)
+      .map((source) => [source.id, source.published_at] as const),
+  )
   const qualifiedEvidence = publicProbativeEvidence(input.resources, 3, evidenceRelevanceQuery(input))
     .map((evidence) => ({
       source_id: evidence.source_id,
@@ -460,6 +466,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       public_signal_fr: publicSignalForm(evidence.public_label_fr, contextFrame),
       status: evidence.status,
       can_drive_probability: evidence.can_drive_probability,
+      published_at: evidence.source_id ? publishedBySourceId.get(evidence.source_id) : undefined,
     }))
   const knownActorTokens = new Set(
     [...knownEntities, ...input.theatre.actors].flatMap((actor) => normalizedWords(actor)),
