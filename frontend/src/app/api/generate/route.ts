@@ -5060,7 +5060,7 @@ export async function POST(req: NextRequest) {
           interpretation: canonicalInterpretation,
           resource_plan: fastResourcePlan,
           timeout_ms: mode === 'generate_full' ? 8000 : MIN_FAST_RESOURCE_TIMEOUT_MS,
-          max_sources: 3,
+          max_sources: mode === 'generate_full' ? 5 : 3,
         })
       : undefined
     if (fastRunnerResult) {
