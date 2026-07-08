@@ -421,7 +421,11 @@ export function legacyFallbackPlanQueriesForDiagnostics(input: FastResourceRunne
   return executionPlans(input).map((plan) => plan.query)
 }
 
-async function fetchTavilyFastPlan(plan: FastSearchPlan, maxSources: number, timeoutMs: number): Promise<ResourceItem[]> {
+async function fetchTavilyFastPlan(
+  plan: FastSearchPlan,
+  maxSources: number,
+  timeoutMs: number,
+): Promise<ResourceItem[] | 'transport_failed'> {
   const apiKey = process.env.TAVILY_API_KEY
   if (!apiKey) return []
 
@@ -442,7 +446,7 @@ async function fetchTavilyFastPlan(plan: FastSearchPlan, maxSources: number, tim
     timeoutMs,
   )
 
-  if (!response?.ok) return []
+  if (!response?.ok) return 'transport_failed'
   const data = await response.json()
   const results = Array.isArray(data.results) ? data.results : []
 
@@ -613,14 +617,22 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
   }
 
   try {
-    const planResults = await Promise.all(
+    let planResults = await Promise.all(
       plans.map((plan) => fetchTavilyFastPlan(plan, maxSources, timeoutMs)),
     )
-    const firstHitIndex = planResults.findIndex((items) => items.length > 0)
-    const firstHitPlan = firstHitIndex >= 0 ? plans[firstHitIndex] : primaryPlan
+    const allTransportFailed = planResults.length > 0 &&
+      planResults.every((result) => result === 'transport_failed')
+    if (allTransportFailed) {
+      const retry = await fetchTavilyFastPlan(primaryPlan, maxSources, Math.min(timeoutMs, 2500))
+      planResults = [retry]
+    }
+    const resolvedResults = planResults.map((result) => (result === 'transport_failed' ? [] : result))
+    const resolvedPlans = allTransportFailed ? [primaryPlan] : plans
+    const firstHitIndex = resolvedResults.findIndex((items) => items.length > 0)
+    const firstHitPlan = firstHitIndex >= 0 ? resolvedPlans[firstHitIndex] : primaryPlan
     const fast = filterFastResourceResultsByPlanForDiagnostics(
-      planResults,
-      plans.map((plan) => plan.query),
+      resolvedResults,
+      resolvedPlans.map((plan) => plan.query),
       query,
       maxSources,
     )
