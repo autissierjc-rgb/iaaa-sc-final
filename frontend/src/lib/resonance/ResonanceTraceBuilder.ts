@@ -376,8 +376,8 @@ function knownEntitiesFromContracts(input: ResonanceTraceInput): string[] {
   ])
 }
 
-function namedActorAnchoredInCanonicalText(actor: string, normalizedCanonical: string): boolean {
-  if (!normalizedCanonical) return true
+function namedActorAnchoredInCanonicalText(actor: string, normalizedSupport: string): boolean {
+  if (!normalizedSupport) return true
   const namedTokens = actor
     .split(/[^A-Za-zÀ-ÖØ-öø-ÿ0-9]+/)
     .filter((token) => /^[A-ZÀ-Ö]/.test(token))
@@ -385,7 +385,41 @@ function namedActorAnchoredInCanonicalText(actor: string, normalizedCanonical: s
     .filter((token) => token.length >= 2)
 
   if (namedTokens.length === 0) return true
-  return namedTokens.some((token) => normalizedCanonical.includes(token))
+  return namedTokens.some((token) => normalizedSupport.includes(token))
+}
+
+const SOURCE_ANCHOR_NOISE = /^(?:the|a|an|in|on|at|of|for|and|but|with|after|before|from|says?|said|watch|news|live|updates?|breaking|report|analysis|opinion|world|middle|east|latest|video|photos?)$/i
+
+function isFragmentOfOtherActors(actor: string, others: string[]): boolean {
+  const tokens = normalizedWords(actor)
+  if (tokens.length < 2) return false
+  const otherTokens = new Set(
+    others.filter((other) => other !== actor).flatMap((other) => normalizedWords(other)),
+  )
+  return tokens.every((token) => otherTokens.has(token))
+}
+
+function namedAnchorsFromQualifiedSources(
+  signals: Array<{ signal_fr: string; source_title: string; source_name: string }>,
+  evidence: Array<{ public_label_fr: string }>,
+  sourceHosts: string[],
+): string[] {
+  const text = [
+    ...signals.map((signal) => `${signal.signal_fr} ${signal.source_title}`),
+    ...evidence.map((item) => item.public_label_fr),
+  ].join(' ')
+  const hostText = normalize([...sourceHosts, ...signals.map((signal) => signal.source_name)].join(' '))
+
+  return unique(text.match(/\b[A-ZÀ-Ý][\p{L}'’-]{3,}(?:\s+[A-ZÀ-Ý][\p{L}'’-]{3,}){0,2}\b/gu) ?? [])
+    .filter((anchor) => {
+      const tokens = anchor.split(/\s+/)
+      if (tokens.some((token) => SOURCE_ANCHOR_NOISE.test(token))) return false
+      const key = normalize(anchor)
+      if (key.length < 4) return false
+      if (hostText.includes(key)) return false
+      return true
+    })
+    .slice(0, 6)
 }
 
 function institutionAnchoredInContracts(institution: string, normalizedSupport: string): boolean {
@@ -427,13 +461,24 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       status: evidence.status,
       can_drive_probability: evidence.can_drive_probability,
     }))
-  const canonicalQuestion = normalize(input.interpretation.situation_soumise || '')
+  const knownActorTokens = new Set(
+    [...knownEntities, ...input.theatre.actors].flatMap((actor) => normalizedWords(actor)),
+  )
+  const sourceNamedAnchors = namedAnchorsFromQualifiedSources(sourceSignals, qualifiedEvidence, sourceHosts)
+    .filter((anchor) => normalizedWords(anchor).some((token) => !knownActorTokens.has(token)))
+  const actorSupport = normalize([
+    input.interpretation.situation_soumise || '',
+    ...sourceSignals.map((signal) => `${signal.signal_fr} ${signal.source_title}`),
+    ...qualifiedEvidence.map((evidence) => evidence.public_label_fr),
+  ].join(' '))
   const realActors = removeCompositeActors([
     ...knownEntities,
     ...input.theatre.actors,
+    ...sourceNamedAnchors,
   ])
     .filter((actor) => publicAnchor(actor, sourceHosts, sourceLabels))
-    .filter((actor) => namedActorAnchoredInCanonicalText(actor, canonicalQuestion))
+    .filter((actor) => namedActorAnchoredInCanonicalText(actor, actorSupport))
+    .filter((actor, _index, list) => !isFragmentOfOtherActors(actor, list))
     .slice(0, 8)
   const institutionSupport = normalize([
     corpus,
