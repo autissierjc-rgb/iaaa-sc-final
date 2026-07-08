@@ -390,7 +390,8 @@ async function requestOpenAIWriting({
         model,
         ...(reasoningModel
           ? {
-              max_completion_tokens: maxTokens,
+              // reasoning tokens count against max_completion_tokens: keep headroom
+              max_completion_tokens: Math.max(maxTokens, 8000),
               reasoning_effort: process.env.SC_DIAMOND_WRITER_REASONING_EFFORT || 'minimal',
             }
           : {

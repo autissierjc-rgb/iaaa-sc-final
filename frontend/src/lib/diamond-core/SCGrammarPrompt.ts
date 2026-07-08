@@ -275,6 +275,9 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       'situation_card.asymmetry_fr must name the asymmetry of power, proof, role, timing or adoption.',
       'situation_card.key_signal_fr must name the observable signal that would change the regime of the situation.',
       'Every public card must make the user see the system, feel the fragile point, and know what to watch.',
+      'Name the real theatre: the named persons, institutions and dated events present in the dossier (actors, regime signals, public evidence) must appear in the public text. A card about a public situation that names no person, no institution and no dated fact is a contract violation.',
+      'Give at least one dated fact from the dossier as an example, with its proof status (etabli, probable or plausible) stated in the same sentence.',
+      'The proof status of the reading (etabli/probable/plausible/hypothese) must appear explicitly in the section "Ce que la situation est réellement", with the proof that would change it.',
       ...(hasRegimeSignals
         ? [
             'Resources.regime_signals are mandatory anchors, not optional background.',
