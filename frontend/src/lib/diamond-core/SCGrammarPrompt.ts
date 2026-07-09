@@ -289,6 +289,7 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       'situation_card.key_signal_fr must name the observable signal that would change the regime of the situation.',
       'Every public card must make the user see the system, feel the fragile point, and know what to watch.',
       'Name the real theatre: the named persons, institutions and dated events present in the dossier (actors, regime signals, public evidence) must appear in the public text. A card about a public situation that names no person, no institution and no dated fact is a contract violation.',
+      'All public text is French. Translate English role phrases and institution names into their French public forms (e.g. Premier ministre israélien, Gardiens de la révolution) and use the French spelling of proper names (Netanyahou, Téhéran). Never leave an English phrase inside a French sentence.',
       'The date in the canonical situation is the reference point. Anchor the regime diagnosis on the MOST RECENT dated facts in the dossier (published_at); older events are background context and must never lead the reading. If a fact is months older than the question date, say so explicitly instead of presenting it as the current state.',
       'The primary theatre is where the most recent facts put the named actors of the question, not the most detailed source.',
       'Give at least one dated fact from the dossier as an example, with its proof status (etabli, probable or plausible) stated in the same sentence.',

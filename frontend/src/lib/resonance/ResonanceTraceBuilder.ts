@@ -388,8 +388,6 @@ function namedActorAnchoredInCanonicalText(actor: string, normalizedSupport: str
   return namedTokens.some((token) => normalizedSupport.includes(token))
 }
 
-const SOURCE_ANCHOR_NOISE = /^(?:the|a|an|in|on|at|of|for|and|but|with|after|before|from|says?|said|watch|news|live|updates?|breaking|report|analysis|opinion|world|middle|east|latest|video|photos?)$/i
-
 function isFragmentOfOtherActors(actor: string, others: string[]): boolean {
   const tokens = normalizedWords(actor)
   if (tokens.length < 2) return false
@@ -397,29 +395,6 @@ function isFragmentOfOtherActors(actor: string, others: string[]): boolean {
     others.filter((other) => other !== actor).flatMap((other) => normalizedWords(other)),
   )
   return tokens.every((token) => otherTokens.has(token))
-}
-
-function namedAnchorsFromQualifiedSources(
-  signals: Array<{ signal_fr: string; source_title: string; source_name: string }>,
-  evidence: Array<{ public_label_fr: string }>,
-  sourceHosts: string[],
-): string[] {
-  const text = [
-    ...signals.map((signal) => `${signal.signal_fr} ${signal.source_title}`),
-    ...evidence.map((item) => item.public_label_fr),
-  ].join(' ')
-  const hostText = normalize([...sourceHosts, ...signals.map((signal) => signal.source_name)].join(' '))
-
-  return unique(text.match(/\b[A-ZÀ-Ý][\p{L}'’-]{3,}(?:\s+[A-ZÀ-Ý][\p{L}'’-]{3,}){0,2}\b/gu) ?? [])
-    .filter((anchor) => {
-      const tokens = anchor.split(/\s+/)
-      if (tokens.some((token) => SOURCE_ANCHOR_NOISE.test(token))) return false
-      const key = normalize(anchor)
-      if (key.length < 4) return false
-      if (hostText.includes(key)) return false
-      return true
-    })
-    .slice(0, 6)
 }
 
 function institutionAnchoredInContracts(institution: string, normalizedSupport: string): boolean {
@@ -468,11 +443,10 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       can_drive_probability: evidence.can_drive_probability,
       published_at: evidence.source_id ? publishedBySourceId.get(evidence.source_id) : undefined,
     }))
-  const knownActorTokens = new Set(
-    [...knownEntities, ...input.theatre.actors].flatMap((actor) => normalizedWords(actor)),
-  )
-  const sourceNamedAnchors = namedAnchorsFromQualifiedSources(sourceSignals, qualifiedEvidence, sourceHosts)
-    .filter((anchor) => normalizedWords(anchor).some((token) => !knownActorTokens.has(token)))
+  // Persons named by sources are writer material: the diamond writer reads the
+  // full qualified signals and translates them into French public forms. The
+  // deterministic fast card cannot translate, so its actors stay anchored in
+  // the canonical question and the theatre.
   const actorSupport = normalize([
     input.interpretation.situation_soumise || '',
     ...sourceSignals.map((signal) => `${signal.signal_fr} ${signal.source_title}`),
@@ -481,7 +455,6 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
   const realActors = removeCompositeActors([
     ...knownEntities,
     ...input.theatre.actors,
-    ...sourceNamedAnchors,
   ])
     .filter((actor) => publicAnchor(actor, sourceHosts, sourceLabels))
     .filter((actor) => namedActorAnchoredInCanonicalText(actor, actorSupport))
