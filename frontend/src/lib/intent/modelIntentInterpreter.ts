@@ -161,6 +161,14 @@ function asEntityExplanations(value: unknown, fallback: InterpretedRequest['enti
   return items.length > 0 ? items : fallback
 }
 
+function referenceModelRequestParams(): Record<string, unknown> {
+  const model = process.env.OPENAI_INTENT_MODEL || 'gpt-4o-mini'
+  const reasoningModel = /^(?:gpt-5|o\d)/i.test(model)
+  return reasoningModel
+    ? { model, reasoning_effort: process.env.OPENAI_INTENT_REASONING_EFFORT || 'minimal' }
+    : { model, temperature: 0 }
+}
+
 function hasUnknownEntity(entities: InterpretedRequest['entity_explanations']): boolean {
   return Boolean(entities?.some((entity) => {
     const explanation = `${entity.explanation || ''} ${entity.certainty || ''}`
@@ -191,8 +199,7 @@ async function inferConfirmationHypothesis({
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: process.env.OPENAI_INTENT_MODEL || 'gpt-4o-mini',
-        temperature: 0,
+        ...referenceModelRequestParams(),
         response_format: { type: 'json_object' },
         messages: [
           {
@@ -244,8 +251,7 @@ export async function interpretRequestWithModel(input: string): Promise<Interpre
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: process.env.OPENAI_INTENT_MODEL || 'gpt-4o-mini',
-        temperature: 0,
+        ...referenceModelRequestParams(),
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
