@@ -121,7 +121,7 @@ function resourcePlanWithNoisyReutersExcerpt(): ResourceServiceContract {
     source: 'reuters.com',
     channel: 'news_agency',
     domain_relevance: ['geopolitics'],
-    excerpt: '# Exclusive: US carries out new strikes in Iran against military site, official says. Exclusive news, data and analytics from Reuters. Iran and the United States remain central to the military threshold.',
+    excerpt: '# Exclusive: US carries out new strikes in Iran against military site, official says. Exclusive news, data and analytics for financial market professionals Learn more about Refinitiv. Iran and the United States remain central to the military threshold.',
     retrieved_at: '2026-06-02T00:00:00.000Z',
     reliability: 'secondary',
   }
@@ -1161,6 +1161,8 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     '# Exclusive',
     'Exclusive: US carries out',
     'Exclusive news, data and analytics',
+    'Learn more about',
+    'Refinitiv',
     'Reuters transforme',
     'La lecture changerait si l’on observe Exclusive',
   ]) {

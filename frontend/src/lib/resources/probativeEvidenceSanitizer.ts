@@ -50,7 +50,12 @@ function hasImageNoise(value: string): boolean {
 }
 
 function hasNavigationNoise(value: string): boolean {
-  return /\b(skip to|menu|privacy policy|terms of service|all rights reserved|cookie|javascript)\b/i.test(value)
+  return /\b(skip to|menu|privacy policy|terms of service|all rights reserved|cookie|javascript)\b/i.test(value) ||
+    hasMarketingBoilerplate(value)
+}
+
+function hasMarketingBoilerplate(value: string): boolean {
+  return /\b(learn more|read more|sign up|subscribe|newsletter|click here|download (?:the )?app|follow us|trust principles|exclusive news, data and analytics|latest news, data and analysis|en savoir plus|abonnez-vous|inscrivez-vous)\b/i.test(value)
 }
 
 export function looksLikeSourceTitleNoise(value: string): boolean {

@@ -256,7 +256,13 @@ export function signalCompatibleWithContextFrame(signal: string, frame: Resonanc
 export function looksLikeRawExternalExcerpt(value: string): boolean {
   const normalized = normalize(value)
   if (normalized.split(/\s+/).filter(Boolean).length > 16) return true
-  return /\b(?:the|after|before|between|over|war|ceasefire|reported|launched|strikes?|talks?|negotiations?|officials?|according|warnings?|thresholds?)\b/i.test(normalized)
+  if (/\b(?:the|after|before|between|over|war|ceasefire|reported|launched|strikes?|talks?|negotiations?|officials?|according|warnings?|thresholds?)\b/i.test(normalized)) {
+    return true
+  }
+  // Language-level guard: two or more English function words mark a foreign
+  // excerpt regardless of its topic (marketing boilerplate included).
+  const englishFunctionWords = normalized.match(/\b(?:and|for|with|from|about|more|our|your|this|that|will|have|has|are|was|were|been|its|of|to|by|at|as)\b/g) ?? []
+  return englishFunctionWords.length >= 2
 }
 
 function publicSignalForm(value: string, frame: ResonanceContextFrame): string {
