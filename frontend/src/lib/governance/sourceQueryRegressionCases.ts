@@ -23,6 +23,7 @@ import { buildResourceRegimeSignals } from '@/lib/resources/regimeSignals'
 import { filterRelevantResources } from '@/lib/resources/resourceRelevance'
 import type { SituationCard } from '@/lib/resources/resourceContract'
 import { buildResonanceTrace } from '@/lib/resonance'
+import { shouldUseWeb } from '@/lib/resources/shouldUseWeb'
 import { buildConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWriting } from '@/lib/writing'
 import { runQualityGate } from '@/lib/quality'
@@ -1803,12 +1804,40 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     }
   }
 
+  const currentEvolutionIssues: SourceQueryRegressionResult['issues'] = []
+  for (const currentQuestion of [
+    'COMMENT risque d evoluer la situation intérieure russe avec cette pénurie d essence ?',
+    'Quelle est la situation économique actuelle avec cette inflation ?',
+    'Comment la crise politique peut-elle évoluer après ces manifestations ?',
+  ]) {
+    if (!shouldUseWeb(currentQuestion)) {
+      currentEvolutionIssues.push({
+        level: 'error',
+        code: 'current_evolution_question_without_web',
+        message: `A current-evolution public question must trigger fast sources: ${currentQuestion.slice(0, 80)}`,
+      })
+    }
+  }
+  if (shouldUseWeb('Comment organiser la répartition des rôles dans mon équipe ?')) {
+    currentEvolutionIssues.push({
+      level: 'error',
+      code: 'internal_question_forced_to_web',
+      message: 'A purely internal organizational question must not trigger fast sources.',
+    })
+  }
+
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
     query,
     subject: plans.subject,
     issues,
+  }, {
+    id: 'current-evolution-question-triggers-web',
+    ok: currentEvolutionIssues.length === 0,
+    query: 'pénurie / inflation / manifestations vs organisation interne',
+    subject: 'shouldUseWeb',
+    issues: currentEvolutionIssues,
   }, {
     id: 'current-question-rejects-off-topic-fast-sources',
     ok: relevanceIssues.length === 0,

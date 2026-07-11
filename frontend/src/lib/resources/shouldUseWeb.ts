@@ -1,8 +1,11 @@
 const LIVE_HINTS = [
   /\b(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s]*)?/i,
   /\b20\d{2}\b/i,
-  /\b(today|yesterday|tomorrow|latest|current|breaking|ceasefire|election|electoral|midterm|war|summit)\b/i,
-  /\b(aujourd'hui|hier|demain|dernier|recen|actuel|cessez-le-feu|[ée]lections?|[ée]lectoral|mi-mandat|guerre|sommet)\b/i,
+  /\b\d{1,2}\/\d{1,2}\b/,
+  /\b(today|yesterday|tomorrow|latest|current|breaking|ceasefire|election|electoral|midterm|war|summit|shortage|crisis|unrest|protests?|sanctions?|blackouts?)\b/i,
+  /\b(aujourd'hui|hier|demain|dernier|recen|actuel|cessez-le-feu|[ée]lections?|[ée]lectoral|mi-mandat|guerre|sommet|p[ée]nurie|crise|manifestations?|sanctions?|inflation|blocus|gr[èe]ves?)\b/i,
+  /\bsituation\s+(?:actuelle|int[ée]rieure|politique|[ée]conomique|militaire|sociale)\b/i,
+  /\brisque\s+d['’]?[ée]voluer\b|\bcomment\b[^?!.]{0,60}\b[ée]voluer\b|\bo[ùu]\s+en\s+(?:est|sommes|sont)\b/i,
   /\b(iran|ukraine|gaza|russie|chine|usa|etats-unis|israel|palestine)\b/i,
 ]
 

@@ -293,6 +293,7 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       'The date in the canonical situation is the reference point. Anchor the regime diagnosis on the MOST RECENT dated facts in the dossier (published_at); older events are background context and must never lead the reading. If a fact is months older than the question date, say so explicitly instead of presenting it as the current state.',
       'The primary theatre is where the most recent facts put the named actors of the question, not the most detailed source.',
       'Give at least one dated fact from the dossier as an example, with its proof status (etabli, probable or plausible) stated in the same sentence.',
+      'Never assign etabli or probable to a fact that the dossier evidence does not carry. When the dossier has no public evidence, world facts from your own knowledge are at most hypotheses to verify, and the card must say plainly that no source could be attached.',
       'The proof status of the reading (etabli/probable/plausible/hypothese) must appear explicitly in the section "Ce que la situation est réellement", with the proof that would change it.',
       ...(hasRegimeSignals
         ? [
