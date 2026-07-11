@@ -1805,25 +1805,32 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
   }
 
   const currentEvolutionIssues: SourceQueryRegressionResult['issues'] = []
-  for (const currentQuestion of [
+  for (const publicQuestion of [
     'COMMENT risque d evoluer la situation intérieure russe avec cette pénurie d essence ?',
     'Quelle est la situation économique actuelle avec cette inflation ?',
     'Comment la crise politique peut-elle évoluer après ces manifestations ?',
+    'Quelles sont les conséquences du nouvel accord commercial pour les producteurs laitiers européens ?',
   ]) {
-    if (!shouldUseWeb(currentQuestion)) {
+    if (!shouldUseWeb(publicQuestion)) {
       currentEvolutionIssues.push({
         level: 'error',
-        code: 'current_evolution_question_without_web',
-        message: `A current-evolution public question must trigger fast sources: ${currentQuestion.slice(0, 80)}`,
+        code: 'public_question_without_web',
+        message: `A public question defaults to fast sources: ${publicQuestion.slice(0, 80)}`,
       })
     }
   }
-  if (shouldUseWeb('Comment organiser la répartition des rôles dans mon équipe ?')) {
-    currentEvolutionIssues.push({
-      level: 'error',
-      code: 'internal_question_forced_to_web',
-      message: 'A purely internal organizational question must not trigger fast sources.',
-    })
+  for (const offlineQuestion of [
+    'Comment organiser la répartition des rôles dans mon équipe ?',
+    'Ma fille hésite entre deux orientations et notre famille est divisée, comment aborder la décision ?',
+    'Un dirigeant découvre une fracture silencieuse dans son comité exécutif, que doit-il regarder ?',
+  ]) {
+    if (shouldUseWeb(offlineQuestion)) {
+      currentEvolutionIssues.push({
+        level: 'error',
+        code: 'personal_internal_question_forced_to_web',
+        message: `A personal or internal-organization question must stay offline: ${offlineQuestion.slice(0, 80)}`,
+      })
+    }
   }
 
   return [{
