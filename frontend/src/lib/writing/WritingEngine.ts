@@ -1409,10 +1409,10 @@ function writingGrammar(input: WritingEngineInput) {
   if (isGeopoliticalWritingDomain(input.expertises_metiers.domain_playbook.domain)) {
     const isInstitutional = input.resonance.context_frame === 'political_institutional'
     return {
-      actorsFallback: isInstitutional ? 'les autorites et forces politiques concernees' : 'les Etats et forces engagees',
+      actorsFallback: isInstitutional ? 'les autorités et forces politiques concernées' : 'les États et forces engagées',
       institutionsFallback: isInstitutional
-        ? 'les autorites, institutions, partis, corps de securite et canaux diplomatiques concernes'
-        : 'les gouvernements, canaux diplomatiques et commandements militaires concernes',
+        ? 'les autorités, institutions, partis, corps de sécurité et canaux diplomatiques concernés'
+        : 'les gouvernements, canaux diplomatiques et commandements militaires concernés',
       actionFallback: isInstitutional
         ? 'une decision politique, institutionnelle ou diplomatique verifiable'
         : 'une decision militaire, diplomatique ou economique verifiable',
@@ -1448,7 +1448,7 @@ function writingGrammar(input: WritingEngineInput) {
         signalSentence(
           evidence,
           isInstitutional
-            ? 'modifie les marges politiques, institutionnelles ou diplomatiques des acteurs concernes'
+            ? 'modifie les marges politiques, institutionnelles ou diplomatiques des acteurs concernés'
             : 'modifie les marges militaires, diplomatiques ou économiques des acteurs engagés',
         ),
     }
@@ -1513,7 +1513,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     resonance.structural_gap_fr,
     ...theatreFragilityAnchors(input.theatre, input.expertises_metiers),
   ])
-  const evidence = publicAnchors(proofAnchors, 'une trace verifiable')
+  const evidence = publicAnchors(proofAnchors, 'une trace vérifiable', 2)
   const blindSpot = publicAnchors(fragilityAnchors, 'le point qui ferait changer la lecture')
   const firstProcedure = namedAction(actionAnchors, grammar.actionFallback)
   const firstEvidence = namedAction(proofAnchors, grammar.evidenceFallback)
