@@ -14,32 +14,8 @@ export function normalizeSearchText(value: string): string {
     .toLowerCase()
 }
 
-const SEARCH_EQUIVALENT_KEYWORDS: Record<string, string[]> = {
-  usa: ['us', 'united', 'states', 'america', 'american', 'etats', 'unis'],
-  us: ['usa', 'united', 'states', 'america', 'american', 'etats', 'unis'],
-  etats: ['usa', 'us', 'united', 'states', 'america', 'american'],
-  unis: ['usa', 'us', 'united', 'states', 'america', 'american'],
-  united: ['usa', 'us', 'etats', 'unis', 'america', 'american'],
-  states: ['usa', 'us', 'etats', 'unis', 'america', 'american'],
-  israel: ['israeli', 'israelien', 'israelienne'],
-  israeli: ['israel'],
-  iran: ['iranian', 'iranien', 'iranienne'],
-  iranian: ['iran'],
-}
-
-function expandEquivalentKeywords(keywords: string[]): string[] {
-  const expanded = new Set<string>()
-  for (const keyword of keywords) {
-    expanded.add(keyword)
-    for (const equivalent of SEARCH_EQUIVALENT_KEYWORDS[keyword] ?? []) {
-      expanded.add(equivalent)
-    }
-  }
-  return Array.from(expanded)
-}
-
 export function searchKeywords(value: string): string[] {
-  const baseKeywords = Array.from(
+  return Array.from(
     new Set(
       normalizeSearchText(value)
         .split(/[^a-z0-9]+/i)
@@ -47,7 +23,45 @@ export function searchKeywords(value: string): string[] {
         .filter((word) => (word.length >= 4 || word === 'us') && !SEARCH_STOPWORDS.has(word))
     )
   ).slice(0, 12)
-  return expandEquivalentKeywords(baseKeywords).slice(0, 24)
+}
+
+// Appariement par cognat : une question française et une source anglaise
+// partagent leurs noms propres et leurs racines latines (Russie/Russia,
+// iranien/Iranian, situation/situation) mais pas leurs flexions. Un token
+// correspond s'il est contenu tel quel ou si les deux mots partagent leurs
+// cinq premiers caractères normalisés. Aucun lexique de pays ou d'acteurs :
+// la règle vaut pour n'importe quel sujet.
+const COGNATE_PREFIX_LENGTH = 5
+
+function cognateMatch(keyword: string, haystack: string, haystackTokens: string[]): boolean {
+  if (haystack.includes(keyword)) return true
+  if (keyword.length < COGNATE_PREFIX_LENGTH) return false
+  const prefix = keyword.slice(0, COGNATE_PREFIX_LENGTH)
+  return haystackTokens.some((token) => token.length >= COGNATE_PREFIX_LENGTH && token.startsWith(prefix))
+}
+
+function haystackTokensOf(haystack: string): string[] {
+  return haystack.split(/[^a-z0-9]+/).filter((token) => token.length >= 4)
+}
+
+// Les noms propres de la question (majuscule hors début de phrase) sont les
+// ancres de pertinence : une source qui ne porte aucun d'entre eux, même par
+// cognat, parle d'autre chose quelle que soit sa langue.
+export function queryProperNounAnchors(query: string): string[] {
+  const anchors = new Set<string>()
+  let sentenceStart = true
+  for (const raw of query.split(/\s+/)) {
+    const word = raw.replace(/^[«"'(\[]+/, '')
+    const core = word.replace(/[»")\],.;:!?…]+$/g, '')
+    if (!core) continue
+    if (!sentenceStart && /^[A-ZÀ-Þ]/.test(core) && core.length >= 4) {
+      for (const part of normalizeSearchText(core).split(/[^a-z0-9]+/)) {
+        if (part.length >= 4) anchors.add(part)
+      }
+    }
+    sentenceStart = /[.!?…:]$/.test(word)
+  }
+  return Array.from(anchors)
 }
 
 export function resourceSearchText(resource: ResourceItem): string {
@@ -93,27 +107,6 @@ function isCausalInfluenceQuery(query: string): boolean {
     /\b(entraine|entraine|pousse|force|manipule|provoque|cause|declenche|amene|dragged|pushed|led|influence)\b/i.test(text)
 }
 
-const GEO_ACTOR_GROUPS = [
-  ['iran', 'iranian', 'iranien', 'iranienne', 'tehran', 'teheran'],
-  ['israel', 'israeli', 'israelien', 'israelienne'],
-  ['usa', 'us', 'united', 'states', 'america', 'american', 'etats', 'unis'],
-  ['ukraine', 'kyiv', 'kiev'],
-  ['russia', 'russie', 'moscow', 'moscou'],
-  ['china', 'chine', 'beijing', 'pekin'],
-  ['gaza', 'hamas', 'palestine', 'palestinian'],
-]
-
-function requestedGeoActorGroups(query: string): string[][] {
-  const text = normalizeSearchText(query)
-  return GEO_ACTOR_GROUPS.filter((group) => group.some((term) => text.includes(term)))
-}
-
-function carriesRequestedGeoActor(resourceText: string, query: string): boolean {
-  const groups = requestedGeoActorGroups(query)
-  if (groups.length === 0) return true
-  return groups.some((group) => group.some((term) => resourceText.includes(term)))
-}
-
 export function isRelevantResource(resource: ResourceItem, query: string): boolean {
   const haystack = resourceSearchText(resource)
   if (!haystack) return false
@@ -127,8 +120,20 @@ export function isRelevantResource(resource: ResourceItem, query: string): boole
   const causalQuery = isCausalInfluenceQuery(query)
 
   if (queryKeywords.length === 0) return true
-  if (!carriesRequestedGeoActor(haystack, query)) return false
-  const overlap = queryKeywords.filter((keyword) => haystack.includes(keyword)).length
+
+  const haystackTokens = haystackTokensOf(haystack)
+  const overlap = queryKeywords.filter((keyword) => cognateMatch(keyword, haystack, haystackTokens)).length
+  const anchors = queryProperNounAnchors(query)
+
+  if (anchors.length > 0) {
+    const anchorHit = anchors.some((anchor) => cognateMatch(anchor, haystack, haystackTokens))
+    // L'ancre nominale est le signal fort : quand la source la porte, le
+    // classement du moteur de recherche fait foi et un seul recoupement
+    // lexical suffit (les flexions et la langue divergent). Sans elle, il
+    // faut une évidence lexicale nette pour garder la source.
+    return anchorHit ? overlap >= 1 : overlap >= 3
+  }
+
   const minimumOverlap = causalQuery ? 2 : queryKeywords.length <= 3 ? 1 : 2
   return overlap >= minimumOverlap
 }
@@ -150,7 +155,8 @@ export function bestRelevantExcerpt(resource: ResourceItem, query: string): stri
 
   const scored = sentences.map((sentence) => {
     const text = normalizeSearchText(sentence)
-    const keywordScore = queryKeywords.filter((keyword) => text.includes(keyword)).length
+    const textTokens = haystackTokensOf(text)
+    const keywordScore = queryKeywords.filter((keyword) => cognateMatch(keyword, text, textTokens)).length
     const sequenceScore = queryText.length > 0 && text.includes(queryText.slice(0, 80)) ? 1 : 0
     return { sentence, score: keywordScore + sequenceScore }
   }).filter((item) => item.score > 0)
