@@ -174,9 +174,11 @@ export function buildMaieuticQuestions(
     type: 'tension',
     question_fr: signal
       ? `Si ${lowerFirst(shorten(signal, 110))} survient, qu'est-ce que cela changerait pour vous en premier ?`
-      : actors.length > 0
+      : actors.length >= 2
         ? `Parmi ${actors.join(', ')}, qui a le plus intérêt à faire bouger la situation maintenant ?`
-        : 'Qu’est-ce qui pourrait précipiter la situation dans les prochains jours ?',
+        : actors.length === 1
+          ? `Qu'est-ce qui donnerait à ${actors[0]} une raison de faire bouger la situation maintenant ?`
+          : 'Qu’est-ce qui pourrait précipiter la situation dans les prochains jours ?',
     question_en: 'If the watched signal appears, what would it change for you first?',
     rationale_internal: 'Dynamique mobilisante : le signal de bascule surveillé par la carte.',
   }
