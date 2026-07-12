@@ -546,7 +546,7 @@ export function filterFastResourceResultsByPlanForDiagnostics(
   fallbackQuery: string,
   maxSources: number,
 ): ResourceItem[] {
-  return uniqueResourceItems(
+  const merged = uniqueResourceItems(
     planResults.flatMap((items, index) => {
       const planQuery = planQueries[index] ?? fallbackQuery
       return filterRelevantResources(items, planQuery).map((item) => ({
@@ -554,7 +554,12 @@ export function filterFastResourceResultsByPlanForDiagnostics(
         excerpt: bestRelevantExcerpt(item, planQuery) || item.excerpt,
       }))
     }),
-  ).slice(0, maxSources)
+  )
+  // L'ancrage temporel exige des faits datés : à pertinence égale, une
+  // source datée prime sur une source sans date (tri stable).
+  const dated = merged.filter((item) => Boolean(item.date))
+  const undated = merged.filter((item) => !item.date)
+  return [...dated, ...undated].slice(0, maxSources)
 }
 
 export async function runFastResourceRunner(input: FastResourceRunnerInput): Promise<FastResourceRunnerResult> {

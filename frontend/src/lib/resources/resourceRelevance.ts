@@ -107,7 +107,22 @@ function isCausalInfluenceQuery(query: string): boolean {
     /\b(entraine|entraine|pousse|force|manipule|provoque|cause|declenche|amene|dragged|pushed|led|influence)\b/i.test(text)
 }
 
+// Les publications de plateformes sociales ne sont pas des preuves
+// probantes : n'importe qui peut y publier n'importe quoi, sans date fiable
+// ni responsabilité éditoriale. Règle de qualité de source, pas de cas
+// spécial : elle vaut pour tout sujet.
+const SOCIAL_POST_HOSTS = new Set([
+  'facebook.com', 'm.facebook.com', 'twitter.com', 'x.com', 'instagram.com',
+  'tiktok.com', 'vk.com', 't.me', 'youtube.com', 'reddit.com', 'threads.net',
+])
+
+export function isSocialPostResource(resource: ResourceItem): boolean {
+  const host = hostname(resource.url)
+  return SOCIAL_POST_HOSTS.has(host)
+}
+
 export function isRelevantResource(resource: ResourceItem, query: string): boolean {
+  if (isSocialPostResource(resource)) return false
   const haystack = resourceSearchText(resource)
   if (!haystack) return false
   if (isDirectSiteResource(resource)) {
