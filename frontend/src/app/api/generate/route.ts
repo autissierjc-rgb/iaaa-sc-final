@@ -6392,7 +6392,10 @@ export async function POST(req: NextRequest) {
       transition_signal_source: resonanceTrace.transition_signal_source,
       actors: resonanceTrace.real_actors,
       tensions: arbre.tensions,
-      uncertainty: arbre.incertitudes?.[0],
+      // Matière publique uniquement : les incertitudes de l'arbre sont des
+      // consignes internes (« Chercher quelles intentions… ») et ne doivent
+      // jamais être citées dans une relance.
+      uncertainty: Array.isArray(finalSc.uncertainties_fr) ? finalSc.uncertainties_fr[0] : undefined,
       context_type: String(generationIntentContext.dominant_frame ?? generationInterpretation.domain),
     })
     const finalScWithReflection = {
