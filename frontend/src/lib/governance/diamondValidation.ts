@@ -236,13 +236,27 @@ function significantFactTokens(value: string): string[] {
 function copiedSourceTitleInPublicText(
   resources: ResourceServiceContract | undefined,
   publicText: string,
+  baselineText = '',
 ): string | null {
   if (!resources?.public_sources.length) return null
 
   const normalizedText = normalizeForReadiness(publicText).replace(/[^a-z0-9]+/g, ' ')
+  // Les mots de la question canonique ne comptent pas : toute prose légitime
+  // sur le sujet les contient. Un titre n'est « copié » que si ses tokens
+  // DISTINCTIFS (absents de la question, à la flexion près) se retrouvent.
+  const baselineTokens = normalizeForReadiness(baselineText)
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 4)
+  const isBaselineToken = (token: string): boolean =>
+    baselineTokens.some((base) =>
+      base === token ||
+      (base.length >= 5 && token.length >= 5 && (token.startsWith(base.slice(0, 6)) || base.startsWith(token.slice(0, 6)))),
+    )
+
   for (const source of resources.public_sources) {
     const tokens = significantFactTokens(source.title)
-    if (tokens.length < 3) continue
+    const distinctive = tokens.filter((token) => !isBaselineToken(token))
+    if (distinctive.length < 3) continue
 
     const normalizedTitle = normalizeForReadiness(source.title).replace(/[^a-z0-9]+/g, ' ').trim()
     if (normalizedTitle.length >= 28 && normalizedText.includes(normalizedTitle.slice(0, Math.min(80, normalizedTitle.length)))) {
@@ -250,7 +264,9 @@ function copiedSourceTitleInPublicText(
     }
 
     for (let index = 0; index <= tokens.length - 3; index += 1) {
-      const phrase = tokens.slice(index, index + 3).join(' ')
+      const window = tokens.slice(index, index + 3)
+      if (!window.some((token) => !isBaselineToken(token))) continue
+      const phrase = window.join(' ')
       if (normalizedText.includes(phrase)) return source.title
     }
   }
@@ -268,13 +284,14 @@ export function stripCopiedSourceTitleSentences(
 ): WritingContract | null {
   if (!resources?.public_sources.length) return null
 
+  const baseline = writing.situation_card.submitted_situation_fr ?? ''
   let changed = false
   const cleanText = (value: unknown): string => {
     const text = typeof value === 'string' ? value : ''
     if (!text.trim()) return text
-    if (!copiedSourceTitleInPublicText(resources, text)) return text
+    if (!copiedSourceTitleInPublicText(resources, text, baseline)) return text
     const sentences = text.split(/(?<=[.!?])\s+/)
-    const kept = sentences.filter((sentence) => !copiedSourceTitleInPublicText(resources, sentence))
+    const kept = sentences.filter((sentence) => !copiedSourceTitleInPublicText(resources, sentence, baseline))
     const next = kept.join(' ').trim()
     if (!next || next === text.trim()) return text
     changed = true
@@ -357,12 +374,13 @@ export function stripCopiedSourceTitlesFromCard(
 ): SituationCard | null {
   if (!resources?.public_sources.length) return null
 
+  const baseline = sc.submitted_situation_fr ?? ''
   let changed = false
   const cleanValue = (value: unknown): unknown => {
     if (typeof value === 'string') {
-      if (!value.trim() || !copiedSourceTitleInPublicText(resources, value)) return value
+      if (!value.trim() || !copiedSourceTitleInPublicText(resources, value, baseline)) return value
       const sentences = value.split(/(?<=[.!?])\s+/)
-      const kept = sentences.filter((sentence) => !copiedSourceTitleInPublicText(resources, sentence))
+      const kept = sentences.filter((sentence) => !copiedSourceTitleInPublicText(resources, sentence, baseline))
       const next = kept.join(' ').trim()
       if (!next || next === value.trim()) return value
       changed = true
@@ -373,7 +391,7 @@ export function stripCopiedSourceTitlesFromCard(
         .map((item) => cleanValue(item))
         .filter((item) => {
           if (typeof item !== 'string' || !item.trim()) return true
-          if (!copiedSourceTitleInPublicText(resources, item)) return true
+          if (!copiedSourceTitleInPublicText(resources, item, baseline)) return true
           changed = true
           return false
         })
@@ -498,7 +516,7 @@ export function validateAntiHorsSol(
     }
   }
 
-  const copiedSourceTitle = copiedSourceTitleInPublicText(context?.resources, text)
+  const copiedSourceTitle = copiedSourceTitleInPublicText(context?.resources, text, sc.submitted_situation_fr ?? '')
   if (copiedSourceTitle) {
     issues.push(issue(
       'error',
