@@ -33,7 +33,7 @@ import { fetchResources } from '@/lib/resources/fetchResources'
 import { MIN_FAST_RESOURCE_TIMEOUT_MS, runFastResourceRunner } from '@/lib/resources/FastResourceRunner'
 import { planResources } from '@/lib/resources'
 import { DIAMOND_EDITORIAL_CONTRACT, SC_INTERPRETATION_AUTHORITY } from '@/lib/governance/scDoctrine'
-import { buildDiamondClarificationQuestions, validateDiamondContract } from '@/lib/governance/diamondValidation'
+import { buildDiamondClarificationQuestions, stripCopiedSourceTitleSentences, stripCopiedSourceTitlesFromCard, validateDiamondContract } from '@/lib/governance/diamondValidation'
 import { sanitizeResources } from '@/lib/resources/sanitizeResources'
 import { shouldUseWeb } from '@/lib/resources/shouldUseWeb'
 import { enrichResourcesWithSiteUnderstanding } from '@/lib/resources/siteUnderstanding'
@@ -5931,6 +5931,12 @@ export async function POST(req: NextRequest) {
         canonicalQuality = writingQuality ?? contractQuality
       }
     }
+    if (writingContract) {
+      const strippedWriting = stripCopiedSourceTitleSentences(writingContract, diamondResourcePlan)
+      if (strippedWriting) {
+        writingContract = strippedWriting
+      }
+    }
     baseSc = exposeWritingApprofondir(
       applyWritingContractToCard(baseSc, writingContract, generationDisplayText),
       writingContract
@@ -6216,7 +6222,7 @@ export async function POST(req: NextRequest) {
       generation_status: baseSc.generation_status ?? 'ok',
       resources_status: resourcesStatus,
     }
-    const sc: SituationCard = {
+    let sc: SituationCard = {
       ...sanitizeSituationCardPublicText(enforceHeaderContract(
       applyEntityExplanationsToSituationCard(
         generationIntentContext.interpreted_request?.question_type === 'causal_attribution'
@@ -6251,6 +6257,26 @@ export async function POST(req: NextRequest) {
       submitted_situation_en: exploratoryWithoutMaterial ? generationDisplayText : canonicalSubmittedText,
     }
 
+    const strippedCard = stripCopiedSourceTitlesFromCard(sc, diamondResourcePlan)
+    if (strippedCard) {
+      sc = strippedCard
+      recordGenerationTrace({
+        status: 'partial',
+        gate: 'GENERATE',
+        route: '/api/generate',
+        canonicalLayer: 'quality',
+        pipelineStep: 'DiamondValidation:title_repair',
+        diagnostic: 'copied_source_title_stripped_from_assembled_card',
+        durationMs: 0,
+        inputChars: analysisText.length,
+        domain: canonicalInterpretation.domain,
+        intentType: intentContext.interpreted_request?.intent_type,
+        questionType: intentContext.interpreted_request?.question_type,
+        resourcesStatus: diamondResourcePlan.status,
+        resourcesCount: diamondResourcePlan.resources.length,
+        modelPath: 'local',
+      })
+    }
     const diamondValidation = validateDiamondContract(sc, effectiveCoverageForGeneration.domain, {
       grounding: groundingContract,
       resources: diamondResourcePlan,

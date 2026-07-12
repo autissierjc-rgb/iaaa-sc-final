@@ -1,4 +1,4 @@
-import type { GroundedFact, GroundingContract, ResourceServiceContract } from '../contracts'
+import type { GroundedFact, GroundingContract, ResourceServiceContract, WritingContract } from '../contracts'
 import type { SituationCard, SituationDomain } from '../resources/resourceContract'
 
 // Boundary rule:
@@ -256,6 +256,145 @@ function copiedSourceTitleInPublicText(
   }
 
   return null
+}
+
+// Réparation miroir du juge : retire, phrase par phrase, tout passage qui
+// recopie un titre de source, en utilisant exactement le même détecteur que le
+// contrôle diamant. Retourne null si rien n'a changé. Un champ dont toutes les
+// phrases seraient fautives est laissé intact : le contrôle final tranchera.
+export function stripCopiedSourceTitleSentences(
+  writing: WritingContract,
+  resources: ResourceServiceContract | undefined,
+): WritingContract | null {
+  if (!resources?.public_sources.length) return null
+
+  let changed = false
+  const cleanText = (value: unknown): string => {
+    const text = typeof value === 'string' ? value : ''
+    if (!text.trim()) return text
+    if (!copiedSourceTitleInPublicText(resources, text)) return text
+    const sentences = text.split(/(?<=[.!?])\s+/)
+    const kept = sentences.filter((sentence) => !copiedSourceTitleInPublicText(resources, sentence))
+    const next = kept.join(' ').trim()
+    if (!next || next === text.trim()) return text
+    changed = true
+    return next
+  }
+
+  const repaired: WritingContract = {
+    ...writing,
+    situation_card: {
+      ...writing.situation_card,
+      insight_fr: cleanText(writing.situation_card.insight_fr),
+      main_vulnerability_fr: cleanText(writing.situation_card.main_vulnerability_fr),
+      asymmetry_fr: cleanText(writing.situation_card.asymmetry_fr),
+      key_signal_fr: cleanText(writing.situation_card.key_signal_fr),
+    },
+    lecture: {
+      ...writing.lecture,
+      text_fr: cleanText(writing.lecture.text_fr),
+    },
+    approfondir: {
+      ...writing.approfondir,
+      analysis_fr: cleanText(writing.approfondir.analysis_fr),
+      sections_fr: writing.approfondir.sections_fr.map((section) => ({
+        ...section,
+        body: cleanText(section.body),
+      })),
+    },
+    trajectories: writing.trajectories.map((trajectory) => ({
+      ...trajectory,
+      description_fr: cleanText(trajectory.description_fr),
+      signal_fr: cleanText(trajectory.signal_fr),
+    })),
+    diamond_sentences: writing.diamond_sentences.map((sentence) => ({
+      ...sentence,
+      text_fr: cleanText(sentence.text_fr),
+    })),
+  }
+
+  if (!changed) return null
+  return {
+    ...repaired,
+    trace: {
+      ...repaired.trace,
+      notes: [
+        ...(repaired.trace.notes ?? []),
+        'copied_source_title_stripped_before_display',
+      ],
+    },
+  }
+}
+
+// Même réparation au niveau de la carte assemblée : couvre les champs publics
+// que collectCardText inspecte (y compris les champs hérités constraints_fr /
+// uncertainties_fr) pour que le juge et le réparateur voient le même texte.
+const CARD_PUBLIC_STRING_FIELDS = [
+  'insight_fr',
+  'insight_en',
+  'main_vulnerability_fr',
+  'main_vulnerability_en',
+  'asymmetry_fr',
+  'asymmetry_en',
+  'key_signal_fr',
+  'key_signal_en',
+  'avertissement_fr',
+  'lecture_systeme_fr',
+  'lecture_systeme_en',
+  'approfondir_fr',
+  'approfondir_en',
+  'constraints_fr',
+  'constraints_en',
+  'uncertainties_fr',
+  'uncertainties_en',
+  'movements_fr',
+  'movements_en',
+] as const
+
+export function stripCopiedSourceTitlesFromCard(
+  sc: SituationCard,
+  resources: ResourceServiceContract | undefined,
+): SituationCard | null {
+  if (!resources?.public_sources.length) return null
+
+  let changed = false
+  const cleanValue = (value: unknown): unknown => {
+    if (typeof value === 'string') {
+      if (!value.trim() || !copiedSourceTitleInPublicText(resources, value)) return value
+      const sentences = value.split(/(?<=[.!?])\s+/)
+      const kept = sentences.filter((sentence) => !copiedSourceTitleInPublicText(resources, sentence))
+      const next = kept.join(' ').trim()
+      if (!next || next === value.trim()) return value
+      changed = true
+      return next
+    }
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => cleanValue(item))
+        .filter((item) => {
+          if (typeof item !== 'string' || !item.trim()) return true
+          if (!copiedSourceTitleInPublicText(resources, item)) return true
+          changed = true
+          return false
+        })
+    }
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, cleanValue(item)]),
+      )
+    }
+    return value
+  }
+
+  const record = { ...(sc as Record<string, unknown>) }
+  for (const field of CARD_PUBLIC_STRING_FIELDS) {
+    record[field] = cleanValue(record[field])
+  }
+  record.trajectories = cleanValue(record.trajectories)
+  record.cap = cleanValue(record.cap)
+
+  if (!changed) return null
+  return record as SituationCard
 }
 
 function factVisibleInPublicText(fact: GroundedFact, normalizedText: string): boolean {
