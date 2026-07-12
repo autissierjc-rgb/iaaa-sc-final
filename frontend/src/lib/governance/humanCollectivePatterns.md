@@ -121,6 +121,31 @@ qui legitime ne protege plus, ce qui protege empeche de produire, ou ce qui
 produit n'est plus reconnu par ce qui legitime.
 ```
 
+## Meta-grille des dynamiques ternaires (relances)
+
+A cote de la triade fonctionnelle (qui fait quoi), toute situation vecue se
+deplace entre trois dynamiques d'etat, resumables comme les trois gunas en
+action :
+
+- ce qui **clarifie** : rend lisible, prouve, stabilise la comprehension ;
+- ce qui **agite** : pousse, precipite, deplace les acteurs et les seuils ;
+- ce qui **fige** : bloque, pese, s'evite, empeche la situation de se decanter.
+
+Usage canonique : cette grille sert de charpente aux questions de relance
+(pistes a explorer, conseils de suite). Une relance par dynamique, toujours
+ancree dans la matiere de la carte (gap structurel, signal de transition,
+vulnerabilite, acteurs reels) — jamais une formule generique quand la matiere
+existe, et jamais le nom de la grille en public.
+
+```txt
+Relance clarifiante : demander a l'utilisateur ce qu'il sait deja sur le
+manque precis que la carte a nomme.
+Relance mobilisante : demander ce que changerait, pour lui, le signal de
+bascule que la carte surveille.
+Relance de degel : demander ce qu'il observe concretement sur le point que
+la carte designe comme fige ou fragile.
+```
+
 ## Usage pour les ressources et Recherche+
 
 La triade ne sert pas seulement a lire ou ecrire. Elle sert aussi a orienter la

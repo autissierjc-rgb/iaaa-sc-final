@@ -118,15 +118,72 @@ function questionFromEmotion(signal: EmotionStructureSignal, input: ReflectivePr
   return genericQuestion(signal.type, input)
 }
 
+function shorten(value: string, max = 90): string {
+  const compactValue = clean(value)
+  if (compactValue.length <= max) return compactValue
+  const clipped = compactValue.slice(0, max)
+  const boundary = clipped.lastIndexOf(' ')
+  return `${clipped.slice(0, boundary > max * 0.6 ? boundary : max)}…`
+}
+
+function lowerFirst(value: string): string {
+  const compactValue = clean(value)
+  if (!compactValue) return compactValue
+  if (/^[A-ZÀ-Ý][a-zà-ÿ]/.test(compactValue) && !/^[A-ZÀ-Ý]{2}/.test(compactValue)) {
+    return compactValue.charAt(0).toLowerCase() + compactValue.slice(1)
+  }
+  return compactValue
+}
+
+// Grille canonique des dynamiques ternaires (humanCollectivePatterns.md) :
+// une relance qui clarifie, une qui suit ce qui agite, une qui sonde ce qui
+// fige — chacune ancrée dans la matière de la carte, jamais générique quand
+// la matière existe, jamais le nom de la grille en public.
 export function buildMaieuticQuestions(
   input: ReflectivePromptInput,
   emotionSignals: EmotionStructureSignal[],
 ): ReflectiveQuestion[] {
-  const questions = [
-    ...emotionSignals.map((signal) => questionFromEmotion(signal, input)),
-    genericQuestion(input.structure_gap ? 'structure_gap' : 'tension', input),
-    genericQuestion('decision', input),
-  ]
+  const gap = clean(input.structure_gap)
+  const vulnerability = clean(input.main_vulnerability)
+  const signal = clean(input.transition_signal)
+  const uncertainty = clean(input.uncertainty)
+  const actors = (input.actors ?? []).map(clean).filter(Boolean).slice(0, 3)
+
+  const clarifier: ReflectiveQuestion = {
+    type: 'structure_gap',
+    question_fr: gap
+      ? `De votre côté, que savez-vous déjà sur « ${lowerFirst(shorten(gap, 110))} » ?`
+      : uncertainty
+        ? `Quelle information rendrait « ${shorten(uncertainty, 80)} » moins décisive ?`
+        : 'Quel fait, document ou décision rendrait cette situation vérifiable ?',
+    question_en: 'What do you already know about the missing piece the card names?',
+    rationale_internal: 'Dynamique clarifiante : le manque précis nommé par la carte.',
+  }
+
+  const mobilisante: ReflectiveQuestion = {
+    type: 'tension',
+    question_fr: signal
+      ? `Si ${lowerFirst(shorten(signal, 110))} survient, qu'est-ce que cela changerait pour vous en premier ?`
+      : actors.length > 0
+        ? `Parmi ${actors.join(', ')}, qui a le plus intérêt à faire bouger la situation maintenant ?`
+        : 'Qu’est-ce qui pourrait précipiter la situation dans les prochains jours ?',
+    question_en: 'If the watched signal appears, what would it change for you first?',
+    rationale_internal: 'Dynamique mobilisante : le signal de bascule surveillé par la carte.',
+  }
+
+  const emotionQuestion = emotionSignals.length > 0
+    ? questionFromEmotion(emotionSignals[0], input)
+    : null
+  const degel: ReflectiveQuestion = vulnerability
+    ? {
+        type: 'decision',
+        question_fr: `Sur le point fragile — ${lowerFirst(shorten(vulnerability, 100))} — qu'observez-vous concrètement aujourd'hui ?`,
+        question_en: 'On the fragile point the card names, what do you concretely observe today?',
+        rationale_internal: 'Dynamique de dégel : le point que la carte désigne comme figé ou fragile.',
+      }
+    : emotionQuestion ?? genericQuestion('decision', input)
+
+  const questions = [clarifier, mobilisante, degel]
   const seen = new Set<string>()
   return questions.filter((question) => {
     const key = question.question_fr.toLowerCase()

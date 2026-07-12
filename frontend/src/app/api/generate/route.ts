@@ -6387,6 +6387,8 @@ export async function POST(req: NextRequest) {
       dominant_regime: resonanceTrace.regime_hypothesis_fr,
       structure_gap: resonanceTrace.structural_gap_fr,
       main_vulnerability: finalSc.main_vulnerability_fr,
+      transition_signal: resonanceTrace.transition_signal_fr,
+      actors: resonanceTrace.real_actors,
       tensions: arbre.tensions,
       uncertainty: arbre.incertitudes?.[0],
       context_type: String(generationIntentContext.dominant_frame ?? generationInterpretation.domain),

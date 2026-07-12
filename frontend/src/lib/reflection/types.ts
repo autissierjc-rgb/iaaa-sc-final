@@ -21,6 +21,8 @@ export type ReflectivePromptInput = {
   dominant_regime?: string
   structure_gap?: string
   main_vulnerability?: string
+  transition_signal?: string
+  actors?: string[]
   tensions?: string[]
   uncertainty?: string
   context_type?: string
