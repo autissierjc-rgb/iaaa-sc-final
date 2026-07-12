@@ -1493,6 +1493,9 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
   const grammar = writingGrammar(input)
   const actorsLabel = publicAnchors(resonance.real_actors, grammar.actorsFallback)
   const actors = publicPhrase(actorsLabel)
+  // Nom propre nu = grammaire cassée (« sur Russie ») : l'apposition
+  // parenthésée reste correcte pour tout acteur unique, sans lexique.
+  const actorFocus = resonance.real_actors.length === 1 ? `l’acteur central (${actors})` : actors
   const title = isGenericPublicSubject(rawTitle) ? `situation ${actorsLabel}` : rawTitle
   const institutions = publicPhrase(publicAnchors(resonance.institutions, grammar.institutionsFallback))
   const actionAnchors = theatreActionAnchors(input.theatre)
@@ -1546,7 +1549,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     sourcedVulnerabilityText || resonance.structural_vulnerability_fr || grammar.vulnerability(blindSpot),
     320,
   ))
-  const asymmetry = polishPublicProofText(compactSentence(grammar.asymmetry(actors, institutions)))
+  const asymmetry = polishPublicProofText(compactSentence(grammar.asymmetry(actorFocus, institutions)))
   const keySignal = polishPublicProofText(compactSentence(grammar.keySignal(firstEvidence)))
   const rawTrajectories: WritingContract['trajectories'] = [
     {
@@ -1592,7 +1595,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
     groundedFactOpening,
     diamondText,
     grammar.approfondirEntry,
-    sourcedContradictionText || resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
+    sourcedContradictionText || resonance.structural_contradiction_fr || grammar.supportSentence(actorFocus, institutions),
     `Ce qu il faut etablir n est pas seulement l intention, mais le lien entre ${firstProcedure}, ${evidence} et ${blindSpot}.`,
     resourcesWarning ? resourcesWarning : '',
     trajectoryText,
@@ -1652,7 +1655,7 @@ export function composeDiamondWriting(input: WritingEngineInput): WritingContrac
       analysis_fr: polishPublicProofText(approfondirAnalysis),
       sections_fr: canonicalApprofondirSections({
         really: `${missingExternalEvidence ? 'Lecture structurelle provisoire : aucun signal public n’a été retenu comme preuve suffisante. ' : ''}${diamondText} La lecture utile consiste à distinguer trois choses : qui porte le coût, qui garde la marge d’arbitrage, et quel fait rendrait la situation opposable. ${probabilityDemonstration}`,
-        holds: sourcedContradictionText || resonance.structural_contradiction_fr || grammar.supportSentence(actors, institutions),
+        holds: sourcedContradictionText || resonance.structural_contradiction_fr || grammar.supportSentence(actorFocus, institutions),
         weakens: `La fragilité tient au point suivant : ${blindSpot}. Tant que ce passage n’est pas relié à ${evidence}, la lecture reste une hypothèse structurée plutôt qu’un constat vérifiable.`,
         escalates: `${trajectories[1].title_fr} : ${trajectories[1].description_fr} Signal à surveiller : ${trajectories[1].signal_fr} Le statut reste ${probabilityLabelFr(probability).toLowerCase()} tant que ce relais n’est pas observable.`,
         shifts: `${trajectories[2].title_fr} : ${trajectories[2].description_fr} Signal à surveiller : ${trajectories[2].signal_fr} ${probabilityChange}`,

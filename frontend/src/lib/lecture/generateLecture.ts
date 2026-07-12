@@ -24,6 +24,8 @@ function stripLeadIn(value: string): string {
   return cleanModelText(value)
     .replace(/^le point fragile (est|se situe dans|tient à|tient a)\s+/i, '')
     .replace(/^the fragile point (is|lies in)\s+/i, '')
+    .replace(/^la vuln[eé]rabilit[eé] centrale (est|reste|tient à|tient a)\s+/i, '')
+    .replace(/^the central vulnerability (is|remains|lies in)\s+/i, '')
     .replace(/^la contradiction centrale (est|tient à|tient a)\s+/i, '')
     .replace(/^the central contradiction (is|lies in)\s+/i, '')
     .trim()
