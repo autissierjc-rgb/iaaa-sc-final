@@ -5896,17 +5896,24 @@ export async function POST(req: NextRequest) {
         modelPath: 'local',
       })
 
-      writingContract = fallbackWriting && fallbackQuality && !fallbackHasError
+      // Pont V1→V2 : le contrat local V2 reste l'auteur public même quand sa
+      // qualité porte des erreurs (carte provisoire). Une carte V2 imparfaite
+      // mais passée aux gates vaut toujours mieux qu'un texte V1 que les gates
+      // n'ont jamais inspecté ; le contrôle diamant final reste juge.
+      writingContract = fallbackWriting
         ? {
           ...fallbackWriting,
           trace: {
             ...fallbackWriting.trace,
-            status: fallbackWriting.trace.status === 'error' ? 'partial' : fallbackWriting.trace.status,
+            status: fallbackWriting.trace.status === 'error' || fallbackHasError
+              ? 'partial'
+              : fallbackWriting.trace.status,
             notes: [
               ...(fallbackWriting.trace.notes ?? []),
               diamondArchitectWriter?.accepted
                 ? 'diamond_architect_writer_rejected_by_quality_provisional_local'
                 : 'quality_rejected_public_fallback_provisional_local',
+              ...(fallbackHasError ? ['fallback_quality_error_public_v2_kept'] : []),
             ],
           },
         }

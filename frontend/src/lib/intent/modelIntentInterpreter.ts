@@ -76,7 +76,8 @@ Rules:
 - Ask for clarification only if the object or desired action is genuinely missing.
 - Keep object_of_analysis concrete and short.
 - Never use generic placeholders such as "la trajectoire de la crise évoquée", "l'objet de la question", or "la situation". Name the actual object from the user text.
-- Do not classify a political/electoral question as a military crisis unless the user mentions war, attack, armed conflict, strikes, sanctions, nuclear, army, borders, hostages, or a named war theatre.`
+- Do not classify a political/electoral question as a military crisis unless the user mentions war, attack, armed conflict, strikes, sanctions, nuclear, army, borders, hostages, or a named war theatre.
+- domain names the arena of the question, never its emotional intensity: "war" only for an ongoing armed conflict between states or armed groups; "geopolitics" for relations between countries (alliances, energy or trade agreements, diplomatic ruptures); "governance" for public institutions and their disputes (communes, écoles, administrations, conseils, polémiques publiques institutionnelles); "management" for internal organization tensions; "personal" for family and close relationships. A school disciplinary dispute is governance, an inter-country energy agreement is geopolitics.`
 
 function isGenericImportedInterpretation(value: string): boolean {
   return /trajectoire de la crise|crise [ée]voqu[ée]e|objet de la question|objet visible garde un r[oô]le|rapports de confiance, de preuve et de pouvoir|un [ée]v[ée]nement local peut d[ée]placer des seuils militaires/i.test(value)

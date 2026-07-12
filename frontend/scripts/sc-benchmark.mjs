@@ -67,6 +67,8 @@ function argValue(name) {
 
 const baseUrl = String(argValue('base-url') || 'http://localhost:3101').replace(/\/+$/, '')
 const outDir = argValue('out') || 'benchmark-results'
+const only = (argValue('only') || '').split(',').map((id) => id.trim()).filter(Boolean)
+const selectedCases = only.length > 0 ? CASES.filter((testCase) => only.includes(testCase.id)) : CASES
 fs.mkdirSync(outDir, { recursive: true })
 
 function sectionsSummary(writing) {
@@ -118,7 +120,7 @@ async function runCase(testCase) {
 }
 
 const summary = []
-for (const testCase of CASES) {
+for (const testCase of selectedCases) {
   process.stdout.write(`${testCase.id} ... `)
   const result = await runCase(testCase)
   summary.push(result)
