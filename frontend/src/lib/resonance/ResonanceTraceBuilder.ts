@@ -196,17 +196,27 @@ function visibleList(items: string[], fallback: string): string {
   return items.length > 0 ? items.slice(0, 4).join(', ') : fallback
 }
 
+// Appariement par cognat : une question française et une source anglaise
+// partagent leurs noms propres et racines latines (Russie/Russia) mais pas
+// leurs flexions. Réduire les mots à leur préfixe de cinq caractères
+// normalisés suffit, sans lexique.
+function cognateKey(word: string): string {
+  return word.length >= 5 ? word.slice(0, 5) : word
+}
+
 function relevantSourceSignal(
   signal: { signal_fr: string; source_title: string; source_name: string },
   corpus: string,
   knownEntities: string[],
 ): boolean {
-  const corpusWords = new Set(words(corpus).filter((word) => !RELEVANCE_STOPWORDS.has(word)))
-  if (corpusWords.size === 0) return true
+  const corpusKeys = new Set(
+    words(corpus).filter((word) => !RELEVANCE_STOPWORDS.has(word)).map(cognateKey),
+  )
+  if (corpusKeys.size === 0) return true
 
   const sourceText = `${signal.signal_fr} ${signal.source_title} ${signal.source_name}`
   const signalWords = words(sourceText)
-  const overlap = signalWords.filter((word) => corpusWords.has(word))
+  const overlap = signalWords.filter((word) => corpusKeys.has(cognateKey(word)))
 
   if (overlap.length >= 2) return true
 
@@ -214,7 +224,8 @@ function relevantSourceSignal(
     .filter((key) => key.length >= 3 && !RELEVANCE_STOPWORDS.has(key))
   if (entityKeys.length > 0) {
     const normalizedSource = normalize(sourceText)
-    return entityKeys.some((key) => new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i').test(normalizedSource))
+    return entityKeys.some((key) =>
+      new RegExp(`\\b${cognateKey(key).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i').test(normalizedSource))
   }
 
   return overlap.length >= 1
@@ -265,18 +276,51 @@ export function looksLikeRawExternalExcerpt(value: string): boolean {
   return englishFunctionWords.length >= 2
 }
 
-function publicSignalForm(value: string, frame: ResonanceContextFrame): string {
+type SignalInvariants = {
+  source_name?: string
+  published_at?: string
+}
+
+function frenchDateAnchor(publishedAt?: string): string {
+  if (!publishedAt) return ''
+  const date = new Date(publishedAt)
+  if (Number.isNaN(date.getTime())) return ''
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  return `${day}/${month}`
+}
+
+// Les invariants de langue d'un extrait étranger — pourcentage, nom de la
+// source, date de publication — sont publiables en français sans traduction.
+// Ils gardent le fait réel que la forme catégorielle seule perdait : le
+// writer LLM traduit la prose complète, le fallback local conserve au moins
+// un fait daté, sourcé et chiffré.
+function foreignSignalPublicForm(value: string, invariants?: SignalInvariants): string {
+  const category = sourceSignalAsTransition(value)
+  if (category === 'un fait public qualifié') return ''
+  const percent = value.match(/\b\d{1,3}(?:[.,]\d+)?\s?%/)?.[0]?.replace(/\s*%/, ' %')
+  const anchorParts = [invariants?.source_name?.trim(), frenchDateAnchor(invariants?.published_at)]
+    .filter((part): part is string => Boolean(part))
+  const anchor = anchorParts.length > 0 ? ` (${anchorParts.join(', ')})` : ''
+  const figure = percent ? ` — ${percent}` : ''
+  return `${category}${anchor}${figure}`
+}
+
+function publicSignalForm(value: string, frame: ResonanceContextFrame, invariants?: SignalInvariants): string {
   const compactValue = value.replace(/\s+/g, ' ').trim()
   if (!compactValue) return ''
   const candidate = looksLikeRawExternalExcerpt(compactValue)
-    ? sourceSignalAsTransition(compactValue)
+    ? foreignSignalPublicForm(compactValue, invariants)
     : compactValue
-  if (candidate === 'un fait public qualifié') return ''
+  if (!candidate || candidate === 'un fait public qualifié') return ''
   return signalCompatibleWithContextFrame(candidate, frame) ? candidate : ''
 }
 
-function sourceTransitionsFromSignals(signals: Array<{ signal_fr: string }>, frame: ResonanceContextFrame): string[] {
-  return unique(signals.map((signal) => sourceSignalAsTransition(signal.signal_fr)))
+function sourceTransitionsFromSignals(
+  signals: Array<{ signal_fr: string; public_signal_fr?: string }>,
+  frame: ResonanceContextFrame,
+): string[] {
+  return unique(signals.map((signal) => signal.public_signal_fr || sourceSignalAsTransition(signal.signal_fr)))
     .filter((signal) => signalCompatibleWithContextFrame(signal, frame))
     .filter((signal) => signal !== 'un fait public qualifié')
     .slice(0, 3)
@@ -429,7 +473,10 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     .map((signal) => ({
       source_id: signal.source_id,
       signal_fr: signal.signal_fr,
-      public_signal_fr: publicSignalForm(signal.signal_fr, contextFrame),
+      public_signal_fr: publicSignalForm(signal.signal_fr, contextFrame, {
+        source_name: signal.source_name,
+        published_at: signal.published_at,
+      }),
       source_title: signal.source_title,
       source_name: signal.source_name,
       discriminant_terms: signal.discriminant_terms,
@@ -440,11 +487,19 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
       .filter((source) => source.id && source.published_at)
       .map((source) => [source.id, source.published_at] as const),
   )
+  const nameBySourceId = new Map(
+    (input.resources?.public_sources ?? [])
+      .filter((source) => source.id)
+      .map((source) => [source.id, source.source] as const),
+  )
   const qualifiedEvidence = publicProbativeEvidence(input.resources, 3, evidenceRelevanceQuery(input))
     .map((evidence) => ({
       source_id: evidence.source_id,
       public_label_fr: evidence.public_label_fr,
-      public_signal_fr: publicSignalForm(evidence.public_label_fr, contextFrame),
+      public_signal_fr: publicSignalForm(evidence.public_label_fr, contextFrame, {
+        source_name: evidence.source_id ? nameBySourceId.get(evidence.source_id) : undefined,
+        published_at: evidence.source_id ? publishedBySourceId.get(evidence.source_id) : undefined,
+      }),
       status: evidence.status,
       can_drive_probability: evidence.can_drive_probability,
       published_at: evidence.source_id ? publishedBySourceId.get(evidence.source_id) : undefined,
