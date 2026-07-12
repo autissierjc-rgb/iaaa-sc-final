@@ -143,9 +143,19 @@ export function buildMaieuticQuestions(
   input: ReflectivePromptInput,
   emotionSignals: EmotionStructureSignal[],
 ): ReflectiveQuestion[] {
-  const gap = clean(input.structure_gap)
-  const vulnerability = clean(input.main_vulnerability)
-  const signal = clean(input.transition_signal)
+  // La matière par défaut de la trace (gap ou transition de repli) est une
+  // formule mécanique : la citer produit une relance incompréhensible. Seule
+  // la matière qualifiée (théâtre, sources) est citable ; sinon la relance
+  // retombe sur sa forme générique lisible.
+  const gapQuotable = input.structure_gap_source !== 'default'
+  const signalQuotable = input.transition_signal_source !== 'default'
+  const gap = gapQuotable ? clean(input.structure_gap) : ''
+  const rawVulnerability = clean(input.main_vulnerability)
+    .replace(/^le point fragile est\s+/i, '')
+  const vulnerability = !gapQuotable && input.structure_gap && rawVulnerability.includes(clean(input.structure_gap))
+    ? ''
+    : rawVulnerability
+  const signal = signalQuotable ? clean(input.transition_signal) : ''
   const uncertainty = clean(input.uncertainty)
   const actors = (input.actors ?? []).map(clean).filter(Boolean).slice(0, 3)
 

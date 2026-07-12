@@ -20,8 +20,10 @@ export type ReflectivePromptInput = {
   sc_output?: unknown
   dominant_regime?: string
   structure_gap?: string
+  structure_gap_source?: 'theatre' | 'default'
   main_vulnerability?: string
   transition_signal?: string
+  transition_signal_source?: 'sources' | 'theatre' | 'default'
   actors?: string[]
   tensions?: string[]
   uncertainty?: string

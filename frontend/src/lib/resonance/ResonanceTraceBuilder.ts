@@ -196,6 +196,15 @@ function visibleList(items: string[], fallback: string): string {
   return items.length > 0 ? items.slice(0, 4).join(', ') : fallback
 }
 
+// Un nom propre nu casse la grammaire des gabarits (« sur Russie »,
+// « entre Russie ») : l'apposition parenthésée reste correcte pour tout
+// acteur unique, sans gérer d'articles par nom.
+function actorFocusList(items: string[], fallback: string): string {
+  if (items.length === 0) return fallback
+  if (items.length === 1) return `l’acteur central (${items[0]})`
+  return items.slice(0, 4).join(', ')
+}
+
 // Appariement par cognat : une question française et une source anglaise
 // partagent leurs noms propres et racines latines (Russie/Russia) mais pas
 // leurs flexions. Réduire les mots à leur préfixe de cinq caractères
@@ -327,7 +336,7 @@ function sourceTransitionsFromSignals(
 }
 
 function buildStructuralContradiction(actors: string[], institutions: string[]): string {
-  const actorLine = visibleList(actors, 'les acteurs directement concernés')
+  const actorLine = actorFocusList(actors, 'les acteurs directement concernés')
   const institutionLine = visibleList(institutions, 'les instances capables de cadrer ou bloquer la suite')
   return `Le coût visible se concentre sur ${actorLine} ; la formalisation du seuil dépend de ${institutionLine}.`
 }
@@ -397,8 +406,10 @@ function buildStructuralVulnerability(structuralGap: string, transitionSignal: s
 }
 
 function buildDiamondThesis(actors: string[], structuralGap: string, transitionSignal: string): string {
-  const actorLine = visibleList(actors, 'les acteurs concernés')
-  return `Le point décisif n’est pas la tension visible entre ${actorLine}, mais ${structuralGap} : ${transitionSignal} ne change le régime que s’il oblige un acteur habilité à assumer publiquement le seuil.`
+  const tensionScope = actors.length === 1
+    ? `autour de l’acteur central (${actors[0]})`
+    : `entre ${visibleList(actors, 'les acteurs concernés')}`
+  return `Le point décisif n’est pas la tension visible ${tensionScope}, mais ${structuralGap} : ${transitionSignal} ne change le régime que s’il oblige un acteur habilité à assumer publiquement le seuil.`
 }
 
 function corpusText(input: ResonanceTraceInput): string {
@@ -531,13 +542,15 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     .filter((institution) => publicAnchor(institution, sourceHosts, sourceLabels))
     .filter((institution) => institutionAnchoredInContracts(institution, institutionSupport))
     .slice(0, 8)
-  const structuralGap = firstUseful(
+  const theatreGap = firstUseful(
     unique([
       ...input.theatre.missing_anchors,
       ...input.theatre.unknowns,
     ]).filter((item) => structuralGapAnchor(item, sourceHosts, sourceLabels)),
-    defaultStructuralGap(input),
+    '',
   )
+  const structuralGap = theatreGap || defaultStructuralGap(input)
+  const structuralGapSource: ResonanceTraceContract['structural_gap_source'] = theatreGap ? 'theatre' : 'default'
   const sourceTransition = firstUseful(sourceTransitionsFromSignals(sourceSignals, contextFrame), '')
   const theatreTransition = firstUseful(
     unique([
@@ -570,6 +583,7 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     real_actors: realActors,
     institutions,
     structural_gap_fr: structuralGap,
+    structural_gap_source: structuralGapSource,
     structural_contradiction_fr: structuralContradiction,
     structural_vulnerability_fr: structuralVulnerability,
     diamond_thesis_fr: diamondThesis,

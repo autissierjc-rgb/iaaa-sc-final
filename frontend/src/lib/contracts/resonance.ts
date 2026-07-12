@@ -29,6 +29,7 @@ export type ResonanceTraceContract = {
   real_actors: string[]
   institutions: string[]
   structural_gap_fr: string
+  structural_gap_source: 'theatre' | 'default'
   structural_contradiction_fr: string
   structural_vulnerability_fr: string
   diamond_thesis_fr: string
