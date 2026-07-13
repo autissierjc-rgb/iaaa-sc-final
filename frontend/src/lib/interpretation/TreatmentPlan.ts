@@ -31,6 +31,11 @@ function pointsToMissingMaterialAnswer(text: string): boolean {
 }
 
 function asksTargetChoice(text: string, interpreted: InterpretedRequest): boolean {
+  // Le choix de cible est une lecture de décision : il ne s'impose pas à un
+  // référent qui a classé la question en compréhension ou en évaluation d'un
+  // arbitrage déjà nommé (« évaluer l'arbitrage entre X et Y »).
+  if (!['decide', 'compare', 'prepare'].includes(interpreted.intent_type)) return false
+
   const normalized = normalize([
     text,
     interpreted.object_of_analysis,
@@ -213,7 +218,10 @@ export function buildTreatmentPlan({
     }
   }
 
-  if (optionsMissing && !hasMaterial) {
+  // La regex d'options est un indice, pas une autorité : elle ne peut pas
+  // demander une clarification que le référent n'a pas jugée nécessaire
+  // (« arbitrer entre X et Y » nomme déjà ses options).
+  if (optionsMissing && !hasMaterial && interpreted.needs_clarification) {
     return {
       mode: 'collaborative_clarification',
       source_status: 'not_needed',

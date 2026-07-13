@@ -206,18 +206,10 @@ export function clarifyBeforeGenerate({
     }
   }
 
-  if (lowConfidenceIncomplete) {
-    return {
-      shouldClarify: true,
-      status: 'clarify_intent',
-      shape,
-      questions: confirmationHypothesis
-        ? [confirmationQuestion(confirmationHypothesis)]
-        : contextualQuestions(situation, intentContext).slice(0, 1),
-      signals: [...signals, `compréhension insuffisante : confiance ${interpreted?.confidence}`],
-    }
-  }
-
+  // Autorité du référent : un contrat exploitable (objet précis, question
+  // formalisée, forme de réponse) génère directement. La méfiance
+  // confiance-basse ne s'applique qu'aux contrats inexploitables — elle ne
+  // double jamais un référent qui a compris.
   if (hasActionableInterpretation(intentContext)) {
     return {
       shouldClarify: false,
@@ -230,6 +222,18 @@ export function clarifyBeforeGenerate({
         `intention interprétée : ${interpreted?.intent_type}`,
         `objet interprété : ${interpreted?.object_of_analysis}`,
       ],
+    }
+  }
+
+  if (lowConfidenceIncomplete) {
+    return {
+      shouldClarify: true,
+      status: 'clarify_intent',
+      shape,
+      questions: confirmationHypothesis
+        ? [confirmationQuestion(confirmationHypothesis)]
+        : contextualQuestions(situation, intentContext).slice(0, 1),
+      signals: [...signals, `compréhension insuffisante : confiance ${interpreted?.confidence}`],
     }
   }
 
