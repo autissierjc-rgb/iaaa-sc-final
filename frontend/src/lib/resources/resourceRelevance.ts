@@ -44,9 +44,42 @@ function haystackTokensOf(haystack: string): string[] {
   return haystack.split(/[^a-z0-9]+/).filter((token) => token.length >= 4)
 }
 
-// Les noms propres de la question (majuscule hors début de phrase) sont les
-// ancres de pertinence : une source qui ne porte aucun d'entre eux, même par
-// cognat, parle d'autre chose quelle que soit sa langue.
+// Les ancres de pertinence viennent d'abord de la compréhension du référent
+// canonique (entités expliquées, objet d'analyse, sujet d'en-tête) : c'est
+// lui qui sait que « russe » désigne la Russie, minuscule ou pas. Zéro
+// re-dérivation lexicale quand l'interprétation est disponible.
+const GENERIC_ANCHOR_WORDS = new Set([
+  'situation', 'question', 'analyse', 'analyses', 'evolution', 'evolutions',
+  'contexte', 'comprendre', 'explication', 'probable', 'possible', 'actuel',
+  'actuelle', 'identifier', 'expliciter', 'nom', 'propre', 'acronyme',
+])
+
+export function relevanceAnchorsFromUnderstanding(understanding: {
+  entity_explanations?: Array<{ label?: string; explanation?: string }>
+  object_of_analysis?: string
+  header_subject?: string
+}): string[] {
+  const parts: string[] = []
+  for (const entity of understanding.entity_explanations ?? []) {
+    if (entity.label) parts.push(entity.label)
+    if (entity.explanation) parts.push(entity.explanation)
+  }
+  if (understanding.object_of_analysis) parts.push(understanding.object_of_analysis)
+  if (understanding.header_subject) parts.push(understanding.header_subject)
+
+  const anchors = new Set<string>()
+  for (const part of parts) {
+    for (const token of normalizeSearchText(part).split(/[^a-z0-9]+/)) {
+      if (token.length >= 4 && !SEARCH_STOPWORDS.has(token) && !GENERIC_ANCHOR_WORDS.has(token)) {
+        anchors.add(token)
+      }
+    }
+  }
+  return Array.from(anchors).slice(0, 16)
+}
+
+// Repli lexical quand aucune interprétation n'est disponible : les noms
+// propres de la question (majuscule hors début de phrase).
 export function queryProperNounAnchors(query: string): string[] {
   const anchors = new Set<string>()
   let sentenceStart = true
@@ -121,7 +154,17 @@ export function isSocialPostResource(resource: ResourceItem): boolean {
   return SOCIAL_POST_HOSTS.has(host)
 }
 
-export function isRelevantResource(resource: ResourceItem, query: string): boolean {
+// Les ancres issues de la compréhension sont peu nombreuses et sûres :
+// l'appariement tolère les flexions FR/EN par préfixe partagé de quatre
+// caractères (russe~Russia, iranien~Iranian).
+function anchorMatch(anchor: string, haystack: string, haystackTokens: string[]): boolean {
+  if (haystack.includes(anchor)) return true
+  if (anchor.length < 4) return false
+  const prefix = anchor.slice(0, 4)
+  return haystackTokens.some((token) => token.startsWith(prefix))
+}
+
+export function isRelevantResource(resource: ResourceItem, query: string, understandingAnchors?: string[]): boolean {
   if (isSocialPostResource(resource)) return false
   const haystack = resourceSearchText(resource)
   if (!haystack) return false
@@ -138,14 +181,14 @@ export function isRelevantResource(resource: ResourceItem, query: string): boole
 
   const haystackTokens = haystackTokensOf(haystack)
   const overlap = queryKeywords.filter((keyword) => cognateMatch(keyword, haystack, haystackTokens)).length
-  const anchors = queryProperNounAnchors(query)
+  const anchors = understandingAnchors?.length ? understandingAnchors : queryProperNounAnchors(query)
 
   if (anchors.length > 0) {
-    const anchorHit = anchors.some((anchor) => cognateMatch(anchor, haystack, haystackTokens))
-    // L'ancre nominale est le signal fort : quand la source la porte, le
-    // classement du moteur de recherche fait foi et un seul recoupement
-    // lexical suffit (les flexions et la langue divergent). Sans elle, il
-    // faut une évidence lexicale nette pour garder la source.
+    const anchorHit = anchors.some((anchor) => anchorMatch(anchor, haystack, haystackTokens))
+    // L'ancre est le signal fort : quand la source la porte, le classement
+    // du moteur de recherche fait foi et un seul recoupement lexical suffit
+    // (les flexions et la langue divergent). Sans elle, il faut une évidence
+    // lexicale nette pour garder la source.
     return anchorHit ? overlap >= 1 : overlap >= 3
   }
 
@@ -181,6 +224,6 @@ export function bestRelevantExcerpt(resource: ResourceItem, query: string): stri
   return cleanSelected.length > 220 ? `${cleanSelected.slice(0, 217).trim()}...` : cleanSelected
 }
 
-export function filterRelevantResources(resources: ResourceItem[], query: string): ResourceItem[] {
-  return resources.filter((resource) => isRelevantResource(resource, query))
+export function filterRelevantResources(resources: ResourceItem[], query: string, understandingAnchors?: string[]): ResourceItem[] {
+  return resources.filter((resource) => isRelevantResource(resource, query, understandingAnchors))
 }

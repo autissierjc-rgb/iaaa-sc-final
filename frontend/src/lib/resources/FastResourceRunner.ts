@@ -9,7 +9,7 @@ import type {
 } from '@/lib/contracts'
 import { fetchResources } from './fetchResources'
 import type { ResourceItem } from './resourceContract'
-import { bestRelevantExcerpt, filterRelevantResources } from './resourceRelevance'
+import { bestRelevantExcerpt, filterRelevantResources, relevanceAnchorsFromUnderstanding } from './resourceRelevance'
 import { shouldUseWeb } from './shouldUseWeb'
 
 export type FastResourceRunnerResult = {
@@ -501,23 +501,25 @@ async function legacyFastFallback(
   query: string,
   timeoutMs: number,
   maxSources: number,
+  understandingAnchors?: string[],
 ): Promise<ResourceItem[] | 'timeout'> {
   const result = await withTimeout(fetchResources(query), Math.max(800, timeoutMs))
   if (result === 'timeout') return 'timeout'
-  return uniqueResourceItems(filterRelevantResources(result, query)).slice(0, maxSources)
+  return uniqueResourceItems(filterRelevantResources(result, query, understandingAnchors)).slice(0, maxSources)
 }
 
 async function legacyFastFallbackForPlans(
   plans: FastSearchPlan[],
   timeoutMs: number,
   maxSources: number,
+  understandingAnchors?: string[],
 ): Promise<{ resources: ResourceItem[]; firstHitPlan: FastSearchPlan } | 'timeout'> {
   const usablePlans = plans.filter((plan) => plan.query.trim().length > 0)
   const firstPlan = usablePlans[0] ?? { query: '', label: 'empty' }
   const planResults = await Promise.all(
     usablePlans.map(async (plan) => ({
       plan,
-      result: await legacyFastFallback(plan.query, timeoutMs, maxSources),
+      result: await legacyFastFallback(plan.query, timeoutMs, maxSources, understandingAnchors),
     })),
   )
   const nonTimeoutResults = planResults.filter(
@@ -535,6 +537,7 @@ async function legacyFastFallbackForPlans(
       nonTimeoutResults.map((entry) => entry.plan.query),
       fallbackQuery,
       maxSources,
+      understandingAnchors,
     ),
     firstHitPlan: firstHit?.plan ?? firstPlan,
   }
@@ -545,11 +548,12 @@ export function filterFastResourceResultsByPlanForDiagnostics(
   planQueries: string[],
   fallbackQuery: string,
   maxSources: number,
+  understandingAnchors?: string[],
 ): ResourceItem[] {
   const merged = uniqueResourceItems(
     planResults.flatMap((items, index) => {
       const planQuery = planQueries[index] ?? fallbackQuery
-      return filterRelevantResources(items, planQuery).map((item) => ({
+      return filterRelevantResources(items, planQuery, understandingAnchors).map((item) => ({
         ...item,
         excerpt: bestRelevantExcerpt(item, planQuery) || item.excerpt,
       }))
@@ -581,6 +585,9 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
   const fallbackPlan = fastSearchPlan(input)
   const plans = executionPlans(input)
   const primaryPlan = plans[0] ?? fallbackPlan
+  // La pertinence s'ancre dans la compréhension du référent (entités,
+  // objet d'analyse), pas dans une relecture lexicale de la question.
+  const understandingAnchors = relevanceAnchorsFromUnderstanding(input.interpretation)
   const query = [
     input.interpretation.situation_soumise,
     input.resource_plan.fallback_searches[0] ?? '',
@@ -588,7 +595,7 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
   ].filter(Boolean).join(' ')
 
   if (!process.env.TAVILY_API_KEY) {
-    const fallback = await legacyFastFallbackForPlans(plans, timeoutMs, maxSources)
+    const fallback = await legacyFastFallbackForPlans(plans, timeoutMs, maxSources, understandingAnchors)
     if (fallback === 'timeout') {
       return {
         resources: [],
@@ -640,11 +647,12 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
       resolvedPlans.map((plan) => plan.query),
       query,
       maxSources,
+      understandingAnchors,
     )
     const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
     const result = fast.length > 0 || !usedLegacyFallback
       ? { resources: fast, firstHitPlan }
-      : await legacyFastFallbackForPlans(plans, timeoutMs, maxSources)
+      : await legacyFastFallbackForPlans(plans, timeoutMs, maxSources, understandingAnchors)
 
     if (result === 'timeout') {
       return {
