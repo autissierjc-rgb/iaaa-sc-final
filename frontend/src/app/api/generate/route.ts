@@ -1,7 +1,10 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const maxDuration = 60
+// 120 s : filet anti-504 mesuré le 13/07 (generate_full à 60,6 s tué par
+// Vercel). L'objectif produit reste ≤ 35 s ; le budget se regagne par
+// l'Approfondir asynchrone (P5), pas en tuant la carte au plafond.
+export const maxDuration = 120
 import type { Interaction, Raindrop, RaindropProperties } from 'raindrop-ai'
 import {
   getStateLabel,
