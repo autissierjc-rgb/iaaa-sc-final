@@ -524,12 +524,31 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     ...sourceSignals.map((signal) => `${signal.signal_fr} ${signal.source_title}`),
     ...qualifiedEvidence.map((evidence) => evidence.public_label_fr),
   ].join(' '))
+  // Le média qui rapporte n'est pas un acteur de la situation : tout acteur
+  // dont le nom coïncide avec le nom d'une source attachée est exclu, sauf
+  // s'il est nommé dans la question canonique elle-même.
+  const compactKey = (value: string): string => normalize(value).replace(/[^a-z0-9]+/g, '')
+  const canonicalCompact = compactKey(input.interpretation.situation_soumise || '')
+  const sourceNameKeys = (input.resources?.public_sources ?? []).flatMap((source) => {
+    const keys: string[] = []
+    if (source.source) keys.push(compactKey(source.source))
+    const title = String(source.title ?? '')
+    const tail = title.split(/\s[-|–—]\s/).pop() ?? ''
+    if (tail && tail !== title && tail.length <= 40) keys.push(compactKey(tail))
+    return keys.filter((key) => key.length >= 4)
+  })
+  const isAttachedSourceName = (actor: string): boolean => {
+    const key = compactKey(actor)
+    if (key.length < 4 || canonicalCompact.includes(key)) return false
+    return sourceNameKeys.some((name) => name.includes(key) || key.includes(name))
+  }
   const realActors = removeCompositeActors([
     ...knownEntities,
     ...input.theatre.actors,
   ])
     .filter((actor) => publicAnchor(actor, sourceHosts, sourceLabels))
     .filter((actor) => namedActorAnchoredInCanonicalText(actor, actorSupport))
+    .filter((actor) => !isAttachedSourceName(actor))
     .filter((actor, _index, list) => !isFragmentOfOtherActors(actor, list))
     .slice(0, 8)
   const institutionSupport = normalize([

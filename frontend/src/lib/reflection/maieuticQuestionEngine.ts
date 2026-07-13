@@ -149,22 +149,41 @@ export function buildMaieuticQuestions(
   // retombe sur sa forme générique lisible.
   const gapQuotable = input.structure_gap_source !== 'default'
   const signalQuotable = input.transition_signal_source !== 'default'
-  const gap = gapQuotable ? clean(input.structure_gap) : ''
+  // Les ancres du théâtre faites uniquement de notre vocabulaire d'analyse
+  // (« acteurs réellement impliqués », « preuve manquante ») sont du méta,
+  // pas de la matière de situation : rien à citer.
+  const META_ANALYSIS_WORDS = /\b(acteurs?|r[ée]ellement|impliqu[ée]s?|absent[es]?|cach[ée]e?s?|manquant[es]?|preuves?|contraintes?|chronologies?|d[ée]clarations?|institutions?|dirigeants?|lectures?|analyses?|structurel(?:le)?s?)\b/gi
+  const hasSituationSubstance = (fragment: string): boolean =>
+    fragment.replace(META_ANALYSIS_WORDS, ' ')
+      .split(/[^\p{L}\d]+/u)
+      .filter((word) => word.length >= 4)
+      .length >= 1
+  const rawGap = gapQuotable ? clean(input.structure_gap) : ''
+  const gap = rawGap && hasSituationSubstance(rawGap) ? rawGap : ''
   const rawVulnerability = clean(input.main_vulnerability)
     .replace(/^le point fragile est\s+/i, '')
   const vulnerability = !gapQuotable && input.structure_gap && rawVulnerability.includes(clean(input.structure_gap))
     ? ''
     : rawVulnerability
   const signal = signalQuotable ? clean(input.transition_signal) : ''
-  const uncertainty = clean(input.uncertainty)
+  // Une incertitude n'est citable que si c'est un constat, pas une question :
+  // les gabarits d'axe VI (« Quelle absence peut renverser la lecture... »)
+  // produiraient une question dans la question.
+  const rawUncertainty = clean(input.uncertainty)
+  const uncertainty = /[?]|^(quelle?s?|quels?|qui|que|quoi|comment|pourquoi|où)\b/i.test(rawUncertainty)
+    ? ''
+    : rawUncertainty
   const actors = (input.actors ?? []).map(clean).filter(Boolean).slice(0, 3)
 
+  // L'incertitude publique de la carte (champ validé par les gates) prime
+  // sur l'ancre interne du théâtre, souvent méta (« acteurs réellement
+  // impliqués ») et moins parlante pour l'utilisateur.
   const clarifier: ReflectiveQuestion = {
     type: 'structure_gap',
-    question_fr: gap
-      ? `De votre côté, que savez-vous déjà sur « ${lowerFirst(shorten(gap, 110))} » ?`
-      : uncertainty
-        ? `Quelle information rendrait « ${shorten(uncertainty, 80)} » moins décisive ?`
+    question_fr: uncertainty
+      ? `Quelle information rendrait « ${shorten(uncertainty, 80)} » moins décisive ?`
+      : gap
+        ? `De votre côté, que savez-vous déjà sur « ${lowerFirst(shorten(gap, 110))} » ?`
         : 'Quel fait, document ou décision rendrait cette situation vérifiable ?',
     question_en: 'What do you already know about the missing piece the card names?',
     rationale_internal: 'Dynamique clarifiante : le manque précis nommé par la carte.',
