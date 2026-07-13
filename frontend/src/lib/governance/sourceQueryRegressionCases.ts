@@ -27,7 +27,7 @@ import { shouldUseWeb } from '@/lib/resources/shouldUseWeb'
 import { buildConcreteTheatre } from '@/lib/theatre'
 import { composeDiamondWriting } from '@/lib/writing'
 import { runQualityGate } from '@/lib/quality'
-import { buildDiamondClarificationQuestions, validateDiamondContract } from './diamondValidation'
+import { buildDiamondClarificationQuestions, stripCopiedSourceTitleSentences, validateDiamondContract } from './diamondValidation'
 
 export type SourceQueryRegressionResult = {
   id: string
@@ -174,6 +174,75 @@ function resourcePlanWithDatelineEvidence(): ResourceServiceContract {
     status: 'available',
     resources: [source],
     public_sources: [source],
+  }
+}
+
+// Dossier gelé du 13/07/2026 (cas geopolitique-energie, BLOCK
+// source_title_copied_into_public_card) : question abstraite sans nom
+// propre, sources d'actualité hors sujet dont un extrait pollué par du
+// scaffolding de navigation, et un titre anglais entré au théâtre comme
+// preuve. La carte composée ne doit ni reprendre un titre de source ni
+// laisser passer une phrase anglaise brute.
+function frozenAbstractEnergyDossier(): {
+  interpretation: InterpretationContract
+  theatre: ConcreteTheatreContract
+  resources: ResourceServiceContract
+} {
+  const northKoreaTitle = 'North Korea condemns NATO summit, says denuclearisation should start with US allies - Reuters'
+  const sources: ResourceContract[] = [
+    {
+      id: 'public_fast_2',
+      title: northKoreaTitle,
+      url: 'https://www.reuters.com/world/asia-pacific/north-korea-nato-summit-example/',
+      source: 'reuters.com',
+      channel: 'news_agency',
+      domain_relevance: ['general'],
+      excerpt: "## Browse World. Image 3: North Korean leader Kim Jong Un attends the second plenary meeting of the Ninth Central Committee of the Workers' Party of Korea, in Pyongyang.",
+      published_at: 'Fri, 11 Jul 2026 08:00:00 GMT',
+      retrieved_at: '2026-07-13T10:24:27.991Z',
+      reliability: 'secondary',
+    },
+    {
+      id: 'public_fast_4',
+      title: 'Russia Bans Diesel Exports After Ukrainian Strikes Trigger Domestic Shortages - Reuters',
+      url: 'https://www.reuters.com/business/energy/russia-diesel-exports-example/',
+      source: 'reuters.com',
+      channel: 'news_agency',
+      domain_relevance: ['general'],
+      excerpt: 'Drivers in many regions are facing hours-long lines to refuel, as intensifying Ukrainian strikes disrupt refineries.',
+      published_at: 'Thu, 10 Jul 2026 09:00:00 GMT',
+      retrieved_at: '2026-07-13T10:24:27.991Z',
+      reliability: 'secondary',
+    },
+  ]
+
+  return {
+    interpretation: interpretationForCurrentQuestionVariant({
+      raw: "Un pays allié hésite à rompre un accord énergétique devenu politiquement toxique avec son fournisseur historique : quelle est la dynamique ?",
+      submitted: "Un pays allié hésite à rompre un accord énergétique devenu politiquement toxique avec son fournisseur historique : quelle est la dynamique ?",
+      subject: 'accord énergétique politiquement toxique',
+      actors: [],
+    }),
+    theatre: {
+      ...theatreForCurrentQuestion(),
+      domain: 'general',
+      actors: [],
+      named_actors: [],
+      institutions: ['les gouvernements concernés'],
+      dates: [],
+      constraints: [],
+      evidence: [{
+        label: northKoreaTitle,
+        level: 'plausible',
+        source_ids: ['public_fast_2'],
+      }],
+    },
+    resources: {
+      ...baseResourcePlan(),
+      status: 'available',
+      resources: sources,
+      public_sources: sources,
+    },
   }
 }
 
@@ -1833,6 +1902,51 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     }
   }
 
+  const frozenDossier = frozenAbstractEnergyDossier()
+  const frozenWriting = composeDiamondWriting({
+    interpretation: frozenDossier.interpretation,
+    theatre: frozenDossier.theatre,
+    resources: frozenDossier.resources,
+    resonance: buildResonanceTrace({
+      interpretation: frozenDossier.interpretation,
+      theatre: frozenDossier.theatre,
+      resources: frozenDossier.resources,
+    }),
+    safety: safetyForRegression(),
+    expertises_metiers: expertisesForCurrentQuestion(),
+    scoring: scoringForRegression(),
+  })
+  const frozenDossierIssues: SourceQueryRegressionResult['issues'] = []
+  if (stripCopiedSourceTitleSentences(frozenWriting, frozenDossier.resources)) {
+    frozenDossierIssues.push({
+      level: 'error',
+      code: 'frozen_dossier_title_echo',
+      message: 'The deterministic writer echoed an attached source title on the frozen abstract dossier.',
+    })
+  }
+  const frozenPublicTexts = [
+    frozenWriting.situation_card.insight_fr,
+    frozenWriting.situation_card.main_vulnerability_fr,
+    frozenWriting.situation_card.asymmetry_fr,
+    frozenWriting.situation_card.key_signal_fr,
+    frozenWriting.lecture.text_fr,
+    ...frozenWriting.approfondir.sections_fr.map((section) => section.body),
+  ]
+  for (const text of frozenPublicTexts) {
+    for (const sentence of String(text ?? '').split(/(?<=[.!?])\s+/)) {
+      const englishHits = (sentence.match(/\b(?:the|and|with|from|this|that|will|have|has|are|was|were|been|says?|after|should|start)\b/gi) ?? []).length
+      if (sentence.trim() && englishHits >= 3) {
+        frozenDossierIssues.push({
+          level: 'error',
+          code: 'frozen_dossier_raw_english',
+          message: `Raw English sentence in public writing: ${sentence.slice(0, 110)}`,
+        })
+        break
+      }
+    }
+    if (frozenDossierIssues.some((item) => item.code === 'frozen_dossier_raw_english')) break
+  }
+
   return [{
     id: 'current-question-uses-raw-source-query',
     ok: issues.length === 0,
@@ -2001,5 +2115,11 @@ export function runSourceQueryRegressionCases(): SourceQueryRegressionResult[] {
     query: nonCausalCurrentDeepReading.approfondir_fr.slice(0, 240),
     subject: 'writing/quality context isolation',
     issues: deepCausalFrameLeakIssues,
+  }, {
+    id: 'frozen-abstract-dossier-no-title-echo',
+    ok: frozenDossierIssues.length === 0,
+    query: frozenDossier.resources.public_sources.map((source) => source.title).join(' | ').slice(0, 200),
+    subject: 'dossier gelé : question abstraite + sources hors sujet',
+    issues: frozenDossierIssues,
   }]
 }

@@ -265,14 +265,14 @@ function copiedSourceTitleInPublicText(
 
     const normalizedTitle = normalizeForReadiness(source.title).replace(/[^a-z0-9]+/g, ' ').trim()
     if (normalizedTitle.length >= 28 && normalizedText.includes(normalizedTitle.slice(0, Math.min(80, normalizedTitle.length)))) {
-      return source.title
+      return `${source.title} [collage verbatim]`
     }
 
     for (let index = 0; index <= tokens.length - WINDOW; index += 1) {
       const window = tokens.slice(index, index + WINDOW)
       if (!window.some((token) => !isBaselineToken(token))) continue
       const phrase = window.join(' ')
-      if (normalizedText.includes(phrase)) return source.title
+      if (normalizedText.includes(phrase)) return `${source.title} [segment copié : « ${phrase} »]`
     }
   }
 
