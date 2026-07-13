@@ -167,10 +167,12 @@ function asEntityExplanations(value: unknown, fallback: InterpretedRequest['enti
 }
 
 function referenceModelRequestParams(): Record<string, unknown> {
-  // Le référent est l'autorité de compréhension : il reçoit le même niveau
-  // de modèle que le writer (gpt-5-mini, effort minimal). gpt-4o-mini
-  // classait « personal » ou « war » des questions abstraites simples.
-  const model = process.env.OPENAI_INTENT_MODEL || 'gpt-5-mini'
+  // Défaut gpt-4o-mini : la bascule gpt-5-mini du 13/07 a fait déborder la
+  // chaîne complète au-delà de maxDuration en prod (504 mesuré à 61 s).
+  // gpt-5-mini reste activable par OPENAI_INTENT_MODEL pour re-mesurer la
+  // qualité de compréhension quand le budget global aura été retravaillé
+  // (Approfondir asynchrone, P5).
+  const model = process.env.OPENAI_INTENT_MODEL || 'gpt-4o-mini'
   const reasoningModel = /^(?:gpt-5|o\d)/i.test(model)
   return reasoningModel
     ? { model, reasoning_effort: process.env.OPENAI_INTENT_REASONING_EFFORT || 'minimal' }
@@ -248,10 +250,9 @@ export async function interpretRequestWithModel(input: string): Promise<Interpre
   if (!apiKey) return fallback
 
   const controller = new AbortController()
-  // Le référent est l'autorité de compréhension : mieux vaut lui laisser
-  // quelques secondes de plus que retomber sur l'heuristique locale
-  // (gpt-5-mini dépasse parfois 8 s en effort minimal).
-  const timeout = setTimeout(() => controller.abort(), Number(process.env.OPENAI_INTENT_TIMEOUT_MS || 12000))
+  // 8 s par défaut : chaque seconde du référent se paie sur le budget global
+  // de la carte (maxDuration 60 s en prod). Surchargeable pour les mesures.
+  const timeout = setTimeout(() => controller.abort(), Number(process.env.OPENAI_INTENT_TIMEOUT_MS || 8000))
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
