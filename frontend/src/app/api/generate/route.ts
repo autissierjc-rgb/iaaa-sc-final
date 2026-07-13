@@ -1309,9 +1309,14 @@ function canonicalWritingFamilyFromIntentContext(intentContext: IntentContext | 
   const decisionType = intentContext?.decision_type ?? ''
   const signals = [...(intentContext?.signals ?? []), ...(interpreted?.signals ?? [])].join(' ')
   const text = `${situation} ${interpreted?.user_question ?? ''} ${interpreted?.object_of_analysis ?? ''} ${signals}`.toLowerCase()
+  // Le choix de cible exige que la question porte le choix D'UNE CIBLE
+  // (public, segment, audience) — pas la simple co-occurrence du mot
+  // « utilisateurs » avec un vocabulaire de décision (« la confiance des
+  // utilisateurs » dans un arbitrage n'est pas un choix de cible).
+  const targetQuestionText = `${interpreted?.user_question ?? ''} ${interpreted?.object_of_analysis ?? ''} ${situation}`
   const asksTargetChoice =
-    /\b(?:cible|segment|public|audience|utilisateurs?|clients?|client[eè]le)\b/i.test(text) &&
-    /\b(?:choisir|viser|prioriser|prioritaire|premiers?|premi[eè]re|options?|strat[eé]gique|lancement)\b/i.test(text)
+    /(?:quel(?:le)?s?|choisir|viser|prioriser)[^.?!]{0,60}?\b(?:cibles?|segments?|publics?|audiences?|client[eè]les?|clients? (?:type|id[eé]a[lu]x?))\b/i.test(targetQuestionText) ||
+    /\b(?:cibles?|segments?|publics?|audiences?)\b[^.?!]{0,60}?\b(?:choisir|viser|prioriser|en premier|prioritaire)\b/i.test(targetQuestionText)
   const asksStrategicOptions =
     (
       interpreted?.intent_type === 'decide' ||
@@ -1323,8 +1328,17 @@ function canonicalWritingFamilyFromIntentContext(intentContext: IntentContext | 
     ) &&
     /\b(?:option|options|choix|arbitrage|prioriser|vendre|exploiter|produits?|services?|offres?)\b/i.test(text)
 
-  if (frame === 'startup_target_choice' || asksTargetChoice) return 'target_choice'
-  if (asksStrategicOptions) return 'strategic_options'
+  // Les familles de décision (choix de cible, options stratégiques) ne
+  // s'imposent pas à un référent qui a classé la question en compréhension
+  // ou en évaluation : l'indice lexical ne prime jamais sur l'intention.
+  const referentDecides =
+    !interpreted ||
+    ['decide', 'compare', 'prepare'].includes(interpreted.intent_type ?? '') ||
+    interpreted.question_type === 'decision' ||
+    interpreted.question_type === 'comparison'
+
+  if ((asksTargetChoice || (frame === 'startup_target_choice' && !interpreted)) && referentDecides) return 'target_choice'
+  if (asksStrategicOptions && referentDecides) return 'strategic_options'
   if (frame === 'personal_relationship' || domain === 'personal') return 'relationship_clarification'
   if (frame === 'experience_explanation') return 'experience_explanation'
   if (domain === 'management' || decisionType === 'organization_change') return 'organization_change'

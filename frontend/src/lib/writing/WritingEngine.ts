@@ -505,12 +505,14 @@ function isStrategicOptionsWriting(input: WritingEngineInput): boolean {
     input.interpretation.intent,
     input.interpretation.question_type,
   ].filter(Boolean).join(' '))
+  // L'intention du référent est l'autorité : le vocabulaire décisionnel
+  // (« arbitrage », « stratégique ») dans une question d'évaluation ou de
+  // compréhension ne déclenche pas la grammaire de décision.
   const decisionIntent =
     input.interpretation.intent === 'decide' ||
     input.interpretation.intent === 'compare' ||
     input.interpretation.question_type === 'decision' ||
-    input.interpretation.question_type === 'comparison' ||
-    /\b(decision|arbitrage|choisir|prioriser|options?|strategique|vendre|exploiter)\b/.test(text)
+    input.interpretation.question_type === 'comparison'
   const optionObject = /\b(options?|choix|arbitrage|prioriser|vendre|exploiter|produits?|services?|offres?)\b/.test(text)
   return decisionIntent && optionObject
 }
