@@ -253,6 +253,11 @@ function copiedSourceTitleInPublicText(
       (base.length >= 5 && token.length >= 5 && (token.startsWith(base.slice(0, 6)) || base.startsWith(token.slice(0, 6)))),
     )
 
+  // Nommer le même fait dans la même langue partage naturellement trois
+  // mots consécutifs avec le titre qui le rapporte — et la grammaire exige
+  // de nommer le théâtre réel. Le signal de copie est donc quatre tokens
+  // significatifs consécutifs, ou le collage verbatim (≥ 28 caractères).
+  const WINDOW = 4
   for (const source of resources.public_sources) {
     const tokens = significantFactTokens(source.title)
     const distinctive = tokens.filter((token) => !isBaselineToken(token))
@@ -263,8 +268,8 @@ function copiedSourceTitleInPublicText(
       return source.title
     }
 
-    for (let index = 0; index <= tokens.length - 3; index += 1) {
-      const window = tokens.slice(index, index + 3)
+    for (let index = 0; index <= tokens.length - WINDOW; index += 1) {
+      const window = tokens.slice(index, index + WINDOW)
       if (!window.some((token) => !isBaselineToken(token))) continue
       const phrase = window.join(' ')
       if (normalizedText.includes(phrase)) return source.title
