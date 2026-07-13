@@ -1036,12 +1036,14 @@ function atlasDomainLabel(sc: SituationCard): string {
     return 'Site'
   }
 
+  // Le référent canonique est l'autorité de compréhension : son domaine
+  // prime sur les détecteurs lexicaux, qui ne restent que des replis.
   const domain =
+    sc.intent_context?.interpreted_request?.domain ??
+    sc.coverage_check?.intent_context?.interpreted_request?.domain ??
     sc.coverage_check?.domain ??
     sc.intent_context?.surface_domain ??
     sc.coverage_check?.intent_context?.surface_domain ??
-    sc.intent_context?.interpreted_request?.domain ??
-    sc.coverage_check?.intent_context?.interpreted_request?.domain ??
     'general'
 
   const labels: Record<string, string> = {
