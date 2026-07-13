@@ -158,22 +158,37 @@ export function buildMaieuticQuestions(
       .split(/[^\p{L}\d]+/u)
       .filter((word) => word.length >= 4)
       .length >= 1
+  // Une énumération sans verbe (« traction, clients, revenus, équipe... »)
+  // est une checklist d'analyse, pas un manque situé : rien à citer.
+  const looksLikeChecklist = (fragment: string): boolean =>
+    (fragment.match(/,/g) ?? []).length >= 3 &&
+    !/\b(est|sont|reste|restent|devient|deviennent|manque|manquent|d[ée]pend|d[ée]pendent)\b/i.test(fragment)
   const rawGap = gapQuotable ? clean(input.structure_gap) : ''
-  const gap = rawGap && hasSituationSubstance(rawGap) ? rawGap : ''
+  const gap = rawGap && hasSituationSubstance(rawGap) && !looksLikeChecklist(rawGap) ? rawGap : ''
   const rawVulnerability = clean(input.main_vulnerability)
     .replace(/^le point fragile est\s+/i, '')
+    .replace(/^la vuln[ée]rabilit[ée] centrale est\s+/i, '')
   const vulnerability = !gapQuotable && input.structure_gap && rawVulnerability.includes(clean(input.structure_gap))
     ? ''
     : rawVulnerability
   const signal = signalQuotable ? clean(input.transition_signal) : ''
-  // Une incertitude n'est citable que si c'est un constat, pas une question :
-  // les gabarits d'axe VI (« Quelle absence peut renverser la lecture... »)
-  // produiraient une question dans la question.
+  // Une incertitude n'est citable que si c'est un constat : ni une question
+  // (gabarits d'axe VI « Quelle absence peut renverser la lecture... »), ni
+  // une consigne interne à l'infinitif (« Chercher quelles intentions... »,
+  // « Vérifier... ») — notre propre grammaire d'instruction n'est jamais de
+  // la matière de situation.
   const rawUncertainty = clean(input.uncertainty)
-  const uncertainty = /[?]|^(quelle?s?|quels?|qui|que|quoi|comment|pourquoi|où)\b/i.test(rawUncertainty)
-    ? ''
-    : rawUncertainty
-  const actors = (input.actors ?? []).map(clean).filter(Boolean).slice(0, 3)
+  const uncertainty =
+    /[?]|^(quelle?s?|quels?|qui|que|quoi|comment|pourquoi|où)\b|^(chercher|v[ée]rifier|rep[ée]rer|surveiller|identifier|relever|comparer|distinguer|observer|examiner)\b/i.test(rawUncertainty)
+      ? ''
+      : rawUncertainty
+  // Seul un agent se cite comme acteur : un nom propre ou une entité
+  // capitalisée. Un phénomène en minuscules (« pénurie d'essence ») n'a pas
+  // d'intérêt à « faire bouger la situation ».
+  const actors = (input.actors ?? [])
+    .map(clean)
+    .filter((actor) => actor && /^[A-ZÀ-Þ]/.test(actor))
+    .slice(0, 3)
 
   // L'incertitude publique de la carte (champ validé par les gates) prime
   // sur l'ancre interne du théâtre, souvent méta (« acteurs réellement
