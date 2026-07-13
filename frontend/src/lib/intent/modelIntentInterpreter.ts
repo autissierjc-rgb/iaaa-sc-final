@@ -80,7 +80,8 @@ Rules:
 - domain names the arena of the question, never its emotional intensity: "war" only for an ongoing armed conflict between states or armed groups; "geopolitics" for relations between countries (alliances, energy or trade agreements, diplomatic ruptures); "governance" for public institutions, collective bodies and their disputes (communes, écoles, administrations, conseils, polémiques publiques institutionnelles, mouvements citoyens, associations, partis, syndicats); "management" for internal organization tensions; "personal" for family and close relationships. A school disciplinary dispute is governance, an inter-country energy agreement is geopolitics.
 - Distinguish the QUESTIONED OBJECT from the PRESSURE VECTOR. A causal adjunct ("avec X", "à cause de X", "suite à X", "face à X") names the pressure, not the object: the object_of_analysis is what the user asks to see evolve, decide or read UNDER that pressure. "Comment évolue la situation intérieure d'un pays avec une pénurie ?" asks about the political and social evolution of that country (stability of power, population, elites, possible exits), where the shortage is the mechanism — never reduce the card to the mechanics of the vector itself.
 - The domain follows the questioned object, not the vector: the internal political or social situation of a state, the stability of a government or regime under pressure, is "geopolitics" even when the pressure is economic, logistical or sanitary.
-- A question about the current or probable evolution of a public, national or international situation always requires fresh public sources: never set source_status to not_needed for it, and add a signal "source_need:current_news".`
+- A question about the current or probable evolution of a public, national or international situation always requires fresh public sources: never set source_status to not_needed for it, and add a signal "source_need:current_news".
+- A deliberately generic or hypothetical actor ("un pays allié", "une entreprise", "un mouvement citoyen") is NOT an ambiguity: the user asks for the structural dynamics, not a named case. Do not fill confirmation_hypothesis to ask which actor is meant, do not mark such generic actors as unknown entities, and keep needs_clarification false.`
 
 function isGenericImportedInterpretation(value: string): boolean {
   return /trajectoire de la crise|crise [ée]voqu[ée]e|objet de la question|objet visible garde un r[oô]le|rapports de confiance, de preuve et de pouvoir|un [ée]v[ée]nement local peut d[ée]placer des seuils militaires/i.test(value)
@@ -166,7 +167,10 @@ function asEntityExplanations(value: unknown, fallback: InterpretedRequest['enti
 }
 
 function referenceModelRequestParams(): Record<string, unknown> {
-  const model = process.env.OPENAI_INTENT_MODEL || 'gpt-4o-mini'
+  // Le référent est l'autorité de compréhension : il reçoit le même niveau
+  // de modèle que le writer (gpt-5-mini, effort minimal). gpt-4o-mini
+  // classait « personal » ou « war » des questions abstraites simples.
+  const model = process.env.OPENAI_INTENT_MODEL || 'gpt-5-mini'
   const reasoningModel = /^(?:gpt-5|o\d)/i.test(model)
   return reasoningModel
     ? { model, reasoning_effort: process.env.OPENAI_INTENT_REASONING_EFFORT || 'minimal' }
@@ -244,7 +248,10 @@ export async function interpretRequestWithModel(input: string): Promise<Interpre
   if (!apiKey) return fallback
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 8000)
+  // Le référent est l'autorité de compréhension : mieux vaut lui laisser
+  // quelques secondes de plus que retomber sur l'heuristique locale
+  // (gpt-5-mini dépasse parfois 8 s en effort minimal).
+  const timeout = setTimeout(() => controller.abort(), Number(process.env.OPENAI_INTENT_TIMEOUT_MS || 12000))
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

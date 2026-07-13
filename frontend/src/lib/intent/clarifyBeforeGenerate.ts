@@ -190,7 +190,11 @@ export function clarifyBeforeGenerate({
     }
   }
 
-  if (uncertainEntity) {
+  // Une entité incertaine ne bloque que si le contrat du référent n'est pas
+  // exploitable : une question volontairement générique (« un pays allié »,
+  // « une entreprise ») n'est pas une ambiguïté, c'est une demande de
+  // lecture structurelle que le référent a déjà comprise.
+  if (uncertainEntity && !hasActionableInterpretation(intentContext)) {
     return {
       shouldClarify: true,
       status: 'clarify_intent',
