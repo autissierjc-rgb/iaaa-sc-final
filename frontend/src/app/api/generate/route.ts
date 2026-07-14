@@ -5600,6 +5600,12 @@ export async function POST(req: NextRequest) {
           fast_resource_timeout_ms: 0,
           supplied_resources: diamondResourcePlan.resources,
         })
+        // P5 — mode colonne vertébrale : le writer synchrone n'écrit que la
+        // carte et la Lecture (sortie ~2× plus courte, il finit sous la pince
+        // au lieu d'être amputé) ; les six sections Approfondir viennent du
+        // contrat local et le canal /api/approfondir les enrichit à
+        // l'ouverture du panneau, hors du budget de génération.
+        const spineOnlyWriter = process.env.SC_DIAMOND_SPINE_ONLY !== '0'
         let diamondWriter = await runLLMDiamondWriter({
           dossier: diamondDossier.dossier,
           // Pince absolue à 25 s : au-delà, le writer seul consomme le budget
@@ -5607,7 +5613,9 @@ export async function POST(req: NextRequest) {
           // même si l'environnement demande plus.
           timeout_ms: Math.min(Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000), 25000),
           temperature: 0.2,
-          max_tokens: 4200,
+          max_tokens: spineOnlyWriter ? 2600 : 4200,
+          spine_only: spineOnlyWriter,
+          fallback_sections: localWritingContract?.approfondir.sections_fr,
         })
         const repairableWriterCodes = new Set([
           'PRESS_SUMMARY_INSTEAD_OF_DIAMOND',
@@ -5694,7 +5702,9 @@ export async function POST(req: NextRequest) {
             dossier: diamondDossier.dossier,
             timeout_ms: Math.min(Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000), 10000),
             temperature: 0.3,
-            max_tokens: 4200,
+            max_tokens: spineOnlyWriter ? 2600 : 4200,
+            spine_only: spineOnlyWriter,
+            fallback_sections: localWritingContract?.approfondir.sections_fr,
             corrective_issue_codes: diamondWriter.errors,
           })
           if (retry.status === 'ok' || (retry.writing && !diamondWriter.writing)) {

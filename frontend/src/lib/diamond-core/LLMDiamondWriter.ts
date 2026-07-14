@@ -28,6 +28,11 @@ export type LLMDiamondWriterInput = {
   timeout_ms?: number
   max_tokens?: number
   corrective_issue_codes?: string[]
+  // Mode colonne vertébrale (P5) : le writer n'écrit pas les six sections
+  // Approfondir — elles viennent du contrat local fourni ici, et le canal
+  // /api/approfondir les enrichit ensuite hors du chemin synchrone.
+  spine_only?: boolean
+  fallback_sections?: WritingContract['approfondir']['sections_fr']
 }
 
 export type LLMDiamondWriterResult = {
@@ -421,7 +426,7 @@ async function requestOpenAIWriting({
 
 export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise<LLMDiamondWriterResult> {
   const started = Date.now()
-  const prompt = buildSCGrammarPrompt(input.dossier)
+  const prompt = buildSCGrammarPrompt(input.dossier, { spine_only: input.spine_only })
   if ((input.corrective_issue_codes ?? []).length > 0) {
     prompt.messages = [
       ...prompt.messages,
@@ -483,6 +488,7 @@ export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise
 
   parsed = coerceWritingContractShape(parsed)
   const shapeIssues = writingShapeIssues(parsed)
+    .filter((issue) => !(input.spine_only && issue === 'approfondir.sections_fr'))
   if (shapeIssues.length > 0) {
     return {
       status: 'parse_failed',
@@ -500,6 +506,13 @@ export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise
   }
 
   const writing = normalizeWritingContract(parsed, model, Date.now() - started)
+  if (input.spine_only && writing.approfondir.sections_fr.length === 0 && (input.fallback_sections?.length ?? 0) > 0) {
+    writing.approfondir = {
+      ...writing.approfondir,
+      sections_fr: input.fallback_sections as WritingContract['approfondir']['sections_fr'],
+    }
+    writing.trace.notes = [...(writing.trace.notes ?? []), 'approfondir_sections_from_local_spine_mode']
+  }
   const quality = runQualityGate({
     interpretation: input.dossier.interpretation,
     theatre: input.dossier.theatre,

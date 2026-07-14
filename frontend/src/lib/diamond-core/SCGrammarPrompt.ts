@@ -138,7 +138,19 @@ function scoringSummary(dossier: DiamondDossier) {
   }
 }
 
-function responseShape(): SCGrammarPrompt['required_json_shape'] {
+function responseShape(spineOnly = false): SCGrammarPrompt['required_json_shape'] {
+  if (spineOnly) {
+    return {
+      ...fullResponseShape(),
+      approfondir: {
+        analysis_fr: 'string',
+      },
+    }
+  }
+  return fullResponseShape()
+}
+
+function fullResponseShape(): SCGrammarPrompt['required_json_shape'] {
   return {
     substance_form: {
       substance_fr: ['string'],
@@ -218,7 +230,11 @@ function qualityTargets(dossier: DiamondDossier): string[] {
   ]
 }
 
-export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
+export function buildSCGrammarPrompt(
+  dossier: DiamondDossier,
+  options?: { spine_only?: boolean },
+): SCGrammarPrompt {
+  const spineOnly = options?.spine_only === true
   const hasExtractedOptions = (dossier.resources.plan.extracted_options ?? []).length >= 2
   const hasRegimeSignals = dossier.resonance.source_signals.length >= 2
   const hasPublicEvidence = dossier.resonance.qualified_evidence.some((evidence) => evidence.can_drive_probability)
@@ -276,8 +292,14 @@ export function buildSCGrammarPrompt(dossier: DiamondDossier): SCGrammarPrompt {
       calibration_questions_fr: dossier.grammar.calibration_questions_fr,
       quality_targets_fr: qualityTargets(dossier),
     }),
-    section('Output JSON Shape', responseShape()),
+    section('Output JSON Shape', responseShape(spineOnly)),
     section('Output Rules', [
+      ...(spineOnly
+        ? [
+            'SPINE MODE: do NOT write approfondir.sections_fr — the six deep sections are produced by a dedicated pass. Write approfondir.analysis_fr as a dense 2-3 sentence bridge only.',
+            'SPINE MODE: invest the full budget in lecture.text_fr, the situation_card fields, the trajectories and the diamond sentences. The proof status of the reading (etabli/probable/plausible/hypothese) must appear explicitly in lecture.text_fr with the proof that would change it.',
+          ]
+        : []),
       'situation_card.submitted_situation_fr must equal the canonical situation or its polished faithful French form.',
       'situation_card.insight_fr must contain the core reading, not a disclaimer.',
       'situation_card.insight_fr must open a diamond reading: a central contradiction carried by actors, constraints and proof, not an administrative summary.',
