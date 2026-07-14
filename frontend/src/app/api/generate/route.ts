@@ -5602,7 +5602,10 @@ export async function POST(req: NextRequest) {
         })
         let diamondWriter = await runLLMDiamondWriter({
           dossier: diamondDossier.dossier,
-          timeout_ms: Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000),
+          // Pince absolue à 25 s : au-delà, le writer seul consomme le budget
+          // de la fonction (plafond plateforme 60 s, 504 mesurés le 13/07)
+          // même si l'environnement demande plus.
+          timeout_ms: Math.min(Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000), 25000),
           temperature: 0.2,
           max_tokens: 4200,
         })
