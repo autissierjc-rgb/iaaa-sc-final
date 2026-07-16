@@ -458,6 +458,7 @@ export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
+    const promptChars = prompt.messages.reduce((sum, item) => sum + (item.content?.length ?? 0), 0)
     return {
       status: message.includes('OPENAI_API_KEY') ? 'model_unavailable' : 'request_failed',
       prompt,
@@ -466,7 +467,7 @@ export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise
       raw_text: rawText || undefined,
       model,
       duration_ms: Date.now() - started,
-      errors: [message],
+      errors: [`${message} (model=${model}, timeout=${timeoutMs}ms, prompt=${promptChars} chars)`],
     }
   }
 
@@ -487,8 +488,9 @@ export async function runLLMDiamondWriter(input: LLMDiamondWriterInput): Promise
   }
 
   parsed = coerceWritingContractShape(parsed)
+  const SPINE_OPTIONAL_SHAPE = new Set(['approfondir.sections_fr', 'substance_form', 'probability_assessments'])
   const shapeIssues = writingShapeIssues(parsed)
-    .filter((issue) => !(input.spine_only && issue === 'approfondir.sections_fr'))
+    .filter((issue) => !(input.spine_only && SPINE_OPTIONAL_SHAPE.has(issue)))
   if (shapeIssues.length > 0) {
     return {
       status: 'parse_failed',

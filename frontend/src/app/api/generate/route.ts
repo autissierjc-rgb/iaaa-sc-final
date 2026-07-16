@@ -5606,17 +5606,55 @@ export async function POST(req: NextRequest) {
         // contrat local et le canal /api/approfondir les enrichit à
         // l'ouverture du panneau, hors du budget de génération.
         const spineOnlyWriter = process.env.SC_DIAMOND_SPINE_ONLY !== '0'
-        let diamondWriter = await runLLMDiamondWriter({
+        // La qualité d'expression ne doit pas dépendre de la charge d'un
+        // modèle : deux écrivains rédigent la même colonne vertébrale EN
+        // PARALLÈLE (le temps total reste celui d'une seule fenêtre) et la
+        // meilleure copie gagne. Le texte déterministe n'est que l'ultime
+        // secours si les deux échouent dans leur fenêtre.
+        const mainPenPromise = runLLMDiamondWriter({
           dossier: diamondDossier.dossier,
-          // Pince absolue à 25 s : au-delà, le writer seul consomme le budget
-          // de la fonction (plafond plateforme 60 s, 504 mesurés le 13/07)
-          // même si l'environnement demande plus.
-          timeout_ms: Math.min(Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000), 25000),
+          // Pince absolue : au-delà, le writer seul consomme le budget de la
+          // fonction (plafond plateforme 60 s, 504 mesurés le 13/07) même si
+          // l'environnement demande plus.
+          timeout_ms: Math.min(Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 26000), spineOnlyWriter ? 26000 : 25000),
           temperature: 0.2,
-          max_tokens: spineOnlyWriter ? 2600 : 4200,
+          max_tokens: spineOnlyWriter ? 1600 : 4200,
           spine_only: spineOnlyWriter,
           fallback_sections: localWritingContract?.approfondir.sections_fr,
         })
+        const secondPenPromise = spineOnlyWriter
+          ? runLLMDiamondWriter({
+              dossier: diamondDossier.dossier,
+              // gpt-4.1-mini mesuré à ~14 s pour ~1200 tokens sur un dossier
+              // de 12k tokens : le plus régulier des stylos rapides.
+              model: process.env.OPENAI_DIAMOND_WRITER_FALLBACK_MODEL || 'gpt-4.1-mini',
+              // Mesuré : ~75 tokens/s, soit 24-28 s pour la colonne complète
+              // (démarrage compris). En dessous de 32 s on coupe des copies
+              // presque finies.
+              timeout_ms: 32000,
+              temperature: 0.2,
+              max_tokens: 1600,
+              spine_only: true,
+              fallback_sections: localWritingContract?.approfondir.sections_fr,
+            })
+          : null
+        let diamondWriter = await mainPenPromise
+        if (secondPenPromise) {
+          const secondPen = await secondPenPromise
+          const mainUsable = Boolean(diamondWriter.writing)
+          if (!mainUsable && secondPen.writing) {
+            diamondWriter = secondPen
+          } else if (!mainUsable && !secondPen.writing) {
+            diamondWriter = {
+              ...diamondWriter,
+              errors: [
+                ...diamondWriter.errors,
+                `second_pen_${secondPen.status}`,
+                ...(secondPen.errors ?? []).slice(0, 2),
+              ],
+            }
+          }
+        }
         const repairableWriterCodes = new Set([
           'PRESS_SUMMARY_INSTEAD_OF_DIAMOND',
           'RESOURCE_REGIME_SIGNALS_UNDERUSED',

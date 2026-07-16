@@ -140,12 +140,18 @@ function scoringSummary(dossier: DiamondDossier) {
 
 function responseShape(spineOnly = false): SCGrammarPrompt['required_json_shape'] {
   if (spineOnly) {
-    return {
+    // Colonne vertébrale seule (~1200 tokens ≈ 15 s d'écriture) : les
+    // sections Approfondir, substance_form et probability_assessments sont
+    // remplies par le contrat déterministe et le canal /api/approfondir.
+    const shape = {
       ...fullResponseShape(),
       approfondir: {
         analysis_fr: 'string',
       },
-    }
+    } as Record<string, unknown>
+    delete shape.substance_form
+    delete shape.probability_assessments
+    return shape as SCGrammarPrompt['required_json_shape']
   }
   return fullResponseShape()
 }
