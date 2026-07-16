@@ -5,6 +5,7 @@ import type {
   ResonanceTraceContract,
   ResourceServiceContract,
 } from '../contracts'
+import { isInternalTheatreLabel } from '../context/concreteTheatre'
 import { looksLikeProbativeEvidenceNoise, publicProbativeEvidence } from '../resources/probativeEvidenceSanitizer'
 import { buildResourceRegimeSignals } from '../resources/regimeSignals'
 
@@ -565,7 +566,9 @@ export function buildResonanceTrace(input: ResonanceTraceInput): ResonanceTraceC
     unique([
       ...input.theatre.missing_anchors,
       ...input.theatre.unknowns,
-    ]).filter((item) => structuralGapAnchor(item, sourceHosts, sourceLabels)),
+    ])
+      .filter((item) => !isInternalTheatreLabel(item))
+      .filter((item) => structuralGapAnchor(item, sourceHosts, sourceLabels)),
     '',
   )
   const structuralGap = theatreGap || defaultStructuralGap(input)

@@ -335,6 +335,15 @@ export function buildConcreteTheatre({
   }
 }
 
+// Les étiquettes internes du manuel d'analyse (« regles explicites »,
+// « preuve attendue: … », « acteur absent », « preuves vérifiables ») ne
+// sont pas de la matière de situation : elles ne se publient jamais.
+const INTERNAL_THEATRE_LABEL = /^preuve attendue\s*:|^r[eè]gles? (?:explicites?|implicites?)$|^pr[ée]c[ée]dents?$|^acteur absent$|^contrainte cach[ée]e$|^preuve manquante$|^chronologie$|^d[ée]clarations?$|^institutions?$|^dirigeants?$|^acteurs? r[ée]ellement impliqu[ée]s?$|^contraintes?$|^preuves? v[ée]rifiables?$/i
+
+export function isInternalTheatreLabel(value: string): boolean {
+  return INTERNAL_THEATRE_LABEL.test(value.trim())
+}
+
 export function theatreAnchorText(theatre?: ConcreteTheatre, max = 10): string {
   if (!theatre) return ''
   return unique([
@@ -346,5 +355,7 @@ export function theatreAnchorText(theatre?: ConcreteTheatre, max = 10): string {
     ...theatre.precedents,
     ...theatre.mechanisms,
     ...theatre.thresholds,
-  ], max).join(', ')
+  ], max)
+    .filter((item) => !INTERNAL_THEATRE_LABEL.test(item.trim()))
+    .join(', ')
 }

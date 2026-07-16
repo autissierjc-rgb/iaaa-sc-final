@@ -206,7 +206,7 @@ function genericFrame(situation: string, resources: ResourceItem[], powers: Powe
     temporalites: ['Urgences, rythmes, fenêtres d’action et retards dangereux'],
     trajectoires: ['Stabilisation, escalade ou changement de régime selon le traitement des contraintes'],
     incertitudes: [
-      'Chercher quelles intentions, informations manquantes, seuils de rupture ou effets secondaires pourraient changer la lecture.',
+      'Les intentions, les informations manquantes, les seuils de rupture et les effets secondaires qui pourraient changer la lecture restent à établir.',
       BLIND_SPOT_LENS,
     ],
     temps: ['Rythmes, délais, fenêtres d’action et risque de retard dans la décision'],
@@ -263,7 +263,7 @@ export async function analyzeWithArbreACames(
     temporalites: pick(signals, 6, 'Temporalités, urgences et fenêtres d’action'),
     trajectoires: pick(signals, 7, 'Trajectoires possibles de stabilisation, escalade ou bascule'),
     incertitudes: [
-      ...pick(signals, 5, 'Chercher quelles intentions, capacités ou seuils restent invisibles.'),
+      ...pick(signals, 5, 'Les intentions, capacités ou seuils encore invisibles restent à établir.'),
       blindSpotLensFor(intentContext),
     ],
     temps: pick(signals, 6, 'Rythmes, délais et fenêtres d’action'),

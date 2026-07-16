@@ -1700,13 +1700,17 @@ function toInquiryFr(item: string): string {
   if (/^demande de /i.test(text)) return ''
   if (/^angles morts relationnels/i.test(text)) return PERSONAL_BLIND_SPOT_FR
   if (/^angles morts/i.test(text)) return UNIVERSAL_BLIND_SPOT_FR
+  // Le champ Incertitudes est public : il porte des constats, jamais des
+  // consignes à l'infinitif (« Chercher… », « Vérifier… »).
   if (/^incertitudes sur ce qui est attendu/i.test(text)) {
-    return 'Chercher ce que chacun attendait sans le dire, ce qui a été exprimé clairement et ce qui relève d’une projection.'
+    return 'Ce que chacun attendait sans le dire, ce qui a été exprimé clairement et ce qui relève d’une projection restent à distinguer.'
   }
   if (/^incertitudes sur les intentions/i.test(text)) {
-    return 'Chercher quelles intentions, informations manquantes, seuils de rupture ou effets secondaires pourraient changer la lecture.'
+    return 'Les intentions, les informations manquantes, les seuils de rupture et les effets secondaires qui pourraient changer la lecture restent à établir.'
   }
-  if (/^incertitudes sur /i.test(text)) return text.replace(/^Incertitudes sur /i, 'Vérifier ')
+  if (/^incertitudes sur /i.test(text)) {
+    return text.replace(/^Incertitudes sur (.+?)\.?$/i, (_match, rest: string) => `${rest.charAt(0).toUpperCase()}${rest.slice(1)} : encore à vérifier.`)
+  }
   if (/^seuil exact/i.test(text)) {
     return text
       .replace(/^Seuil exact à partir duquel/i, 'Repérer le moment où')
