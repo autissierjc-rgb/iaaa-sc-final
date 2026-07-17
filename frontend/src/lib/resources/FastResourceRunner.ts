@@ -390,12 +390,31 @@ function broadFastSearchPlan(input: FastResourceRunnerInput): FastSearchPlan {
   }
 }
 
+// La langue du terrain fait partie du théâtre : quand le référent fournit
+// des termes dans la langue publique du théâtre (ex. russe), une recherche
+// dédiée part dans cette langue — les médias locaux racontent ce que les
+// agences internationales résument.
+function localLanguagePlan(input: FastResourceRunnerInput): FastSearchPlan | null {
+  const terms = (input.interpretation.local_search_terms ?? []).filter(Boolean)
+  if (terms.length === 0) return null
+  return {
+    query: terms.join(' ').slice(0, 200),
+    // Index général, pas actualités : l'index news de Tavily est
+    // anglophone même interrogé en cyrillique ; l'index général renvoie
+    // les médias du pays (mesuré : kommersant.ru, 76.ru, finance.mail.ru).
+    topic: 'general',
+    label: 'local_language',
+  }
+}
+
 function executionPlans(input: FastResourceRunnerInput): FastSearchPlan[] {
+  const localPlan = localLanguagePlan(input)
   return uniquePlans([
     fastSearchPlan(input),
+    ...(localPlan ? [localPlan] : []),
     broadFastSearchPlan(input),
     ...functionalNeedPlans(input),
-  ]).slice(0, 4)
+  ]).slice(0, localPlan ? 5 : 4)
 }
 
 export function buildFastResourceSearchPlansForDiagnostics(input: FastResourceRunnerInput): {
@@ -560,10 +579,26 @@ export function filterFastResourceResultsByPlanForDiagnostics(
     }),
   )
   // L'ancrage temporel exige des faits datés : à pertinence égale, une
-  // source datée prime sur une source sans date (tri stable).
-  const dated = merged.filter((item) => Boolean(item.date))
-  const undated = merged.filter((item) => !item.date)
-  return [...dated, ...undated].slice(0, maxSources)
+  // source datée prime sur une source sans date (tri stable). Et la
+  // pluralité des regards prime sur la répétition : un média déjà retenu ne
+  // double pas tant que d'autres médias ont des articles pertinents.
+  const ordered = [
+    ...merged.filter((item) => Boolean(item.date)),
+    ...merged.filter((item) => !item.date),
+  ]
+  const seenHosts = new Set<string>()
+  const diverse: ResourceItem[] = []
+  const duplicates: ResourceItem[] = []
+  for (const item of ordered) {
+    const itemHost = host(item.url) || item.source || ''
+    if (itemHost && seenHosts.has(itemHost)) {
+      duplicates.push(item)
+    } else {
+      if (itemHost) seenHosts.add(itemHost)
+      diverse.push(item)
+    }
+  }
+  return [...diverse, ...duplicates].slice(0, maxSources)
 }
 
 export async function runFastResourceRunner(input: FastResourceRunnerInput): Promise<FastResourceRunnerResult> {
@@ -642,13 +677,28 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     const resolvedPlans = allTransportFailed ? [primaryPlan] : plans
     const firstHitIndex = resolvedResults.findIndex((items) => items.length > 0)
     const firstHitPlan = firstHitIndex >= 0 ? resolvedPlans[firstHitIndex] : primaryPlan
-    const fast = filterFastResourceResultsByPlanForDiagnostics(
+    let fast = filterFastResourceResultsByPlanForDiagnostics(
       resolvedResults,
       resolvedPlans.map((plan) => plan.query),
       query,
       maxSources,
       understandingAnchors,
     )
+    // Le regard local a un siège garanti : si la recherche en langue du
+    // théâtre a rapporté des articles pertinents et qu'aucun n'a survécu au
+    // classement, le meilleur d'entre eux remplace la dernière place.
+    const localPlanIndex = resolvedPlans.findIndex((plan) => plan.label === 'local_language')
+    if (localPlanIndex >= 0 && fast.length > 0) {
+      const localItems = filterRelevantResources(
+        resolvedResults[localPlanIndex] ?? [],
+        resolvedPlans[localPlanIndex].query,
+        understandingAnchors,
+      )
+      const localUrls = new Set(localItems.map((item) => item.url))
+      if (localItems.length > 0 && !fast.some((item) => localUrls.has(item.url))) {
+        fast = [...fast.slice(0, Math.max(1, fast.length - 1)), localItems[0]]
+      }
+    }
     const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
     const result = fast.length > 0 || !usedLegacyFallback
       ? { resources: fast, firstHitPlan }

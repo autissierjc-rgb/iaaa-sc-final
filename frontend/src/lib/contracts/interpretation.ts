@@ -125,6 +125,9 @@ export type InterpretationContract = {
   needs_clarification: boolean
   clarification_question?: string
   entity_explanations: EntityExplanation[]
+  // Termes de recherche dans la langue publique du théâtre, fournis par le
+  // référent (ex. russe pour une question intérieure russe).
+  local_search_terms?: string[]
   treatment_plan?: TreatmentPlanContract
   confidence: number
   signals: string[]

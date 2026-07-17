@@ -128,6 +128,11 @@ export type InterpretedRequest = {
     explanation: string
     certainty?: 'known' | 'inferred' | 'unknown'
   }>
+  // Termes de recherche dans la langue publique du théâtre (ex. russe pour
+  // une question sur la Russie) : le référent les fournit, la recherche
+  // rapide les exploite en plan dédié. Vide si le théâtre parle la langue
+  // de l'utilisateur.
+  local_search_terms?: string[]
   domain: SituationDomain
   needs_clarification: boolean
   confidence: number

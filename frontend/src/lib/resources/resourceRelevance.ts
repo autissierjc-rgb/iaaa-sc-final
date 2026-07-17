@@ -58,6 +58,7 @@ export function relevanceAnchorsFromUnderstanding(understanding: {
   entity_explanations?: Array<{ label?: string; explanation?: string }>
   object_of_analysis?: string
   header_subject?: string
+  local_search_terms?: string[]
 }): string[] {
   const parts: string[] = []
   for (const entity of understanding.entity_explanations ?? []) {
@@ -75,7 +76,14 @@ export function relevanceAnchorsFromUnderstanding(understanding: {
       }
     }
   }
-  return Array.from(anchors).slice(0, 16)
+  // Les termes en langue du théâtre (cyrillique, arabe…) sont des ancres à
+  // part entière : sans eux, le filtre latin rejetterait les médias locaux.
+  for (const term of understanding.local_search_terms ?? []) {
+    for (const token of String(term).toLowerCase().split(/\s+/)) {
+      if (token.length >= 3) anchors.add(token)
+    }
+  }
+  return Array.from(anchors).slice(0, 20)
 }
 
 // Repli lexical quand aucune interprétation n'est disponible : les noms

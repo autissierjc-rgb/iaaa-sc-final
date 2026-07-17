@@ -247,6 +247,7 @@ export async function interpretSituation(
     needs_clarification: shouldClarify(interpreted, rawInput),
     clarification_question: interpreted.confirmation_hypothesis || undefined,
     entity_explanations: toEntityExplanations(interpreted.entity_explanations),
+    local_search_terms: interpreted.local_search_terms ?? [],
     treatment_plan: treatmentPlan,
     confidence: interpreted.confidence,
     signals: interpreted.signals,
