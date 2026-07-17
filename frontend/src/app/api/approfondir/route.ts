@@ -14,7 +14,17 @@ import { detectScopeContext } from '@/lib/scope/scopeContext'
 import type { ArbreACamesAnalysis, ConversationContract, SituationCard } from '@/lib/resources/resourceContract'
 
 function contractApprofondirResponse(sc: unknown): { approfondir_fr: string; approfondir_en: string; sources: unknown[] } | null {
-  const card = sc as { writing_contract?: { approfondir?: { analysis_fr?: unknown; analysis_en?: unknown; sections_fr?: unknown } }; resources?: unknown[] } | undefined
+  const card = sc as { writing_contract?: { approfondir?: { analysis_fr?: unknown; analysis_en?: unknown; sections_fr?: unknown }; trace?: { notes?: unknown[] } }; resources?: unknown[] } | undefined
+  // Depuis le découpage (mode colonne vertébrale), les sections embarquées
+  // peuvent être le remplissage local : dans ce cas ce canal doit écrire la
+  // vraie profondeur au lieu de resservir le remplissage.
+  const notes = (card?.writing_contract?.trace?.notes ?? []).map((note) => String(note))
+  if (
+    notes.includes('approfondir_sections_from_local_spine_mode') ||
+    notes.includes('full_diamond_writer_unavailable_provisional_local')
+  ) {
+    return null
+  }
   const approfondir = card?.writing_contract?.approfondir
   const sections = Array.isArray(approfondir?.sections_fr) ? approfondir.sections_fr : []
   const sectionText = sections
