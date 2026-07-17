@@ -179,7 +179,10 @@ export function buildMaieuticQuestions(
   // la matière de situation.
   const rawUncertainty = clean(input.uncertainty)
   const uncertainty =
-    /[?]|^(quelle?s?|quels?|qui|que|quoi|comment|pourquoi|où)\b|^(chercher|v[ée]rifier|rep[ée]rer|surveiller|identifier|relever|comparer|distinguer|observer|examiner)\b/i.test(rawUncertainty)
+    /[?]|^(quelle?s?|quels?|qui|que|quoi|comment|pourquoi|où)\b|^(chercher|v[ée]rifier|rep[ée]rer|surveiller|identifier|relever|comparer|distinguer|observer|examiner)\b/i.test(rawUncertainty) ||
+    // Nos propres gabarits de repli se reconnaissent à leur chute
+    // (« … restent à établir », « : encore à vérifier ») : rien à citer.
+    /restent? à (?:[ée]tablir|v[ée]rifier|distinguer)\.?$|:\s*encore à v[ée]rifier\.?$/i.test(rawUncertainty)
       ? ''
       : rawUncertainty
   // Seul un agent se cite comme acteur : un nom propre ou une entité
