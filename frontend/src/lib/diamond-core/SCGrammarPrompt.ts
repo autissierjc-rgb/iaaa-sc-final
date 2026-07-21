@@ -140,14 +140,12 @@ function scoringSummary(dossier: DiamondDossier) {
 
 function responseShape(spineOnly = false): SCGrammarPrompt['required_json_shape'] {
   if (spineOnly) {
-    // Colonne vertébrale seule (~1200 tokens ≈ 15 s d'écriture) : les
-    // sections Approfondir, substance_form et probability_assessments sont
-    // remplies par le contrat déterministe et le canal /api/approfondir.
+    // Colonne vertébrale : la plume écrit tout le texte public, y compris
+    // les six rubriques Approfondir mais COURTES (une à deux phrases situées
+    // chacune). substance_form et probability_assessments restent hors du
+    // budget synchrone. Le remplissage local n'est plus qu'un ultime secours.
     const shape = {
       ...fullResponseShape(),
-      approfondir: {
-        analysis_fr: 'string',
-      },
     } as Record<string, unknown>
     delete shape.substance_form
     delete shape.probability_assessments
@@ -302,8 +300,9 @@ export function buildSCGrammarPrompt(
     section('Output Rules', [
       ...(spineOnly
         ? [
-            'SPINE MODE: do NOT write approfondir.sections_fr — the six deep sections are produced by a dedicated pass. Write approfondir.analysis_fr as a dense 2-3 sentence bridge only.',
-            'SPINE MODE: invest the full budget in lecture.text_fr, the situation_card fields, the trajectories and the diamond sentences. The proof status of the reading (etabli/probable/plausible/hypothese) must appear explicitly in lecture.text_fr with the proof that would change it.',
+            'SPINE MODE: write ALL public text yourself, including the six approfondir.sections_fr, but keep every section to ONE tight sentence (max ~25 words). Never leave a section to a template.',
+            'SPINE MODE: each approfondir section must add a NEW concrete angle drawn from the dossier (a named actor, a dated fact, a threshold, a cost), never restate the same formula. Forbidden across sections: repeating "le passage entre tension visible", "qui porte le coût / qui garde la marge", "statut de preuve : plausible", or any source domain name.',
+            'SPINE MODE: the proof status appears once, inside a fact sentence in lecture.text_fr, with the proof that would change it — never as a standalone label in the sections.',
           ]
         : []),
       'situation_card.submitted_situation_fr must equal the canonical situation or its polished faithful French form.',

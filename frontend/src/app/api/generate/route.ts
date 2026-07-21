@@ -1,10 +1,11 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 
-// 120 s : filet anti-504 mesuré le 13/07 (generate_full à 60,6 s tué par
-// Vercel). L'objectif produit reste ≤ 35 s ; le budget se regagne par
-// l'Approfondir asynchrone (P5), pas en tuant la carte au plafond.
-export const maxDuration = 120
+// Priorité qualité (décision JC 17/07) : la carte complète diamant prime sur
+// le temps. Plafond fonction porté au maximum ; l'optimisation du budget
+// viendra après, une fois la qualité tenue. NB : la plateforme peut plafonner
+// plus bas selon le réglage Function Max Duration du projet.
+export const maxDuration = 300
 import type { Interaction, Raindrop, RaindropProperties } from 'raindrop-ai'
 import {
   getStateLabel,
@@ -5604,46 +5605,35 @@ export async function POST(req: NextRequest) {
           fast_resource_timeout_ms: 0,
           supplied_resources: diamondResourcePlan.resources,
         })
-        // P5 — mode colonne vertébrale : le writer synchrone n'écrit que la
-        // carte et la Lecture (sortie ~2× plus courte, il finit sous la pince
-        // au lieu d'être amputé) ; les six sections Approfondir viennent du
-        // contrat local et le canal /api/approfondir les enrichit à
-        // l'ouverture du panneau, hors du budget de génération.
-        const spineOnlyWriter = process.env.SC_DIAMOND_SPINE_ONLY !== '0'
-        // La qualité d'expression ne doit pas dépendre de la charge d'un
-        // modèle : deux écrivains rédigent la même colonne vertébrale EN
-        // PARALLÈLE (le temps total reste celui d'une seule fenêtre) et la
-        // meilleure copie gagne. Le texte déterministe n'est que l'ultime
-        // secours si les deux échouent dans leur fenêtre.
+        // Priorité qualité (décision JC 17/07) : le rédacteur écrit la carte
+        // COMPLÈTE en diamant, six sections Approfondir denses comprises, avec
+        // un budget généreux. Le mode colonne vertébrale reste débrayable
+        // (SC_DIAMOND_SPINE_ONLY=1) pour une future optimisation du temps.
+        const spineOnlyWriter = process.env.SC_DIAMOND_SPINE_ONLY === '1'
+        // Budget d'écriture généreux : mieux vaut une carte complète lente
+        // qu'une carte amputée retombée sur le remplissage mécanique.
+        const writerTimeoutMs = Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 90000)
+        // Deux plumes en parallèle : la meilleure copie complète gagne ; le
+        // texte déterministe n'est que l'ultime secours si les deux échouent.
         const mainPenPromise = runLLMDiamondWriter({
           dossier: diamondDossier.dossier,
-          // Pince absolue : au-delà, le writer seul consomme le budget de la
-          // fonction (plafond plateforme 60 s, 504 mesurés le 13/07) même si
-          // l'environnement demande plus.
-          timeout_ms: Math.min(Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 26000), spineOnlyWriter ? 26000 : 25000),
+          timeout_ms: writerTimeoutMs,
           temperature: 0.2,
-          max_tokens: spineOnlyWriter ? 1600 : 4200,
+          max_tokens: spineOnlyWriter ? 1800 : 5200,
           spine_only: spineOnlyWriter,
           fallback_sections: localWritingContract?.approfondir.sections_fr,
         })
-        const secondPenPromise = spineOnlyWriter
-          ? runLLMDiamondWriter({
-              dossier: diamondDossier.dossier,
-              // gpt-4.1-mini mesuré à ~14 s pour ~1200 tokens sur un dossier
-              // de 12k tokens : le plus régulier des stylos rapides.
-              model: process.env.OPENAI_DIAMOND_WRITER_FALLBACK_MODEL || 'gpt-4.1-mini',
-              // Mesuré : ~75 tokens/s, soit 24-28 s pour la colonne complète
-              // (démarrage compris). En dessous de 32 s on coupe des copies
-              // presque finies.
-              timeout_ms: 32000,
-              temperature: 0.2,
-              max_tokens: 1600,
-              spine_only: true,
-              fallback_sections: localWritingContract?.approfondir.sections_fr,
-            })
-          : null
+        const secondPenPromise = runLLMDiamondWriter({
+          dossier: diamondDossier.dossier,
+          model: process.env.OPENAI_DIAMOND_WRITER_FALLBACK_MODEL || 'gpt-4.1-mini',
+          timeout_ms: writerTimeoutMs,
+          temperature: 0.2,
+          max_tokens: spineOnlyWriter ? 1600 : 5200,
+          spine_only: spineOnlyWriter,
+          fallback_sections: localWritingContract?.approfondir.sections_fr,
+        })
         let diamondWriter = await mainPenPromise
-        if (secondPenPromise) {
+        {
           const secondPen = await secondPenPromise
           const mainUsable = Boolean(diamondWriter.writing)
           if (!mainUsable && secondPen.writing) {
@@ -5742,9 +5732,9 @@ export async function POST(req: NextRequest) {
           })
           const retry = await runLLMDiamondWriter({
             dossier: diamondDossier.dossier,
-            timeout_ms: Math.min(Number(process.env.SC_DIAMOND_ARCHITECT_TIMEOUT_MS ?? 22000), 10000),
+            timeout_ms: writerTimeoutMs,
             temperature: 0.3,
-            max_tokens: spineOnlyWriter ? 2600 : 4200,
+            max_tokens: spineOnlyWriter ? 2600 : 5200,
             spine_only: spineOnlyWriter,
             fallback_sections: localWritingContract?.approfondir.sections_fr,
             corrective_issue_codes: diamondWriter.errors,
