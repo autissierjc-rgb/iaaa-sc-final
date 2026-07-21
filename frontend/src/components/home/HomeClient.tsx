@@ -2376,7 +2376,7 @@ export default function HomeClient({ initialLang = 'FR' }: { initialLang?: HomeL
           return syncRefineMessages(normalized, [])
         })
         const fullController = new AbortController()
-        const fullTimeout = window.setTimeout(() => fullController.abort(), 65000)
+        const fullTimeout = window.setTimeout(() => fullController.abort(), 180000)
         try {
           const fullResponse = await fetch('/api/generate', {
             method: 'POST',
