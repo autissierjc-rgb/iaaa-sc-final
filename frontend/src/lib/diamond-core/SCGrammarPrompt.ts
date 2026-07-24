@@ -253,10 +253,12 @@ export function buildSCGrammarPrompt(
     'Never paste raw resources, markdown links, image references or URL avalanches into public fields.',
   ].join('\n')
 
+  const todayIso = new Date().toISOString().slice(0, 10)
   const user = [
     section('Canonical Situation', {
       language: dossier.language,
       canonical_situation: dossier.canonical_situation,
+      reference_date_today: todayIso,
       header_domain_fr: dossier.header.domain_fr,
       header_subject_fr: dossier.header.subject_fr,
       intent: dossier.interpretation.intent,
@@ -325,7 +327,7 @@ export function buildSCGrammarPrompt(
       'When the dossier attributes the pressure to a deliberate action of a named external actor (strikes, sanctions, blockade, lawsuit, campaign), the card must read the situation as the strategic dilemma of the pressured actor: name its real options (absorb, negotiate, concede, escalate), the cost of each, and which exits are closing. A situation caused by an adversary is never only an internal management problem, and at least one trajectory must name the escalation or concession path that the sources make plausible.',
       'Name the real theatre: the named persons, institutions and dated events present in the dossier (actors, regime signals, public evidence) must appear in the public text. A card about a public situation that names no person, no institution and no dated fact is a contract violation.',
       'All public text is French. Translate English role phrases and institution names into their French public forms (e.g. Premier ministre israélien, Gardiens de la révolution) and use the French spelling of proper names (Netanyahou, Téhéran). Never leave an English phrase inside a French sentence.',
-      'The date in the canonical situation is the reference point. Anchor the regime diagnosis on the MOST RECENT dated facts in the dossier (published_at); older events are background context and must never lead the reading. If a fact is months older than the question date, say so explicitly instead of presenting it as the current state.',
+      'TODAY is reference_date_today (in Canonical Situation). This is "now". Anchor the reading on today, not on the dates of the sources. Never present a fact from two weeks ago as the current state: if the freshest dated fact in the dossier is clearly older than today, say so explicitly and situate it — e.g. "au 24 juillet, les derniers signaux publics datent de mi-juillet et montrent…", not "début juillet, la situation est…". The freshest dated facts lead the reading; older events are background.',
       'The primary theatre is where the most recent facts put the named actors of the question, not the most detailed source.',
       'Give at least one dated fact from the dossier as an example, with its proof status (etabli, probable or plausible) stated in the same sentence.',
       'Never assign etabli or probable to a fact that the dossier evidence does not carry. When the dossier has no public evidence, world facts from your own knowledge are at most hypotheses to verify, and the card must say plainly that no source could be attached.',
