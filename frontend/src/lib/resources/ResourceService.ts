@@ -211,10 +211,18 @@ function buildFunctionalNeeds(input: ResourceServiceInput): FunctionalResourceNe
     input.interpretation.domain,
     input.interpretation.object_of_analysis,
   )
-  const subject = input.interpretation.object_of_analysis || input.interpretation.situation_soumise
+  // Le sujet de recherche est la question canonique entière : l'objet seul
+  // ampute le facteur décisif (« la situation intérieure en Russie » perd
+  // « pénurie d'essence ») et ramène des pages hors sujet.
+  const subject = input.interpretation.situation_soumise || input.interpretation.object_of_analysis
   const balance = input.patterns?.dumezil_balance
 
-  const query = (suffix: string) => subject ? `${subject} ${suffix}` : suffix
+  // Les suffixes anglais figés (legal framework, customers usage, pricing…)
+  // sont du vocabulaire d'entreprise : plaqués sur une question publique ou
+  // géopolitique, ils font dériver la recherche vers des documents de droit
+  // ou de méthode sans rapport. Chaque famille reçoit donc un angle formulé
+  // dans la langue de la question, et le domaine choisit la formulation.
+  const query = (suffix: string) => (subject ? `${subject} ${suffix}` : suffix).trim().slice(0, 220)
 
   const needs: FunctionalResourceNeed[] = [
     {
@@ -223,9 +231,8 @@ function buildFunctionalNeeds(input: ResourceServiceInput): FunctionalResourceNe
       question_fr: 'Quelles sources disent le droit, la regle, la certification, la parole officielle ou la reputation ?',
       channels: route.channels.filter((channel) => ['official', 'legal', 'news_agency', 'research', 'company'].includes(channel)),
       suggested_queries: [
-        query('official statement'),
-        query('legal framework'),
-        query('certification decision'),
+        query('déclaration officielle'),
+        query('décision annoncée'),
       ],
       expected_evidence_fr: [
         'texte officiel',
@@ -241,9 +248,8 @@ function buildFunctionalNeeds(input: ResourceServiceInput): FunctionalResourceNe
       question_fr: 'Quelles sources montrent qui bloque, conteste, protege, attaque ou deplace le rapport de force ?',
       channels: route.channels.filter((channel) => ['news_agency', 'local_media', 'legal', 'social_public', 'official'].includes(channel)),
       suggested_queries: [
-        query('controversy'),
-        query('legal challenge'),
-        query('opposition conflict'),
+        query('contestation'),
+        query('blocage incident'),
       ],
       expected_evidence_fr: [
         'contentieux',
@@ -259,9 +265,8 @@ function buildFunctionalNeeds(input: ResourceServiceInput): FunctionalResourceNe
       question_fr: 'Quelles sources montrent usage reel, travail, revenus, dependances, infrastructure ou charge portee ?',
       channels: route.channels.filter((channel) => ['company', 'market', 'technical', 'research', 'official', 'local_media'].includes(channel)),
       suggested_queries: [
-        query('customers usage'),
-        query('jobs pricing revenue'),
-        query('infrastructure dependency'),
+        query('conséquences concrètes'),
+        query('approvisionnement dépendance'),
       ],
       expected_evidence_fr: [
         'usage ou clients',
