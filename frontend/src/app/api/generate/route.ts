@@ -5140,7 +5140,7 @@ export async function POST(req: NextRequest) {
       : webNeeded
           ? await fetchResources(urlAugmentedAnalysisText)
           : []
-    const resources = await enrichResourcesWithSiteUnderstanding({
+    let resources = await enrichResourcesWithSiteUnderstanding({
       situation: exploratoryWithoutMaterial ? generationAnalysisText : urlAugmentedAnalysisText,
       resources: rawFetchedResources,
       intentContext: generationIntentContext,
@@ -5311,6 +5311,15 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // Autorité unique de la matière publique : dès que le contrat de
+    // ressources a qualifié le dossier, la liste de travail devient la
+    // sienne. Sans cet alignement, la liste brute (enrichie de nos fiches
+    // internes, et non triée par fraîcheur) continuait d'alimenter la carte
+    // affichée et le théâtre pendant que le contrat, lui, était propre.
+    if (canonicalResourcePlan.resources.length > 0) {
+      const acceptedUrls = new Set(canonicalResourcePlan.resources.map((resource) => resource.url))
+      resources = resources.filter((resource) => acceptedUrls.has(resource.url))
+    }
     const scMaterialUnderstanding = interpretSCMaterial({
       interpretation: generationInterpretation,
       resources: canonicalResourcePlan,

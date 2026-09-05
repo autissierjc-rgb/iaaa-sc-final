@@ -326,8 +326,52 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
         ...route.suggested_queries,
       ].slice(0, 4)
     : []
-  const publicSources = suppliedResources.filter((resource) => resource.reliability !== 'unknown')
-  const optionSources = publicSources.length > 0 ? publicSources : suppliedResources
+  // Une source publique se définit POSITIVEMENT : un contenu publié par un
+  // hôte externe. Nos propres artefacts internes (fiches de compréhension de
+  // site, synthèses de crawl) sont produits par une brique, pas par un
+  // éditeur : leur origine n'est pas un hôte. Cette règle les écarte par
+  // construction, sans liste de libellés à maintenir.
+  const isPublishedByExternalHost = (resource: ResourceContract): boolean => {
+    const origin = String(resource.source ?? '').trim()
+    return origin.length > 0 && /^[^\s]+\.[a-z]{2,}$/i.test(origin.replace(/^https?:\/\//i, '').split('/')[0])
+  }
+
+  // Fraîcheur : la condition n'est pas un signal que le référent peut
+  // oublier d'émettre, mais la décision structurelle déjà prise — si le
+  // système va chercher le web pour cette question, c'est que la matière
+  // courante lui est nécessaire. Le repère n'est pas un seuil absolu mais la
+  // source la plus fraîche du dossier : on ne mélange pas un papier d'il y a
+  // cinq ans avec les dépêches du jour. Si tout le dossier est ancien
+  // (question historique), la plus fraîche est ancienne elle aussi et rien
+  // n'est écarté.
+  const needsCurrentNews = decision.needs_web
+  const publishedTime = (resource: ResourceContract): number | null => {
+    if (!resource.published_at) return null
+    const time = new Date(resource.published_at).getTime()
+    return Number.isNaN(time) ? null : time
+  }
+  // Une seule définition de la source acceptable, appliquée à TOUS les
+  // consommateurs (affichage, théâtre, résonance, rédacteur). Auparavant le
+  // tri ne portait que sur public_sources : les intrus continuaient d'entrer
+  // par `resources`, donc de s'afficher et de nourrir le théâtre.
+  const externallyPublished = suppliedResources.filter(isPublishedByExternalHost)
+  const freshestTime = externallyPublished
+    .map(publishedTime)
+    .filter((time): time is number => time !== null)
+    .reduce((max, time) => (time > max ? time : max), 0)
+  const sameNewsCycleMs = 365 * 24 * 60 * 60 * 1000
+  const withinCurrentCycle = (resource: ResourceContract): boolean => {
+    if (!needsCurrentNews || freshestTime === 0) return true
+    const time = publishedTime(resource)
+    if (time === null) return true
+    return freshestTime - time <= sameNewsCycleMs
+  }
+  const qualifiedSources = externallyPublished.filter(withinCurrentCycle)
+  // Si le tri ne laisse rien, on garde la matière brute plutôt que de rendre
+  // une carte sans aucune source.
+  const acceptedSources = qualifiedSources.length > 0 ? qualifiedSources : suppliedResources
+  const publicSources = acceptedSources.filter((resource) => resource.reliability !== 'unknown')
+  const optionSources = publicSources.length > 0 ? publicSources : acceptedSources
   const extractedOptions = extractQualifiedOptionsFromResources(optionSources)
 
   return {
@@ -339,7 +383,7 @@ export function planResources(input: ResourceServiceInput): ResourceServiceContr
     requested_urls: urls,
     extracted_urls: extractedUrls,
     fallback_searches: fallbackSearches,
-    resources: suppliedResources,
+    resources: acceptedSources,
     public_sources: publicSources,
     extracted_options: extractedOptions,
     internal_notes: [
