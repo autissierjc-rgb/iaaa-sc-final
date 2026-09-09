@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npx tsc --noEmit)",
+      "PowerShell(npx tsc --noEmit *)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx tsc --noEmit *)",
+      "PowerShell(npm run build)",
+      "PowerShell(npm run build *)",
+      "Bash(npm run build)",
+      "Bash(npm run build *)",
+      "PowerShell(npm run lint)",
+      "PowerShell(npm run lint *)",
+      "PowerShell(npm run start)",
+      "PowerShell(npm run start *)",
+      "Bash(npm run start *)",
+      "PowerShell(npm run codex:preflight)",
+      "Bash(npm run codex:preflight)",
+      "PowerShell(git add *)",
+      "Bash(git add *)",
+      "PowerShell(git commit *)",
+      "Bash(git commit *)",
+      "PowerShell(node scripts/sc-e2e-gate.mjs *)",
+      "Bash(node scripts/sc-e2e-gate.mjs *)",
+      "PowerShell(node scripts/sc-dev.mjs *)",
+      "Bash(node scripts/sc-dev.mjs *)",
+      "PowerShell(node scripts/sc-benchmark.mjs *)",
+      "Bash(node scripts/sc-benchmark.mjs *)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' http://localhost:*)",
+      "Bash(curl -s -X POST http://localhost:*)",
+      "Bash(curl -s http://localhost:*)",
+      "PowerShell(Get-NetTCPConnection *)"
+    ]
+  }
+}

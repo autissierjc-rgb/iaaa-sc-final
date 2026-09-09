@@ -1504,6 +1504,14 @@ function contractPublicText(value: unknown, fallback = ''): string {
   return text || fallback
 }
 
+// Règle unique, inscrite dans les instructions du rédacteur : le brouillon
+// déterministe « sert seulement de garde-fou contractuel, pas de style
+// public ». Ses six rubriques Approfondir sont des gabarits qui ne disent
+// rien ; elles ne doivent atteindre la carte par AUCUN chemin.
+function isDeterministicDraftWriting(writing: WritingContract): boolean {
+  return writing.trace.service === 'WritingEngine'
+}
+
 function applyWritingContractToCard(card: SituationCard, writing: WritingContract | null, situation: string): SituationCard {
   if (!writing || writing.trace.status === 'error') return card
 
@@ -1520,14 +1528,19 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
   const keySignalFrCandidates = preferCompletedCard
     ? [card.key_signal_fr, sc.key_signal_fr]
     : [sc.key_signal_fr, card.key_signal_fr]
-  const approfondirSections = writing.approfondir.sections_fr
-    .map((section) => `${section.title}\n${section.body}`)
-    .filter(Boolean)
-    .join('\n\n')
-  const approfondirFr = [
-    writing.approfondir.analysis_fr,
-    approfondirSections,
-  ].filter(Boolean).join('\n\n')
+  const isDeterministicDraft = isDeterministicDraftWriting(writing)
+  const approfondirSections = isDeterministicDraft
+    ? ''
+    : writing.approfondir.sections_fr
+        .map((section) => `${section.title}\n${section.body}`)
+        .filter(Boolean)
+        .join('\n\n')
+  const approfondirFr = isDeterministicDraft
+    ? ''
+    : [
+        writing.approfondir.analysis_fr,
+        approfondirSections,
+      ].filter(Boolean).join('\n\n')
 
   if (forceWritingContract) {
     return {
@@ -1576,6 +1589,9 @@ function applyWritingContractToCard(card: SituationCard, writing: WritingContrac
 
 function exposeWritingApprofondir(card: SituationCard, writing: WritingContract | null): SituationCard {
   if (!writing || writing.trace.status === 'error') return card
+  // Même règle que dans applyWritingContractToCard : le brouillon
+  // déterministe ne s'expose jamais comme Approfondir public.
+  if (isDeterministicDraftWriting(writing)) return card
 
   const sectionsFr = writing.approfondir.sections_fr
     .map((section) => ({
@@ -5926,14 +5942,24 @@ export async function POST(req: NextRequest) {
         resourcesCount: diamondResourcePlan.resources.length,
         modelPath: 'local',
       })
+      // Une erreur de qualité ne se répare pas en servant un texte qui ne dit
+      // rien. Quand la plume a produit une carte, elle reste l'auteur public
+      // (marquée provisoire) : la remplacer par le brouillon déterministe,
+      // c'était troquer une prose imparfaite contre des gabarits vides
+      // (« la lecture utile consiste à distinguer trois choses… »). Le
+      // brouillon ne sert que s'il n'y a aucune prose du tout ; le contrôle
+      // diamant final reste juge et peut toujours bloquer.
+      const publicAuthorWriting = diamondArchitectWriter?.accepted && writingContract
+        ? writingContract
+        : localWritingContract
       const fallbackWriting = mode === 'generate_full'
         ? markFullDiamondFallbackAsProvisional(
-            localWritingContract,
+            publicAuthorWriting,
             diamondArchitectWriter?.accepted
-              ? 'diamond_architect_writer_rejected_by_quality'
+              ? 'diamond_architect_writer_kept_despite_quality_error'
               : 'quality_rejected_public_fallback',
           )
-        : localWritingContract
+        : publicAuthorWriting
       const fallbackQuality = canonicalScoringForWriting && fallbackWriting
         ? runQualityGate({
             interpretation: generationInterpretation,
@@ -5984,7 +6010,7 @@ export async function POST(req: NextRequest) {
             notes: [
               ...(fallbackWriting.trace.notes ?? []),
               diamondArchitectWriter?.accepted
-                ? 'diamond_architect_writer_rejected_by_quality_provisional_local'
+                ? 'diamond_architect_writer_kept_despite_quality_error_provisional'
                 : 'quality_rejected_public_fallback_provisional_local',
               ...(fallbackHasError ? ['fallback_quality_error_public_v2_kept'] : []),
             ],
