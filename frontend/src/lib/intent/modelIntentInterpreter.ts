@@ -54,6 +54,7 @@ Return ONLY valid JSON with this shape:
   "missing_evidence_policy": "what to do if proof is missing",
   "entity_explanations": [{"label":"proper noun or acronym from the user question","explanation":"short contextual explanation in French, or 'à expliciter' if uncertain","certainty":"known | inferred | unknown"}],
   "local_search_terms": ["2-4 news search terms written in the primary public language of the situation's theatre (e.g. Russian for a question about Russia's interior); empty array when that language is the user's language"],
+  "news_search_terms": ["1-2 short keyword queries in English naming the core actors, places and object of a public situation, for the international news index; empty array when the question is not about a public situation"],
   "domain": "geopolitics | war | management | personal | professional | governance | startup_vc | economy | humanitarian | general",
   "needs_clarification": false,
   "confidence": 0.0,
@@ -83,7 +84,8 @@ Rules:
 - The domain follows the questioned object, not the vector: the internal political or social situation of a state, the stability of a government or regime under pressure, is "geopolitics" even when the pressure is economic, logistical or sanitary.
 - A question about the current or probable evolution of a public, national or international situation always requires fresh public sources: never set source_status to not_needed for it, and add a signal "source_need:current_news".
 - A deliberately generic or hypothetical actor ("un pays allié", "une entreprise", "un mouvement citoyen") is NOT an ambiguity: the user asks for the structural dynamics, not a named case. Do not fill confirmation_hypothesis to ask which actor is meant, do not mark such generic actors as unknown entities, and keep needs_clarification false.
-- local_search_terms MUST be written in the theatre's own public language and script — Cyrillic for Russia (e.g. "дефицит бензина Россия"), Arabic script for Egypt, Mandarin for China — NEVER translated into the user's language. Local media report what international agencies only summarize. Leave the array empty when the theatre's public language is the user's language. Never invent a year.`
+- local_search_terms MUST be written in the theatre's own public language and script — Cyrillic for Russia (e.g. "дефицит бензина Россия"), Arabic script for Egypt, Mandarin for China — NEVER translated into the user's language. Local media report what international agencies only summarize. Leave the array empty when the theatre's public language is the user's language. Never invent a year.
+- news_search_terms serve to find what happened in the last days: the international news index is written in English, so write them in English, as bare names of actors, places and object (e.g. "Russia fuel shortage", "Russia refineries"). Name the concrete theatre where things happen (actors, places, flows, infrastructures), never abstract words such as strategy, relations, policy or situation: those return commentary, not events. Never state an event, a date or an outcome in them — the search, not you, knows the latest facts.`
 
 function isGenericImportedInterpretation(value: string): boolean {
   return /trajectoire de la crise|crise [ée]voqu[ée]e|objet de la question|objet visible garde un r[oô]le|rapports de confiance, de preuve et de pouvoir|un [ée]v[ée]nement local peut d[ée]placer des seuils militaires/i.test(value)
@@ -314,6 +316,9 @@ export async function interpretRequestWithModel(input: string): Promise<Interpre
       entity_explanations: entityExplanations,
       local_search_terms: Array.isArray(parsed.local_search_terms)
         ? parsed.local_search_terms.map((item) => String(item ?? '').trim()).filter(Boolean).slice(0, 4)
+        : [],
+      news_search_terms: Array.isArray(parsed.news_search_terms)
+        ? parsed.news_search_terms.map((item) => String(item ?? '').trim()).filter(Boolean).slice(0, 2)
         : [],
       domain,
       needs_clarification: asBoolean(parsed.needs_clarification, fallback.needs_clarification),

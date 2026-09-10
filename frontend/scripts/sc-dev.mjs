@@ -96,7 +96,7 @@ const PUBLIC_FIELDS = [
   'movements_fr', 'trajectories', 'cap',
 ]
 
-async function probe(question, mode = 'generate_full') {
+async function probe(question, mode = 'generate_full', name = 'sc-dev-probe') {
   const started = Date.now()
   const response = await fetch(`${BASE}/api/generate`, {
     method: 'POST',
@@ -125,18 +125,64 @@ async function probe(question, mode = 'generate_full') {
   console.log(`gabarit dans le texte public : ${leaks.length === 0 ? 'aucun' : leaks.join(', ')}`)
   console.log(`approfondir_fr : ${String(sc.approfondir_fr ?? '').length} caractères`)
 
-  const out = path.join(ROOT, 'benchmark-results', 'sc-dev-probe.json')
+  const out = path.join(ROOT, 'benchmark-results', `${name}.json`)
   fs.mkdirSync(path.dirname(out), { recursive: true })
   fs.writeFileSync(out, JSON.stringify(payload, null, 1))
   console.log(`carte complète écrite dans ${path.relative(ROOT, out)}`)
 }
 
+// Interroge directement l'index de recherche, pour mesurer ce qu'il rend
+// avant tout traitement du pipeline.
+async function search(query, topic = 'news', timeRange = '') {
+  const response = await fetch('https://api.tavily.com/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: loadEnvLocal().TAVILY_API_KEY,
+      query,
+      max_results: 8,
+      search_depth: 'basic',
+      topic,
+      ...(timeRange ? { time_range: timeRange } : {}),
+    }),
+  })
+  const data = await response.json()
+  if (!response.ok) return console.log(response.status, JSON.stringify(data).slice(0, 300))
+  for (const item of data.results ?? []) {
+    const when = item.published_date ? String(item.published_date).slice(0, 16) : 'sans date'
+    console.log(`   ${when} | ${new URL(item.url).hostname} | ${String(item.title).slice(0, 70)}`)
+  }
+}
+
+// Lit une carte sondée : termes de recherche du référent, verdict de la
+// plume, et texte des champs publics.
+function inspect(name = 'sc-dev-probe', fields = '') {
+  const payload = JSON.parse(fs.readFileSync(path.join(ROOT, 'benchmark-results', `${name}.json`), 'utf8'))
+  const raw = JSON.stringify(payload)
+  for (const key of ['news_search_terms', 'local_search_terms']) {
+    const match = raw.match(new RegExp(`"${key}":(\\[[^\\]]*\\])`))
+    console.log(`${key}: ${match ? match[1] : 'absent'}`)
+  }
+  const sc = payload.sc ?? {}
+  console.log(`plume: ${JSON.stringify(sc.diamond_architect_writer ?? null)}`)
+  const wanted = fields ? fields.split(',') : ['insight_fr', 'main_vulnerability_fr', 'lecture_systeme_fr']
+  for (const field of wanted) {
+    const value = sc[field]
+    console.log(`\n== ${field}`)
+    console.log(typeof value === 'string' ? value : JSON.stringify(value, null, 1))
+  }
+}
+
 const [command, ...args] = process.argv.slice(2)
-if (command === 'restart') {
+if (command === 'inspect') {
+  inspect(args[0], args[1])
+} else if (command === 'search') {
+  await search(args[0], args[1], args[2])
+} else if (command === 'restart') {
   await restart({ build: !args.includes('--no-build') })
 } else if (command === 'probe') {
-  await probe(args[0] ?? 'Comment la situation évolue-t-elle ?', args[1])
+  await probe(args[0] ?? 'Comment la situation évolue-t-elle ?', args[1], args[2])
 } else {
-  console.log('usage: node scripts/sc-dev.mjs restart [--no-build] | probe "question" [mode]')
+  console.log('usage: node scripts/sc-dev.mjs restart [--no-build] | probe "question" [mode] [nom-fichier]')
   process.exit(1)
 }

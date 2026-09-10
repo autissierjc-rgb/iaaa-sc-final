@@ -133,6 +133,9 @@ export type InterpretedRequest = {
   // rapide les exploite en plan dédié. Vide si le théâtre parle la langue
   // de l'utilisateur.
   local_search_terms?: string[]
+  // Termes en anglais pour l'index international d'actualités : ils servent
+  // à trouver ce qui s'est passé ces derniers jours, que le référent ignore.
+  news_search_terms?: string[]
   domain: SituationDomain
   needs_clarification: boolean
   confidence: number

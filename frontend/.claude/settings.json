@@ -29,7 +29,13 @@
       "Bash(curl -s -o /dev/null -w '%{http_code}' http://localhost:*)",
       "Bash(curl -s -X POST http://localhost:*)",
       "Bash(curl -s http://localhost:*)",
-      "PowerShell(Get-NetTCPConnection *)"
+      "PowerShell(Get-NetTCPConnection *)",
+      "PowerShell(git status *)",
+      "PowerShell(git status)",
+      "PowerShell(git log *)",
+      "PowerShell(git diff *)",
+      "PowerShell(git diff)",
+      "PowerShell(git show *)"
     ]
   }
 }

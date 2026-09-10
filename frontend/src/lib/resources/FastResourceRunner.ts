@@ -36,6 +36,7 @@ type FastSearchPlan = {
   query: string
   include_domains?: string[]
   topic?: 'general' | 'news'
+  time_range?: 'day' | 'week' | 'month' | 'year'
   label: string
 }
 
@@ -407,14 +408,31 @@ function localLanguagePlan(input: FastResourceRunnerInput): FastSearchPlan | nul
   }
 }
 
+// Le présent a un siège garanti : une question sur l'évolution d'une
+// situation publique se juge sur ce qui vient de se passer. Le référent ne
+// connaît pas ces faits ; il nomme seulement les acteurs, et l'index
+// d'actualités borné à la semaine rapporte les événements du jour.
+function presentPlans(input: FastResourceRunnerInput): FastSearchPlan[] {
+  return (input.interpretation.news_search_terms ?? [])
+    .filter(Boolean)
+    .map((terms, index) => ({
+      query: compactQuery(terms, 120),
+      topic: 'news' as const,
+      time_range: 'week' as const,
+      label: `present:${index + 1}`,
+    }))
+}
+
 function executionPlans(input: FastResourceRunnerInput): FastSearchPlan[] {
   const localPlan = localLanguagePlan(input)
+  const present = presentPlans(input)
   return uniquePlans([
+    ...present,
     fastSearchPlan(input),
     ...(localPlan ? [localPlan] : []),
     broadFastSearchPlan(input),
     ...functionalNeedPlans(input),
-  ]).slice(0, localPlan ? 5 : 4)
+  ]).slice(0, present.length + (localPlan ? 5 : 4))
 }
 
 export function buildFastResourceSearchPlansForDiagnostics(input: FastResourceRunnerInput): {
@@ -460,6 +478,7 @@ async function fetchTavilyFastPlan(
         search_depth: 'basic',
         topic: plan.topic,
         include_domains: plan.include_domains,
+        ...(plan.time_range ? { time_range: plan.time_range } : {}),
       }),
     },
     timeoutMs,
@@ -579,9 +598,11 @@ export function filterFastResourceResultsByPlanForDiagnostics(
     }),
   )
   // L'ancrage temporel exige des faits datés : à pertinence égale, une
-  // source datée prime sur une source sans date (tri stable). Et la
-  // pluralité des regards prime sur la répétition : un média déjà retenu ne
-  // double pas tant que d'autres médias ont des articles pertinents.
+  // source datée prime sur une source sans date (tri stable : l'ordre des
+  // plans, présent en tête, et le rang de pertinence de l'index sont
+  // conservés). Et la pluralité des regards prime sur la répétition : un
+  // média déjà retenu ne double pas tant que d'autres médias ont des
+  // articles pertinents.
   const ordered = [
     ...merged.filter((item) => Boolean(item.date)),
     ...merged.filter((item) => !item.date),
@@ -677,27 +698,27 @@ export async function runFastResourceRunner(input: FastResourceRunnerInput): Pro
     const resolvedPlans = allTransportFailed ? [primaryPlan] : plans
     const firstHitIndex = resolvedResults.findIndex((items) => items.length > 0)
     const firstHitPlan = firstHitIndex >= 0 ? resolvedPlans[firstHitIndex] : primaryPlan
+    // Le regard local a un siège, un seul : le lecteur lit le français, la
+    // presse du théâtre complète les agences sans les remplacer. Ses
+    // résultats ne concourent donc pas au classement commun ; le meilleur
+    // d'entre eux occupe la dernière place.
+    const localPlanIndex = resolvedPlans.findIndex((plan) => plan.label === 'local_language')
+    const sharedIndexes = resolvedPlans.map((_, index) => index).filter((index) => index !== localPlanIndex)
     let fast = filterFastResourceResultsByPlanForDiagnostics(
-      resolvedResults,
-      resolvedPlans.map((plan) => plan.query),
+      sharedIndexes.map((index) => resolvedResults[index]),
+      sharedIndexes.map((index) => resolvedPlans[index].query),
       query,
       maxSources,
       understandingAnchors,
     )
-    // Le regard local a un siège garanti : si la recherche en langue du
-    // théâtre a rapporté des articles pertinents et qu'aucun n'a survécu au
-    // classement, le meilleur d'entre eux remplace la dernière place.
-    const localPlanIndex = resolvedPlans.findIndex((plan) => plan.label === 'local_language')
-    if (localPlanIndex >= 0 && fast.length > 0) {
-      const localItems = filterRelevantResources(
+    if (localPlanIndex >= 0) {
+      const sharedUrls = new Set(fast.map((item) => item.url))
+      const localItem = filterRelevantResources(
         resolvedResults[localPlanIndex] ?? [],
         resolvedPlans[localPlanIndex].query,
         understandingAnchors,
-      )
-      const localUrls = new Set(localItems.map((item) => item.url))
-      if (localItems.length > 0 && !fast.some((item) => localUrls.has(item.url))) {
-        fast = [...fast.slice(0, Math.max(1, fast.length - 1)), localItems[0]]
-      }
+      ).find((item) => !sharedUrls.has(item.url))
+      if (localItem) fast = [...fast.slice(0, maxSources - 1), localItem]
     }
     const usedLegacyFallback = fast.length === 0 && timeoutMs > 1500
     const result = fast.length > 0 || !usedLegacyFallback

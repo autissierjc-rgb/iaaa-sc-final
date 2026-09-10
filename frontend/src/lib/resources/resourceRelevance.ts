@@ -59,8 +59,9 @@ export function relevanceAnchorsFromUnderstanding(understanding: {
   object_of_analysis?: string
   header_subject?: string
   local_search_terms?: string[]
+  news_search_terms?: string[]
 }): string[] {
-  const parts: string[] = []
+  const parts: string[] = [...(understanding.news_search_terms ?? [])]
   for (const entity of understanding.entity_explanations ?? []) {
     if (entity.label) parts.push(entity.label)
     if (entity.explanation) parts.push(entity.explanation)

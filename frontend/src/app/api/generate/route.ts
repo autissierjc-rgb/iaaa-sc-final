@@ -5615,7 +5615,14 @@ export async function POST(req: NextRequest) {
       !locksDiamondArchitectWriter &&
       process.env.SC_DISABLE_DIAMOND_ARCHITECT_WRITER !== '1'
     let diamondArchitectWriter:
-      | { status: string; accepted: boolean; model?: string; duration_ms?: number; errors?: string[] }
+      | {
+          status: string
+          accepted: boolean
+          model?: string
+          duration_ms?: number
+          errors?: string[]
+          rival_pen?: { model: string; status: string; errors: string[] }
+        }
       | null = null
     if (shouldTryDiamondArchitectWriter) {
       try {
@@ -5657,21 +5664,27 @@ export async function POST(req: NextRequest) {
           spine_only: spineOnlyWriter,
           fallback_sections: localWritingContract?.approfondir.sections_fr,
         })
-        let diamondWriter = await mainPenPromise
-        {
-          const secondPen = await secondPenPromise
-          const mainUsable = Boolean(diamondWriter.writing)
-          if (!mainUsable && secondPen.writing) {
-            diamondWriter = secondPen
-          } else if (!mainUsable && !secondPen.writing) {
-            diamondWriter = {
-              ...diamondWriter,
-              errors: [
-                ...diamondWriter.errors,
-                `second_pen_${secondPen.status}`,
-                ...(secondPen.errors ?? []).slice(0, 2),
-              ],
-            }
+        // La meilleure copie gagne : une copie acceptée par la qualité prime,
+        // puis celle qui porte le moins d'erreurs ; à égalité, la plume
+        // principale. Une plume sans copie ne concourt pas.
+        const penRank = (pen: Awaited<typeof mainPenPromise>): number => {
+          if (!pen.writing) return Number.POSITIVE_INFINITY
+          if (pen.status === 'ok') return 0
+          return 1 + (pen.quality?.issues.filter((issue) => issue.level === 'error').length ?? 1)
+        }
+        const mainPen = await mainPenPromise
+        const secondPen = await secondPenPromise
+        const secondPenWins = penRank(secondPen) < penRank(mainPen)
+        let diamondWriter = secondPenWins ? secondPen : mainPen
+        const rivalPen = secondPenWins ? mainPen : secondPen
+        if (!diamondWriter.writing) {
+          diamondWriter = {
+            ...diamondWriter,
+            errors: [
+              ...diamondWriter.errors,
+              `second_pen_${secondPen.status}`,
+              ...(secondPen.errors ?? []).slice(0, 2),
+            ],
           }
         }
         const repairableWriterCodes = new Set([
@@ -5738,7 +5751,10 @@ export async function POST(req: NextRequest) {
             }
           }
         }
-        if (diamondWriter.status === 'quality_failed' && diamondWriter.errors.length > 0 && diamondWriter.duration_ms < 8000) {
+        // Priorité qualité : une copie refusée est réécrite avec les défauts
+        // relevés, par la plume qui l'a écrite, quel que soit le temps déjà
+        // passé.
+        if (diamondWriter.status === 'quality_failed' && diamondWriter.errors.length > 0) {
           recordGenerationTrace({
             status: 'partial',
             gate: 'GENERATE',
@@ -5757,6 +5773,7 @@ export async function POST(req: NextRequest) {
           })
           const retry = await runLLMDiamondWriter({
             dossier: diamondDossier.dossier,
+            model: diamondWriter.model,
             timeout_ms: writerTimeoutMs,
             temperature: 0.3,
             max_tokens: spineOnlyWriter ? 2600 : 5200,
@@ -5764,7 +5781,7 @@ export async function POST(req: NextRequest) {
             fallback_sections: localWritingContract?.approfondir.sections_fr,
             corrective_issue_codes: diamondWriter.errors,
           })
-          if (retry.status === 'ok' || (retry.writing && !diamondWriter.writing)) {
+          if (penRank(retry) < penRank(diamondWriter)) {
             diamondWriter = retry
           }
         }
@@ -5776,6 +5793,7 @@ export async function POST(req: NextRequest) {
           model: diamondWriter.model,
           duration_ms: diamondWriter.duration_ms,
           errors: diamondWriter.errors,
+          rival_pen: { model: rivalPen.model, status: rivalPen.status, errors: rivalPen.errors.slice(0, 3) },
         }
         recordGenerationTrace({
           status: diamondWriter.status === 'ok' ? 'ok' : 'partial',
@@ -5807,6 +5825,15 @@ export async function POST(req: NextRequest) {
             },
           }
         } else if (resourceSignalsUnderused || !diamondWriterAcceptedByQuality) {
+          // Une copie imparfaite reste l'auteur public, marquée provisoire :
+          // le brouillon déterministe est un garde-fou contractuel, jamais un
+          // texte public. Le contrôle diamant final reste juge.
+          if (diamondWriter.writing) {
+            writingContract = markFullDiamondFallbackAsProvisional(
+              diamondWriter.writing,
+              `diamond_architect_writer_status=${diamondWriter.status}`,
+            )
+          }
           recordGenerationTrace({
             status: 'partial',
             gate: 'GENERATE',
@@ -5949,13 +5976,14 @@ export async function POST(req: NextRequest) {
       // (« la lecture utile consiste à distinguer trois choses… »). Le
       // brouillon ne sert que s'il n'y a aucune prose du tout ; le contrôle
       // diamant final reste juge et peut toujours bloquer.
-      const publicAuthorWriting = diamondArchitectWriter?.accepted && writingContract
+      const publicAuthorWriting = writingContract && !isDeterministicDraftWriting(writingContract)
         ? writingContract
         : localWritingContract
+      const penIsPublicAuthor = Boolean(publicAuthorWriting) && publicAuthorWriting !== localWritingContract
       const fallbackWriting = mode === 'generate_full'
         ? markFullDiamondFallbackAsProvisional(
             publicAuthorWriting,
-            diamondArchitectWriter?.accepted
+            penIsPublicAuthor
               ? 'diamond_architect_writer_kept_despite_quality_error'
               : 'quality_rejected_public_fallback',
           )
@@ -6009,7 +6037,7 @@ export async function POST(req: NextRequest) {
               : fallbackWriting.trace.status,
             notes: [
               ...(fallbackWriting.trace.notes ?? []),
-              diamondArchitectWriter?.accepted
+              penIsPublicAuthor
                 ? 'diamond_architect_writer_kept_despite_quality_error_provisional'
                 : 'quality_rejected_public_fallback_provisional_local',
               ...(fallbackHasError ? ['fallback_quality_error_public_v2_kept'] : []),

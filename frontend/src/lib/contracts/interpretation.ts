@@ -128,6 +128,8 @@ export type InterpretationContract = {
   // Termes de recherche dans la langue publique du théâtre, fournis par le
   // référent (ex. russe pour une question intérieure russe).
   local_search_terms?: string[]
+  // Termes en anglais pour l'index international d'actualités (le présent).
+  news_search_terms?: string[]
   treatment_plan?: TreatmentPlanContract
   confidence: number
   signals: string[]
