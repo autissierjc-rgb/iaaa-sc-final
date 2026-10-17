@@ -80,7 +80,7 @@ async function callClaude(system: string, user: string): Promise<any> {
   const apiKey = process.env.ANTHROPIC_API_KEY || ''
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
 
-  async function rawCall(sys: string, usr: string, maxTokens = 2000) {
+  async function rawCall(sys: string, usr: string, maxTokens = 3200) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -91,6 +91,7 @@ async function callClaude(system: string, user: string): Promise<any> {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: maxTokens,
+        temperature: 0,
         system: sys,
         messages: [{ role: 'user', content: usr }],
       }),
@@ -113,7 +114,7 @@ async function callClaude(system: string, user: string): Promise<any> {
     const repairedText = await rawCall(
       'Repair the following malformed or truncated JSON into valid JSON. Preserve intended content. Return JSON only.',
       clean,
-      2800
+      3200
     )
     const repaired = repairedText.replace(/^\x60\x60\x60(?:json)?\s*/i, '').replace(/\s*\x60\x60\x60$/i, '')
     return JSON.parse(repaired)
