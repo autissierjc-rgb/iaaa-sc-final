@@ -108,7 +108,7 @@ async function callClaude(system: string, user: string): Promise<any> {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 1200,
+      max_tokens: 1800,
       system,
       messages: [{ role: 'user', content: user }],
     }),
@@ -125,7 +125,31 @@ async function callClaude(system: string, user: string): Promise<any> {
     : ''
 
   const clean = text.replace(/^\x60\x60\x60(?:json)?\s*/i, '').replace(/\s*\x60\x60\x60$/i, '')
-  return JSON.parse(clean)
+  try {
+    return JSON.parse(clean)
+  } catch {
+    const repair = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1200,
+        system: 'Repair the following malformed or truncated JSON into valid JSON. Preserve the intended content, do not add commentary, and return JSON only.',
+        messages: [{ role: 'user', content: clean }],
+      }),
+    })
+    if (!repair.ok) throw new Error('JSON repair failed: ' + repair.status)
+    const repairData = await repair.json()
+    const repairText = Array.isArray(repairData?.content)
+      ? repairData.content.map((x: any) => x?.type === 'text' ? x.text : '').join('').trim()
+      : ''
+    const repaired = repairText.replace(/^\x60\x60\x60(?:json)?\s*/i, '').replace(/\s*\x60\x60\x60$/i, '')
+    return JSON.parse(repaired)
+  }
 }
 
 function permutation(index: number): number[] {
