@@ -126,6 +126,23 @@ async function callClaude(system:string,user:string,maxTokens=900):Promise<any>{
  }
 }
 function cap(s:string,n:number){return String(s||'').trim().split(/\s+/).filter(Boolean).slice(0,n).join(' ')}
+function completeEncoding(x:any){
+ return x && typeof x['40']==='string' && x['40'].trim().length>0 &&
+        typeof x['20']==='string' && x['20'].trim().length>0 &&
+        typeof x['10']==='string' && x['10'].trim().length>0
+}
+async function encodeStrict(arm:Arm,situation:string){
+ let x=await callClaude(ep(arm),situation,900)
+ if(!completeEncoding(x)){
+   x=await callClaude(
+     ep(arm)+' IMPORTANT: all three keys 40, 20 and 10 MUST contain non-empty strings. Do not omit any key even if uncertain.',
+     situation,
+     1100
+   )
+ }
+ if(!completeEncoding(x)) throw new Error('encoder incomplete for '+arm)
+ return x
+}
 function ep(arm:Arm){
  const b='You are encoder AI #1. Describe ONLY facts and causal/structural relationships needed by another AI to decide later. Do NOT recommend an intervention, do NOT name or paraphrase any option, and do NOT use ACTION labels. Produce independent messages capped at 40, 20 and 10 words. JSON only: {"40":"...","20":"...","10":"..."}. '
  if(arm==='free')return b+'Compress freely.'
@@ -147,7 +164,7 @@ export async function GET(req:NextRequest){
   const idx=Math.max(0,Math.min(CASES.length-1,Math.trunc(Number(req.nextUrl.searchParams.get('case')||'0'))))
   const c=CASES[idx], arms:Arm[]=['free','generic','arbre'], mapped=optionMap(idx,c.options)
   const expected=Object.entries(mapped).find(([,o])=>o.id===c.correctId)?.[0]||''
-  const encRaw=await Promise.all(arms.map(a=>callClaude(ep(a),c.situation)))
+  const encRaw=await Promise.all(arms.map(a=>encodeStrict(a,c.situation)))
   const enc:Record<string,Record<Budget,string>>={}
   arms.forEach((a,i)=>enc[a]={'40':cap(encRaw[i]['40'],40),'20':cap(encRaw[i]['20'],20),'10':cap(encRaw[i]['10'],10)})
   const jobs:{arm:Arm,b:Budget,p:Promise<any>}[]=[]
