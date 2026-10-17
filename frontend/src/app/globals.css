@@ -4,6 +4,10 @@
 
 /* ── CSS Variables ────────────────────────────────────────────────────────── */
 :root {
+  --font-cormorant: Georgia, "Times New Roman", serif;
+  --font-dm-sans: Arial, Helvetica, sans-serif;
+  --font-dm-mono: "Courier New", monospace;
+  --font-cinzel: Georgia, "Times New Roman", serif;
   /* Surfaces */
  --bg-base:     #F5F3EE;
 --bg-surface:  #FAFAF7;
