@@ -1,34 +1,5 @@
 import type { Metadata } from 'next'
-import { Cormorant_Garamond, DM_Sans, DM_Mono, Cinzel } from 'next/font/google'
 import './globals.css'
-
-const cormorant = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  variable: '--font-cormorant',
-  display: 'swap',
-})
-
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['300', '400', '500'],
-  variable: '--font-dm-sans',
-  display: 'swap',
-})
-
-const dmMono = DM_Mono({
-  subsets: ['latin'],
-  weight: ['300', '400', '500'],
-  variable: '--font-dm-mono',
-  display: 'swap',
-})
-
-const cinzel = Cinzel({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-cinzel',
-  display: 'swap',
-})
 
 import type { Viewport } from 'next'
 
@@ -73,10 +44,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html
-      lang="fr"
-      className={`${cormorant.variable} ${dmSans.variable} ${dmMono.variable} ${cinzel.variable}`}
-    >
+    <html lang="fr">
       <body className="antialiased" style={{ background: '#F5F3EE', color: '#1a2a3a' }}>
         {children}
       </body>
