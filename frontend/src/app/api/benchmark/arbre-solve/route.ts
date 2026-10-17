@@ -113,7 +113,7 @@ async function callClaude(system: string, user: string): Promise<any> {
     const repairedText = await rawCall(
       'Repair the following malformed or truncated JSON into valid JSON. Preserve intended content. Return JSON only.',
       clean,
-      1400
+      2800
     )
     const repaired = repairedText.replace(/^\x60\x60\x60(?:json)?\s*/i, '').replace(/\s*\x60\x60\x60$/i, '')
     return JSON.parse(repaired)
