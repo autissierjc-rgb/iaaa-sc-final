@@ -91,7 +91,6 @@ async function callClaude(system: string, user: string): Promise<any> {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: maxTokens,
-        temperature: 0,
         system: sys,
         messages: [{ role: 'user', content: usr }],
       }),
