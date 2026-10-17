@@ -77,7 +77,7 @@ const ARBRE_PROMPT =
   "Do not force novelty. If the best solution is simple, keep it simple. The value of the grammar is a better transformation, not philosophical language.\n" + COMMON
 
 async function callClaude(system: string, user: string): Promise<any> {
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  const apiKey = process.env.ANTHROPIC_API_KEY || ''
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
 
   async function rawCall(sys: string, usr: string, maxTokens = 2000) {
