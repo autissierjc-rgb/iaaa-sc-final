@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 
-type Arm='free'|'generic'|'arbre'
+type Arm='free'|'generic'|'arbre'|'arbre9'
 type Budget='40'|'20'|'10'
 type Opt={id:string,text:string}
 type HardCase={id:string,domain:string,situation:string,options:Opt[],correctId:string,discriminator:string}
@@ -112,6 +112,7 @@ const CASES:HardCase[]=[
 ]
 
 const ARBRE='0 suspend inherited framing; 1 operative unit; 2 consequential polarity; 3 forces/dynamics; 4 space/topology/direction; 5 structure produced by 3 through 4; 6 only if justified, a genuinely new representation; 7 organizing axis; 8 conditional full potential; 9 observer/metric/model effects. Never force 6-8.'
+const ARBRE9='0 suspend inherited framing; 1 operative unit; 2 consequential polarity; 3 forces/dynamics; 4 space/topology/direction; 5 structure produced by 3 through 4. BEFORE accepting any proposed 6, invoke 9 as an adversarial falsifier: actively search the supplied facts for observations that contradict, dissolve, or supersede the proposed representation; if such evidence exists, preserve it and revise or reject 6. 6 only if it survives that falsification, a genuinely new representation. 7 organizing axis. BEFORE accepting any 8, invoke 9 again: search for evidence that blocks, reverses, or limits the projected potential; 8 only after that challenge and only conditionally. 9 also checks observer/metric/model effects. Never preserve a compelling structure when the supplied evidence already falsifies it. Never force 6-8.'
 
 async function callClaude(system:string,user:string,maxTokens=900):Promise<any>{
  const key=process.env.ANTHROPIC_API_KEY||''; if(!key) throw new Error('ANTHROPIC_API_KEY missing')
@@ -147,6 +148,7 @@ function ep(arm:Arm){
  const b='You are encoder AI #1. Describe ONLY facts and causal/structural relationships needed by another AI to decide later. Do NOT recommend an intervention, do NOT name or paraphrase any option, and do NOT use ACTION labels. Produce independent messages capped at 40, 20 and 10 words. JSON only: {"40":"...","20":"...","10":"..."}. '
  if(arm==='free')return b+'Compress freely.'
  if(arm==='generic')return b+'Preserve the single discriminating mechanism, constraints and uncertainty; delete generic background.'
+ if(arm==='arbre9')return b+'Use this internal grammar to decide what must survive: '+ARBRE9+' Do not mention the grammar.'
  return b+'Use this internal grammar to decide what must survive: '+ARBRE+' Do not mention the grammar.'
 }
 function optionMap(idx:number,opts:Opt[]){
@@ -162,7 +164,7 @@ async function decode(msg:string,mapped:Record<string,Opt>){
 export async function GET(req:NextRequest){
  try{
   const idx=Math.max(0,Math.min(CASES.length-1,Math.trunc(Number(req.nextUrl.searchParams.get('case')||'0'))))
-  const c=CASES[idx], arms:Arm[]=['free','generic','arbre'], mapped=optionMap(idx,c.options)
+  const c=CASES[idx], arms:Arm[]=['free','generic','arbre','arbre9'], mapped=optionMap(idx,c.options)
   const expected=Object.entries(mapped).find(([,o])=>o.id===c.correctId)?.[0]||''
   const encRaw=await Promise.all(arms.map(a=>encodeStrict(a,c.situation)))
   const enc:Record<string,Record<Budget,string>>={}
@@ -171,6 +173,6 @@ export async function GET(req:NextRequest){
   for(const a of arms)for(const b of BUDGETS)jobs.push({arm:a,b,p:decode(enc[a][b],mapped)})
   const dec=await Promise.all(jobs.map(x=>x.p)); const result:Record<string,any>={}
   jobs.forEach((x,i)=>{result[x.arm]||={};result[x.arm][x.b]={correct:dec[i].chosen_action===expected,chosen_action:dec[i].chosen_action,confidence:dec[i].confidence,words:enc[x.arm][x.b].split(/\s+/).filter(Boolean).length,message:enc[x.arm][x.b]}})
-  return NextResponse.json({benchmark:'arbre-compression-hard-20-v1',case_index:idx,case_id:c.id,domain:c.domain,expected,discriminator:c.discriminator,result})
+  return NextResponse.json({benchmark:'arbre-compression-hard-20-v2-nine-falsifier',case_index:idx,case_id:c.id,domain:c.domain,expected,discriminator:c.discriminator,result})
  }catch(e){return NextResponse.json({error:e instanceof Error?e.message:'failed'},{status:500})}
 }
