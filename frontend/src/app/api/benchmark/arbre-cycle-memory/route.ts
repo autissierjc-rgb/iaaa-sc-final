@@ -278,11 +278,12 @@ const GENERIC_UPDATER='Maintain a rolling memory of the HISTORY for a later deci
 
 const ARBRE9_UPDATER='You are point 9: the observer-memory after a completed transformation path. Do not redo or critique the path. Remember how the system arrived from its prior background to its present state before that present becomes the next background 0. Preserve the decisive sequence: what changed, the relevant force/dynamic, the field or direction through which it acted, the structure that formed, and any change of representation/orientation that followed. Preserve reversals and tests. Never rewrite history as if the latest state had always existed. Do not recommend an action. At most 80 words. Return ONLY the memory text, no preamble.'
 
-async function updateMemory(kind:'generic'|'arbre9',previous:string,obs:string){
- const sys=kind==='generic'?GENERIC_UPDATER:ARBRE9_UPDATER
+async function updateMemory(kind:'generic'|'arbre9',previous:string,obs:string,limit:number){
+ const base=kind==='generic'?GENERIC_UPDATER:ARBRE9_UPDATER
+ const sys=base.replace(/80 words/g,String(limit)+' words')
  const user='PREVIOUS MEMORY:\n'+(previous||'[none]')+'\n\nNEW OBSERVATION:\n'+obs
- let mem=cap(await callClaudeText(sys,user,3000),MEMORY_WORDS)
- if(!mem) mem=cap(await callClaudeText(sys+' You MUST return a non-empty memory.',user,4000),MEMORY_WORDS)
+ let mem=cap(await callClaudeText(sys,user,3000),limit)
+ if(!mem) mem=cap(await callClaudeText(sys+' You MUST return a non-empty memory.',user,4000),limit)
  if(!mem) throw new Error('empty '+kind+' memory')
  return mem
 }
