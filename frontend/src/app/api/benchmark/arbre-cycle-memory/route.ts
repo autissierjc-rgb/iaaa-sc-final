@@ -274,15 +274,25 @@ const ARBRE9_UPDATER='Maintain the point-9 memory of a cyclic Arbre process. For
 
 async function updateMemory(kind:'generic'|'arbre9',previous:string,obs:string){
  const sys=kind==='generic'?GENERIC_UPDATER:ARBRE9_UPDATER
- const x=await callClaude(sys,'PREVIOUS MEMORY:\n'+(previous||'[none]')+'\n\nNEW OBSERVATION:\n'+obs,850)
- return cap(x.memory||'',MEMORY_WORDS)
+ const user='PREVIOUS MEMORY:\n'+(previous||'[none]')+'\n\nNEW OBSERVATION:\n'+obs
+ let x=await callClaude(sys,user,850)
+ let mem=cap(x?.memory||'',MEMORY_WORDS)
+ if(!mem){
+   x=await callClaude(sys+' IMPORTANT: the JSON key "memory" MUST contain a non-empty string.',user,1000)
+   mem=cap(x?.memory||'',MEMORY_WORDS)
+ }
+ if(!mem) throw new Error('empty '+kind+' memory')
+ return mem
 }
 async function decide(memory:string,finalState:string,options:Record<string,string>){
- return callClaude(
-  'Choose the best next action using ONLY the supplied current state and memory. Historical path can matter even when current snapshots match. Return JSON only: {"chosen_action":"ACTION_A|ACTION_B|ACTION_C","confidence":0.0,"reason":"max 60 words"}.',
-  'MEMORY:\n'+(memory||'[no history retained]')+'\n\nCURRENT STATE:\n'+finalState+'\n\nOPTIONS:\n'+Object.entries(options).map(([k,v])=>k+': '+v).join('\n'),
-  650
- )
+ const sys='Choose the best next action using ONLY the supplied current state and memory. Historical path can matter even when current snapshots match. Return JSON only: {"chosen_action":"ACTION_A|ACTION_B|ACTION_C","confidence":0.0,"reason":"max 60 words"}.'
+ const user='MEMORY:\n'+(memory||'[no history retained]')+'\n\nCURRENT STATE:\n'+finalState+'\n\nOPTIONS:\n'+Object.entries(options).map(([k,v])=>k+': '+v).join('\n')
+ let x=await callClaude(sys,user,650)
+ if(!['ACTION_A','ACTION_B','ACTION_C'].includes(String(x?.chosen_action||''))){
+   x=await callClaude(sys+' IMPORTANT: chosen_action is mandatory and must be exactly one of ACTION_A, ACTION_B, ACTION_C.',user,750)
+ }
+ if(!['ACTION_A','ACTION_B','ACTION_C'].includes(String(x?.chosen_action||''))) throw new Error('decoder omitted action')
+ return x
 }
 
 export async function GET(req:NextRequest){
