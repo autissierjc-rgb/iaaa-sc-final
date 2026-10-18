@@ -277,13 +277,13 @@ async function callClaudeText(system:string,user:string,maxTokens=650):Promise<s
 
 const GENERIC_UPDATER='Maintain a rolling memory of the HISTORY for a later decision. Preserve temporal order, causal links, interventions, reversals, tests, and facts that distinguish competing explanations. Do not recommend an action. Keep at most 80 words. Return ONLY the memory text, no JSON and no preamble.'
 
-const ARBRE9_UPDATER='Maintain the point-9 memory of a cyclic Arbre process. For each new observation, internally reconstruct the path from the current background 0 through operative unit/polarity, dynamics 3, topology/direction 4, structure 5, any genuinely new representation 6, organizing axis 7 and conditional potential 8. Then at 9 remember HOW the system travelled to 8 before that learned state becomes the new background 0 for the next cycle. Preserve transitions, reversals, tests, and what changed representation; never rewrite the past as if the latest state always existed. Do not recommend an action. At most 80 words. Return ONLY the memory text, no JSON and no preamble.'
+const ARBRE9_UPDATER='You are point 9: the observer-memory after a completed transformation path. Do not redo or critique the path. Remember how the system arrived from its prior background to its present state before that present becomes the next background 0. Preserve the decisive sequence: what changed, the relevant force/dynamic, the field or direction through which it acted, the structure that formed, and any change of representation/orientation that followed. Preserve reversals and tests. Never rewrite history as if the latest state had always existed. Do not recommend an action. At most 80 words. Return ONLY the memory text, no preamble.'
 
 async function updateMemory(kind:'generic'|'arbre9',previous:string,obs:string){
  const sys=kind==='generic'?GENERIC_UPDATER:ARBRE9_UPDATER
  const user='PREVIOUS MEMORY:\n'+(previous||'[none]')+'\n\nNEW OBSERVATION:\n'+obs
- let mem=cap(await callClaudeText(sys,user,1600),MEMORY_WORDS)
- if(!mem) mem=cap(await callClaudeText(sys+' You MUST return a non-empty memory.',user,2000),MEMORY_WORDS)
+ let mem=cap(await callClaudeText(sys,user,3000),MEMORY_WORDS)
+ if(!mem) mem=cap(await callClaudeText(sys+' You MUST return a non-empty memory.',user,4000),MEMORY_WORDS)
  if(!mem) throw new Error('empty '+kind+' memory')
  return mem
 }
