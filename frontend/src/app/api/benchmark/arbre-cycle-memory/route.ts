@@ -290,9 +290,9 @@ async function updateMemory(kind:'generic'|'arbre9',previous:string,obs:string){
 async function decide(memory:string,finalState:string,options:Record<string,string>){
  const sys='Choose the best next action using ONLY the supplied current state and memory. Historical path can matter even when current snapshots match. Return JSON only: {"chosen_action":"ACTION_A|ACTION_B|ACTION_C","confidence":0.0,"reason":"max 60 words"}.'
  const user='MEMORY:\n'+(memory||'[no history retained]')+'\n\nCURRENT STATE:\n'+finalState+'\n\nOPTIONS:\n'+Object.entries(options).map(([k,v])=>k+': '+v).join('\n')
- let x=await callClaude(sys,user,650)
+ let x=await callClaude(sys,user,1800)
  if(!['ACTION_A','ACTION_B','ACTION_C'].includes(String(x?.chosen_action||''))){
-   x=await callClaude(sys+' IMPORTANT: chosen_action is mandatory and must be exactly one of ACTION_A, ACTION_B, ACTION_C.',user,750)
+   x=await callClaude(sys+' IMPORTANT: chosen_action is mandatory and must be exactly one of ACTION_A, ACTION_B, ACTION_C.',user,2500)
  }
  if(!['ACTION_A','ACTION_B','ACTION_C'].includes(String(x?.chosen_action||''))) throw new Error('decoder omitted action')
  return x
