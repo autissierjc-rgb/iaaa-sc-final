@@ -13,7 +13,6 @@ type SeqCase={
 }
 
 const MODEL=process.env.ANTHROPIC_BENCHMARK_MODEL||'claude-sonnet-5-5'
-const MEMORY_WORDS=80
 
 const CASES:SeqCase[]=[
 {
@@ -301,10 +300,12 @@ async function decide(memory:string,finalState:string,options:Record<string,stri
 export async function GET(req:NextRequest){
  try{
   const idx=Math.max(0,Math.min(CASES.length-1,Math.trunc(Number(req.nextUrl.searchParams.get('case')||'0'))))
+  const budgetRaw=Math.trunc(Number(req.nextUrl.searchParams.get('words')||'80'))
+  const budget=[20,40,80].includes(budgetRaw)?budgetRaw:80
   const c=CASES[idx]
   let gm='',am=''
   for(const obs of c.history){
-    const [g,a]=await Promise.all([updateMemory('generic',gm,obs),updateMemory('arbre9',am,obs)])
+    const [g,a]=await Promise.all([updateMemory('generic',gm,obs,budget),updateMemory('arbre9',am,obs,budget)])
     gm=g; am=a
   }
   const [s,g,a]=await Promise.all([
@@ -313,7 +314,8 @@ export async function GET(req:NextRequest){
     decide(am,c.final_state,c.options)
   ])
   return NextResponse.json({
-    benchmark:'arbre-cycle-memory-v1',
+    benchmark:'arbre-cycle-memory-v2',
+    memory_words:budget,
     model:MODEL,
     case_index:idx,
     case_id:c.id,
