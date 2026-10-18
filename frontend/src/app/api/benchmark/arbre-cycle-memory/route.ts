@@ -282,8 +282,8 @@ const ARBRE9_UPDATER='Maintain the point-9 memory of a cyclic Arbre process. For
 async function updateMemory(kind:'generic'|'arbre9',previous:string,obs:string){
  const sys=kind==='generic'?GENERIC_UPDATER:ARBRE9_UPDATER
  const user='PREVIOUS MEMORY:\n'+(previous||'[none]')+'\n\nNEW OBSERVATION:\n'+obs
- let mem=cap(await callClaudeText(sys,user,650),MEMORY_WORDS)
- if(!mem) mem=cap(await callClaudeText(sys+' You MUST return a non-empty memory.',user,750),MEMORY_WORDS)
+ let mem=cap(await callClaudeText(sys,user,1600),MEMORY_WORDS)
+ if(!mem) mem=cap(await callClaudeText(sys+' You MUST return a non-empty memory.',user,2000),MEMORY_WORDS)
  if(!mem) throw new Error('empty '+kind+' memory')
  return mem
 }
