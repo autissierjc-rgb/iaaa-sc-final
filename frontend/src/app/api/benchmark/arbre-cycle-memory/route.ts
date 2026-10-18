@@ -234,16 +234,36 @@ const CASES:SeqCase[]=[
 }
 ]
 
+function parseOneJson(raw:string):any{
+ const clean=String(raw||'').replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/i,'').trim()
+ try{return JSON.parse(clean)}catch{}
+ let start=clean.indexOf('{')
+ if(start<0) throw new Error('No JSON object found')
+ let depth=0,inString=false,escape=false
+ for(let i=start;i<clean.length;i++){
+   const ch=clean[i]
+   if(inString){
+     if(escape){escape=false;continue}
+     if(ch==='\\\\'){escape=true;continue}
+     if(ch==='"')inString=false
+     continue
+   }
+   if(ch==='"'){inString=true;continue}
+   if(ch==='{')depth++
+   if(ch==='}'){depth--;if(depth===0)return JSON.parse(clean.slice(start,i+1))}
+ }
+ throw new Error('Incomplete JSON object')
+}
+
 async function callClaude(system:string,user:string,maxTokens=1000):Promise<any>{
  const key=process.env.ANTHROPIC_API_KEY||''; if(!key) throw new Error('ANTHROPIC_API_KEY missing')
  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:MODEL,max_tokens:maxTokens,system,messages:[{role:'user',content:user}]})})
  if(!r.ok) throw new Error('Anthropic '+r.status+': '+(await r.text()).slice(0,240))
  const d=await r.json(); const t=Array.isArray(d?.content)?d.content.map((x:any)=>x?.type==='text'?x.text:'').join('').trim():''
- const c=t.replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/i,'')
- try{return JSON.parse(c)}catch{
-  const rr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:MODEL,max_tokens:1200,system:'Repair JSON only. Preserve content.',messages:[{role:'user',content:c||'{}'}]})})
+ try{return parseOneJson(t)}catch{
+  const rr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:MODEL,max_tokens:1200,system:'Return exactly ONE valid JSON object and nothing else. Repair malformed JSON while preserving content.',messages:[{role:'user',content:t||'{}'}]})})
   const x=await rr.json(); const q=Array.isArray(x?.content)?x.content.map((y:any)=>y?.type==='text'?y.text:'').join('').trim():''
-  return JSON.parse(q.replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/i,''))
+  return parseOneJson(q)
  }
 }
 function cap(s:string,n:number){return String(s||'').trim().split(/\s+/).filter(Boolean).slice(0,n).join(' ')}
