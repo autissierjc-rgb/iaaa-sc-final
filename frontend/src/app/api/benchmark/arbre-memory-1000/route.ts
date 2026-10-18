@@ -13,7 +13,6 @@ type PairCase={
 }
 
 const MODEL=process.env.ANTHROPIC_BENCHMARK_MODEL||'claude-sonnet-5-5'
-const MEMORY_WORDS=30
 const CHUNK=100
 
 function noise(i:number,domain:string){
@@ -315,14 +314,16 @@ async function jsonCall(system:string,user:string){
  }
 }
 
-const GENERIC='Keep exactly the most decision-relevant long-term causal history in at most 30 words. Preserve decisive tests, reversals, interventions, and temporal causality; discard routine noise and obsolete detail. This memory will be updated repeatedly. Return only the memory text, no preamble.'
-const ARBRE9='Keep a point-9 memory in at most 30 words: preserve how the system moved from prior background to new background—key dynamics, topology/context, emergent structure, representation change, direction, and reached state. Preserve decisive reversals/tests. Discard routine noise. Return only memory text.'
+function memoryPrompt(arm:Arm,words:number){
+ if(arm==='generic') return 'Keep exactly the most decision-relevant long-term causal history in at most '+words+' words. Preserve decisive tests, reversals, interventions, and temporal causality; discard routine noise and obsolete detail. This memory will be updated repeatedly. Return only the memory text, no preamble.'
+ return 'Keep a point-9 memory in at most '+words+' words: preserve how the system moved from prior background to new background—key dynamics, topology/context, emergent structure, representation change, direction, and reached state. Preserve decisive reversals/tests. Discard routine noise. Return only memory text.'
+}
 
-async function update(arm:Arm,prev:string,chunk:string[]){
- const sys=arm==='generic'?GENERIC:ARBRE9
+async function update(arm:Arm,prev:string,chunk:string[],words:number){
+ const sys=memoryPrompt(arm,words)
  const user='PRIOR MEMORY:\n'+(prev||'[none]')+'\n\nNEXT 100 EVENTS:\n'+chunk.join('\n')
  for(const mt of [2600,3400]){
-   const out=cap(await textCall(sys,user,mt),MEMORY_WORDS)
+   const out=cap(await textCall(sys,user,mt),words)
    if(out)return out
  }
  throw new Error('empty '+arm+' memory')
@@ -337,10 +338,13 @@ async function decide(source:string,finalState:string,options:Record<string,stri
 export async function GET(req:NextRequest){
  try{
    const idx=Math.max(0,Math.min(CASES.length-1,Math.trunc(Number(req.nextUrl.searchParams.get('case')||'0'))))
+   const requested=Math.trunc(Number(req.nextUrl.searchParams.get('words')||'30'))
+   const allowed=[15,30,60,120]
+   const memoryWords=allowed.includes(requested)?requested:30
    const c=CASES[idx]; let gm='',am=''
    for(let i=0;i<1000;i+=CHUNK){
      const chunk=c.events.slice(i,i+CHUNK)
-     const [g,a]=await Promise.all([update('generic',gm,chunk),update('arbre9',am,chunk)])
+     const [g,a]=await Promise.all([update('generic',gm,chunk,memoryWords),update('arbre9',am,chunk,memoryWords)])
      gm=g; am=a
    }
    const [snap,g,a,full]=await Promise.all([
@@ -351,7 +355,7 @@ export async function GET(req:NextRequest){
    ])
    const mk=(x:any)=>({chosen:x.chosen_action,correct:x.chosen_action===c.correct,confidence:x.confidence})
    return NextResponse.json({
-     benchmark:'arbre-memory-1000-v1',events:1000,chunks:10,memory_words:MEMORY_WORDS,
+     benchmark:'arbre-memory-1000-curve-v2',events:1000,chunks:10,memory_words:memoryWords,
      case_index:idx,case_id:c.id,domain:c.domain,expected:c.correct,path_key:c.path_key,
      memories:{generic:gm,arbre9:am},
      result:{snapshot:mk(snap),generic_memory:mk(g),arbre9_memory:mk(a),full_history:mk(full)}
