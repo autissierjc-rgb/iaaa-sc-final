@@ -6,23 +6,23 @@ const MODEL=process.env.ANTHROPIC_BENCHMARK_MODEL||'claude-sonnet-5-5'
 const WORDS=20
 const pairs={
 battery:{
- final:'NOW: terminal voltage 12.3 V; temperature normal.',
+ final_state:'NOW: terminal voltage 12.3 V; temperature normal.',
  options:{ACTION_A:'Wait for full relaxation, then verify state-of-charge/capacity.',ACTION_B:'Treat as persistent degradation and replace/derate.',ACTION_C:'Return to normal service now.'}
 },
 server:{
- final:'NOW: CPU 78%, aggregate requests 13k/s, latency elevated.',
+ final_state:'NOW: CPU 78%, aggregate requests 13k/s, latency elevated.',
  options:{ACTION_A:'Scale capacity for sustained exogenous demand.',ACTION_B:'Break retry feedback and drain duplicate/backlog work.',ACTION_C:'Make no system change.'}
 },
 greenhouse:{
- final:'NOW: root-zone moisture 42%; leaves mildly stressed.',
+ final_state:'NOW: root-zone moisture 42%; leaves mildly stressed.',
  options:{ACTION_A:'Restore/increase irrigation delivery.',ACTION_B:'Stop/reduce irrigation and restore drainage/aeration.',ACTION_C:'Hold water controls unchanged.'}
 },
 robot:{
- final:'NOW 10:01:22: corridor A visually empty; B clear. Passage occupies crossing during seconds 6–14 after entry.',
+ final_state:'NOW 10:01:22: corridor A visually empty; B clear. Passage occupies crossing during seconds 6–14 after entry.',
  options:{ACTION_A:'Enter A now.',ACTION_B:'Take B now.',ACTION_C:'Wait 30 seconds then enter A.'}
 },
 catalyst:{
- final:'NOW: outlet product concentration 4.0 units; reactor temperature normal.',
+ final_state:'NOW: outlet product concentration 4.0 units; reactor temperature normal.',
  options:{ACTION_A:'Regenerate/replace catalyst.',ACTION_B:'Correct and verify upstream feed/blending.',ACTION_C:'Hold process unchanged.'}
 }
 }
