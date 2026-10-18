@@ -267,20 +267,23 @@ async function callClaude(system:string,user:string,maxTokens=1000):Promise<any>
  }
 }
 function cap(s:string,n:number){return String(s||'').trim().split(/\s+/).filter(Boolean).slice(0,n).join(' ')}
+async function callClaudeText(system:string,user:string,maxTokens=650):Promise<string>{
+ const key=process.env.ANTHROPIC_API_KEY||''; if(!key) throw new Error('ANTHROPIC_API_KEY missing')
+ const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},body:JSON.stringify({model:MODEL,max_tokens:maxTokens,system,messages:[{role:'user',content:user}]})})
+ if(!r.ok) throw new Error('Anthropic '+r.status+': '+(await r.text()).slice(0,240))
+ const d=await r.json()
+ return Array.isArray(d?.content)?d.content.map((x:any)=>x?.type==='text'?x.text:'').join('').trim():''
+}
 
-const GENERIC_UPDATER='Maintain a rolling memory of the HISTORY for a later decision. Preserve temporal order, causal links, interventions, reversals, tests, and facts that distinguish competing explanations. Do not recommend an action. Keep at most 80 words. Return JSON only: {"memory":"..."}.'
+const GENERIC_UPDATER='Maintain a rolling memory of the HISTORY for a later decision. Preserve temporal order, causal links, interventions, reversals, tests, and facts that distinguish competing explanations. Do not recommend an action. Keep at most 80 words. Return ONLY the memory text, no JSON and no preamble.'
 
-const ARBRE9_UPDATER='Maintain the point-9 memory of a cyclic Arbre process. For each new observation, internally reconstruct the path from the current background 0 through operative unit/polarity, dynamics 3, topology/direction 4, structure 5, any genuinely new representation 6, organizing axis 7 and conditional potential 8. Then at 9 remember HOW the system travelled to 8 before that learned state becomes the new background 0 for the next cycle. Preserve transitions, reversals, tests, and what changed representation; never rewrite the past as if the latest state always existed. Do not recommend an action. At most 80 words. Return JSON only: {"memory":"..."}.'
+const ARBRE9_UPDATER='Maintain the point-9 memory of a cyclic Arbre process. For each new observation, internally reconstruct the path from the current background 0 through operative unit/polarity, dynamics 3, topology/direction 4, structure 5, any genuinely new representation 6, organizing axis 7 and conditional potential 8. Then at 9 remember HOW the system travelled to 8 before that learned state becomes the new background 0 for the next cycle. Preserve transitions, reversals, tests, and what changed representation; never rewrite the past as if the latest state always existed. Do not recommend an action. At most 80 words. Return ONLY the memory text, no JSON and no preamble.'
 
 async function updateMemory(kind:'generic'|'arbre9',previous:string,obs:string){
  const sys=kind==='generic'?GENERIC_UPDATER:ARBRE9_UPDATER
  const user='PREVIOUS MEMORY:\n'+(previous||'[none]')+'\n\nNEW OBSERVATION:\n'+obs
- let x=await callClaude(sys,user,850)
- let mem=cap(x?.memory||'',MEMORY_WORDS)
- if(!mem){
-   x=await callClaude(sys+' IMPORTANT: the JSON key "memory" MUST contain a non-empty string.',user,1000)
-   mem=cap(x?.memory||'',MEMORY_WORDS)
- }
+ let mem=cap(await callClaudeText(sys,user,650),MEMORY_WORDS)
+ if(!mem) mem=cap(await callClaudeText(sys+' You MUST return a non-empty memory.',user,750),MEMORY_WORDS)
  if(!mem) throw new Error('empty '+kind+' memory')
  return mem
 }
